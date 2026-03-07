@@ -1596,11 +1596,17 @@ export default function Exchangers() {
           ) : statementData ? (() => {
             const s = statementData.settlement;
             const txs = statementData.transactions;
+            const ieEntries = statementData.ie_entries || [];
+            const loanEntries = statementData.loan_entries || [];
             const v = statementData.vendor;
             const cur = s.source_currency || 'USD';
             const dCur = s.destination_currency || cur;
             const deposits = txs.filter(t => t.transaction_type === 'deposit');
             const withdrawals = txs.filter(t => t.transaction_type === 'withdrawal');
+            const ieIn = ieEntries.filter(e => e.entry_type === 'income');
+            const ieOut = ieEntries.filter(e => e.entry_type === 'expense');
+            const loanIn = loanEntries.filter(l => l.credit_to_vendor_id);
+            const loanOut = loanEntries.filter(l => l.source_vendor_id);
             return (
               <>
                 <div className="flex items-center justify-between px-6 pt-4 pb-2 border-b border-gray-200">
@@ -1649,43 +1655,115 @@ export default function Exchangers() {
                     </div>
 
                     {/* Transactions Table */}
-                    <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', color: '#888', marginBottom: '8px', marginTop: '16px' }}>Included Transactions ({txs.length})</h4>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', margin: '0 0 16px 0' }}>
-                      <thead>
-                        <tr>
-                          <th style={{ background: '#0B3D91', color: '#fff', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', padding: '8px 12px', textAlign: 'left' }}>Reference</th>
-                          <th style={{ background: '#0B3D91', color: '#fff', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', padding: '8px 12px', textAlign: 'left' }}>Type</th>
-                          <th style={{ background: '#0B3D91', color: '#fff', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', padding: '8px 12px', textAlign: 'left' }}>Client</th>
-                          <th style={{ background: '#0B3D91', color: '#fff', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', padding: '8px 12px', textAlign: 'right' }}>Amount</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {txs.map((tx, idx) => (
-                          <tr key={tx.transaction_id} style={{ background: idx % 2 === 0 ? '#fff' : '#f9f9f9' }}>
-                            <td style={{ padding: '8px 12px', fontSize: '12px', borderBottom: '1px solid #e5e5e5', fontFamily: 'monospace' }}>{tx.reference || tx.transaction_id}</td>
-                            <td style={{ padding: '8px 12px', fontSize: '12px', borderBottom: '1px solid #e5e5e5', textTransform: 'capitalize' }}>{tx.transaction_type}</td>
-                            <td style={{ padding: '8px 12px', fontSize: '12px', borderBottom: '1px solid #e5e5e5' }}>{tx.client_name || '-'}</td>
-                            <td style={{ padding: '8px 12px', fontSize: '12px', borderBottom: '1px solid #e5e5e5', textAlign: 'right', fontFamily: 'monospace', color: tx.transaction_type === 'deposit' ? '#16a34a' : '#dc2626' }}>
-                              {tx.transaction_type === 'deposit' ? '+' : '-'}{tx.base_currency && tx.base_currency === cur ? fmtCurrency(tx.base_amount, cur) : fmtCurrency(tx.amount, tx.currency)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                    {txs.length > 0 && (
+                      <>
+                        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', color: '#888', marginBottom: '8px', marginTop: '16px' }}>Transactions ({txs.length})</h4>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', margin: '0 0 16px 0' }}>
+                          <thead>
+                            <tr>
+                              <th style={{ background: '#0B3D91', color: '#fff', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', padding: '8px 12px', textAlign: 'left' }}>Reference</th>
+                              <th style={{ background: '#0B3D91', color: '#fff', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', padding: '8px 12px', textAlign: 'left' }}>Type</th>
+                              <th style={{ background: '#0B3D91', color: '#fff', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', padding: '8px 12px', textAlign: 'left' }}>Client</th>
+                              <th style={{ background: '#0B3D91', color: '#fff', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', padding: '8px 12px', textAlign: 'right' }}>Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {txs.map((tx, idx) => (
+                              <tr key={tx.transaction_id} style={{ background: idx % 2 === 0 ? '#fff' : '#f9f9f9' }}>
+                                <td style={{ padding: '8px 12px', fontSize: '12px', borderBottom: '1px solid #e5e5e5', fontFamily: 'monospace' }}>{tx.reference || tx.transaction_id}</td>
+                                <td style={{ padding: '8px 12px', fontSize: '12px', borderBottom: '1px solid #e5e5e5', textTransform: 'capitalize' }}>{tx.transaction_type}</td>
+                                <td style={{ padding: '8px 12px', fontSize: '12px', borderBottom: '1px solid #e5e5e5' }}>{tx.client_name || '-'}</td>
+                                <td style={{ padding: '8px 12px', fontSize: '12px', borderBottom: '1px solid #e5e5e5', textAlign: 'right', fontFamily: 'monospace', color: tx.transaction_type === 'deposit' ? '#16a34a' : '#dc2626' }}>
+                                  {tx.transaction_type === 'deposit' ? '+' : '-'}{tx.base_currency && tx.base_currency === cur ? fmtCurrency(tx.base_amount, cur) : fmtCurrency(tx.amount, tx.currency)}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </>
+                    )}
+
+                    {/* I&E Entries Table */}
+                    {ieEntries.length > 0 && (
+                      <>
+                        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', color: '#888', marginBottom: '8px', marginTop: '16px' }}>Income & Expense Entries ({ieEntries.length})</h4>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', margin: '0 0 16px 0' }}>
+                          <thead>
+                            <tr>
+                              <th style={{ background: '#b45309', color: '#fff', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', padding: '8px 12px', textAlign: 'left' }}>Reference</th>
+                              <th style={{ background: '#b45309', color: '#fff', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', padding: '8px 12px', textAlign: 'left' }}>Type</th>
+                              <th style={{ background: '#b45309', color: '#fff', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', padding: '8px 12px', textAlign: 'left' }}>Category</th>
+                              <th style={{ background: '#b45309', color: '#fff', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', padding: '8px 12px', textAlign: 'right' }}>Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {ieEntries.map((ie, idx) => {
+                              const isIn = ie.entry_type === 'income';
+                              const amt = ie.base_amount || ie.amount;
+                              return (
+                                <tr key={ie.entry_id} style={{ background: idx % 2 === 0 ? '#fff' : '#f9f9f9' }}>
+                                  <td style={{ padding: '8px 12px', fontSize: '12px', borderBottom: '1px solid #e5e5e5', fontFamily: 'monospace' }}>{ie.entry_id?.slice(-10)?.toUpperCase()}</td>
+                                  <td style={{ padding: '8px 12px', fontSize: '12px', borderBottom: '1px solid #e5e5e5' }}>{isIn ? 'I&E IN' : 'I&E OUT'}</td>
+                                  <td style={{ padding: '8px 12px', fontSize: '12px', borderBottom: '1px solid #e5e5e5', textTransform: 'capitalize' }}>{ie.category?.replace('_', ' ') || '-'}</td>
+                                  <td style={{ padding: '8px 12px', fontSize: '12px', borderBottom: '1px solid #e5e5e5', textAlign: 'right', fontFamily: 'monospace', color: isIn ? '#16a34a' : '#dc2626' }}>
+                                    {isIn ? '+' : '-'}{fmtCurrency(amt, cur)}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </>
+                    )}
+
+                    {/* Loan Transactions Table */}
+                    {loanEntries.length > 0 && (
+                      <>
+                        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', color: '#888', marginBottom: '8px', marginTop: '16px' }}>Loan Transactions ({loanEntries.length})</h4>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', margin: '0 0 16px 0' }}>
+                          <thead>
+                            <tr>
+                              <th style={{ background: '#7c3aed', color: '#fff', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', padding: '8px 12px', textAlign: 'left' }}>Reference</th>
+                              <th style={{ background: '#7c3aed', color: '#fff', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', padding: '8px 12px', textAlign: 'left' }}>Type</th>
+                              <th style={{ background: '#7c3aed', color: '#fff', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', padding: '8px 12px', textAlign: 'left' }}>Borrower</th>
+                              <th style={{ background: '#7c3aed', color: '#fff', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', padding: '8px 12px', textAlign: 'right' }}>Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {loanEntries.map((lt, idx) => {
+                              const isIn = !!lt.credit_to_vendor_id;
+                              return (
+                                <tr key={lt.transaction_id} style={{ background: idx % 2 === 0 ? '#fff' : '#f9f9f9' }}>
+                                  <td style={{ padding: '8px 12px', fontSize: '12px', borderBottom: '1px solid #e5e5e5', fontFamily: 'monospace' }}>{lt.transaction_id?.slice(-10)?.toUpperCase()}</td>
+                                  <td style={{ padding: '8px 12px', fontSize: '12px', borderBottom: '1px solid #e5e5e5' }}>{isIn ? 'Loan IN' : 'Loan OUT'}</td>
+                                  <td style={{ padding: '8px 12px', fontSize: '12px', borderBottom: '1px solid #e5e5e5' }}>{lt.borrower_name || '-'}</td>
+                                  <td style={{ padding: '8px 12px', fontSize: '12px', borderBottom: '1px solid #e5e5e5', textAlign: 'right', fontFamily: 'monospace', color: isIn ? '#16a34a' : '#dc2626' }}>
+                                    {isIn ? '+' : '-'}{fmtCurrency(lt.amount, lt.currency || cur)}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </>
+                    )}
 
                     {/* Summary Box */}
                     <div className="summary" style={{ background: '#f0f4fa', border: '1px solid #d0d8e8', borderRadius: '4px', padding: '16px', marginTop: '16px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: '13px', color: '#16a34a' }}>
-                        <span>Money In ({deposits.length} deposits{s.ie_entry_ids?.length ? ` + ${s.ie_entry_ids.length} I&E` : ''}{s.loan_tx_ids?.length ? ` + ${s.loan_tx_ids.length} loans` : ''})</span>
+                        <span>Money In ({deposits.length} deposits{ieIn.length ? ` + ${ieIn.length} I&E` : ''}{loanIn.length ? ` + ${loanIn.length} loans` : ''})</span>
                         <span style={{ fontFamily: 'monospace' }}>+{fmtCurrency(
-                          txs.filter(t => t.transaction_type === 'deposit').reduce((sum, t) => sum + (t.base_currency === cur ? (t.base_amount || t.amount) : t.amount), 0) +
-                          (s.gross_amount > 0 ? Math.max(0, s.gross_amount + s.commission_amount + (s.charges_amount || 0)) : 0)
+                          deposits.reduce((sum, t) => sum + (t.base_currency === cur ? (t.base_amount || t.amount) : t.amount), 0) +
+                          ieIn.reduce((sum, e) => sum + (e.base_amount || e.amount || 0), 0) +
+                          loanIn.reduce((sum, l) => sum + (l.amount || 0), 0)
                         , cur)}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: '13px', color: '#dc2626' }}>
-                        <span>Money Out ({withdrawals.length} withdrawals)</span>
+                        <span>Money Out ({withdrawals.length} withdrawals{ieOut.length ? ` + ${ieOut.length} I&E` : ''}{loanOut.length ? ` + ${loanOut.length} loans` : ''})</span>
                         <span style={{ fontFamily: 'monospace' }}>-{fmtCurrency(
-                          Math.abs(txs.filter(t => t.transaction_type === 'withdrawal').reduce((sum, t) => sum + (t.base_currency === cur ? (t.base_amount || t.amount) : t.amount), 0))
+                          withdrawals.reduce((sum, t) => sum + (t.base_currency === cur ? (t.base_amount || t.amount) : t.amount), 0) +
+                          ieOut.reduce((sum, e) => sum + (e.base_amount || e.amount || 0), 0) +
+                          loanOut.reduce((sum, l) => sum + (l.amount || 0), 0)
                         , cur)}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: '13px' }}>

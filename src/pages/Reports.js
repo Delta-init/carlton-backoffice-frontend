@@ -1224,6 +1224,7 @@ export default function Reports() {
         <TabsContent value="exchangers" className="space-y-4">
           {vendorReport && (
             <>
+              {/* Summary cards by currency */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
                   title="Total Exchangers"
@@ -1231,80 +1232,71 @@ export default function Reports() {
                   icon={Store}
                   color="purple"
                 />
-                <StatCard
-                  title="Total Deposits"
-                  value={`$${(vendorReport.grand_totals?.total_deposits_usd || 0).toLocaleString()}`}
-                  icon={ArrowDownRight}
-                  color="green"
-                />
-                <StatCard
-                  title="Total Withdrawals"
-                  value={`$${(vendorReport.grand_totals?.total_withdrawals_usd || 0).toLocaleString()}`}
-                  icon={ArrowUpRight}
-                  color="red"
-                />
-                <StatCard
-                  title="Net Settlement"
-                  value={`$${(vendorReport.grand_totals?.total_net_settlement_usd || 0).toLocaleString()}`}
-                  subtitle="After commission"
-                  icon={DollarSign}
-                  color={
-                    vendorReport.grand_totals?.total_net_settlement_usd >= 0
-                      ? "green"
-                      : "red"
-                  }
-                />
+                {Object.entries(
+                  vendorReport.grand_totals_by_currency || {},
+                ).map(([curr, d]) => (
+                  <StatCard
+                    key={curr}
+                    title={`Net Settlement (${curr})`}
+                    value={`${curr} ${d.net_settlement?.toLocaleString()}`}
+                    subtitle={`In: ${d.money_in?.toLocaleString()} / Out: ${d.money_out?.toLocaleString()}`}
+                    icon={DollarSign}
+                    color={d.net_settlement >= 0 ? "green" : "red"}
+                  />
+                ))}
               </div>
 
               <Card className="bg-foreground/10 border-slate-200">
                 <CardHeader className="pb-2 flex flex-row items-center justify-between">
                   <CardTitle className="text-lg font-semibold text-slate-800">
-                    Exchanger Settlement Summary
+                    Exchanger Settlement Summary (Base Currency)
                   </CardTitle>
                   <Button
                     size="sm"
                     variant="ghost"
                     className="text-[#94A3B8] hover:text-slate-800"
-                    onClick={() =>
-                      downloadCSV(
-                        (vendorReport.vendors || []).map((v) => ({
-                          vendor_name: v.vendor_name,
-                          deposits_usd: v.totals?.deposits_usd,
-                          withdrawals_usd: v.totals?.withdrawals_usd,
-                          commission_usd: v.totals?.commission_usd,
-                          other_in_usd: v.totals?.other_in_usd,
-                          other_out_usd: v.totals?.other_out_usd,
-                          other_commission_usd: v.totals?.other_commission_usd,
-                          net_settlement_usd: v.totals?.net_settlement_usd,
-                        })),
-                        "vendor_settlements",
-                        [
-                          { key: "vendor_name", label: "Exchanger" },
-                          { key: "deposits_usd", label: "Deposits (USD)" },
-                          {
-                            key: "withdrawals_usd",
-                            label: "Withdrawals (USD)",
-                          },
-                          {
-                            key: "commission_usd",
-                            label: "Tx Commission (USD)",
-                          },
-                          { key: "other_in_usd", label: "Other In (USD)" },
-                          { key: "other_out_usd", label: "Other Out (USD)" },
-                          {
-                            key: "other_commission_usd",
-                            label: "Other Commission (USD)",
-                          },
-                          {
-                            key: "net_settlement_usd",
-                            label: "Net Settlement (USD)",
-                          },
-                        ],
-                      )
-                    }
+                    onClick={() => {
+                      const rows = [];
+                      (vendorReport.vendors || []).forEach((v) => {
+                        (v.currency_rows || []).forEach((r) => {
+                          rows.push({
+                            vendor: v.vendor_name,
+                            currency: r.currency,
+                            money_in: r.money_in,
+                            money_out: r.money_out,
+                            deposits: r.deposits,
+                            withdrawals: r.withdrawals,
+                            tx_comm: r.tx_commission,
+                            ie_in: r.ie_in,
+                            ie_out: r.ie_out,
+                            ie_comm: r.ie_commission,
+                            loan_in: r.loan_in,
+                            loan_out: r.loan_out,
+                            loan_comm: r.loan_commission,
+                            total_comm: r.total_commission,
+                            net: r.net_settlement,
+                          });
+                        });
+                      });
+                      downloadCSV(rows, "vendor_settlement_base_currency", [
+                        { key: "vendor", label: "Exchanger" },
+                        { key: "currency", label: "Currency" },
+                        { key: "money_in", label: "Money In" },
+                        { key: "money_out", label: "Money Out" },
+                        { key: "deposits", label: "Deposits" },
+                        { key: "withdrawals", label: "Withdrawals" },
+                        { key: "tx_comm", label: "Tx Comm" },
+                        { key: "ie_in", label: "I&E In" },
+                        { key: "ie_out", label: "I&E Out" },
+                        { key: "ie_comm", label: "I&E Comm" },
+                        { key: "loan_in", label: "Loan In" },
+                        { key: "loan_out", label: "Loan Out" },
+                        { key: "total_comm", label: "Total Comm" },
+                        { key: "net", label: "Net Settlement" },
+                      ]);
+                    }}
                   >
-                    <Download className="w-4 h-4 mr-2" />
-                    Export CSV
+                    <Download className="w-4 h-4 mr-2" /> Export CSV
                   </Button>
                 </CardHeader>
                 <CardContent>
@@ -1315,192 +1307,135 @@ export default function Reports() {
                           <TableHead className="text-[#94A3B8] text-xs">
                             Exchanger
                           </TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs text-right">
-                            Deposits
+                          <TableHead className="text-[#94A3B8] text-xs">
+                            Currency
                           </TableHead>
                           <TableHead className="text-[#94A3B8] text-xs text-right">
-                            Withdrawals
+                            Money In
                           </TableHead>
                           <TableHead className="text-[#94A3B8] text-xs text-right">
-                            Tx Comm.
+                            Money Out
                           </TableHead>
                           <TableHead className="text-[#94A3B8] text-xs text-right">
-                            Other In
-                          </TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs text-right">
-                            Other Out
-                          </TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs text-right">
-                            Other Comm.
+                            Commission
                           </TableHead>
                           <TableHead className="text-[#94A3B8] text-xs text-right">
                             Net Settlement
                           </TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs">
-                            Currencies
-                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {(vendorReport.vendors || []).map((vendor, i) => (
-                          <TableRow key={i} className="border-slate-200">
-                            <TableCell>
-                              <div>
-                                <p className="text-slate-800 font-medium">
-                                  {vendor.vendor_name}
-                                </p>
-                                <p className="text-xs text-[#94A3B8]">
-                                  In: {vendor.deposit_commission_rate}% / Out:{" "}
-                                  {vendor.withdrawal_commission_rate}%
-                                </p>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-emerald-400 font-mono text-right">
-                              $
-                              {(
-                                vendor.totals?.deposits_usd || 0
-                              ).toLocaleString()}
-                            </TableCell>
-                            <TableCell className="text-red-400 font-mono text-right">
-                              $
-                              {(
-                                vendor.totals?.withdrawals_usd || 0
-                              ).toLocaleString()}
-                            </TableCell>
-                            <TableCell className="text-amber-400 font-mono text-right">
-                              $
-                              {(
-                                vendor.totals?.commission_usd || 0
-                              ).toLocaleString()}
-                            </TableCell>
-                            <TableCell className="text-emerald-300 font-mono text-right">
-                              $
-                              {(
-                                vendor.totals?.other_in_usd || 0
-                              ).toLocaleString()}
-                            </TableCell>
-                            <TableCell className="text-red-300 font-mono text-right">
-                              $
-                              {(
-                                vendor.totals?.other_out_usd || 0
-                              ).toLocaleString()}
-                            </TableCell>
-                            <TableCell className="text-amber-300 font-mono text-right">
-                              $
-                              {(
-                                vendor.totals?.other_commission_usd || 0
-                              ).toLocaleString()}
-                            </TableCell>
-                            <TableCell
-                              className={`font-mono text-right font-bold ${(vendor.totals?.net_settlement_usd || 0) >= 0 ? "text-blue-400" : "text-red-400"}`}
+                        {(vendorReport.vendors || []).flatMap((vendor, vi) =>
+                          (vendor.currency_rows || []).map((row, ri) => (
+                            <TableRow
+                              key={`${vi}-${ri}`}
+                              className="border-slate-200"
                             >
-                              $
-                              {(
-                                vendor.totals?.net_settlement_usd || 0
-                              ).toLocaleString()}
+                              {ri === 0 ? (
+                                <TableCell
+                                  rowSpan={vendor.currency_rows.length}
+                                >
+                                  <div>
+                                    <p className="text-slate-800 font-medium">
+                                      {vendor.vendor_name}
+                                    </p>
+                                    <p className="text-xs text-[#94A3B8]">
+                                      In: {vendor.deposit_commission_rate}% /
+                                      Out: {vendor.withdrawal_commission_rate}%
+                                    </p>
+                                  </div>
+                                </TableCell>
+                              ) : null}
+                              <TableCell>
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs border-white/20 text-[#94A3B8]"
+                                >
+                                  {row.currency}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-emerald-400 font-mono text-right">
+                                <div>{row.money_in?.toLocaleString()}</div>
+                                <div className="text-[10px] text-slate-500">
+                                  Dep: {row.deposits?.toLocaleString()}
+                                  {row.ie_in > 0
+                                    ? ` + IE: ${row.ie_in?.toLocaleString()}`
+                                    : ""}
+                                  {row.loan_in > 0
+                                    ? ` + Ln: ${row.loan_in?.toLocaleString()}`
+                                    : ""}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-red-400 font-mono text-right">
+                                <div>{row.money_out?.toLocaleString()}</div>
+                                <div className="text-[10px] text-slate-500">
+                                  Wdr: {row.withdrawals?.toLocaleString()}
+                                  {row.ie_out > 0
+                                    ? ` + IE: ${row.ie_out?.toLocaleString()}`
+                                    : ""}
+                                  {row.loan_out > 0
+                                    ? ` + Ln: ${row.loan_out?.toLocaleString()}`
+                                    : ""}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-amber-400 font-mono text-right">
+                                <div>
+                                  {row.total_commission?.toLocaleString()}
+                                </div>
+                                <div className="text-[10px] text-slate-500">
+                                  Tx: {row.tx_commission?.toLocaleString()}
+                                  {row.ie_commission > 0
+                                    ? ` + IE: ${row.ie_commission?.toLocaleString()}`
+                                    : ""}
+                                  {row.loan_commission > 0
+                                    ? ` + Ln: ${row.loan_commission?.toLocaleString()}`
+                                    : ""}
+                                </div>
+                              </TableCell>
+                              <TableCell
+                                className={`font-mono text-right font-bold ${row.net_settlement >= 0 ? "text-blue-400" : "text-red-400"}`}
+                              >
+                                {row.net_settlement?.toLocaleString()}{" "}
+                                {row.currency}
+                              </TableCell>
+                            </TableRow>
+                          )),
+                        )}
+                        {/* Grand Total rows per currency */}
+                        {Object.entries(
+                          vendorReport.grand_totals_by_currency || {},
+                        ).map(([curr, d]) => (
+                          <TableRow
+                            key={`total-${curr}`}
+                            className="border-t-2 border-purple-500 bg-purple-500/10 font-bold"
+                          >
+                            <TableCell className="text-purple-400 font-bold">
+                              TOTAL
                             </TableCell>
                             <TableCell>
-                              <div className="flex flex-wrap gap-1">
-                                {Object.keys(vendor.currencies || {}).map(
-                                  (curr) => (
-                                    <Badge
-                                      key={curr}
-                                      variant="outline"
-                                      className="text-xs border-white/20 text-[#94A3B8]"
-                                    >
-                                      {curr}
-                                    </Badge>
-                                  ),
-                                )}
-                              </div>
+                              <Badge className="bg-purple-500/20 text-purple-300 text-xs">
+                                {curr}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-emerald-400 font-mono text-right font-bold">
+                              {d.money_in?.toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-red-400 font-mono text-right font-bold">
+                              {d.money_out?.toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-amber-400 font-mono text-right font-bold">
+                              {d.total_commission?.toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-blue-400 font-mono text-right font-bold">
+                              {d.net_settlement?.toLocaleString()} {curr}
                             </TableCell>
                           </TableRow>
                         ))}
-                        {/* Total Row */}
-                        {vendorReport.vendors?.length > 0 && (
-                          <TableRow className="border-t-2 border-purple-500 bg-purple-500/10 font-bold">
-                            <TableCell className="text-purple-400 font-bold">
-                              GRAND TOTAL ({vendorReport.vendors.length}{" "}
-                              Exchangers)
-                            </TableCell>
-                            <TableCell className="text-emerald-400 font-mono text-right font-bold">
-                              $
-                              {vendorReport.vendors
-                                .reduce(
-                                  (sum, v) =>
-                                    sum + (v.totals?.deposits_usd || 0),
-                                  0,
-                                )
-                                .toLocaleString()}
-                            </TableCell>
-                            <TableCell className="text-red-400 font-mono text-right font-bold">
-                              $
-                              {vendorReport.vendors
-                                .reduce(
-                                  (sum, v) =>
-                                    sum + (v.totals?.withdrawals_usd || 0),
-                                  0,
-                                )
-                                .toLocaleString()}
-                            </TableCell>
-                            <TableCell className="text-amber-400 font-mono text-right font-bold">
-                              $
-                              {vendorReport.vendors
-                                .reduce(
-                                  (sum, v) =>
-                                    sum + (v.totals?.commission_usd || 0),
-                                  0,
-                                )
-                                .toLocaleString()}
-                            </TableCell>
-                            <TableCell className="text-emerald-300 font-mono text-right font-bold">
-                              $
-                              {vendorReport.vendors
-                                .reduce(
-                                  (sum, v) =>
-                                    sum + (v.totals?.other_in_usd || 0),
-                                  0,
-                                )
-                                .toLocaleString()}
-                            </TableCell>
-                            <TableCell className="text-red-300 font-mono text-right font-bold">
-                              $
-                              {vendorReport.vendors
-                                .reduce(
-                                  (sum, v) =>
-                                    sum + (v.totals?.other_out_usd || 0),
-                                  0,
-                                )
-                                .toLocaleString()}
-                            </TableCell>
-                            <TableCell className="text-amber-300 font-mono text-right font-bold">
-                              $
-                              {vendorReport.vendors
-                                .reduce(
-                                  (sum, v) =>
-                                    sum + (v.totals?.other_commission_usd || 0),
-                                  0,
-                                )
-                                .toLocaleString()}
-                            </TableCell>
-                            <TableCell className="text-blue-400 font-mono text-right font-bold">
-                              $
-                              {vendorReport.vendors
-                                .reduce(
-                                  (sum, v) =>
-                                    sum + (v.totals?.net_settlement_usd || 0),
-                                  0,
-                                )
-                                .toLocaleString()}
-                            </TableCell>
-                            <TableCell></TableCell>
-                          </TableRow>
-                        )}
                         {(!vendorReport.vendors ||
                           vendorReport.vendors.length === 0) && (
                           <TableRow>
                             <TableCell
-                              colSpan={9}
+                              colSpan={6}
                               className="text-center text-[#94A3B8] py-8"
                             >
                               No vendor data
