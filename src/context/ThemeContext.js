@@ -14,12 +14,13 @@ export function ThemeProvider({ children }) {
     // Apply theme to document
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('miles-theme', theme);
-    
+     document.documentElement.classList.add('dark');
     // Update body class for Tailwind
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
-      document.documentElement.classList.remove('dark');
+       document.documentElement.classList.add('dark');
+      // document.documentElement.classList.remove('dark');
     }
   }, [theme]);
 

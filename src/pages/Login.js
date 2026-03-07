@@ -43,7 +43,7 @@ export default function Login() {
             "url(https://images.pexels.com/photos/30766684/pexels-photo-30766684.png?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940)",
         }}
       >
-        <div className="absolute inset-0 bg-blue-900/80 backdrop-blur-sm" />
+        <div className="absolute inset-0 bg-primary/80 backdrop-blur-sm" />
         <div className="relative z-10 flex flex-col justify-center items-center w-full p-12 text-center">
           <div className="flex items-center gap-3 mb-6">
             <TrendingUp className="w-12 h-12 text-white" />
@@ -67,7 +67,7 @@ export default function Login() {
       </div>
 
       {/* Right Panel - Login Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-slate-50">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-card">
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
@@ -107,7 +107,7 @@ export default function Login() {
                     placeholder="admin@fxbroker.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:ring-blue-500 font-mono"
+                    className="pl-10 bg-card border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:ring-blue-500 font-mono"
                     data-testid="login-email-input"
                     required
                   />
@@ -129,7 +129,7 @@ export default function Login() {
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:ring-blue-500"
+                    className="pl-10 bg-card border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:ring-blue-500"
                     data-testid="login-password-input"
                     required
                   />
@@ -139,7 +139,7 @@ export default function Login() {
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-blue-600 text-white hover:bg-blue-700 font-bold uppercase tracking-wider rounded-xl shadow-sm"
+                className="w-full bg-primary text-white hover:bg-blue-700 font-bold uppercase tracking-wider rounded-xl shadow-sm"
                 data-testid="login-submit-btn"
               >
                 {isLoading ? "Signing in..." : "Sign In"}
