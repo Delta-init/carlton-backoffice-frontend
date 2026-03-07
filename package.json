@@ -62,7 +62,7 @@
     "start": "PORT=3001 craco start",
     "build": "PORT=3001 craco build",
     "test": "craco test",
-    "dev": "PORT=3001 craco start"
+    "dev": "PORT=3000 craco start"
   },
   "browserslist": {
     "production": [
