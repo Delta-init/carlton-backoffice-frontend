@@ -1458,7 +1458,7 @@ export default function Settings() {
                     <Button
                       onClick={handleSaveFxRates}
                       disabled={savingFxRates}
-                      className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold"
+                      className="bg-primary text-[#0B0C10] hover:bg-[#45A29E] font-bold"
                       data-testid="save-fx-rates-btn"
                     >
                       {savingFxRates ? (

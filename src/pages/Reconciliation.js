@@ -1860,7 +1860,7 @@ export default function Reconciliation() {
                       dateFrom: e.target.value,
                     }))
                   }
-                  className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-800"
+                  className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-xl bg-white text-slate-800"
                 />
               </div>
               <div className="min-w-[120px]">
@@ -1873,7 +1873,7 @@ export default function Reconciliation() {
                   onChange={(e) =>
                     setPendingFilters((p) => ({ ...p, dateTo: e.target.value }))
                   }
-                  className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-800"
+                  className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-xl bg-white text-slate-800"
                 />
               </div>
               <div className="min-w-[130px]">
@@ -1888,7 +1888,7 @@ export default function Reconciliation() {
                       accountType: e.target.value,
                     }))
                   }
-                  className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-800"
+                  className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-xl bg-white text-slate-800"
                 >
                   <option value="all">All Types</option>
                   <option value="treasury">Treasury</option>

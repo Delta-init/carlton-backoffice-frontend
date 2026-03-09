@@ -101,7 +101,7 @@ const COLORS = [
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-foreground/10/95 backdrop-blur-md border border-slate-200 rounded-lg p-3">
+      <div className="bg-foreground/10/95 backdrop-blur-md border border-slate-200 rounded-xl p-3">
         <p className="text-xs text-[#94A3B8] mb-1">{label}</p>
         {payload.map((entry, index) => (
           <p
@@ -487,7 +487,7 @@ export default function Reports() {
             )}
           </div>
           <div
-            className={`p-2 rounded-lg ${
+            className={`p-2 rounded-xl ${
               color === "blue"
                 ? "bg-blue-500/10"
                 : color === "green"
@@ -1606,7 +1606,7 @@ export default function Reports() {
                       .map((item, i) => (
                         <div
                           key={i}
-                          className="p-3 bg-[#0F172A] rounded-lg border border-slate-200"
+                          className="p-3 bg-[#0F172A] rounded-xl border border-slate-200"
                         >
                           <p className="text-xs text-[#94A3B8] uppercase mb-1">
                             {item.currency}
@@ -1821,7 +1821,7 @@ export default function Reports() {
                       (item, i) => (
                         <div
                           key={i}
-                          className="p-3 bg-[#0F172A] rounded-lg border border-slate-200"
+                          className="p-3 bg-[#0F172A] rounded-xl border border-slate-200"
                         >
                           <p className="text-xs text-[#94A3B8] uppercase mb-1">
                             {item.currency}
@@ -2253,7 +2253,7 @@ export default function Reports() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-lg">
+                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-xl">
                         <span className="text-[#94A3B8]">Total Disbursed</span>
                         <span className="text-slate-800 font-mono">
                           $
@@ -2262,7 +2262,7 @@ export default function Reports() {
                           ).toLocaleString()}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-lg">
+                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-xl">
                         <span className="text-[#94A3B8]">
                           Outstanding Balance
                         </span>
@@ -2273,7 +2273,7 @@ export default function Reports() {
                           ).toLocaleString()}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-lg">
+                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-xl">
                         <span className="text-[#94A3B8]">Total Repaid</span>
                         <span className="text-emerald-400 font-mono">
                           $
@@ -2282,7 +2282,7 @@ export default function Reports() {
                           ).toLocaleString()}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-lg">
+                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-xl">
                         <span className="text-[#94A3B8]">Active Loans</span>
                         <span className="text-slate-800 font-mono">
                           {financialReport.loans?.active_loans || 0}
@@ -2301,7 +2301,7 @@ export default function Reports() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-lg">
+                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-xl">
                         <span className="text-[#94A3B8]">
                           Total Commission Paid
                         </span>
@@ -2312,7 +2312,7 @@ export default function Reports() {
                           ).toLocaleString()}
                         </span>
                       </div>
-                      <div className="p-3 bg-[#0F172A] rounded-lg">
+                      <div className="p-3 bg-[#0F172A] rounded-xl">
                         <p className="text-xs text-[#94A3B8] mb-2">
                           This represents the total vendor commission deducted
                           from settlements.
@@ -2561,7 +2561,7 @@ export default function Reports() {
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-5 gap-4">
-                      <div className="p-4 bg-[#0F172A] rounded-lg text-center">
+                      <div className="p-4 bg-[#0F172A] rounded-xl text-center">
                         <p className="text-xs text-[#94A3B8] mb-2">Current</p>
                         <p className="text-2xl font-mono text-emerald-400 font-bold">
                           $
@@ -2570,7 +2570,7 @@ export default function Reports() {
                           ).toLocaleString()}
                         </p>
                       </div>
-                      <div className="p-4 bg-[#0F172A] rounded-lg text-center">
+                      <div className="p-4 bg-[#0F172A] rounded-xl text-center">
                         <p className="text-xs text-[#94A3B8] mb-2">1-30 Days</p>
                         <p className="text-2xl font-mono text-amber-400 font-bold">
                           $
@@ -2579,7 +2579,7 @@ export default function Reports() {
                           ).toLocaleString()}
                         </p>
                       </div>
-                      <div className="p-4 bg-[#0F172A] rounded-lg text-center">
+                      <div className="p-4 bg-[#0F172A] rounded-xl text-center">
                         <p className="text-xs text-[#94A3B8] mb-2">
                           31-60 Days
                         </p>
@@ -2590,7 +2590,7 @@ export default function Reports() {
                           ).toLocaleString()}
                         </p>
                       </div>
-                      <div className="p-4 bg-[#0F172A] rounded-lg text-center">
+                      <div className="p-4 bg-[#0F172A] rounded-xl text-center">
                         <p className="text-xs text-[#94A3B8] mb-2">
                           61-90 Days
                         </p>
@@ -2601,7 +2601,7 @@ export default function Reports() {
                           ).toLocaleString()}
                         </p>
                       </div>
-                      <div className="p-4 bg-[#0F172A] rounded-lg text-center">
+                      <div className="p-4 bg-[#0F172A] rounded-xl text-center">
                         <p className="text-xs text-[#94A3B8] mb-2">90+ Days</p>
                         <p className="text-2xl font-mono text-red-500 font-bold">
                           $
@@ -2664,7 +2664,7 @@ export default function Reports() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3 mb-4">
-                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-lg">
+                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-xl">
                         <span className="text-[#94A3B8]">Total Amount</span>
                         <span className="text-slate-800 font-mono">
                           $
@@ -2673,7 +2673,7 @@ export default function Reports() {
                           ).toLocaleString()}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-lg">
+                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-xl">
                         <span className="text-[#94A3B8]">Total Collected</span>
                         <span className="text-emerald-400 font-mono">
                           $
@@ -2682,7 +2682,7 @@ export default function Reports() {
                           ).toLocaleString()}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-lg">
+                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-xl">
                         <span className="text-[#94A3B8]">Outstanding</span>
                         <span className="text-slate-800 font-mono font-bold">
                           $
@@ -2691,7 +2691,7 @@ export default function Reports() {
                           ).toLocaleString()}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center p-3 bg-amber-500/10 rounded-lg">
+                      <div className="flex justify-between items-center p-3 bg-amber-500/10 rounded-xl">
                         <span className="text-amber-400">Overdue</span>
                         <span className="text-amber-400 font-mono">
                           $
@@ -2700,7 +2700,7 @@ export default function Reports() {
                           ).toLocaleString()}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center p-3 bg-purple-500/10 rounded-lg">
+                      <div className="flex justify-between items-center p-3 bg-purple-500/10 rounded-xl">
                         <span className="text-purple-400">
                           Accrued Interest
                         </span>
@@ -2827,7 +2827,7 @@ export default function Reports() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3 mb-4">
-                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-lg">
+                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-xl">
                         <span className="text-[#94A3B8]">Total Amount</span>
                         <span className="text-slate-800 font-mono">
                           $
@@ -2836,7 +2836,7 @@ export default function Reports() {
                           ).toLocaleString()}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-lg">
+                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-xl">
                         <span className="text-[#94A3B8]">Total Paid</span>
                         <span className="text-emerald-400 font-mono">
                           $
@@ -2845,7 +2845,7 @@ export default function Reports() {
                           ).toLocaleString()}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-lg">
+                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-xl">
                         <span className="text-[#94A3B8]">Outstanding</span>
                         <span className="text-slate-800 font-mono font-bold">
                           $
@@ -2854,7 +2854,7 @@ export default function Reports() {
                           ).toLocaleString()}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center p-3 bg-amber-500/10 rounded-lg">
+                      <div className="flex justify-between items-center p-3 bg-amber-500/10 rounded-xl">
                         <span className="text-amber-400">Overdue</span>
                         <span className="text-amber-400 font-mono">
                           $
@@ -2863,7 +2863,7 @@ export default function Reports() {
                           ).toLocaleString()}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center p-3 bg-purple-500/10 rounded-lg">
+                      <div className="flex justify-between items-center p-3 bg-purple-500/10 rounded-xl">
                         <span className="text-purple-400">
                           Accrued Interest
                         </span>

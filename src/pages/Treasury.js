@@ -500,7 +500,7 @@ export default function Treasury() {
             <Button
               onClick={initiateTransfer}
               variant="outline"
-              className="border-[#66FCF1]/50 text-blue-600 hover:bg-blue-100 font-bold uppercase tracking-wider rounded-sm"
+              className="border-[#66FCF1]/50 text-blue-600 hover:bg-blue-100 font-bold uppercase tracking-wider rounded-xl"
               data-testid="transfer-btn"
             >
               <ArrowLeftRight className="w-4 h-4 mr-2" />
@@ -517,7 +517,7 @@ export default function Treasury() {
             >
               <DialogTrigger asChild>
                 <Button
-                  className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan"
+                  className="bg-primary text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-xl glow-cyan"
                   data-testid="add-treasury-btn"
                 >
                   <Plus className="w-4 h-4 mr-2" />
@@ -903,7 +903,7 @@ export default function Treasury() {
                     <Button
                       type="submit"
                       disabled={submitting}
-                      className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider disabled:opacity-50"
+                      className="bg-primary text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider disabled:opacity-50"
                       data-testid="save-treasury-btn"
                     >
                       {submitting ? (
@@ -940,7 +940,7 @@ export default function Treasury() {
                 Based on manual FX rates (Settings)
               </p>
             </div>
-            <div className="p-4 bg-blue-100 rounded-sm">
+            <div className="p-4 bg-blue-100 rounded-xl">
               <DollarSign className="w-8 h-8 text-blue-600" />
             </div>
           </div>
@@ -972,7 +972,7 @@ export default function Treasury() {
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 rounded-sm">
+                    <div className="p-2 bg-blue-100 rounded-xl">
                       <Building2 className="w-5 h-5 text-blue-600" />
                     </div>
                     <div>
@@ -1106,7 +1106,7 @@ export default function Treasury() {
           {viewAccount && (
             <div className="space-y-4">
               <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-100 rounded-sm">
+                <div className="p-3 bg-blue-100 rounded-xl">
                   <Building2 className="w-8 h-8 text-blue-600" />
                 </div>
                 <div>
@@ -1217,7 +1217,7 @@ export default function Treasury() {
           {historyAccount && (
             <div className="space-y-4">
               {/* Account Info */}
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-sm">
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
                 <div className="flex items-center gap-3">
                   <Building2 className="w-5 h-5 text-blue-600" />
                   <div>
@@ -1244,7 +1244,7 @@ export default function Treasury() {
               </div>
 
               {/* Filters */}
-              <div className="flex flex-wrap items-end gap-4 p-4 bg-slate-50 rounded-sm">
+              <div className="flex flex-wrap items-end gap-4 p-4 bg-slate-50 rounded-xl">
                 <div className="flex-1 min-w-[150px] space-y-1">
                   <Label className="text-slate-500 text-xs uppercase tracking-wider">
                     Start Date
@@ -1329,7 +1329,7 @@ export default function Treasury() {
                 <Button
                   onClick={downloadStatement}
                   disabled={historyData.length === 0}
-                  className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider"
+                  className="bg-primary text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider"
                   data-testid="download-statement-btn"
                 >
                   <Download className="w-4 h-4 mr-2" />
@@ -1590,7 +1590,7 @@ export default function Treasury() {
                 )}
 
               {transferData.amount && sourceAccount && destAccount && (
-                <div className="p-4 bg-slate-50 rounded-sm border border-slate-200 space-y-2">
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
                   <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">
                     Transfer Preview
                   </p>
@@ -1637,7 +1637,7 @@ export default function Treasury() {
                 </Button>
                 <Button
                   onClick={handleTransferSubmit}
-                  className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider"
+                  className="bg-primary text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider"
                   data-testid="transfer-continue-btn"
                 >
                   Continue
@@ -1646,7 +1646,7 @@ export default function Treasury() {
             </div>
           ) : (
             <div className="space-y-6" data-testid="transfer-captcha">
-              <div className="p-4 bg-slate-50 rounded-sm border border-[#66FCF1]/30">
+              <div className="p-4 bg-slate-50 rounded-xl border border-[#66FCF1]/30">
                 <div className="flex items-center gap-3 mb-4">
                   <Calculator className="w-6 h-6 text-blue-600" />
                   <div>
@@ -1680,7 +1680,7 @@ export default function Treasury() {
                 </div>
               </div>
 
-              <div className="p-4 bg-slate-50 rounded-sm border border-slate-200">
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
                 <p className="text-xs text-slate-500 uppercase tracking-wider mb-3">
                   Transfer Summary
                 </p>
@@ -1728,7 +1728,7 @@ export default function Treasury() {
                 <Button
                   onClick={verifyCaptchaAndTransfer}
                   disabled={!captchaAnswer || transferProcessing}
-                  className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider disabled:opacity-50"
+                  className="bg-primary text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider disabled:opacity-50"
                   data-testid="transfer-confirm-btn"
                 >
                   {transferProcessing ? "Processing..." : "Confirm Transfer"}
