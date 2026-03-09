@@ -515,6 +515,16 @@ export default function Reconciliation() {
   // Daily summary
   const [dailySummary, setDailySummary] = useState(null);
 
+  // Pending reconciliation
+  const [pendingItems, setPendingItems] = useState([]);
+  const [pendingLoading, setPendingLoading] = useState(false);
+  const [pendingSummary, setPendingSummary] = useState({ total: 0, dates: 0 });
+  const [pendingFilters, setPendingFilters] = useState({
+    dateFrom: "",
+    dateTo: "",
+    accountType: "all",
+  });
+
   // Fetch dates with transactions
   const fetchDatesWithTransactions = useCallback(async () => {
     try {
@@ -731,6 +741,42 @@ export default function Reconciliation() {
     };
     init();
   }, [fetchDatesWithTransactions, fetchAccounts, fetchReconHistory]);
+
+  // Fetch pending when tab changes or filters change
+  const fetchPendingReconciliation = useCallback(async () => {
+    setPendingLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (pendingFilters.dateFrom)
+        params.append("date_from", pendingFilters.dateFrom);
+      if (pendingFilters.dateTo)
+        params.append("date_to", pendingFilters.dateTo);
+      if (pendingFilters.accountType !== "all")
+        params.append("account_type", pendingFilters.accountType);
+      const response = await fetch(
+        `${API_URL}/api/reconciliation/pending?${params.toString()}`,
+        { headers: getAuthHeaders() },
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setPendingItems(data.items || []);
+        setPendingSummary({
+          total: data.total_pending_transactions || 0,
+          dates: data.unique_dates || 0,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching pending:", error);
+    } finally {
+      setPendingLoading(false);
+    }
+  }, [pendingFilters, getAuthHeaders]);
+
+  useEffect(() => {
+    if (activeTab === "pending") {
+      fetchPendingReconciliation();
+    }
+  }, [activeTab, fetchPendingReconciliation]);
 
   useEffect(() => {
     if (selectedAccount) {
@@ -974,6 +1020,9 @@ export default function Reconciliation() {
           </TabsTrigger>
           <TabsTrigger value="history" className="gap-2">
             <History className="w-4 h-4" /> History
+          </TabsTrigger>
+          <TabsTrigger value="pending" className="gap-2">
+            <Clock className="w-4 h-4" /> Pending
           </TabsTrigger>
         </TabsList>
 
@@ -1748,6 +1797,233 @@ export default function Reconciliation() {
               </ScrollArea>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Pending Tab */}
+        <TabsContent value="pending">
+          <div className="space-y-4">
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Card className="bg-yellow-50 border-yellow-200">
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-yellow-600 uppercase tracking-wider">
+                      Pending Transactions
+                    </p>
+                    <p className="text-3xl font-bold text-yellow-700">
+                      {pendingSummary.total}
+                    </p>
+                  </div>
+                  <Clock className="w-8 h-8 text-yellow-500 opacity-60" />
+                </CardContent>
+              </Card>
+              <Card className="bg-blue-50 border-blue-200">
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-blue-600 uppercase tracking-wider">
+                      Dates with Pending
+                    </p>
+                    <p className="text-3xl font-bold text-blue-700">
+                      {pendingSummary.dates}
+                    </p>
+                  </div>
+                  <CalendarDays className="w-8 h-8 text-blue-500 opacity-60" />
+                </CardContent>
+              </Card>
+              <Card className="bg-purple-50 border-purple-200">
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-purple-600 uppercase tracking-wider">
+                      Accounts
+                    </p>
+                    <p className="text-3xl font-bold text-purple-700">
+                      {pendingItems.length}
+                    </p>
+                  </div>
+                  <Building2 className="w-8 h-8 text-purple-500 opacity-60" />
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Filters */}
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="min-w-[120px]">
+                <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">
+                  From
+                </label>
+                <input
+                  type="date"
+                  value={pendingFilters.dateFrom}
+                  onChange={(e) =>
+                    setPendingFilters((p) => ({
+                      ...p,
+                      dateFrom: e.target.value,
+                    }))
+                  }
+                  className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-800"
+                />
+              </div>
+              <div className="min-w-[120px]">
+                <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">
+                  To
+                </label>
+                <input
+                  type="date"
+                  value={pendingFilters.dateTo}
+                  onChange={(e) =>
+                    setPendingFilters((p) => ({ ...p, dateTo: e.target.value }))
+                  }
+                  className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-800"
+                />
+              </div>
+              <div className="min-w-[130px]">
+                <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">
+                  Account Type
+                </label>
+                <select
+                  value={pendingFilters.accountType}
+                  onChange={(e) =>
+                    setPendingFilters((p) => ({
+                      ...p,
+                      accountType: e.target.value,
+                    }))
+                  }
+                  className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-800"
+                >
+                  <option value="all">All Types</option>
+                  <option value="treasury">Treasury</option>
+                  <option value="psp">PSP</option>
+                  <option value="exchanger">Exchanger</option>
+                </select>
+              </div>
+              {(pendingFilters.dateFrom ||
+                pendingFilters.dateTo ||
+                pendingFilters.accountType !== "all") && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    setPendingFilters({
+                      dateFrom: "",
+                      dateTo: "",
+                      accountType: "all",
+                    })
+                  }
+                  className="text-slate-500 hover:text-red-500 text-xs"
+                >
+                  <X className="w-3.5 h-3.5 mr-1" /> Clear
+                </Button>
+              )}
+            </div>
+
+            {/* Pending Items Table */}
+            <Card className="bg-white border-slate-200">
+              <CardHeader className="py-3">
+                <CardTitle className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-yellow-500" />
+                  Pending Reconciliation
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {pendingLoading ? (
+                  <div className="flex justify-center py-12">
+                    <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : pendingItems.length === 0 ? (
+                  <div className="text-center py-12 text-slate-400">
+                    <CheckCircle2 className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    <p className="font-medium">All caught up!</p>
+                    <p className="text-sm">No pending reconciliation items</p>
+                  </div>
+                ) : (
+                  <ScrollArea className="h-[500px]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-slate-200">
+                          <TableHead className="text-slate-500 text-xs font-bold uppercase">
+                            Date
+                          </TableHead>
+                          <TableHead className="text-slate-500 text-xs font-bold uppercase">
+                            Type
+                          </TableHead>
+                          <TableHead className="text-slate-500 text-xs font-bold uppercase">
+                            Account
+                          </TableHead>
+                          <TableHead className="text-slate-500 text-xs font-bold uppercase">
+                            Currency
+                          </TableHead>
+                          <TableHead className="text-slate-500 text-xs font-bold uppercase text-right">
+                            Pending Txns
+                          </TableHead>
+                          <TableHead className="text-slate-500 text-xs font-bold uppercase text-right">
+                            Total Amount
+                          </TableHead>
+                          <TableHead className="text-slate-500 text-xs font-bold uppercase text-right">
+                            Action
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {pendingItems.map((item, idx) => (
+                          <TableRow
+                            key={idx}
+                            className="border-slate-200 hover:bg-slate-50"
+                          >
+                            <TableCell className="font-mono text-sm text-slate-800">
+                              {item.date}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                className={
+                                  item.account_type === "treasury"
+                                    ? "bg-blue-100 text-blue-700 text-xs"
+                                    : item.account_type === "psp"
+                                      ? "bg-purple-100 text-purple-700 text-xs"
+                                      : "bg-orange-100 text-orange-700 text-xs"
+                                }
+                              >
+                                {item.account_type}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-slate-800 text-sm">
+                              {item.account_name}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="text-xs">
+                                {item.currency}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-yellow-600 font-bold">
+                              {item.pending_count}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-slate-800">
+                              {item.total_amount?.toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-blue-600 border-blue-200 hover:bg-blue-50 text-xs h-7"
+                                onClick={() => {
+                                  const d = new Date(item.date + "T12:00:00");
+                                  setSelectedDate(d);
+                                  setSelectedType(item.account_type);
+                                  setSelectedAccount(item.account_id);
+                                  setActiveTab("reconcile");
+                                }}
+                              >
+                                Reconcile
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
 

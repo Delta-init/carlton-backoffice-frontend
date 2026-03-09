@@ -113,6 +113,13 @@ export default function Settings() {
   const [sendingMonthlyReport, setSendingMonthlyReport] = useState(false);
   const [savingEmail, setSavingEmail] = useState(false);
 
+  // Manual FX Rates State
+  const [manualFxRates, setManualFxRates] = useState({});
+  const [fxRatesUpdatedAt, setFxRatesUpdatedAt] = useState(null);
+  const [fxRatesUpdatedBy, setFxRatesUpdatedBy] = useState(null);
+  const [savingFxRates, setSavingFxRates] = useState(false);
+  const [newFxCurrency, setNewFxCurrency] = useState("");
+
   const getAuthHeaders = () => {
     const token = localStorage.getItem("auth_token");
     return {
@@ -201,7 +208,45 @@ export default function Settings() {
     fetchRoles();
     fetchEmailSettings();
     fetchEmailLogs();
+    fetchManualFxRates();
   }, []);
+
+  const fetchManualFxRates = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/settings/manual-fx-rates`, {
+        headers: getAuthHeaders(),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setManualFxRates(data.rates || {});
+        setFxRatesUpdatedAt(data.updated_at);
+        setFxRatesUpdatedBy(data.updated_by_name);
+      }
+    } catch (error) {
+      console.error("Error fetching manual FX rates:", error);
+    }
+  };
+
+  const handleSaveFxRates = async () => {
+    setSavingFxRates(true);
+    try {
+      const response = await fetch(`${API_URL}/api/settings/manual-fx-rates`, {
+        method: "PUT",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ rates: manualFxRates }),
+      });
+      if (response.ok) {
+        toast.success("Manual FX rates saved");
+        fetchManualFxRates();
+      } else {
+        toast.error("Failed to save FX rates");
+      }
+    } catch (error) {
+      toast.error("Failed to save FX rates");
+    } finally {
+      setSavingFxRates(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1302,6 +1347,126 @@ export default function Settings() {
                     >
                       <Eye className="w-4 h-4 mr-2" />
                       Preview
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Manual FX Rates Card */}
+              <Card className="bg-white border-slate-200 md:col-span-2">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+                    <DollarSign className="w-5 h-5 text-green-400" />
+                    Manual FX Rates (1 unit = X USD)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-xs text-[#C5C6C7]">
+                    Set exchange rates for currency conversion in Treasury and
+                    Dashboard. These replace live FX rates.
+                  </p>
+
+                  {Object.keys(manualFxRates).length > 0 ? (
+                    <div className="space-y-2">
+                      {Object.entries(manualFxRates)
+                        .sort()
+                        .map(([currency, rate]) => (
+                          <div
+                            key={currency}
+                            className="flex items-center gap-2"
+                          >
+                            <span className="text-sm font-mono text-slate-800 w-16 font-bold">
+                              {currency}
+                            </span>
+                            <span className="text-xs text-[#C5C6C7]">
+                              1 {currency} =
+                            </span>
+                            <Input
+                              type="number"
+                              step="0.000001"
+                              value={rate}
+                              onChange={(e) =>
+                                setManualFxRates((prev) => ({
+                                  ...prev,
+                                  [currency]: parseFloat(e.target.value) || 0,
+                                }))
+                              }
+                              className="w-32 bg-slate-50 border-slate-200 text-white text-sm"
+                            />
+                            <span className="text-xs text-[#C5C6C7]">USD</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0 text-red-400 hover:text-red-600"
+                              onClick={() => {
+                                const r = { ...manualFxRates };
+                                delete r[currency];
+                                setManualFxRates(r);
+                              }}
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-[#C5C6C7]">
+                      No manual rates set. USD equivalents won't be shown for
+                      non-USD accounts.
+                    </p>
+                  )}
+
+                  <div className="flex items-center gap-2 pt-2 border-t border-slate-200">
+                    <Input
+                      placeholder="Currency code (e.g., INR)"
+                      value={newFxCurrency}
+                      onChange={(e) =>
+                        setNewFxCurrency(e.target.value.toUpperCase())
+                      }
+                      className="w-40 bg-slate-50 border-slate-200 text-white text-sm"
+                      data-testid="new-fx-currency"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (newFxCurrency && newFxCurrency.length >= 3) {
+                          setManualFxRates((prev) => ({
+                            ...prev,
+                            [newFxCurrency]: 0,
+                          }));
+                          setNewFxCurrency("");
+                        }
+                      }}
+                      className="text-green-400 border-green-400/30 hover:bg-green-400/10"
+                      data-testid="add-fx-currency-btn"
+                    >
+                      + Add Currency
+                    </Button>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-[#C5C6C7]">
+                      {fxRatesUpdatedAt && (
+                        <span>
+                          Last updated:{" "}
+                          {new Date(fxRatesUpdatedAt).toLocaleString()}
+                          {fxRatesUpdatedBy && ` by ${fxRatesUpdatedBy}`}
+                        </span>
+                      )}
+                    </div>
+                    <Button
+                      onClick={handleSaveFxRates}
+                      disabled={savingFxRates}
+                      className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold"
+                      data-testid="save-fx-rates-btn"
+                    >
+                      {savingFxRates ? (
+                        <div className="w-4 h-4 border-2 border-[#0B0C10] border-t-transparent rounded-full animate-spin mr-2" />
+                      ) : (
+                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                      )}
+                      Save FX Rates
                     </Button>
                   </div>
                 </CardContent>

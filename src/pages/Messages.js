@@ -74,22 +74,18 @@ export default function Messages() {
 
   const isAdmin = user?.role === "admin";
 
-  // Fetch all users
-  const fetchUsers = useCallback(async () => {
+const fetchUsers = useCallback(async () => {
     try {
-      const response = await fetch(`${API_URL}/api/users`, {
-        headers: getAuthHeaders(),
-      });
+      const response = await fetch(`${API_URL}/api/messages/users`, { headers: getAuthHeaders() });
       if (response.ok) {
-        const data = await response.json();
-        // Filter out current user
-        setUsers(data.filter((u) => u.user_id !== user?.user_id));
+        setUsers(await response.json());
       }
     } catch (error) {
-      console.error("Error fetching users:", error);
+      console.error('Error fetching users:', error);
     }
-  }, [getAuthHeaders, user]);
+  }, [getAuthHeaders]);
 
+  
   // Fetch conversations
   const fetchConversations = useCallback(async () => {
     try {

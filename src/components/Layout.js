@@ -172,12 +172,7 @@ export default function Layout() {
     { to: "/audit", icon: ShieldCheck, label: "Audit", module: "audit" },
     { to: "/logs", icon: ScrollText, label: "Logs", module: "logs" },
     { to: "/reports", icon: BarChart3, label: "Reports", module: "reports" },
-    {
-      to: "/accountant",
-      icon: ClipboardCheck,
-      label: "Approvals",
-      module: "transactions",
-    },
+   { to: '/accountant', icon: ClipboardCheck, label: 'Approvals', module: 'approvals' },
     {
       to: "/roles",
       icon: Shield,
