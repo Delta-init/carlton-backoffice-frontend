@@ -133,7 +133,7 @@ export default function Login() {
       </div>
 
       {/* Right Panel - Login Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-slate-50">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-card">
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
@@ -212,23 +212,23 @@ export default function Login() {
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                       <Input id="email" type="email" placeholder="admin@fxbroker.com" value={email} onChange={(e) => setEmail(e.target.value)}
-                        className="pl-10 bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:ring-blue-500 font-mono" data-testid="login-email-input" required />
+                        className="pl-10 bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-primary focus:ring-primary font-mono" data-testid="login-email-input" required />
                     </div>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
                       <Label htmlFor="password" className="text-slate-600 text-xs uppercase tracking-wider">Password</Label>
-                      <button type="button" className="text-xs text-blue-600 hover:text-blue-700 font-medium" onClick={() => { setForgotStep('email'); setResetEmail(email); }} data-testid="forgot-password-link">
+                      <button type="button" className="text-xs text-primary hover:text-primary/80 font-medium" onClick={() => { setForgotStep('email'); setResetEmail(email); }} data-testid="forgot-password-link">
                         Forgot Password?
                       </button>
                     </div>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                       <Input id="password" type="password" placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)}
-                        className="pl-10 bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:ring-blue-500" data-testid="login-password-input" required />
+                        className="pl-10 bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-primary focus:ring-primary" data-testid="login-password-input" required />
                     </div>
                   </div>
-                  <Button type="submit" disabled={isLoading} className="w-full bg-blue-600 text-white hover:bg-blue-700 font-bold uppercase tracking-wider rounded-xl shadow-sm" data-testid="login-submit-btn">
+                  <Button type="submit" disabled={isLoading} className="w-full bg-primary text-white hover:bg-primary/80 font-bold uppercase tracking-wider rounded-xl shadow-sm" data-testid="login-submit-btn">
                     {isLoading ? 'Signing in...' : 'Sign In'}
                   </Button>
                 </form>
@@ -247,7 +247,7 @@ export default function Login() {
                       data-testid="otp-input" maxLength={6} autoFocus required />
                   </div>
                   <Button type="submit" disabled={isLoading || otpCode.length !== 6}
-                    className="w-full bg-blue-600 text-white hover:bg-blue-700 font-bold uppercase tracking-wider rounded-xl shadow-sm" data-testid="otp-submit-btn">
+                    className="w-full bg-primary text-white hover:bg-primary/80 font-bold uppercase tracking-wider rounded-xl shadow-sm" data-testid="otp-submit-btn">
                     {isLoading ? 'Verifying...' : 'Verify & Sign In'}
                   </Button>
                   <Button type="button" variant="ghost" className="w-full text-slate-500" onClick={() => { setOtpStep(false); setOtpCode(''); }}>
