@@ -428,6 +428,9 @@ export default function Transactions() {
       if (formData.reference) {
         formDataToSend.append("reference", formData.reference);
       }
+      if (formData.crm_reference) {
+        formDataToSend.append("crm_reference", formData.crm_reference);
+      }
       // Transaction mode and collecting person
       formDataToSend.append(
         "transaction_mode",
@@ -546,9 +549,7 @@ export default function Transactions() {
       tx.client_name || getClientName(tx.client_id)
     ).toLowerCase();
     const ref = (tx.reference || "").toLowerCase();
-    const matchesSearch =
-      clientName.includes(searchTerm.toLowerCase()) ||
-      ref.includes(searchTerm.toLowerCase());
+    const crmRef = (tx.crm_reference || "").toLowerCase();
     const matchesType =
       typeFilter === "all" || tx.transaction_type === typeFilter;
     const matchesStatus = statusFilter === "all" || tx.status === statusFilter;
@@ -1946,6 +1947,24 @@ export default function Transactions() {
 
                 <div className="space-y-2">
                   <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                    CRM Reference (Optional, Unique)
+                  </Label>
+                  <Input
+                    value={formData.crm_reference || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        crm_reference: e.target.value,
+                      })
+                    }
+                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
+                    placeholder="Enter CRM reference number"
+                    data-testid="tx-crm-reference"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
                     Description
                   </Label>
                   <Textarea
@@ -2191,6 +2210,9 @@ export default function Transactions() {
                     Reference
                   </TableHead>
                   <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                    CRM Ref
+                  </TableHead>
+                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
                     Client
                   </TableHead>
                   <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
@@ -2219,14 +2241,14 @@ export default function Transactions() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8">
-                      <div className="w-6 h-6 border-2 border-[#1FA21B] border-t-transparent rounded-full animate-spin mx-auto" />
+                    <TableCell colSpan={10} className="text-center py-8">
+                      <div className="w-6 h-6 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
                 ) : filteredTransactions.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={9}
+                      colSpan={10}
                       className="text-center py-8 text-slate-500"
                     >
                       No transactions found
@@ -2265,6 +2287,9 @@ export default function Transactions() {
                             </span>
                           )}
                         </div>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs text-purple-600">
+                        {tx.crm_reference || "-"}
                       </TableCell>
                       <TableCell className="text-slate-800">
                         {tx.client_name || getClientName(tx.client_id)}

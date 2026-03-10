@@ -1,4 +1,10 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -9,15 +15,17 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [impersonating, setImpersonating] = useState(false);
   const [impersonationLogId, setImpersonationLogId] = useState(null);
-  const [adminName, setAdminName] = useState('');
+  const [adminName, setAdminName] = useState("");
 
   // Restore impersonation state on mount
   useEffect(() => {
-    const savedAdmin = sessionStorage.getItem('admin_token');
+    const savedAdmin = sessionStorage.getItem("admin_token");
     if (savedAdmin) {
       setImpersonating(true);
-      setImpersonationLogId(sessionStorage.getItem('impersonation_log_id') || null);
-      setAdminName(sessionStorage.getItem('admin_name') || 'Admin');
+      setImpersonationLogId(
+        sessionStorage.getItem("impersonation_log_id") || null,
+      );
+      setAdminName(sessionStorage.getItem("admin_name") || "Admin");
     }
   }, []);
 
@@ -26,34 +34,34 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const checkAuth = async () => {
-    const token = localStorage.getItem('auth_token');
+    const token = localStorage.getItem("auth_token");
     if (token) {
       try {
         const response = await fetch(`${API_URL}/api/auth/me`, {
-          headers: { 'Authorization': `Bearer ${token}` },
-          credentials: 'include'
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
         });
         if (response.ok) {
           const userData = await response.json();
           setUser(userData);
         } else {
-          localStorage.removeItem('auth_token');
+          localStorage.removeItem("auth_token");
         }
       } catch (error) {
-        console.error('Auth check failed:', error);
-        localStorage.removeItem('auth_token');
+        console.error("Auth check failed:", error);
+        localStorage.removeItem("auth_token");
       }
     } else {
       try {
         const response = await fetch(`${API_URL}/api/auth/me`, {
-          credentials: 'include'
+          credentials: "include",
         });
         if (response.ok) {
           const userData = await response.json();
           setUser(userData);
         }
       } catch (error) {
-        console.error('Session check failed:', error);
+        console.error("Session check failed:", error);
       }
     }
     setLoading(false);
@@ -61,38 +69,65 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     const response = await fetch(`${API_URL}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
-      credentials: 'include'
+      credentials: "include",
     });
 
     const data = await response.json();
     if (!response.ok) {
-      throw new Error(data.detail || 'Login failed');
+      throw new Error(data.detail || "Login failed");
+    }
+    // Check if 2FA is required
+    if (data.requires_2fa) {
+      return {
+        requires_2fa: true,
+        email,
+        message: data.message,
+        user: data.user,
+      };
     }
 
-    localStorage.setItem('auth_token', data.access_token);
+    localStorage.setItem("auth_token", data.access_token);
+    setUser(data.user);
+    return data.user;
+  };
+
+  const verifyOtp = async (email, otpCode) => {
+    const response = await fetch(`${API_URL}/api/auth/verify-otp`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, otp_code: otpCode }),
+      credentials: "include",
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.detail || "Verification failed");
+    }
+
+    localStorage.setItem("auth_token", data.access_token);
     setUser(data.user);
     return data.user;
   };
 
   const loginWithGoogle = () => {
     // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
-    const redirectUrl = window.location.origin + '/dashboard';
+    const redirectUrl = window.location.origin + "/dashboard";
     window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
   };
 
   const processGoogleSession = async (sessionId) => {
     const response = await fetch(`${API_URL}/api/auth/session`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ session_id: sessionId }),
-      credentials: 'include'
+      credentials: "include",
     });
 
     if (!response.ok) {
-      throw new Error('Google authentication failed');
+      throw new Error("Google authentication failed");
     }
 
     const userData = await response.json();
@@ -103,125 +138,156 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       await fetch(`${API_URL}/api/auth/logout`, {
-        method: 'POST',
-        credentials: 'include'
+        method: "POST",
+        credentials: "include",
       });
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
     }
-    localStorage.removeItem('auth_token');
+    localStorage.removeItem("auth_token");
     // Clear impersonation state on full logout
-    sessionStorage.removeItem('admin_token');
-    sessionStorage.removeItem('admin_name');
-    sessionStorage.removeItem('impersonation_log_id');
+    sessionStorage.removeItem("admin_token");
+    sessionStorage.removeItem("admin_name");
+    sessionStorage.removeItem("impersonation_log_id");
     setImpersonating(false);
     setImpersonationLogId(null);
-    setAdminName('');
+    setAdminName("");
     setUser(null);
   };
 
-  const startImpersonation = useCallback(async (targetUserId) => {
-    const token = localStorage.getItem('auth_token');
-    const response = await fetch(`${API_URL}/api/admin/impersonate/${targetUserId}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-      },
-      credentials: 'include'
-    });
+  // Auto-logout: check JWT expiry every minute
+  useEffect(() => {
+    const checkTokenExpiry = () => {
+      const token = localStorage.getItem("auth_token");
+      if (!token) return;
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        const expiresAt = payload.exp * 1000;
+        const now = Date.now();
+        if (now >= expiresAt) {
+          localStorage.removeItem("auth_token");
+          setUser(null);
+          window.location.href = "/login";
+        }
+      } catch (e) {
+        /* invalid token */
+      }
+    };
+    const interval = setInterval(checkTokenExpiry, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
-    if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.detail || 'Impersonation failed');
-    }
+  const startImpersonation = useCallback(
+    async (targetUserId) => {
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(
+        `${API_URL}/api/admin/impersonate/${targetUserId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          credentials: "include",
+        },
+      );
 
-    const data = await response.json();
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.detail || "Impersonation failed");
+      }
 
-    // Save admin token securely in sessionStorage
-    sessionStorage.setItem('admin_token', token);
-    sessionStorage.setItem('admin_name', user?.name || 'Admin');
-    sessionStorage.setItem('impersonation_log_id', data.impersonation_log_id);
+      const data = await response.json();
 
-    // Switch to impersonated user token
-    localStorage.setItem('auth_token', data.access_token);
-    setUser(data.user);
-    setImpersonating(true);
-    setImpersonationLogId(data.impersonation_log_id);
-    setAdminName(user?.name || 'Admin');
+      // Save admin token securely in sessionStorage
+      sessionStorage.setItem("admin_token", token);
+      sessionStorage.setItem("admin_name", user?.name || "Admin");
+      sessionStorage.setItem("impersonation_log_id", data.impersonation_log_id);
 
-    return data.user;
-  }, [user]);
+      // Switch to impersonated user token
+      localStorage.setItem("auth_token", data.access_token);
+      setUser(data.user);
+      setImpersonating(true);
+      setImpersonationLogId(data.impersonation_log_id);
+      setAdminName(user?.name || "Admin");
+
+      return data.user;
+    },
+    [user],
+  );
 
   const stopImpersonation = useCallback(async () => {
-    const adminToken = sessionStorage.getItem('admin_token');
-    const logId = sessionStorage.getItem('impersonation_log_id');
+    const adminToken = sessionStorage.getItem("admin_token");
+    const logId = sessionStorage.getItem("impersonation_log_id");
 
     // End impersonation on server
     try {
-      const currentToken = localStorage.getItem('auth_token');
+      const currentToken = localStorage.getItem("auth_token");
       await fetch(`${API_URL}/api/admin/stop-impersonate`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          ...(currentToken ? { 'Authorization': `Bearer ${currentToken}` } : {})
+          "Content-Type": "application/json",
+          ...(currentToken ? { Authorization: `Bearer ${currentToken}` } : {}),
         },
-        credentials: 'include',
-        body: JSON.stringify({ log_id: logId })
+        credentials: "include",
+        body: JSON.stringify({ log_id: logId }),
       });
     } catch (error) {
-      console.error('Stop impersonation log error:', error);
+      console.error("Stop impersonation log error:", error);
     }
 
     // Restore admin token
     if (adminToken) {
-      localStorage.setItem('auth_token', adminToken);
+      localStorage.setItem("auth_token", adminToken);
     }
 
     // Clear impersonation state
-    sessionStorage.removeItem('admin_token');
-    sessionStorage.removeItem('admin_name');
-    sessionStorage.removeItem('impersonation_log_id');
+    sessionStorage.removeItem("admin_token");
+    sessionStorage.removeItem("admin_name");
+    sessionStorage.removeItem("impersonation_log_id");
     setImpersonating(false);
     setImpersonationLogId(null);
-    setAdminName('');
+    setAdminName("");
 
     // Reload admin user profile
     try {
       const response = await fetch(`${API_URL}/api/auth/me`, {
-        headers: { 'Authorization': `Bearer ${adminToken}` },
-        credentials: 'include'
+        headers: { Authorization: `Bearer ${adminToken}` },
+        credentials: "include",
       });
       if (response.ok) {
         const adminUser = await response.json();
         setUser(adminUser);
       }
     } catch (error) {
-      console.error('Failed to restore admin session:', error);
+      console.error("Failed to restore admin session:", error);
     }
   }, []);
 
   // Helper function to get auth headers for API calls
   const getAuthHeaders = useCallback(() => {
-    const token = localStorage.getItem('auth_token');
-    return token ? { 'Authorization': `Bearer ${token}` } : {};
+    const token = localStorage.getItem("auth_token");
+    return token ? { Authorization: `Bearer ${token}` } : {};
   }, []);
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      loading,
-      login,
-      loginWithGoogle,
-      processGoogleSession,
-      logout,
-      checkAuth,
-      getAuthHeaders,
-      impersonating,
-      adminName,
-      startImpersonation,
-      stopImpersonation,
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        login,
+        verifyOtp,
+        loginWithGoogle,
+        processGoogleSession,
+        logout,
+        checkAuth,
+        getAuthHeaders,
+        impersonating,
+        adminName,
+        startImpersonation,
+        stopImpersonation,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -230,7 +296,7 @@ export const AuthProvider = ({ children }) => {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
