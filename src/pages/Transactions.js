@@ -735,6 +735,7 @@ export default function Transactions() {
     const matchesType =
       typeFilter === "all" || tx.transaction_type === typeFilter;
     const matchesStatus = statusFilter === "all" || tx.status === statusFilter;
+     const matchesSearch = clientName.includes(searchTerm.toLowerCase()) || ref.includes(searchTerm.toLowerCase()) || crmRef.includes(searchTerm.toLowerCase());
     const matchesDestination =
       destinationFilter === "all" || tx.destination_type === destinationFilter;
 
