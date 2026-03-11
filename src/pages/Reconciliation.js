@@ -546,39 +546,40 @@ export default function Reconciliation() {
     }
   }, [getAuthHeaders]);
 
-  // Fetch accounts
+ // Fetch accounts
+   // Fetch accounts
   const fetchAccounts = useCallback(async () => {
     try {
       const [treasuryRes, pspRes, exchangerRes] = await Promise.all([
-        fetch(`${API_URL}/api/treasury`, { headers: getAuthHeaders() }),
+        fetch(`${API_URL}/api/treasury?page_size=200`, { headers: getAuthHeaders() }),
         fetch(`${API_URL}/api/psp`, { headers: getAuthHeaders() }),
-        fetch(`${API_URL}/api/vendors?page_size=100`, {
-          headers: getAuthHeaders(),
-        }),
+        fetch(`${API_URL}/api/vendors?page_size=100`, { headers: getAuthHeaders() })
       ]);
-
+      
       if (treasuryRes.ok) {
         const data = await treasuryRes.json();
-        setTreasuryAccounts(Array.isArray(data) ? data : []);
+        setTreasuryAccounts(data.items || (Array.isArray(data) ? data : []));
       } else {
-        console.error("Error fetching treasury:", treasuryRes.status);
+        console.error('Error fetching treasury:', treasuryRes.status);
       }
       if (pspRes.ok) {
         const data = await pspRes.json();
         setPsps(Array.isArray(data) ? data : []);
       } else {
-        console.error("Error fetching psps:", pspRes.status);
+        console.error('Error fetching psps:', pspRes.status);
       }
       if (exchangerRes.ok) {
         const data = await exchangerRes.json();
         setExchangers(data.items || data || []);
       } else {
-        console.error("Error fetching exchangers:", exchangerRes.status);
+        console.error('Error fetching exchangers:', exchangerRes.status);
       }
     } catch (error) {
-      console.error("Error fetching accounts:", error);
+      console.error('Error fetching accounts:', error);
     }
   }, [getAuthHeaders]);
+
+
 
   // Fetch daily summary
   const fetchDailySummary = useCallback(

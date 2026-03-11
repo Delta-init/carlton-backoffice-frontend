@@ -116,49 +116,28 @@ export default function Debts() {
     };
   };
 
-  const fetchData = async () => {
+   const fetchData = async () => {
     setLoading(true);
     try {
-      const [debtsRes, summaryRes, clientsRes, vendorsRes, treasuryRes] =
-        await Promise.all([
-          fetch(`${API_URL}/api/debts`, {
-            headers: getAuthHeaders(),
-            credentials: "include",
-          }),
-          fetch(`${API_URL}/api/debts/summary/overview`, {
-            headers: getAuthHeaders(),
-            credentials: "include",
-          }),
-          fetch(`${API_URL}/api/clients?page_size=200`, {
-            headers: getAuthHeaders(),
-            credentials: "include",
-          }),
-          fetch(`${API_URL}/api/vendors?page_size=200`, {
-            headers: getAuthHeaders(),
-            credentials: "include",
-          }),
-          fetch(`${API_URL}/api/treasury`, {
-            headers: getAuthHeaders(),
-            credentials: "include",
-          }),
-        ]);
+      const [debtsRes, summaryRes, clientsRes, vendorsRes, treasuryRes] = await Promise.all([
+        fetch(`${API_URL}/api/debts`, { headers: getAuthHeaders(), credentials: 'include' }),
+        fetch(`${API_URL}/api/debts/summary/overview`, { headers: getAuthHeaders(), credentials: 'include' }),
+        fetch(`${API_URL}/api/clients?page_size=200`, { headers: getAuthHeaders(), credentials: 'include' }),
+        fetch(`${API_URL}/api/vendors?page_size=200`, { headers: getAuthHeaders(), credentials: 'include' }),
+        fetch(`${API_URL}/api/treasury?page_size=200`, { headers: getAuthHeaders(), credentials: 'include' }),
+      ]);
 
       if (debtsRes.ok) setDebts(await debtsRes.json());
       if (summaryRes.ok) setSummary(await summaryRes.json());
-      if (clientsRes.ok) {
-        const d = await clientsRes.json();
-        setClients(d.items || d);
-      }
+      if (clientsRes.ok) { const d = await clientsRes.json(); setClients(d.items || d); }
       if (vendorsRes.ok) {
         const vendorData = await vendorsRes.json();
-        setExchangers(
-          vendorData.items || (Array.isArray(vendorData) ? vendorData : []),
-        );
+        setExchangers(vendorData.items || (Array.isArray(vendorData) ? vendorData : []));
       }
-      if (treasuryRes.ok) setTreasuryAccounts(await treasuryRes.json());
+      if (treasuryRes.ok) { const d = await treasuryRes.json(); setTreasuryAccounts(d.items || d); }
     } catch (error) {
-      console.error("Error fetching data:", error);
-      toast.error("Failed to load data");
+      console.error('Error fetching data:', error);
+      toast.error('Failed to load data');
     } finally {
       setLoading(false);
     }

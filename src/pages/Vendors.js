@@ -1,14 +1,9 @@
-import { useEffect, useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
-import { Badge } from "../components/ui/badge";
+import { useEffect, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Badge } from '../components/ui/badge';
 import {
   Table,
   TableBody,
@@ -16,35 +11,35 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "../components/ui/table";
+} from '../components/ui/table';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "../components/ui/dialog";
+} from '../components/ui/dialog';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../components/ui/select";
+} from '../components/ui/select';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "../components/ui/dropdown-menu";
-import { Textarea } from "../components/ui/textarea";
-import { ScrollArea } from "../components/ui/scroll-area";
+} from '../components/ui/dropdown-menu';
+import { Textarea } from '../components/ui/textarea';
+import { ScrollArea } from '../components/ui/scroll-area';
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "../components/ui/tabs";
+} from '../components/ui/tabs';
 import {
   Pagination,
   PaginationContent,
@@ -52,9 +47,9 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from "../components/ui/pagination";
-import { toast } from "sonner";
-import { useAuth } from "../context/AuthContext";
+} from '../components/ui/pagination';
+import { toast } from 'sonner';
+import { useAuth } from '../context/AuthContext';
 import {
   Store,
   Plus,
@@ -78,7 +73,7 @@ import {
   ChevronLeft,
   ChevronRight,
   RefreshCw,
-} from "lucide-react";
+} from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -100,55 +95,49 @@ export default function Exchangers() {
   const [statementOpen, setStatementOpen] = useState(false);
   const [statementLoading, setStatementLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [settlementType, setSettlementType] = useState("bank");
-  const [settlementDestination, setSettlementDestination] = useState("");
-  const [settlementCommission, setSettlementCommission] = useState("");
-  const [settlementCharges, setSettlementCharges] = useState("");
-  const [settlementChargesDescription, setSettlementChargesDescription] =
-    useState("");
-  const [settlementAmountInDestCurrency, setSettlementAmountInDestCurrency] =
-    useState("");
-
+  const [settlementType, setSettlementType] = useState('bank');
+  const [settlementDestination, setSettlementDestination] = useState('');
+  const [settlementCommission, setSettlementCommission] = useState('');
+  const [settlementCharges, setSettlementCharges] = useState('');
+  const [settlementChargesDescription, setSettlementChargesDescription] = useState('');
+  const [settlementAmountInDestCurrency, setSettlementAmountInDestCurrency] = useState('');
+  
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
   const pageSize = 10;
-
+  
   const [formData, setFormData] = useState({
-    vendor_name: "",
-    email: "",
-    password: "",
-    deposit_commission: "",
-    withdrawal_commission: "",
-    deposit_commission_cash: "",
-    withdrawal_commission_cash: "",
-    description: "",
-    status: "active",
+    vendor_name: '',
+    email: '',
+    password: '',
+    deposit_commission: '',
+    withdrawal_commission: '',
+    deposit_commission_cash: '',
+    withdrawal_commission_cash: '',
+    description: '',
+    status: 'active',
   });
 
-  const isAdmin = user?.role === "admin";
-  const isAccountantOrAdmin =
-    user?.role === "admin" || user?.role === "accountant";
+  const isAdmin = user?.role === 'admin';
+  const isAccountantOrAdmin = user?.role === 'admin' || user?.role === 'accountant';
 
   const getAuthHeaders = () => {
-    const token = localStorage.getItem("auth_token");
+    const token = localStorage.getItem('auth_token');
     return {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     };
   };
 
-  const fetchExchangers = async (page = 1, search = "") => {
+  const fetchExchangers = async (page = 1, search = '') => {
     setLoading(true);
     try {
       let url = `${API_URL}/api/vendors?page=${page}&page_size=${pageSize}`;
       if (search) url += `&search=${encodeURIComponent(search)}`;
-      const response = await fetch(url, {
-        headers: getAuthHeaders(),
-        credentials: "include",
-      });
+      const response = await fetch(url, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
         // Handle paginated response format
@@ -165,8 +154,8 @@ export default function Exchangers() {
         }
       }
     } catch (error) {
-      console.error("Error fetching vendors:", error);
-      toast.error("Failed to load vendors");
+      console.error('Error fetching vendors:', error);
+      toast.error('Failed to load vendors');
     } finally {
       setLoading(false);
     }
@@ -174,15 +163,13 @@ export default function Exchangers() {
 
   const fetchTreasuryAccounts = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/treasury`, {
-        headers: getAuthHeaders(),
-        credentials: "include",
-      });
+      const response = await fetch(`${API_URL}/api/treasury?page_size=200`, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
-        setTreasuryAccounts(await response.json());
+        const d = await response.json();
+        setTreasuryAccounts(d.items || d);
       }
     } catch (error) {
-      console.error("Error fetching treasury accounts:", error);
+      console.error('Error fetching treasury accounts:', error);
     }
   };
 

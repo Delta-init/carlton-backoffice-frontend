@@ -34,6 +34,7 @@ import {
 import { toast } from "sonner";
 import { useAutoRefresh } from "../hooks/useAutoRefresh";
 import { useAuth } from "../context/AuthContext";
+import PaginationControls from "../components/PaginationControls";
 import {
   Store,
   ArrowDownRight,
@@ -115,15 +116,19 @@ export default function ExchangerDashboard() {
   const [txPage, setTxPage] = useState(1);
   const [txTotalPages, setTxTotalPages] = useState(1);
   const [txTotal, setTxTotal] = useState(0);
+  const [txPageSize, setTxPageSize] = useState(20);
   const [iePage, setIePage] = useState(1);
   const [ieTotalPages, setIeTotalPages] = useState(1);
   const [ieTotal, setIeTotal] = useState(0);
+  const [iePageSize, setIePageSize] = useState(20);
   const [loanTxPage, setLoanTxPage] = useState(1);
   const [loanTxTotalPages, setLoanTxTotalPages] = useState(1);
   const [loanTxTotal, setLoanTxTotal] = useState(0);
+  const [loanTxPageSize, setLoanTxPageSize] = useState(20);
   const [stPage, setStPage] = useState(1);
   const [stTotalPages, setStTotalPages] = useState(1);
   const [stTotal, setStTotal] = useState(0);
+  const [stPageSize, setStPageSize] = useState(20);
 
   // Other Transactions filter state
   const [otSearchQuery, setOtSearchQuery] = useState("");
@@ -182,7 +187,7 @@ export default function ExchangerDashboard() {
       if (txDateFrom) params.append("date_from", txDateFrom);
       if (txDateTo) params.append("date_to", txDateTo);
       params.append("page", p);
-      params.append("page_size", 20);
+      params.append("page_size", txPageSize);
       const qs = `?${params.toString()}`;
       const response = await fetch(`${API_URL}/api/vendor/transactions${qs}`, {
         headers: getAuthHeaders(),
@@ -204,7 +209,7 @@ export default function ExchangerDashboard() {
     try {
       const p = pg || stPage;
       const response = await fetch(
-        `${API_URL}/api/vendor/settlements?page=${p}&page_size=20`,
+        `${API_URL}/api/vendor/settlements?page=${p}&page_size=${stPageSize}`,
         {
           headers: getAuthHeaders(),
           credentials: "include",
@@ -225,7 +230,7 @@ export default function ExchangerDashboard() {
     try {
       const p = pg || iePage;
       const response = await fetch(
-        `${API_URL}/api/vendor/income-expenses?page=${p}&page_size=20`,
+        `${API_URL}/api/vendor/income-expenses?page=${p}&page_size=${iePageSize}`,
         {
           headers: getAuthHeaders(),
           credentials: "include",
@@ -246,7 +251,7 @@ export default function ExchangerDashboard() {
     try {
       const p = pg || loanTxPage;
       const response = await fetch(
-        `${API_URL}/api/vendor/loan-transactions?page=${p}&page_size=20`,
+        `${API_URL}/api/vendor/loan-transactions?page=${p}&page_size=${loanTxPageSize}`,
         {
           headers: getAuthHeaders(),
           credentials: "include",
@@ -1631,60 +1636,21 @@ export default function ExchangerDashboard() {
                 </Table>
               </ScrollArea>
             </CardContent>
-            {txTotalPages > 1 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200">
-                <span className="text-xs text-slate-400">
-                  Showing page {txPage} of {txTotalPages} ({txTotal} total)
-                </span>
-                <div className="flex gap-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={txPage <= 1}
-                    onClick={() => {
-                      setTxPage(txPage - 1);
-                      fetchTransactions(txPage - 1);
-                    }}
-                    className="h-7 px-2 text-xs"
-                  >
-                    Prev
-                  </Button>
-                  {Array.from({ length: Math.min(txTotalPages, 5) }, (_, i) => {
-                    const p =
-                      txTotalPages <= 5
-                        ? i + 1
-                        : Math.max(1, Math.min(txPage - 2, txTotalPages - 4)) +
-                          i;
-                    return (
-                      <Button
-                        key={p}
-                        variant={p === txPage ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => {
-                          setTxPage(p);
-                          fetchTransactions(p);
-                        }}
-                        className="h-7 w-7 px-0 text-xs"
-                      >
-                        {p}
-                      </Button>
-                    );
-                  })}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={txPage >= txTotalPages}
-                    onClick={() => {
-                      setTxPage(txPage + 1);
-                      fetchTransactions(txPage + 1);
-                    }}
-                    className="h-7 px-2 text-xs"
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
-            )}
+            <PaginationControls
+              currentPage={txPage}
+              totalPages={txTotalPages}
+              totalItems={txTotal}
+              pageSize={txPageSize}
+              onPageChange={(p) => {
+                setTxPage(p);
+                fetchTransactions(p);
+              }}
+              onPageSizeChange={(s) => {
+                setTxPageSize(s);
+                setTxPage(1);
+                fetchTransactions(1);
+              }}
+            />
           </Card>
         </TabsContent>
 
@@ -2118,6 +2084,21 @@ export default function ExchangerDashboard() {
               )}
             </CardContent>
           </Card>
+          <PaginationControls
+            currentPage={iePage}
+            totalPages={ieTotalPages}
+            totalItems={ieTotal}
+            pageSize={iePageSize}
+            onPageChange={(p) => {
+              setIePage(p);
+              fetchIeEntries(p);
+            }}
+            onPageSizeChange={(s) => {
+              setIePageSize(s);
+              setIePage(1);
+              fetchIeEntries(1);
+            }}
+          />
         </TabsContent>
 
         {/* Settlements Tab */}
@@ -2371,6 +2352,21 @@ export default function ExchangerDashboard() {
               )}
             </CardContent>
           </Card>
+          <PaginationControls
+            currentPage={stPage}
+            totalPages={stTotalPages}
+            totalItems={stTotal}
+            pageSize={stPageSize}
+            onPageChange={(p) => {
+              setStPage(p);
+              fetchSettlements(p);
+            }}
+            onPageSizeChange={(s) => {
+              setStPageSize(s);
+              setStPage(1);
+              fetchSettlements(1);
+            }}
+          />
         </TabsContent>
       </Tabs>
 

@@ -8,6 +8,9 @@ import {
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
+
+import PaginationControls from "../components/PaginationControls";
+
 import { Badge } from "../components/ui/badge";
 import { useAutoRefresh } from "../hooks/useAutoRefresh";
 import {
@@ -222,27 +225,30 @@ export default function Transactions() {
     }
   };
 
-const fetchClients = async () => {
+  const fetchClients = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/clients?page_size=200`, { headers: getAuthHeaders(), credentials: 'include' });
+      const response = await fetch(`${API_URL}/api/clients?page_size=200`, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
       if (response.ok) {
         const data = await response.json();
         setClients(data.items || data);
       }
     } catch (error) {
-      console.error('Error fetching clients:', error);
+      console.error("Error fetching clients:", error);
     }
   };
-  
 
   const fetchTreasuryAccounts = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/treasury`, {
+      const response = await fetch(`${API_URL}/api/treasury?page_size=200`, {
         headers: getAuthHeaders(),
         credentials: "include",
       });
       if (response.ok) {
-        setTreasuryAccounts(await response.json());
+        const d = await response.json();
+        setTreasuryAccounts(d.items || d);
       }
     } catch (error) {
       console.error("Error fetching treasury accounts:", error);
@@ -2428,64 +2434,21 @@ const fetchClients = async () => {
       </Card>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-center mt-6">
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  onClick={() => {
-                    if (currentPage > 1) {
-                      setCurrentPage(currentPage - 1);
-                      fetchTransactions(currentPage - 1);
-                    }
-                  }}
-                  className={`cursor-pointer ${currentPage === 1 ? "pointer-events-none opacity-50" : ""}`}
-                />
-              </PaginationItem>
-
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let pageNum;
-                if (totalPages <= 5) {
-                  pageNum = i + 1;
-                } else if (currentPage <= 3) {
-                  pageNum = i + 1;
-                } else if (currentPage >= totalPages - 2) {
-                  pageNum = totalPages - 4 + i;
-                } else {
-                  pageNum = currentPage - 2 + i;
-                }
-                return (
-                  <PaginationItem key={pageNum}>
-                    <PaginationLink
-                      onClick={() => {
-                        setCurrentPage(pageNum);
-                        fetchTransactions(pageNum);
-                      }}
-                      isActive={currentPage === pageNum}
-                      className="cursor-pointer"
-                    >
-                      {pageNum}
-                    </PaginationLink>
-                  </PaginationItem>
-                );
-              })}
-
-              <PaginationItem>
-                <PaginationNext
-                  onClick={() => {
-                    if (currentPage < totalPages) {
-                      setCurrentPage(currentPage + 1);
-                      fetchTransactions(currentPage + 1);
-                    }
-                  }}
-                  className={`cursor-pointer ${currentPage === totalPages ? "pointer-events-none opacity-50" : ""}`}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </div>
-      )}
+      <PaginationControls
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        pageSize={pageSize}
+        onPageChange={(p) => {
+          setCurrentPage(p);
+          fetchTransactions(p);
+        }}
+        onPageSizeChange={(s) => {
+          setPageSize(s);
+          setCurrentPage(1);
+          fetchTransactions(1);
+        }}
+      />
 
       <div className="text-center text-sm text-slate-500">
         Showing {transactions.length} of {totalItems} transactions

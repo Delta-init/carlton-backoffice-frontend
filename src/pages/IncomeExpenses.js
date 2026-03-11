@@ -17,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "../components/ui/table";
+
 import {
   Dialog,
   DialogContent,
@@ -47,6 +48,7 @@ import {
   PaginationPrevious,
 } from "../components/ui/pagination";
 import { toast } from "sonner";
+import PaginationControls from "../components/PaginationControls";
 import { useAuth } from "../context/AuthContext";
 import {
   TrendingUp,
@@ -247,11 +249,12 @@ export default function IncomeExpenses() {
 
   const fetchTreasuryAccounts = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/treasury`, {
+      const response = await fetch(`${API_URL}/api/treasury?page_size=200`, {
         headers: getAuthHeaders(),
       });
       if (response.ok) {
-        const accounts = await response.json();
+        const data = await response.json();
+        const accounts = data.items || data;
         setTreasuryAccounts(accounts.filter((a) => a.status === "active"));
       }
     } catch {}
@@ -289,15 +292,18 @@ export default function IncomeExpenses() {
     } catch {}
   };
 
- const fetchClients = async () => {
+  const fetchClients = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/clients?page_size=200`, { headers: getAuthHeaders(), credentials: 'include' });
+      const response = await fetch(`${API_URL}/api/clients?page_size=200`, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
       if (response.ok) {
         const data = await response.json();
         setClients(data.items || data);
       }
     } catch (error) {
-      console.error('Error fetching clients:', error);
+      console.error("Error fetching clients:", error);
     }
   };
 
@@ -731,7 +737,18 @@ export default function IncomeExpenses() {
     setCategoryForm({ name: "", category_type: "both", description: "" });
   };
 
-const clearFilters = () => { setFilters({ startDate: '', endDate: '', category: '', treasuryAccountId: '', status: '', vendorId: '', entryType: '' }); setCurrentPage(1); };
+  const clearFilters = () => {
+    setFilters({
+      startDate: "",
+      endDate: "",
+      category: "",
+      treasuryAccountId: "",
+      status: "",
+      vendorId: "",
+      entryType: "",
+    });
+    setCurrentPage(1);
+  };
 
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
@@ -1001,7 +1018,14 @@ const clearFilters = () => { setFilters({ startDate: '', endDate: '', category: 
       )}
 
       {/* Tabs */}
-    <Tabs value={activeTab} onValueChange={(val) => { setActiveTab(val); setCurrentPage(1); }} className="w-full">
+      <Tabs
+        value={activeTab}
+        onValueChange={(val) => {
+          setActiveTab(val);
+          setCurrentPage(1);
+        }}
+        className="w-full"
+      >
         <TabsList className="bg-white border border-slate-200">
           <TabsTrigger
             value="all"
@@ -1327,56 +1351,18 @@ const clearFilters = () => { setFilters({ startDate: '', endDate: '', category: 
                 }
               />
 
-                
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex justify-between items-center mt-6">
-                <div className="text-sm text-slate-500">
-                  Showing {entries.length} of {totalItems} entries
-                </div>
-                <Pagination>
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious
-                        onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
-                        className={`cursor-pointer ${currentPage === 1 ? 'pointer-events-none opacity-50' : ''}`}
-                      />
-                    </PaginationItem>
-                    
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      let pageNum;
-                      if (totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (currentPage <= 3) {
-                        pageNum = i + 1;
-                      } else if (currentPage >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i;
-                      } else {
-                        pageNum = currentPage - 2 + i;
-                      }
-                      return (
-                        <PaginationItem key={pageNum}>
-                          <PaginationLink
-                            onClick={() => setCurrentPage(pageNum)}
-                            isActive={currentPage === pageNum}
-                            className="cursor-pointer"
-                          >
-                            {pageNum}
-                          </PaginationLink>
-                        </PaginationItem>
-                      );
-                    })}
-                    
-                    <PaginationItem>
-                      <PaginationNext
-                        onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
-                        className={`cursor-pointer ${currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}`}
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
-              </div>
-            )}
+              {/* Pagination */}
+              <PaginationControls
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={(s) => {
+                  setPageSize(s);
+                  setCurrentPage(1);
+                }}
+              />
             </TabsContent>
           );
         })}

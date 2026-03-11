@@ -15,6 +15,8 @@ import {
   TabsList,
   TabsTrigger,
 } from "../components/ui/tabs";
+import PaginationControls from "../components/PaginationControls";
+
 import {
   Select,
   SelectContent,
@@ -64,6 +66,9 @@ export default function Logs() {
   const [stats, setStats] = useState(null);
   const [activeTab, setActiveTab] = useState("all");
   const [total, setTotal] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Filters
   const [filters, setFilters] = useState({
@@ -83,9 +88,10 @@ export default function Logs() {
     };
   };
 
-  const fetchLogs = async (type = "") => {
+  const fetchLogs = async (type = "", pg) => {
     setLoading(true);
     try {
+      const p = pg || currentPage;
       const params = new URLSearchParams();
       if (type) params.append("log_type", type);
       if (filters.action) params.append("action", filters.action);
@@ -93,7 +99,8 @@ export default function Logs() {
       if (filters.date_from) params.append("date_from", filters.date_from);
       if (filters.date_to) params.append("date_to", filters.date_to);
       if (filters.search) params.append("search", filters.search);
-      params.append("limit", "200");
+      params.append("page", p);
+      params.append("page_size", pageSize);
 
       const response = await fetch(`${API_URL}/api/logs?${params.toString()}`, {
         headers: getAuthHeaders(),
@@ -102,8 +109,9 @@ export default function Logs() {
 
       if (response.ok) {
         const data = await response.json();
-        setLogs(data.logs || []);
+        setLogs(data.items || data.logs || []);
         setTotal(data.total || 0);
+        setTotalPages(data.total_pages || 1);
       }
     } catch (error) {
       console.error("Error fetching logs:", error);
@@ -677,6 +685,17 @@ export default function Logs() {
         </TabsContent>
       </Tabs>
 
+      <PaginationControls
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={(s) => {
+          setPageSize(s);
+          setCurrentPage(1);
+        }}
+      />
       {/* Most Active Users & Common Actions */}
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

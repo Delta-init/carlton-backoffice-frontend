@@ -1,14 +1,9 @@
-import { useEffect, useState, useCallback } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
-import { Badge } from "../components/ui/badge";
+import { useEffect, useState, useCallback } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Badge } from '../components/ui/badge';
 import {
   Table,
   TableBody,
@@ -16,37 +11,37 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "../components/ui/table";
+} from '../components/ui/table';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "../components/ui/dialog";
+} from '../components/ui/dialog';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../components/ui/select";
+} from '../components/ui/select';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "../components/ui/dropdown-menu";
-import { Textarea } from "../components/ui/textarea";
-import { ScrollArea } from "../components/ui/scroll-area";
+} from '../components/ui/dropdown-menu';
+import { Textarea } from '../components/ui/textarea';
+import { ScrollArea } from '../components/ui/scroll-area';
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "../components/ui/tabs";
-import { toast } from "sonner";
-import { useAuth } from "../context/AuthContext";
+} from '../components/ui/tabs';
+import { toast } from 'sonner';
+import { useAuth } from '../context/AuthContext';
 import {
   Landmark,
   Plus,
@@ -64,26 +59,32 @@ import {
   Calendar,
   ArrowLeftRight,
   Calculator,
-} from "lucide-react";
+} from 'lucide-react';
+
+import PaginationControls from '../components/PaginationControls';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const accountTypes = [
-  { value: "bank", label: "Bank Account" },
-  { value: "crypto_wallet", label: "Crypto Wallet" },
-  { value: "payment_gateway", label: "Payment Gateway" },
-  { value: "usdt", label: "USDT Wallet" },
+  { value: 'bank', label: 'Bank Account' },
+  { value: 'crypto_wallet', label: 'Crypto Wallet' },
+  { value: 'payment_gateway', label: 'Payment Gateway' },
+  { value: 'usdt', label: 'USDT Wallet' },
 ];
 
 const statusOptions = [
-  { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
 ];
 
 export default function Treasury() {
   const { user } = useAuth();
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submittingTransfer, setSubmittingTransfer] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -93,51 +94,50 @@ export default function Treasury() {
   const [historyData, setHistoryData] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyFilters, setHistoryFilters] = useState({
-    startDate: "",
-    endDate: "",
-    transactionType: "",
+    startDate: '',
+    endDate: '',
+    transactionType: '',
   });
-
+  
   // Transfer state
   const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
   const [transferData, setTransferData] = useState({
-    source_account_id: "",
-    destination_account_id: "",
-    amount: "",
-    exchange_rate: "1",
-    notes: "",
+    source_account_id: '',
+    destination_account_id: '',
+    amount: '',
+    exchange_rate: '1',
+    notes: '',
   });
   const [transferProcessing, setTransferProcessing] = useState(false);
   const [showCaptcha, setShowCaptcha] = useState(false);
   const [captchaNumbers, setCaptchaNumbers] = useState({ n1: 0, n2: 0 });
-  const [captchaAnswer, setCaptchaAnswer] = useState("");
-
+  const [captchaAnswer, setCaptchaAnswer] = useState('');
+  
   const [formData, setFormData] = useState({
-    account_name: "",
-    account_type: "bank",
-    bank_name: "",
-    account_number: "",
-    routing_number: "",
-    swift_code: "",
-    currency: "USD",
-    description: "",
-    status: "active",
-    opening_balance: "",
+    account_name: '',
+    account_type: 'bank',
+    bank_name: '',
+    account_number: '',
+    routing_number: '',
+    swift_code: '',
+    currency: 'USD',
+    description: '',
+    status: 'active',
+    opening_balance: '',
     // USDT specific fields
-    usdt_address: "",
-    usdt_network: "",
-    usdt_notes: "",
+    usdt_address: '',
+    usdt_network: '',
+    usdt_notes: '',
   });
 
-  const isAdmin = user?.role === "admin";
-  const isAccountantOrAdmin =
-    user?.role === "admin" || user?.role === "accountant";
+  const isAdmin = user?.role === 'admin';
+  const isAccountantOrAdmin = user?.role === 'admin' || user?.role === 'accountant';
 
   const getAuthHeaders = () => {
-    const token = localStorage.getItem("auth_token");
+    const token = localStorage.getItem('auth_token');
     return {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     };
   };
 
@@ -146,21 +146,21 @@ export default function Treasury() {
     const n1 = Math.floor(Math.random() * 10) + 1;
     const n2 = Math.floor(Math.random() * 10) + 1;
     setCaptchaNumbers({ n1, n2 });
-    setCaptchaAnswer("");
+    setCaptchaAnswer('');
   }, []);
 
   const fetchAccounts = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/treasury`, {
-        headers: getAuthHeaders(),
-        credentials: "include",
-      });
+      const response = await fetch(`${API_URL}/api/treasury?page=${currentPage}&page_size=${pageSize}`, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
-        setAccounts(await response.json());
+        const data = await response.json();
+        setAccounts(data.items || data);
+        setTotalPages(data.total_pages || 1);
+        setTotalItems(data.total || 0);
       }
     } catch (error) {
-      console.error("Error fetching treasury accounts:", error);
-      toast.error("Failed to load treasury accounts");
+      console.error('Error fetching treasury accounts:', error);
+      toast.error('Failed to load treasury accounts');
     } finally {
       setLoading(false);
     }
@@ -179,18 +179,15 @@ export default function Treasury() {
       if (historyFilters.transactionType) {
         url += `&transaction_type=${historyFilters.transactionType}`;
       }
-
-      const response = await fetch(url, {
-        headers: getAuthHeaders(),
-        credentials: "include",
-      });
+      
+      const response = await fetch(url, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
         setHistoryData(Array.isArray(data) ? data : data.items || []);
       }
     } catch (error) {
-      console.error("Error fetching history:", error);
-      toast.error("Failed to load transaction history");
+      console.error('Error fetching history:', error);
+      toast.error('Failed to load transaction history');
     } finally {
       setHistoryLoading(false);
     }
@@ -198,75 +195,73 @@ export default function Treasury() {
 
   const downloadStatement = () => {
     if (!historyAccount || historyData.length === 0) return;
-
+    
     // Generate CSV content
-    const headers = ["Date", "Type", "Reference", "Amount", "Currency"];
-    const rows = historyData.map((tx) => [
+    const headers = ['Date', 'Type', 'Reference', 'Amount', 'Currency'];
+    const rows = historyData.map(tx => [
       new Date(tx.created_at).toLocaleDateString(),
-      tx.transaction_type || "N/A",
-      tx.reference || "N/A",
-      tx.amount?.toLocaleString() || "0",
-      historyAccount.currency || "USD",
+      tx.transaction_type || 'N/A',
+      tx.reference || 'N/A',
+      tx.amount?.toLocaleString() || '0',
+      historyAccount.currency || 'USD'
     ]);
-
+    
     const csvContent = [
       `Treasury Account Statement - ${historyAccount.account_name}`,
       `Currency: ${historyAccount.currency}`,
       `Balance: ${historyAccount.balance?.toLocaleString()}`,
       `Generated: ${new Date().toLocaleDateString()}`,
-      "",
-      headers.join(","),
-      ...rows.map((row) => row.join(",")),
-    ].join("\n");
-
+      '',
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+    
     // Download file
-    const blob = new Blob([csvContent], { type: "text/csv" });
+    const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
+    const a = document.createElement('a');
     a.href = url;
-    a.download = `statement_${historyAccount.account_name.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.csv`;
+    a.download = `statement_${historyAccount.account_name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
-
-    toast.success("Statement downloaded");
+    
+    toast.success('Statement downloaded');
   };
 
   // Transfer functions
   const initiateTransfer = () => {
     setTransferData({
-      source_account_id: "",
-      destination_account_id: "",
-      amount: "",
-      exchange_rate: "1",
-      notes: "",
+      source_account_id: '',
+      destination_account_id: '',
+      amount: '',
+      exchange_rate: '1',
+      notes: '',
     });
     setIsTransferDialogOpen(true);
   };
 
   const handleTransferSubmit = () => {
     if (!transferData.source_account_id) {
-      toast.error("Please select source account");
+      toast.error('Please select source account');
       return;
     }
     if (!transferData.destination_account_id) {
-      toast.error("Please select destination account");
+      toast.error('Please select destination account');
       return;
     }
     if (!transferData.amount || parseFloat(transferData.amount) <= 0) {
-      toast.error("Please enter a valid amount");
+      toast.error('Please enter a valid amount');
       return;
     }
-
-    const srcAccount = accounts.find(
-      (a) => a.account_id === transferData.source_account_id,
-    );
+    
+    const srcAccount = accounts.find(a => a.account_id === transferData.source_account_id);
     if (srcAccount && parseFloat(transferData.amount) > srcAccount.balance) {
-      toast.error("Insufficient balance in source account");
+      toast.error('Insufficient balance in source account');
       return;
     }
-
+    
     generateCaptcha();
     setShowCaptcha(true);
   };
@@ -274,18 +269,18 @@ export default function Treasury() {
   const verifyCaptchaAndTransfer = async () => {
     const correctAnswer = captchaNumbers.n1 + captchaNumbers.n2;
     if (parseInt(captchaAnswer) !== correctAnswer) {
-      toast.error("Incorrect answer. Please try again.");
+      toast.error('Incorrect answer. Please try again.');
       generateCaptcha();
-      setCaptchaAnswer("");
+      setCaptchaAnswer('');
       return;
     }
-
+    
     setTransferProcessing(true);
     try {
       const response = await fetch(`${API_URL}/api/treasury/transfer`, {
-        method: "POST",
+        method: 'POST',
         headers: getAuthHeaders(),
-        credentials: "include",
+        credentials: 'include',
         body: JSON.stringify({
           source_account_id: transferData.source_account_id,
           destination_account_id: transferData.destination_account_id,
@@ -297,42 +292,32 @@ export default function Treasury() {
 
       if (response.ok) {
         const result = await response.json();
-        toast.success(
-          `Transferred ${result.source_amount} ${result.source_currency} to ${result.destination_account}`,
-        );
+        toast.success(`Transferred ${result.source_amount} ${result.source_currency} to ${result.destination_account}`);
         setShowCaptcha(false);
         setIsTransferDialogOpen(false);
         fetchAccounts();
       } else {
         const error = await response.json();
-        toast.error(error.detail || "Transfer failed");
+        toast.error(error.detail || 'Transfer failed');
       }
     } catch (error) {
-      toast.error("Transfer failed");
+      toast.error('Transfer failed');
     } finally {
       setTransferProcessing(false);
-      setCaptchaAnswer("");
+      setCaptchaAnswer('');
     }
   };
 
   // Computed values for transfer preview
-  const sourceAccount = accounts.find(
-    (a) => a.account_id === transferData.source_account_id,
-  );
-  const destAccount = accounts.find(
-    (a) => a.account_id === transferData.destination_account_id,
-  );
-  const calculatedDestAmount =
-    transferData.amount && transferData.exchange_rate
-      ? (
-          parseFloat(transferData.amount) *
-          parseFloat(transferData.exchange_rate)
-        ).toFixed(2)
-      : "0.00";
+  const sourceAccount = accounts.find(a => a.account_id === transferData.source_account_id);
+  const destAccount = accounts.find(a => a.account_id === transferData.destination_account_id);
+  const calculatedDestAmount = transferData.amount && transferData.exchange_rate 
+    ? (parseFloat(transferData.amount) * parseFloat(transferData.exchange_rate)).toFixed(2)
+    : '0.00';
 
   useEffect(() => {
     fetchAccounts();
-  }, []);
+  }, [currentPage, pageSize]);
 
   useEffect(() => {
     if (historyAccount) {
@@ -1091,6 +1076,9 @@ export default function Treasury() {
           ))
         )}
       </div>
+
+            <PaginationControls currentPage={currentPage} totalPages={totalPages} totalItems={totalItems} pageSize={pageSize} onPageChange={setCurrentPage} onPageSizeChange={s => { setPageSize(s); setCurrentPage(1); }} />
+
 
       {/* View Account Dialog */}
       <Dialog open={!!viewAccount} onOpenChange={() => setViewAccount(null)}>

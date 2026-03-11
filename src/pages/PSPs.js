@@ -146,17 +146,16 @@ export default function PSPs() {
     }
   };
 
+
   const fetchTreasuryAccounts = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/treasury`, {
-        headers: getAuthHeaders(),
-        credentials: "include",
-      });
+      const response = await fetch(`${API_URL}/api/treasury?page_size=200`, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
-        setTreasuryAccounts(await response.json());
+        const d = await response.json();
+        setTreasuryAccounts(d.items || d);
       }
     } catch (error) {
-      console.error("Error fetching treasury accounts:", error);
+      console.error('Error fetching treasury accounts:', error);
     }
   };
 

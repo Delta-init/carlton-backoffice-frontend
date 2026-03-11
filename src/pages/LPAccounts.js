@@ -58,6 +58,8 @@ import {
   Send,
 } from "lucide-react";
 
+import PaginationControls from "../components/PaginationControls";
+
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const currencies = ["USD", "EUR", "GBP", "AED", "SAR", "INR", "USDT"];
@@ -68,6 +70,10 @@ export default function LPAccounts() {
   const [treasuryAccounts, setTreasuryAccounts] = useState([]);
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const [mainTab, setMainTab] = useState("dashboard");
 
   // Dialogs
@@ -128,18 +134,21 @@ export default function LPAccounts() {
 
   const fetchLPAccounts = useCallback(async () => {
     try {
-      const response = await fetch(`${API_URL}/api/lp`, {
-        headers: getAuthHeaders(),
-        credentials: "include",
-      });
+      const response = await fetch(
+        `${API_URL}/api/lp?page=${currentPage}&page_size=${pageSize}`,
+        { headers: getAuthHeaders(), credentials: "include" },
+      );
       if (response.ok) {
-        setLPAccounts(await response.json());
+        const data = await response.json();
+        setLPAccounts(data.items || data);
+        setTotalPages(data.total_pages || 1);
+        setTotalItems(data.total || 0);
       }
     } catch (error) {
       console.error("Error fetching LP accounts:", error);
       toast.error("Failed to load LP accounts");
     }
-  }, []);
+  }, [currentPage, pageSize]);
 
   const fetchDashboard = useCallback(async () => {
     try {
@@ -159,12 +168,13 @@ export default function LPAccounts() {
 
   const fetchTreasuryAccounts = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/treasury`, {
+      const response = await fetch(`${API_URL}/api/treasury?page_size=200`, {
         headers: getAuthHeaders(),
         credentials: "include",
       });
       if (response.ok) {
-        const accounts = await response.json();
+        const data = await response.json();
+        const accounts = data.items || data;
         setTreasuryAccounts(accounts.filter((a) => a.status === "active"));
       }
     } catch (error) {
@@ -1394,6 +1404,18 @@ export default function LPAccounts() {
           )}
         </TabsContent>
       </Tabs>
+
+      <PaginationControls
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={(s) => {
+          setPageSize(s);
+          setCurrentPage(1);
+        }}
+      />
 
       {/* Add Dealing P&L Dialog */}
       <Dialog open={isDealingFormOpen} onOpenChange={setIsDealingFormOpen}>

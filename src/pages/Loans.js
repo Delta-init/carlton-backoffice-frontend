@@ -17,6 +17,8 @@ import {
   TableHeader,
   TableRow,
 } from "../components/ui/table";
+import PaginationControls from '../components/PaginationControls';
+
 import {
   Dialog,
   DialogContent,
@@ -183,26 +185,26 @@ export default function Loans() {
     };
   };
 
+
   const fetchLoans = useCallback(async () => {
     try {
-      let url = `${API_URL}/api/loans?limit=200`;
+      let url = `${API_URL}/api/loans?page=${currentPage}&page_size=${pageSize}`;
       if (statusFilter) url += `&status=${statusFilter}`;
-
-      const response = await fetch(url, {
-        headers: getAuthHeaders(),
-        credentials: "include",
-      });
+      
+      const response = await fetch(url, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
         setLoans(Array.isArray(data) ? data : data.items || []);
+        if (data.total_pages) setTotalPages(data.total_pages);
+        if (data.total) setTotalItems(data.total);
       }
     } catch (error) {
-      console.error("Error fetching loans:", error);
-      toast.error("Failed to load loans");
+      console.error('Error fetching loans:', error);
+      toast.error('Failed to load loans');
     } finally {
       setLoading(false);
     }
-  }, [statusFilter]);
+  }, [statusFilter, currentPage, pageSize]);
 
   const fetchTreasuryAccounts = async () => {
     try {
@@ -1821,7 +1823,7 @@ export default function Loans() {
           </Card>
         </TabsContent>
       </Tabs>
-
+ <PaginationControls currentPage={currentPage} totalPages={totalPages} totalItems={totalItems} pageSize={pageSize} onPageChange={setCurrentPage} onPageSizeChange={s => { setPageSize(s); setCurrentPage(1); }} />
       {/* Create Loan Dialog */}
       <Dialog
         open={isLoanDialogOpen}
