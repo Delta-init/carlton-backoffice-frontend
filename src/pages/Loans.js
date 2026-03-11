@@ -96,6 +96,7 @@ const installmentFrequencies = [
 export default function Loans() {
   const { user } = useAuth();
   const [loans, setLoans] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [treasuryAccounts, setTreasuryAccounts] = useState([]);
   const [vendors, setExchangers] = useState([]);
   const [dashboard, setDashboard] = useState(null);
