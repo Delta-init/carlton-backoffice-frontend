@@ -192,21 +192,20 @@ export default function AccountantDashboard() {
     };
   };
 
-   const fetchTreasuryAccounts = async () => {
+  const fetchTreasuryAccounts = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/treasury?page_size=200`, { 
-        headers: getAuthHeaders(), 
-        credentials: 'include' 
+      const response = await fetch(`${API_URL}/api/treasury?page_size=200`, {
+        headers: getAuthHeaders(),
+        credentials: "include",
       });
       if (response.ok) {
         const d = await response.json();
         setTreasuryAccounts(d.items || d);
       }
     } catch (error) {
-      console.error('Error fetching treasury accounts:', error);
+      console.error("Error fetching treasury accounts:", error);
     }
   };
-
 
   const fetchPendingTransactions = async () => {
     try {
@@ -1234,6 +1233,78 @@ export default function AccountantDashboard() {
                   <p className="text-sm text-[#C5C6C7]">
                     {viewTransaction.destination_bank_name}
                   </p>
+                </div>
+              )}
+              {/* Client Bank Details */}
+              {viewTransaction.client_bank_name && (
+                <div
+                  className="pt-4 border-t border-slate-200"
+                  data-testid="approval-bank-details"
+                >
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">
+                    Client Bank Details
+                  </p>
+                  <div className="grid grid-cols-2 gap-3 p-3 bg-[#1F2833] rounded-sm border border-[#66FCF1]/20">
+                    <div>
+                      <p className="text-xs text-[#C5C6C7]">Bank Name</p>
+                      <p className="text-white text-sm font-medium">
+                        {viewTransaction.client_bank_name}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-[#C5C6C7]">Account Holder</p>
+                      <p className="text-white text-sm font-medium">
+                        {viewTransaction.client_bank_account_name}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-[#C5C6C7]">Account Number</p>
+                      <p className="text-white text-sm font-mono">
+                        {viewTransaction.client_bank_account_number}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-[#C5C6C7]">SWIFT / IBAN</p>
+                      <p className="text-white text-sm font-mono">
+                        {viewTransaction.client_bank_swift_iban || "-"}
+                      </p>
+                    </div>
+                    {viewTransaction.client_bank_currency && (
+                      <div>
+                        <p className="text-xs text-[#C5C6C7]">Currency</p>
+                        <p className="text-white text-sm font-medium">
+                          {viewTransaction.client_bank_currency}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {/* USDT Details */}
+              {viewTransaction.client_usdt_address && (
+                <div
+                  className="pt-4 border-t border-slate-200"
+                  data-testid="approval-usdt-details"
+                >
+                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">
+                    USDT Details
+                  </p>
+                  <div className="grid grid-cols-1 gap-3 p-3 bg-[#1F2833] rounded-sm border border-[#66FCF1]/20">
+                    <div>
+                      <p className="text-xs text-[#C5C6C7]">Wallet Address</p>
+                      <p className="text-white text-sm font-mono break-all">
+                        {viewTransaction.client_usdt_address}
+                      </p>
+                    </div>
+                    {viewTransaction.client_usdt_network && (
+                      <div>
+                        <p className="text-xs text-[#C5C6C7]">Network</p>
+                        <p className="text-white text-sm font-medium">
+                          {viewTransaction.client_usdt_network}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
               {viewTransaction.description && (

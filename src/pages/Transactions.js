@@ -2612,6 +2612,54 @@ export default function Transactions() {
                   </p>
                 </div>
               )}
+               {/* Client Bank Details */}
+              {viewTransaction.client_bank_name && (
+                <div className="pt-4 border-t border-slate-200" data-testid="tx-bank-details">
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Client Bank Details</p>
+                  <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-sm border border-slate-200">
+                    <div>
+                      <p className="text-xs text-slate-500">Bank Name</p>
+                      <p className="text-slate-800 text-sm font-medium">{viewTransaction.client_bank_name}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500">Account Holder</p>
+                      <p className="text-slate-800 text-sm font-medium">{viewTransaction.client_bank_account_name}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500">Account Number</p>
+                      <p className="text-slate-800 text-sm font-mono">{viewTransaction.client_bank_account_number}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500">SWIFT / IBAN</p>
+                      <p className="text-slate-800 text-sm font-mono">{viewTransaction.client_bank_swift_iban || '-'}</p>
+                    </div>
+                    {viewTransaction.client_bank_currency && (
+                      <div>
+                        <p className="text-xs text-slate-500">Currency</p>
+                        <p className="text-slate-800 text-sm font-medium">{viewTransaction.client_bank_currency}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {/* USDT Details */}
+              {viewTransaction.client_usdt_address && (
+                <div className="pt-4 border-t border-slate-200" data-testid="tx-usdt-details">
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">USDT Details</p>
+                  <div className="grid grid-cols-1 gap-3 p-3 bg-slate-50 rounded-sm border border-slate-200">
+                    <div>
+                      <p className="text-xs text-slate-500">Wallet Address</p>
+                      <p className="text-slate-800 text-sm font-mono break-all">{viewTransaction.client_usdt_address}</p>
+                    </div>
+                    {viewTransaction.client_usdt_network && (
+                      <div>
+                        <p className="text-xs text-slate-500">Network</p>
+                        <p className="text-slate-800 text-sm font-medium">{viewTransaction.client_usdt_network}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               {/* Broker Commission */}
               {viewTransaction.broker_commission_amount > 0 && (
                 <div
