@@ -39,27 +39,7 @@ import {
   CommandList,
 } from "../components/ui/command";
 import { toast } from "sonner";
-import { useAuth } from "../context/AuthContext";
-import {
-  Plus,
-  FileText,
-  Clock,
-  CheckCircle,
-  ArrowDownRight,
-  ArrowUpRight,
-  Trash2,
-  Send,
-  Loader2,
-  ChevronDown,
-  ChevronUp,
-  Save,
-  X,
-  Download,
-  FileSpreadsheet,
-  Search,
-  Check,
-  ChevronsUpDown,
-} from "lucide-react";
+
 import PaginationControls from "../components/PaginationControls";
 import { useAuth } from "../context/AuthContext";
 import {
