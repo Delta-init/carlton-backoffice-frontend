@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -106,6 +106,136 @@ const statusOptions = [
   { value: "rejected", label: "Rejected" },
   { value: "cancelled", label: "Cancelled" },
 ];
+
+function ClientServerSearch({
+  clients: preloadedClients,
+  value,
+  onChange,
+  open,
+  onOpenChange,
+  authHeaders,
+}) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [selectedClient, setSelectedClient] = useState(null);
+  const inputRef = useRef(null);
+
+  const selected =
+    selectedClient || preloadedClients.find((c) => c.client_id === value);
+
+  useEffect(() => {
+    if (!searchTerm || searchTerm.length < 2) {
+      setSearchResults(preloadedClients.slice(0, 50));
+      return;
+    }
+    const hdrs = authHeaders();
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const res = await fetch(
+          `${API_URL}/api/clients?search=${encodeURIComponent(searchTerm)}&page_size=50`,
+          { headers: hdrs, signal: controller.signal },
+        );
+        if (res.ok) {
+          const d = await res.json();
+          setSearchResults(d.items || []);
+        }
+      } catch (e) {
+        if (e.name !== "AbortError") console.error(e);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [searchTerm]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (open) {
+      setSearchResults(preloadedClients.slice(0, 50));
+      setTimeout(() => inputRef.current?.focus(), 100);
+    } else {
+      setSearchTerm("");
+    }
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between bg-slate-50 border-slate-200 text-slate-800 hover:bg-slate-50 hover:text-slate-800"
+          data-testid="select-client"
+        >
+          {selected
+            ? `${selected.first_name} ${selected.last_name}`
+            : "Search & select client..."}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-[--radix-popover-trigger-width] p-0 bg-white border-slate-200"
+        align="start"
+      >
+        <div className="flex items-center border-b px-3">
+          <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+          <input
+            ref={inputRef}
+            placeholder="Search by name, email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="flex h-10 w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground text-slate-800"
+            data-testid="client-search-input"
+          />
+          {searching && (
+            <div className="h-4 w-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+          )}
+        </div>
+        <div className="max-h-60 overflow-y-auto p-1">
+          {searchResults.length === 0 ? (
+            <div className="text-slate-500 text-sm py-4 text-center">
+              {searching
+                ? "Searching..."
+                : searchTerm.length >= 2
+                  ? "No client found."
+                  : "Type to search..."}
+            </div>
+          ) : (
+            searchResults.map((client) => (
+              <div
+                key={client.client_id}
+                className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-slate-800 hover:bg-slate-100"
+                onClick={() => {
+                  onChange(client.client_id, client);
+                  setSelectedClient(client);
+                }}
+                data-testid={`client-option-${client.client_id}`}
+              >
+                <Check
+                  className={`mr-2 h-4 w-4 ${value === client.client_id ? "opacity-100 text-blue-600" : "opacity-0"}`}
+                />
+                <div>
+                  <span className="font-medium">
+                    {client.first_name} {client.last_name}
+                  </span>
+                  <span className="text-slate-500 text-xs ml-2">
+                    {client.email}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 export default function Transactions() {
   const [transactions, setTransactions] = useState([]);
@@ -915,78 +1045,17 @@ export default function Transactions() {
                   <Label className="text-slate-500 text-xs uppercase tracking-wider">
                     Client *
                   </Label>
-                  <Popover
+                  <ClientServerSearch
+                    clients={clients}
+                    value={formData.client_id}
+                    onChange={(id, client) => {
+                      setFormData({ ...formData, client_id: id });
+                      setClientSearchOpen(false);
+                    }}
                     open={clientSearchOpen}
                     onOpenChange={setClientSearchOpen}
-                  >
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={clientSearchOpen}
-                        className="w-full justify-between bg-slate-50 border-slate-200 text-slate-800 hover:bg-slate-50 hover:text-slate-800"
-                        data-testid="select-client"
-                      >
-                        {formData.client_id
-                          ? (() => {
-                              const c = clients.find(
-                                (cl) => cl.client_id === formData.client_id,
-                              );
-                              return c
-                                ? `${c.first_name} ${c.last_name}`
-                                : "Select client";
-                            })()
-                          : "Search & select client..."}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      className="w-[--radix-popover-trigger-width] p-0 bg-white border-slate-200"
-                      align="start"
-                    >
-                      <Command className="bg-white">
-                        <CommandInput
-                          placeholder="Search by name, email, ID..."
-                          className="text-slate-800"
-                          data-testid="client-search-input"
-                        />
-                        <CommandList>
-                          <CommandEmpty className="text-slate-500 text-sm py-4 text-center">
-                            No client found.
-                          </CommandEmpty>
-                          <CommandGroup className="max-h-60 overflow-y-auto">
-                            {clients.map((client) => (
-                              <CommandItem
-                                key={client.client_id}
-                                value={`${client.first_name} ${client.last_name} ${client.email} ${client.client_id}`}
-                                onSelect={() => {
-                                  setFormData({
-                                    ...formData,
-                                    client_id: client.client_id,
-                                  });
-                                  setClientSearchOpen(false);
-                                }}
-                                className="text-slate-800 hover:bg-slate-100 cursor-pointer"
-                                data-testid={`client-option-${client.client_id}`}
-                              >
-                                <Check
-                                  className={`mr-2 h-4 w-4 ${formData.client_id === client.client_id ? "opacity-100 text-blue-600" : "opacity-0"}`}
-                                />
-                                <div>
-                                  <span className="font-medium">
-                                    {client.first_name} {client.last_name}
-                                  </span>
-                                  <span className="text-slate-500 text-xs ml-2">
-                                    {client.email}
-                                  </span>
-                                </div>
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                    authHeaders={getAuthHeaders}
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

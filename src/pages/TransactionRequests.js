@@ -1,131 +1,126 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Badge } from '../components/ui/badge';
+import { Textarea } from '../components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { ScrollArea } from '../components/ui/scroll-area';
+import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../components/ui/command';
+import { toast } from 'sonner';
+import { useAuth } from '../context/AuthContext';
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
-import { Badge } from "../components/ui/badge";
-import { Textarea } from "../components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "../components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../components/ui/select";
-import { ScrollArea } from "../components/ui/scroll-area";
-
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "../components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "../components/ui/command";
-import { toast } from "sonner";
-
-import PaginationControls from "../components/PaginationControls";
-import { useAuth } from "../context/AuthContext";
-import {
-  Plus,
-  FileText,
-  Clock,
-  CheckCircle,
-  ArrowDownRight,
-  ArrowUpRight,
-  Trash2,
-  Send,
-  Loader2,
-  ChevronDown,
-  ChevronUp,
-  Save,
-  X,
-  Download,
-  FileSpreadsheet,
-  Search,
-} from "lucide-react";
+  Plus, FileText, Clock, CheckCircle, ArrowDownRight, ArrowUpRight,
+  Trash2, Send, Loader2, ChevronDown, ChevronUp, Save, X, Download, FileSpreadsheet, Search, Check, ChevronsUpDown,
+} from 'lucide-react';
+import PaginationControls from '../components/PaginationControls';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "../components/ui/dropdown-menu";
+} from '../components/ui/dropdown-menu';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
-const currencies = ["USD", "EUR", "GBP", "AED", "SAR", "INR", "JPY", "USDT"];
+const currencies = ['USD', 'EUR', 'GBP', 'AED', 'SAR', 'INR', 'JPY', 'USDT'];
 
-function ClientSearchPicker({ clients, value, onChange, testId }) {
+function ClientSearchPicker({ clients: preloadedClients, value, onChange, testId, authHeaders }) {
   const [open, setOpen] = useState(false);
-  const selected = clients.find((c) => c.client_id === value);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [selectedClient, setSelectedClient] = useState(null);
+  const inputRef = useRef(null);
+
+  const selected = selectedClient || preloadedClients.find(c => c.client_id === value);
+
+  // Debounced server-side search
+  useEffect(() => {
+    if (!searchTerm || searchTerm.length < 2) {
+      setSearchResults(preloadedClients.slice(0, 50));
+      return;
+    }
+    const hdrs = authHeaders();
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const res = await fetch(
+          `${API_URL}/api/clients?search=${encodeURIComponent(searchTerm)}&page_size=50`,
+          { headers: hdrs, signal: controller.signal }
+        );
+        if (res.ok) {
+          const d = await res.json();
+          setSearchResults(d.items || []);
+        }
+      } catch (e) { if (e.name !== 'AbortError') console.error(e); }
+      finally { setSearching(false); }
+    }, 300);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [searchTerm]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (open) {
+      setSearchResults(preloadedClients.slice(0, 50));
+      setTimeout(() => inputRef.current?.focus(), 100);
+    } else {
+      setSearchTerm('');
+    }
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
+        <Button variant="outline" role="combobox" aria-expanded={open}
           className="w-full justify-between bg-slate-50 border-slate-200 text-slate-800 font-normal hover:bg-slate-100 h-9"
           data-testid={testId}
         >
-          {selected
-            ? `${selected.first_name} ${selected.last_name}`
-            : "Search client..."}
+          {selected ? `${selected.first_name} ${selected.last_name}` : 'Search client...'}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent
-        className="w-[300px] p-0 bg-white border-slate-200"
-        align="start"
-      >
-        <Command>
-          <CommandInput placeholder="Type to search..." className="h-9" />
-          <CommandList>
-            <CommandEmpty>No client found.</CommandEmpty>
-            <CommandGroup className="max-h-[200px] overflow-auto">
-              {clients.map((c) => (
-                <CommandItem
-                  key={c.client_id}
-                  value={`${c.first_name} ${c.last_name} ${c.email || ""}`}
-                  onSelect={() => {
-                    onChange(c.client_id);
-                    setOpen(false);
-                  }}
-                  className="cursor-pointer"
-                >
-                  <Check
-                    className={`mr-2 h-4 w-4 ${value === c.client_id ? "opacity-100" : "opacity-0"}`}
-                  />
-                  <div>
-                    <span className="font-medium">
-                      {c.first_name} {c.last_name}
-                    </span>
-                    {c.email && (
-                      <span className="text-xs text-slate-400 ml-2">
-                        {c.email}
-                      </span>
-                    )}
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
+      <PopoverContent className="w-[300px] p-0 bg-white border-slate-200" align="start">
+        <div className="flex items-center border-b px-3">
+          <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+          <input
+            ref={inputRef}
+            placeholder="Search by name or email..."
+            className="flex h-10 w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            data-testid={`${testId}-input`}
+          />
+          {searching && <Loader2 className="h-4 w-4 animate-spin opacity-50" />}
+        </div>
+        <div className="max-h-[200px] overflow-auto p-1">
+          {searchResults.length === 0 ? (
+            <div className="py-6 text-center text-sm text-slate-500">
+              {searching ? 'Searching...' : searchTerm.length >= 2 ? 'No client found.' : 'Type to search...'}
+            </div>
+          ) : (
+            searchResults.map(c => (
+              <div
+                key={c.client_id}
+                className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
+                onClick={() => {
+                  onChange(c.client_id);
+                  setSelectedClient(c);
+                  setOpen(false);
+                }}
+                data-testid={`client-option-${c.client_id}`}
+              >
+                <Check className={`mr-2 h-4 w-4 ${value === c.client_id ? 'opacity-100' : 'opacity-0'}`} />
+                <div>
+                  <span className="font-medium">{c.first_name} {c.last_name}</span>
+                  {c.email && <span className="text-xs text-slate-400 ml-2">{c.email}</span>}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </PopoverContent>
     </Popover>
   );
@@ -334,12 +329,8 @@ function EditableRequestCard({
                   <Label className="text-xs text-slate-500 uppercase font-bold">
                     Client
                   </Label>
-                  <ClientSearchPicker
-                    clients={clients}
-                    value={form.client_id}
-                    onChange={(v) => setForm({ ...form, client_id: v })}
-                    testId={`edit-client-${req.request_id}`}
-                  />
+                               <ClientSearchPicker clients={clients} value={form.client_id} onChange={v => setForm({ ...form, client_id: v })} testId="create-client-search" authHeaders={authHeaders} />
+
                 </div>
               </div>
 
@@ -1443,12 +1434,8 @@ export default function TransactionRequests() {
                 <Label className="text-xs text-slate-500 uppercase">
                   Client *
                 </Label>
-                <ClientSearchPicker
-                  clients={clients}
-                  value={form.client_id}
-                  onChange={(v) => setForm({ ...form, client_id: v })}
-                  testId="create-client-search"
-                />
+                              <ClientSearchPicker clients={clients} value={form.client_id} onChange={v => setForm({ ...form, client_id: v })} testId="create-client-search" authHeaders={authHeaders} />
+
               </div>
             </div>
 

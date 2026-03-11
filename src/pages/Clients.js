@@ -1,9 +1,14 @@
-import { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Badge } from '../components/ui/badge';
+import { useEffect, useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import { Badge } from "../components/ui/badge";
 import {
   Table,
   TableBody,
@@ -11,31 +16,36 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '../components/ui/table';
+} from "../components/ui/table";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '../components/ui/dialog';
+} from "../components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../components/ui/select';
+} from "../components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '../components/ui/dropdown-menu';
-import { Textarea } from '../components/ui/textarea';
-import { ScrollArea } from '../components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { toast } from 'sonner';
+} from "../components/ui/dropdown-menu";
+import { Textarea } from "../components/ui/textarea";
+import { ScrollArea } from "../components/ui/scroll-area";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../components/ui/tabs";
+import { toast } from "sonner";
 import {
   Users,
   Plus,
@@ -53,55 +63,59 @@ import {
   FileSpreadsheet,
   Calendar,
   TrendingDown,
-} from 'lucide-react';
+  Upload,
+  Loader2,
+} from "lucide-react";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const statusOptions = [
-  { value: 'pending', label: 'Pending' },
-  { value: 'approved', label: 'Approved' },
-  { value: 'rejected', label: 'Rejected' },
-  { value: 'suspended', label: 'Suspended' },
+  { value: "pending", label: "Pending" },
+  { value: "approved", label: "Approved" },
+  { value: "rejected", label: "Rejected" },
+  { value: "suspended", label: "Suspended" },
 ];
 
 export default function Clients() {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [uploading, setUploading] = useState(false);
+
   const [totalPages, setTotalPages] = useState(1);
   const [totalClients, setTotalClients] = useState(0);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
   const [viewClient, setViewClient] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  
+
   // Transaction filter states
-  const [txTypeFilter, setTxTypeFilter] = useState('all');
-  const [txStatusFilter, setTxStatusFilter] = useState('all');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [minBalance, setMinBalance] = useState('');
-  const [maxBalance, setMaxBalance] = useState('');
-  
+  const [txTypeFilter, setTxTypeFilter] = useState("all");
+  const [txStatusFilter, setTxStatusFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [minBalance, setMinBalance] = useState("");
+  const [maxBalance, setMaxBalance] = useState("");
+
   const [formData, setFormData] = useState({
-    first_name: '',
-    last_name: '',
-    email: '',
-    phone: '',
-    country: '',
-    mt5_number: '',
-    crm_customer_id: '',
-    notes: '',
+    first_name: "",
+    last_name: "",
+    email: "",
+    phone: "",
+    country: "",
+    mt5_number: "",
+    crm_customer_id: "",
+    notes: "",
   });
 
   const getAuthHeaders = () => {
-    const token = localStorage.getItem('auth_token');
+    const token = localStorage.getItem("auth_token");
     return {
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
   };
 
@@ -109,11 +123,15 @@ export default function Clients() {
     try {
       const p = pg || currentPage;
       const params = new URLSearchParams({ page: p, page_size: pageSize });
-      if (searchTerm) params.append('search', searchTerm);
-      if (statusFilter && statusFilter !== 'all') params.append('status', statusFilter);
+      if (searchTerm) params.append("search", searchTerm);
+      if (statusFilter && statusFilter !== "all")
+        params.append("status", statusFilter);
       const url = `${API_URL}/api/clients?${params}`;
 
-      const response = await fetch(url, { headers: getAuthHeaders(), credentials: 'include' });
+      const response = await fetch(url, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
       if (response.ok) {
         const data = await response.json();
         setClients(data.items || []);
@@ -121,26 +139,59 @@ export default function Clients() {
         setTotalClients(data.total || 0);
       }
     } catch (error) {
-      console.error('Error fetching clients:', error);
-      toast.error('Failed to load clients');
+      console.error("Error fetching clients:", error);
+      toast.error("Failed to load clients");
     } finally {
       setLoading(false);
     }
   };
 
+  const handleBulkUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const headers = getAuthHeaders();
+      delete headers["Content-Type"];
+      const res = await fetch(`${API_URL}/api/clients/bulk-upload`, {
+        method: "POST",
+        headers,
+        body: formData,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        toast.success(
+          `Uploaded: ${data.created} created, ${data.skipped} skipped`,
+        );
+        if (data.errors?.length)
+          toast.warning(`${data.errors.length} row errors`);
+        fetchClients();
+      } else {
+        const err = await res.json();
+        toast.error(err.detail || "Upload failed");
+      }
+    } catch {
+      toast.error("Upload failed");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
   const fetchClientDetails = async (clientId) => {
     try {
       const response = await fetch(`${API_URL}/api/clients/${clientId}`, {
         headers: getAuthHeaders(),
-        credentials: 'include'
+        credentials: "include",
       });
       if (response.ok) {
         const data = await response.json();
         setViewClient(data);
       }
     } catch (error) {
-      console.error('Error fetching client details:', error);
-      toast.error('Failed to load client details');
+      console.error("Error fetching client details:", error);
+      toast.error("Failed to load client details");
     }
   };
 
@@ -148,7 +199,6 @@ export default function Clients() {
     fetchClients();
   }, [searchTerm, statusFilter, currentPage, pageSize]);
 
-  
   // Filter clients based on transaction filters
   const filteredClients = clients.filter((client) => {
     // Balance filter
@@ -386,6 +436,30 @@ export default function Clients() {
             if (!open) resetForm();
           }}
         >
+          <label className="cursor-pointer">
+            <Button
+              variant="outline"
+              className="border-slate-200 text-slate-600"
+              disabled={uploading}
+              asChild
+              data-testid="bulk-upload-btn"
+            >
+              <span>
+                {uploading ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Upload className="w-4 h-4 mr-2" />
+                )}
+                {uploading ? "Uploading..." : "Bulk Upload"}
+              </span>
+            </Button>
+            <input
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              onChange={handleBulkUpload}
+              className="hidden"
+            />
+          </label>
           <DialogTrigger asChild>
             <Button
               className="bg-[#1FA21B] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-xl glow-cyan"
