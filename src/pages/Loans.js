@@ -95,15 +95,16 @@ const installmentFrequencies = [
 
 export default function Loans() {
   const { user } = useAuth();
-  const [totalPages, setTotalPages] = useState(1);
   const [loans, setLoans] = useState([]);
-  const [pageSize, setPageSize] = useState(20);
-  const [currentPage, setCurrentPage] = useState(1);
   const [treasuryAccounts, setTreasuryAccounts] = useState([]);
   const [vendors, setExchangers] = useState([]);
   const [dashboard, setDashboard] = useState(null);
   const [loanTransactions, setLoanTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const [submittingLoan, setSubmittingLoan] = useState(false);
   const [submittingRepayment, setSubmittingRepayment] = useState(false);
   const [mainTab, setMainTab] = useState("dashboard");
@@ -213,12 +214,13 @@ export default function Loans() {
 
   const fetchTreasuryAccounts = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/treasury`, {
+      const response = await fetch(`${API_URL}/api/treasury?page_size=200`, {
         headers: getAuthHeaders(),
         credentials: "include",
       });
       if (response.ok) {
-        const accounts = await response.json();
+        const data = await response.json();
+        const accounts = data.items || data;
         setTreasuryAccounts(accounts.filter((a) => a.status === "active"));
       }
     } catch (error) {
