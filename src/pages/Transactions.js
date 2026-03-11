@@ -82,6 +82,7 @@ import {
   Download,
   FileSpreadsheet,
   FileText,
+  Edit,
 } from "lucide-react";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -124,7 +125,15 @@ export default function Transactions() {
   const [clientBankAccounts, setClientBankAccounts] = useState([]);
   const [selectedBankAccount, setSelectedBankAccount] = useState("new");
   const [clientSearchOpen, setClientSearchOpen] = useState(false);
-
+  const [destEditTx, setDestEditTx] = useState(null);
+  const [destForm, setDestForm] = useState({
+    destination_type: "",
+    vendor_id: "",
+    destination_account_id: "",
+    description: "",
+    crm_reference: "",
+  });
+  const [destSaving, setDestSaving] = useState(false);
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -542,6 +551,44 @@ export default function Transactions() {
   const getClientName = (clientId) => {
     const client = clients.find((c) => c.client_id === clientId);
     return client ? `${client.first_name} ${client.last_name}` : clientId;
+  };
+
+  const openDestEdit = (tx) => {
+    setDestForm({
+      destination_type: tx.destination_type || "",
+      vendor_id: tx.vendor_id || "",
+      destination_account_id: tx.destination_account_id || "",
+      description: tx.description || "",
+      crm_reference: tx.crm_reference || "",
+    });
+    setDestEditTx(tx);
+  };
+
+  const handleSaveDest = async () => {
+    if (!destEditTx) return;
+    setDestSaving(true);
+    try {
+      const response = await fetch(
+        `${API_URL}/api/transactions/${destEditTx.transaction_id}/assign`,
+        {
+          method: "PUT",
+          headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+          body: JSON.stringify(destForm),
+        },
+      );
+      if (response.ok) {
+        toast.success("Destination updated");
+        setDestEditTx(null);
+        fetchTransactions();
+      } else {
+        const err = await response.json();
+        toast.error(err.detail || "Failed");
+      }
+    } catch {
+      toast.error("Failed to update");
+    } finally {
+      setDestSaving(false);
+    }
   };
 
   const filteredTransactions = transactions.filter((tx) => {
@@ -2348,15 +2395,29 @@ export default function Transactions() {
                       </TableCell>
                       <TableCell>{getStatusBadge(tx.status)}</TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setViewTransaction(tx)}
-                          className="text-slate-500 hover:text-slate-800 hover:bg-slate-100"
-                          data-testid={`tx-view-${tx.transaction_id}`}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
+                        <div className="flex gap-1 justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setViewTransaction(tx)}
+                            className="text-slate-500 hover:text-slate-800 hover:bg-slate-100 h-7 w-7 p-0"
+                            data-testid={`tx-view-${tx.transaction_id}`}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          {tx.status === "pending" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openDestEdit(tx)}
+                              className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 h-7 w-7 p-0"
+                              title="Edit Destination"
+                              data-testid={`tx-dest-edit-${tx.transaction_id}`}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -2670,6 +2731,191 @@ export default function Transactions() {
                   </p>
                 </div>
               )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+      {/* Edit Destination Dialog */}
+      <Dialog open={!!destEditTx} onOpenChange={() => setDestEditTx(null)}>
+        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle
+              className="text-xl font-bold uppercase"
+              style={{ fontFamily: "Barlow Condensed" }}
+            >
+              Edit Destination
+            </DialogTitle>
+          </DialogHeader>
+          {destEditTx && (
+            <div className="space-y-4">
+              <div className="p-3 bg-slate-50 rounded border space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Reference</span>
+                  <span className="font-mono">{destEditTx.reference}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Type</span>
+                  <Badge
+                    className={
+                      destEditTx.transaction_type === "deposit"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-red-100 text-red-700"
+                    }
+                  >
+                    {destEditTx.transaction_type}
+                  </Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Client</span>
+                  <span>{destEditTx.client_name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Amount</span>
+                  <span className="font-mono font-bold">
+                    ${destEditTx.amount?.toLocaleString()}
+                  </span>
+                </div>
+                {destEditTx.base_amount &&
+                  destEditTx.base_currency !== "USD" && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Base Amount</span>
+                      <span className="font-mono">
+                        {destEditTx.base_amount?.toLocaleString()}{" "}
+                        {destEditTx.base_currency}
+                      </span>
+                    </div>
+                  )}
+              </div>
+
+              <div>
+                <Label className="text-xs text-slate-500 uppercase">
+                  Destination Type
+                </Label>
+                <Select
+                  value={destForm.destination_type}
+                  onValueChange={(v) =>
+                    setDestForm({
+                      ...destForm,
+                      destination_type: v,
+                      vendor_id: v !== "vendor" ? "" : destForm.vendor_id,
+                    })
+                  }
+                >
+                  <SelectTrigger
+                    className="bg-slate-50"
+                    data-testid="dest-edit-type"
+                  >
+                    <SelectValue placeholder="Select destination" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="vendor">Exchanger</SelectItem>
+                    <SelectItem value="bank">Bank</SelectItem>
+                    <SelectItem value="treasury">Treasury</SelectItem>
+                    <SelectItem value="psp">PSP</SelectItem>
+                    <SelectItem value="usdt">USDT</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {destForm.destination_type === "vendor" && (
+                <div>
+                  <Label className="text-xs text-slate-500 uppercase">
+                    Select Exchanger *
+                  </Label>
+                  <Select
+                    value={destForm.vendor_id}
+                    onValueChange={(v) =>
+                      setDestForm({ ...destForm, vendor_id: v })
+                    }
+                  >
+                    <SelectTrigger
+                      className="bg-slate-50"
+                      data-testid="dest-edit-vendor"
+                    >
+                      <SelectValue placeholder="Select exchanger" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {vendors
+                        .filter((v) => v.status === "active")
+                        .map((v) => (
+                          <SelectItem key={v.vendor_id} value={v.vendor_id}>
+                            {v.vendor_name} (
+                            {destEditTx.transaction_type === "withdrawal"
+                              ? "WD"
+                              : "DP"}
+                            :{" "}
+                            {destEditTx.transaction_type === "withdrawal"
+                              ? v.withdrawal_commission || 0
+                              : v.deposit_commission || 0}
+                            %)
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {destForm.destination_type === "treasury" && (
+                <div>
+                  <Label className="text-xs text-slate-500 uppercase">
+                    Treasury Account
+                  </Label>
+                  <Select
+                    value={destForm.destination_account_id}
+                    onValueChange={(v) =>
+                      setDestForm({ ...destForm, destination_account_id: v })
+                    }
+                  >
+                    <SelectTrigger className="bg-slate-50">
+                      <SelectValue placeholder="Select account" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {treasuryAccounts.map((a) => (
+                        <SelectItem key={a.account_id} value={a.account_id}>
+                          {a.account_name} ({a.currency})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div>
+                <Label className="text-xs text-slate-500 uppercase">
+                  CRM Reference
+                </Label>
+                <Input
+                  value={destForm.crm_reference}
+                  onChange={(e) =>
+                    setDestForm({ ...destForm, crm_reference: e.target.value })
+                  }
+                  className="bg-slate-50 font-mono"
+                  placeholder="CRM reference"
+                />
+              </div>
+
+              <div>
+                <Label className="text-xs text-slate-500 uppercase">
+                  Description
+                </Label>
+                <Textarea
+                  value={destForm.description}
+                  onChange={(e) =>
+                    setDestForm({ ...destForm, description: e.target.value })
+                  }
+                  className="bg-slate-50"
+                  rows={2}
+                />
+              </div>
+
+              <Button
+                onClick={handleSaveDest}
+                disabled={destSaving}
+                className="w-full bg-blue-600 text-white hover:bg-blue-700"
+                data-testid="dest-edit-save"
+              >
+                {destSaving ? "Saving..." : "Save Destination"}
+              </Button>
             </div>
           )}
         </DialogContent>

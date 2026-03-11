@@ -28,6 +28,7 @@ import Messages from "./pages/Messages";
 import AuditCompliance from "./pages/AuditCompliance";
 import LogsManagement from "./pages/Logs";
 import Layout from "./components/Layout";
+import TransactionRequests from "./pages/TransactionRequests";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
 import { usePermissions } from "./context/usePermissions";
@@ -105,6 +106,7 @@ function AppRouter() {
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="clients" element={<Clients />} />
         <Route path="transactions" element={<Transactions />} />
+        <Route path="transaction-requests" element={<TransactionRequests />} />
         <Route path="treasury" element={<Treasury />} />
         <Route
           path="lp-accounts"

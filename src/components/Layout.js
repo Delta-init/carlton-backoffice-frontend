@@ -40,6 +40,7 @@ import {
   ArrowLeft,
   AlertTriangle,
   MessageSquare,
+  FileInput
 } from "lucide-react";
 
 export default function Layout() {
@@ -52,6 +53,7 @@ export default function Layout() {
   const [notificationCounts, setNotificationCounts] = useState({
     approvals: 0,
     messages: 0,
+    txRequests: 0
   });
 
   const isDark = theme === "dark";
@@ -92,6 +94,12 @@ export default function Layout() {
           ...prev,
           messages: msgData.count || 0,
         }));
+      }
+        // Fetch pending TX requests count
+      const txReqRes = await fetch(`${API_URL}/api/transaction-requests/pending-count`, { headers });
+      if (txReqRes.ok) {
+        const txReqData = await txReqRes.json();
+        setNotificationCounts(prev => ({ ...prev, txRequests: txReqData.count || 0 }));
       }
     } catch (error) {
       console.error("Error fetching notification counts:", error);
@@ -139,6 +147,7 @@ export default function Layout() {
       label: "Transactions",
       module: "transactions",
     },
+      { to: '/transaction-requests', icon: FileInput, label: 'TX Requests', module: 'transaction_requests' },
     { to: "/treasury", icon: Landmark, label: "Treasury", module: "treasury" },
     {
       to: "/lp-accounts",
@@ -198,6 +207,7 @@ export default function Layout() {
   const getBadgeCount = (label) => {
     if (label === "Approvals") return notificationCounts.approvals;
     if (label === "Messages") return notificationCounts.messages;
+     if (label === 'TX Requests') return notificationCounts.txRequests;
     return 0;
   };
 
