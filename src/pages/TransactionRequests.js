@@ -381,11 +381,12 @@ export default function TransactionRequests() {
 
   useEffect(() => { fetchRequests(); }, [fetchRequests]);
 
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [cRes, tRes, pRes, vRes] = await Promise.all([
-          fetch(`${API_URL}/api/clients`, { headers: authHeaders() }),
+          fetch(`${API_URL}/api/clients?page_size=200`, { headers: authHeaders() }),
           fetch(`${API_URL}/api/treasury`, { headers: authHeaders() }),
           fetch(`${API_URL}/api/psp`, { headers: authHeaders() }),
           fetch(`${API_URL}/api/vendors?page_size=100`, { headers: authHeaders() }),
@@ -580,6 +581,7 @@ export default function TransactionRequests() {
       </div>
 
       {/* Summary */}
+     {/* Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="bg-yellow-50 border-yellow-200"><CardContent className="p-4 flex items-center justify-between">
           <div><p className="text-xs text-yellow-600 uppercase">Pending</p><p className="text-3xl font-bold text-yellow-700">{requests.filter(r => r.status === 'pending').length}</p></div>

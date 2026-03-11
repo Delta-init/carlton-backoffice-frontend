@@ -129,7 +129,7 @@ export default function Debts() {
             headers: getAuthHeaders(),
             credentials: "include",
           }),
-          fetch(`${API_URL}/api/clients`, {
+          fetch(`${API_URL}/api/clients?page_size=200`, {
             headers: getAuthHeaders(),
             credentials: "include",
           }),
@@ -145,7 +145,10 @@ export default function Debts() {
 
       if (debtsRes.ok) setDebts(await debtsRes.json());
       if (summaryRes.ok) setSummary(await summaryRes.json());
-      if (clientsRes.ok) setClients(await clientsRes.json());
+      if (clientsRes.ok) {
+        const d = await clientsRes.json();
+        setClients(d.items || d);
+      }
       if (vendorsRes.ok) {
         const vendorData = await vendorsRes.json();
         setExchangers(

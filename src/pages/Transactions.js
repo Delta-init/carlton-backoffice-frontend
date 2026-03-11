@@ -222,19 +222,18 @@ export default function Transactions() {
     }
   };
 
-  const fetchClients = async () => {
+const fetchClients = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/clients`, {
-        headers: getAuthHeaders(),
-        credentials: "include",
-      });
+      const response = await fetch(`${API_URL}/api/clients?page_size=200`, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
-        setClients(await response.json());
+        const data = await response.json();
+        setClients(data.items || data);
       }
     } catch (error) {
-      console.error("Error fetching clients:", error);
+      console.error('Error fetching clients:', error);
     }
   };
+  
 
   const fetchTreasuryAccounts = async () => {
     try {

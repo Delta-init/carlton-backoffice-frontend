@@ -1,14 +1,9 @@
-import { useEffect, useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
-import { Badge } from "../components/ui/badge";
+import { useEffect, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Badge } from '../components/ui/badge';
 import {
   Table,
   TableBody,
@@ -16,36 +11,31 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "../components/ui/table";
+} from '../components/ui/table';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "../components/ui/dialog";
+} from '../components/ui/dialog';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../components/ui/select";
+} from '../components/ui/select';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "../components/ui/dropdown-menu";
-import { Textarea } from "../components/ui/textarea";
-import { ScrollArea } from "../components/ui/scroll-area";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "../components/ui/tabs";
-import { toast } from "sonner";
+} from '../components/ui/dropdown-menu';
+import { Textarea } from '../components/ui/textarea';
+import { ScrollArea } from '../components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { toast } from 'sonner';
 import {
   Users,
   Plus,
@@ -63,73 +53,76 @@ import {
   FileSpreadsheet,
   Calendar,
   TrendingDown,
-} from "lucide-react";
+} from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const statusOptions = [
-  { value: "pending", label: "Pending" },
-  { value: "approved", label: "Approved" },
-  { value: "rejected", label: "Rejected" },
-  { value: "suspended", label: "Suspended" },
+  { value: 'pending', label: 'Pending' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'rejected', label: 'Rejected' },
+  { value: 'suspended', label: 'Suspended' },
 ];
 
 export default function Clients() {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalClients, setTotalClients] = useState(0);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
   const [viewClient, setViewClient] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-
+  
   // Transaction filter states
-  const [txTypeFilter, setTxTypeFilter] = useState("all");
-  const [txStatusFilter, setTxStatusFilter] = useState("all");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [minBalance, setMinBalance] = useState("");
-  const [maxBalance, setMaxBalance] = useState("");
-
+  const [txTypeFilter, setTxTypeFilter] = useState('all');
+  const [txStatusFilter, setTxStatusFilter] = useState('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [minBalance, setMinBalance] = useState('');
+  const [maxBalance, setMaxBalance] = useState('');
+  
   const [formData, setFormData] = useState({
-    first_name: "",
-    last_name: "",
-    email: "",
-    phone: "",
-    country: "",
-    mt5_number: "",
-    crm_customer_id: "",
-    notes: "",
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    country: '',
+    mt5_number: '',
+    crm_customer_id: '',
+    notes: '',
   });
 
   const getAuthHeaders = () => {
-    const token = localStorage.getItem("auth_token");
+    const token = localStorage.getItem('auth_token');
     return {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     };
   };
 
-  const fetchClients = async () => {
+  const fetchClients = async (pg) => {
     try {
-      let url = `${API_URL}/api/clients`;
-      const params = new URLSearchParams();
-      if (searchTerm) params.append("search", searchTerm);
-      if (statusFilter && statusFilter !== "all")
-        params.append("status", statusFilter);
-      if (params.toString()) url += `?${params.toString()}`;
+      const p = pg || currentPage;
+      const params = new URLSearchParams({ page: p, page_size: pageSize });
+      if (searchTerm) params.append('search', searchTerm);
+      if (statusFilter && statusFilter !== 'all') params.append('status', statusFilter);
+      const url = `${API_URL}/api/clients?${params}`;
 
-      const response = await fetch(url, {
-        headers: getAuthHeaders(),
-        credentials: "include",
-      });
+      const response = await fetch(url, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
-        setClients(await response.json());
+        const data = await response.json();
+        setClients(data.items || []);
+        setTotalPages(data.total_pages || 1);
+        setTotalClients(data.total || 0);
       }
     } catch (error) {
-      console.error("Error fetching clients:", error);
-      toast.error("Failed to load clients");
+      console.error('Error fetching clients:', error);
+      toast.error('Failed to load clients');
     } finally {
       setLoading(false);
     }
@@ -139,22 +132,23 @@ export default function Clients() {
     try {
       const response = await fetch(`${API_URL}/api/clients/${clientId}`, {
         headers: getAuthHeaders(),
-        credentials: "include",
+        credentials: 'include'
       });
       if (response.ok) {
         const data = await response.json();
         setViewClient(data);
       }
     } catch (error) {
-      console.error("Error fetching client details:", error);
-      toast.error("Failed to load client details");
+      console.error('Error fetching client details:', error);
+      toast.error('Failed to load client details');
     }
   };
 
   useEffect(() => {
     fetchClients();
-  }, [searchTerm, statusFilter]);
+  }, [searchTerm, statusFilter, currentPage, pageSize]);
 
+  
   // Filter clients based on transaction filters
   const filteredClients = clients.filter((client) => {
     // Balance filter
@@ -606,12 +600,21 @@ export default function Clients() {
               <Input
                 placeholder="Search clients..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-800/30 focus:border-[#1FA21B]"
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="pl-10 bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-800/30 focus:border-[#66FCF1]"
                 data-testid="search-clients"
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select
+              value={statusFilter}
+              onValueChange={(v) => {
+                setStatusFilter(v);
+                setCurrentPage(1);
+              }}
+            >
               <SelectTrigger
                 className="w-40 bg-slate-50 border-slate-200 text-slate-800"
                 data-testid="filter-status"
@@ -741,6 +744,7 @@ export default function Clients() {
                   setMinBalance("");
                   setMaxBalance("");
                   setTxTypeFilter("all");
+                  setCurrentPage(1);
                 }}
                 className="text-slate-500 hover:text-slate-800"
               >
@@ -748,7 +752,7 @@ export default function Clients() {
               </Button>
             )}
             <div className="flex-1 text-right text-sm text-slate-500">
-              Showing {filteredClients.length} of {clients.length} clients
+              Showing {filteredClients.length} of {totalClients} clients
             </div>
           </div>
         </CardContent>
@@ -907,6 +911,98 @@ export default function Clients() {
           </ScrollArea>
         </CardContent>
       </Card>
+
+      {/* Classic Pagination */}
+      <div
+        className="flex items-center justify-between px-2 py-3"
+        data-testid="pagination-container"
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-slate-500">Rows per page:</span>
+          <select
+            value={pageSize}
+            onChange={(e) => {
+              setPageSize(Number(e.target.value));
+              setCurrentPage(1);
+            }}
+            className="px-2 py-1 text-sm border border-slate-200 rounded-md bg-white text-slate-700"
+            data-testid="page-size-select"
+          >
+            {[10, 20, 50, 100].map((size) => (
+              <option key={size} value={size}>
+                {size}
+              </option>
+            ))}
+          </select>
+          <span className="text-sm text-slate-400">
+            {(currentPage - 1) * pageSize + 1}–
+            {Math.min(currentPage * pageSize, totalClients)} of {totalClients}
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={currentPage <= 1}
+            onClick={() => setCurrentPage(1)}
+            className="h-8 px-2 text-xs border-slate-200"
+            data-testid="page-first"
+          >
+            First
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={currentPage <= 1}
+            onClick={() => setCurrentPage(currentPage - 1)}
+            className="h-8 px-3 text-xs border-slate-200"
+            data-testid="page-prev"
+          >
+            Prev
+          </Button>
+          {(() => {
+            const pages = [];
+            let start = Math.max(1, currentPage - 2);
+            let end = Math.min(totalPages, start + 4);
+            if (end - start < 4) start = Math.max(1, end - 4);
+            for (let i = start; i <= end; i++) {
+              pages.push(
+                <Button
+                  key={i}
+                  variant={i === currentPage ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentPage(i)}
+                  className={`h-8 w-8 text-xs ${i === currentPage ? "bg-[#1F2833] text-white hover:bg-[#1F2833]" : "border-slate-200"}`}
+                  data-testid={`page-${i}`}
+                >
+                  {i}
+                </Button>,
+              );
+            }
+            return pages;
+          })()}
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={currentPage >= totalPages}
+            onClick={() => setCurrentPage(currentPage + 1)}
+            className="h-8 px-3 text-xs border-slate-200"
+            data-testid="page-next"
+          >
+            Next
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={currentPage >= totalPages}
+            onClick={() => setCurrentPage(totalPages)}
+            className="h-8 px-2 text-xs border-slate-200"
+            data-testid="page-last"
+          >
+            Last
+          </Button>
+        </div>
+      </div>
 
       {/* View Client Dialog */}
       <Dialog open={!!viewClient} onOpenChange={() => setViewClient(null)}>
