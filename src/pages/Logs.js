@@ -688,7 +688,7 @@ export default function Logs() {
       <PaginationControls
         currentPage={currentPage}
         totalPages={totalPages}
-        totalItems={totalItems}
+        totalItems={total}
         pageSize={pageSize}
         onPageChange={setCurrentPage}
         onPageSizeChange={(s) => {
