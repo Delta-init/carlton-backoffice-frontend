@@ -141,12 +141,7 @@ export default function Layout() {
       module: "dashboard",
     },
     { to: "/clients", icon: Users, label: "Clients", module: "clients" },
-    {
-      to: "/transactions",
-      icon: ArrowLeftRight,
-      label: "Transactions",
-      module: "transactions",
-    },
+    { to: '/transactions', icon: ArrowLeftRight, label: 'Transactions Summary', module: 'transactions' },
       { to: '/transaction-requests', icon: FileInput, label: 'TX Requests', module: 'transaction_requests' },
     { to: "/treasury", icon: Landmark, label: "Treasury", module: "treasury" },
     {

@@ -1235,6 +1235,7 @@ export default function AccountantDashboard() {
                   </p>
                 </div>
               )}
+
               {/* Client Bank Details */}
               {viewTransaction.client_bank_name && (
                 <div
