@@ -910,10 +910,12 @@ export default function AccountantDashboard() {
                             <p className="text-white text-xs truncate">
                               {tx.destination_account_name ||
                                 tx.vendor_name ||
+                                tx.psp_name ||
                                 "N/A"}
                             </p>
                             <p className="text-[10px] text-[#C5C6C7] truncate">
-                              {tx.destination_bank_name || ""}
+                              {tx.destination_bank_name ||
+                                (tx.psp_name ? "PSP" : "")}
                             </p>
                           </div>
                         )}

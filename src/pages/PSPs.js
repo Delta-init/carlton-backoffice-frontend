@@ -146,16 +146,18 @@ export default function PSPs() {
     }
   };
 
-
   const fetchTreasuryAccounts = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/treasury?page_size=200`, { headers: getAuthHeaders(), credentials: 'include' });
+      const response = await fetch(`${API_URL}/api/treasury?page_size=200`, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
       if (response.ok) {
         const d = await response.json();
         setTreasuryAccounts(d.items || d);
       }
     } catch (error) {
-      console.error('Error fetching treasury accounts:', error);
+      console.error("Error fetching treasury accounts:", error);
     }
   };
 
@@ -1313,6 +1315,9 @@ export default function PSPs() {
                               Reference
                             </TableHead>
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                              Pay Currency
+                            </TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
                               Gross
                             </TableHead>
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
@@ -1358,111 +1363,122 @@ export default function PSPs() {
                               (tx.psp_extra_charges || 0);
                             const holdingDays =
                               tx.psp_holding_days || viewPsp?.holding_days || 0;
+
                             const isReleased =
                               tx.psp_holding_release_date &&
                               new Date(tx.psp_holding_release_date) <=
                                 new Date();
+                            const hasDiffCurrency =
+                              tx.base_currency &&
+                              tx.base_currency !== "USD" &&
+                              tx.base_currency !== tx.currency;
+                            const rate = tx.exchange_rate || 1;
+                            const baseGross = hasDiffCurrency
+                              ? tx.base_amount || tx.amount / rate
+                              : null;
+                            const baseComm = hasDiffCurrency
+                              ? (tx.psp_commission_amount || 0) / rate
+                              : null;
+                            const baseReserve = hasDiffCurrency
+                              ? (tx.psp_reserve_fund_amount ||
+                                  tx.psp_chargeback_amount ||
+                                  0) / rate
+                              : null;
+                            const baseExtra = hasDiffCurrency
+                              ? (tx.psp_extra_charges || 0) / rate
+                              : null;
+                            const baseNet = hasDiffCurrency
+                              ? baseGross - baseComm - baseReserve - baseExtra
+                              : null;
                             return (
-                              <TableRow
-                                key={tx.transaction_id}
-                                className={`border-slate-200 hover:bg-slate-100 ${overdue ? "bg-red-500/5" : ""}`}
-                              >
+                          <TableRow key={tx.transaction_id} className={`border-slate-200 hover:bg-slate-100 ${overdue ? 'bg-red-500/5' : ''}`}>
                                 <TableCell>
                                   <div>
-                                    <span className="font-mono text-slate-800 text-xs">
-                                      {tx.reference}
-                                    </span>
-                                    <p className="text-[10px] text-slate-500">
-                                      {tx.client_name}
-                                    </p>
+                                    <span className="font-mono text-slate-800 text-xs">{tx.reference}</span>
+                                    <p className="text-[10px] text-slate-500">{tx.client_name}</p>
                                   </div>
                                 </TableCell>
-                                <TableCell className="font-mono text-slate-800">
-                                  ${tx.amount?.toLocaleString()}
+                                <TableCell className="text-xs text-slate-800 font-medium" data-testid={`pay-currency-${tx.transaction_id}`}>
+                                  {hasDiffCurrency ? tx.base_currency : tx.currency || 'USD'}
+                                  {hasDiffCurrency && <p className="text-[10px] text-slate-400">Rate: {rate}</p>}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="font-mono text-slate-800 text-xs">
+                                    ${tx.amount?.toLocaleString()}
+                                    {hasDiffCurrency && <p className="text-[10px] text-blue-500">{baseGross?.toLocaleString(undefined, {maximumFractionDigits: 2})} {tx.base_currency}</p>}
+                                  </div>
                                 </TableCell>
                                 <TableCell>
                                   <div className="text-xs">
                                     <div className="flex justify-between">
-                                      <span className="text-slate-500">
-                                        Comm:
-                                      </span>
-                                      <span className="font-mono text-yellow-400">
-                                        -$
-                                        {(
-                                          tx.psp_commission_amount || 0
-                                        ).toLocaleString()}
-                                      </span>
+                                      <span className="text-slate-500">Comm:</span>
+                                      <span className="font-mono text-yellow-400">-${(tx.psp_commission_amount || 0).toLocaleString()}</span>
                                     </div>
-                                    {(tx.psp_reserve_fund_amount ||
-                                      tx.psp_chargeback_amount) > 0 && (
+                                    {hasDiffCurrency && (
                                       <div className="flex justify-between">
-                                        <span className="text-slate-500">
-                                          Reserve:
-                                        </span>
-                                        <span className="font-mono text-red-400">
-                                          -$
-                                          {(
-                                            tx.psp_reserve_fund_amount ||
-                                            tx.psp_chargeback_amount
-                                          ).toLocaleString()}
-                                        </span>
+                                        <span></span>
+                                        <span className="font-mono text-[10px] text-blue-500">-{baseComm?.toLocaleString(undefined, {maximumFractionDigits: 2})} {tx.base_currency}</span>
                                       </div>
                                     )}
+                                    {(tx.psp_reserve_fund_amount || tx.psp_chargeback_amount) > 0 && (
+                                      <>
+                                        <div className="flex justify-between">
+                                          <span className="text-slate-500">Reserve:</span>
+                                          <span className="font-mono text-red-400">-${(tx.psp_reserve_fund_amount || tx.psp_chargeback_amount).toLocaleString()}</span>
+                                        </div>
+                                        {hasDiffCurrency && (
+                                          <div className="flex justify-between">
+                                            <span></span>
+                                            <span className="font-mono text-[10px] text-blue-500">-{baseReserve?.toLocaleString(undefined, {maximumFractionDigits: 2})} {tx.base_currency}</span>
+                                          </div>
+                                        )}
+                                      </>
+                                    )}
                                     {tx.psp_extra_charges > 0 && (
-                                      <div className="flex justify-between">
-                                        <span className="text-slate-500">
-                                          Extra:
-                                        </span>
-                                        <span className="font-mono text-red-400">
-                                          -$
-                                          {tx.psp_extra_charges.toLocaleString()}
-                                        </span>
-                                      </div>
+                                      <>
+                                        <div className="flex justify-between">
+                                          <span className="text-slate-500">Extra:</span>
+                                          <span className="font-mono text-red-400">-${tx.psp_extra_charges.toLocaleString()}</span>
+                                        </div>
+                                        {hasDiffCurrency && (
+                                          <div className="flex justify-between">
+                                            <span></span>
+                                            <span className="font-mono text-[10px] text-blue-500">-{baseExtra?.toLocaleString(undefined, {maximumFractionDigits: 2})} {tx.base_currency}</span>
+                                          </div>
+                                        )}
+                                      </>
                                     )}
                                   </div>
                                 </TableCell>
-                                <TableCell className="font-mono text-blue-600 font-bold">
-                                  ${netAmount.toLocaleString()}
+                                <TableCell>
+                                  <div className="font-mono text-blue-600 font-bold">
+                                    ${netAmount.toLocaleString()}
+                                    {hasDiffCurrency && <p className="text-[10px] text-blue-500 font-normal">{baseNet?.toLocaleString(undefined, {maximumFractionDigits: 2})} {tx.base_currency}</p>}
+                                  </div>
                                 </TableCell>
                                 <TableCell>
                                   <div className="flex items-center gap-1">
                                     <Timer className="w-3 h-3 text-slate-500" />
-                                    <span className="text-slate-800 font-mono text-xs">
-                                      {holdingDays} days
-                                    </span>
+                                    <span className="text-slate-800 font-mono text-xs">{holdingDays} days</span>
                                   </div>
                                 </TableCell>
                                 <TableCell>
                                   {tx.psp_holding_release_date ? (
-                                    <span
-                                      className={`flex items-center gap-1 text-xs ${isReleased ? "text-green-400" : "text-slate-500"}`}
-                                    >
-                                      {isReleased ? (
-                                        <CheckCircle2 className="w-3 h-3" />
-                                      ) : (
-                                        <Clock className="w-3 h-3" />
-                                      )}
+                                    <span className={`flex items-center gap-1 text-xs ${isReleased ? 'text-green-400' : 'text-slate-500'}`}>
+                                      {isReleased ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
                                       {formatDate(tx.psp_holding_release_date)}
                                     </span>
                                   ) : (
-                                    <span className="text-slate-500 text-xs">
-                                      -
-                                    </span>
+                                    <span className="text-slate-500 text-xs">-</span>
                                   )}
                                 </TableCell>
                                 <TableCell>
-                                  {tx.settlement_status === "awaiting" ? (
-                                    <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-xs">
-                                      Awaiting
-                                    </Badge>
+                                  {tx.settlement_status === 'awaiting' ? (
+                                    <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-xs">Awaiting</Badge>
                                   ) : isReleased ? (
-                                    <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">
-                                      Ready
-                                    </Badge>
+                                    <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">Ready</Badge>
                                   ) : (
-                                    <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-xs">
-                                      Holding
-                                    </Badge>
+                                    <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-xs">Holding</Badge>
                                   )}
                                 </TableCell>
                                 <TableCell className="text-right">
@@ -1479,9 +1495,7 @@ export default function PSPs() {
                                     {isAccountantOrAdmin && (
                                       <Button
                                         size="sm"
-                                        onClick={() =>
-                                          openRecordPaymentDialog(tx)
-                                        }
+                                        onClick={() => openRecordPaymentDialog(tx)}
                                         className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30 px-2"
                                         data-testid={`record-payment-${tx.transaction_id}`}
                                         title="Record Payment Received"

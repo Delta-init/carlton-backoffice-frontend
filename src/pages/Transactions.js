@@ -2482,6 +2482,12 @@ export default function Transactions() {
                               Exchanger
                             </span>
                           </span>
+                        ) : tx.destination_type === "psp" && tx.psp_name ? (
+                          <span className="text-purple-500">
+                            {tx.psp_name}
+                            <br />
+                            <span className="text-xs text-purple-400">PSP</span>
+                          </span>
                         ) : tx.destination_bank_name ? (
                           <span>
                             {tx.destination_account_name}
