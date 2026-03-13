@@ -51,6 +51,7 @@ import {
   Upload,
   CreditCard,
   Filter,
+  AlertTriangle,
 } from "lucide-react";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -796,200 +797,256 @@ export default function AccountantDashboard() {
                 </CardContent>
               </Card>
             ) : (
-              filteredTransactions.map((tx) => (
-                <Card
-                  key={tx.transaction_id}
-                  className="bg-white border-slate-200"
-                >
-                  <CardContent className="p-4">
-                    <div className="grid grid-cols-[140px_80px_120px_90px_120px_150px_140px_auto] items-center gap-3">
-                      {/* Reference + CRM Ref */}
-                      <div className="min-w-0">
-                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">
-                          Reference
-                        </p>
-                        <p
-                          className="text-white font-mono text-xs truncate"
-                          title={tx.reference}
-                        >
-                          {tx.reference}
-                        </p>
-                        {tx.crm_reference && (
-                          <p
-                            className="text-purple-400 font-mono text-[10px] truncate"
-                            title={tx.crm_reference}
-                          >
-                            CRM: {tx.crm_reference}
+              filteredTransactions.map((tx) => {
+                const hasProperDest =
+                  tx.destination_account_name ||
+                  tx.vendor_name ||
+                  tx.psp_name ||
+                  (tx.destination_type === "bank" && tx.client_bank_name) ||
+                  (tx.destination_type === "usdt" && tx.client_usdt_address);
+                return (
+                  <Card
+                    key={tx.transaction_id}
+                    className="bg-white border-slate-200"
+                  >
+                    <CardContent className="p-4">
+                      <div className="grid grid-cols-[140px_80px_120px_90px_120px_150px_140px_auto] items-center gap-3">
+                        {/* Reference + CRM Ref */}
+                        <div className="min-w-0">
+                          <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">
+                            Reference
                           </p>
-                        )}
-                        {tx.proof_image && (
-                          <ImageIcon className="w-3 h-3 text-[#66FCF1] mt-0.5" />
-                        )}
-                      </div>
-                      {/* Description */}
-                      <div className="min-w-0">
-                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">
-                          Desc
-                        </p>
-                        <p
-                          className="text-white text-[11px] truncate"
-                          title={tx.description || "-"}
-                        >
-                          {tx.description || "-"}
-                        </p>
-                      </div>
-                      {/* Client */}
-                      <div className="min-w-0">
-                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">
-                          Client
-                        </p>
-                        <p className="text-white text-sm truncate">
-                          {tx.client_name}
-                        </p>
-                      </div>
-                      {/* Type */}
-                      <div>
-                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">
-                          Type
-                        </p>
-                        {getTypeBadge(tx.transaction_type)}
-                      </div>
-                      {/* Amount */}
-                      <div>
-                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">
-                          Amount
-                        </p>
-                        <p
-                          className={`font-mono text-sm font-bold ${["deposit", "rebate"].includes(tx.transaction_type) ? "text-green-400" : "text-red-400"}`}
-                        >
-                          {["deposit", "rebate"].includes(tx.transaction_type)
-                            ? "+"
-                            : "-"}
-                          ${tx.amount?.toLocaleString()}
-                        </p>
-                        <p className="text-[10px] text-[#C5C6C7] font-mono">
-                          {tx.currency || "USD"}
-                          {tx.base_currency &&
-                          tx.base_currency !== "USD" &&
-                          tx.base_amount
-                            ? ` (${tx.base_amount?.toLocaleString()} ${tx.base_currency})`
-                            : ""}
-                        </p>
-                      </div>
-                      {/* Destination */}
-                      <div className="min-w-0">
-                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">
-                          Destination
-                        </p>
-                        {tx.destination_type === "bank" &&
-                        tx.client_bank_name ? (
-                          <div>
-                            <p className="text-white text-xs font-medium truncate">
-                              {tx.client_bank_name}
-                            </p>
-                            <p className="text-[10px] text-[#C5C6C7] font-mono truncate">
-                              {tx.client_bank_account_number}
-                            </p>
-                            <p className="text-[10px] text-[#1FA21B]">
-                              {tx.client_bank_currency || "USD"}
-                            </p>
-                          </div>
-                        ) : tx.destination_type === "usdt" &&
-                          tx.client_usdt_address ? (
-                          <div>
-                            <p className="text-white text-xs font-mono truncate">
-                              {tx.client_usdt_address?.slice(0, 8)}...
-                              {tx.client_usdt_address?.slice(-4)}
-                            </p>
-                            <Badge className="bg-green-500/20 text-green-400 text-[10px] mt-0.5">
-                              {tx.client_usdt_network || "USDT"}
-                            </Badge>
-                          </div>
-                        ) : (
-                          <div>
-                            <p className="text-white text-xs truncate">
-                              {tx.destination_account_name ||
-                                tx.vendor_name ||
-                                tx.psp_name ||
-                                "N/A"}
-                            </p>
-                            <p className="text-[10px] text-[#C5C6C7] truncate">
-                              {tx.destination_bank_name ||
-                                (tx.psp_name ? "PSP" : "")}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                      {/* Created */}
-                      <div>
-                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">
-                          Created
-                        </p>
-                        <p className="text-white text-xs">
-                          {formatDate(tx.created_at)}
-                        </p>
-                        <p className="text-[10px] text-[#C5C6C7]">
-                          by {tx.created_by_name || "System"}
-                        </p>
-                      </div>
-                      {/* Actions */}
-                      <div className="flex items-center gap-1.5 justify-end">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setViewTransaction(tx)}
-                          className="text-[#C5C6C7] hover:text-white hover:bg-white/5 h-8 w-8 p-0"
-                          data-testid={`view-tx-${tx.transaction_id}`}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        {tx.transaction_type === "withdrawal" &&
-                          !tx.accountant_proof_image && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setUploadingProof(tx)}
-                              className="text-[#1FA21B] hover:text-white hover:bg-[#1FA21B]/10 h-8 w-8 p-0"
-                              data-testid={`upload-proof-${tx.transaction_id}`}
+                          <p
+                            className="text-white font-mono text-xs truncate"
+                            title={tx.reference}
+                          >
+                            {tx.reference}
+                          </p>
+                          {tx.crm_reference && (
+                            <p
+                              className="text-purple-400 font-mono text-[10px] truncate"
+                              title={tx.crm_reference}
                             >
-                              <Upload className="w-4 h-4" />
-                            </Button>
+                              CRM: {tx.crm_reference}
+                            </p>
                           )}
-                        {tx.accountant_proof_image && (
-                          <Badge className="bg-green-500/20 text-green-400 text-[10px]">
-                            <ImageIcon className="w-3 h-3 mr-0.5" />
-                            Proof
-                          </Badge>
-                        )}
-                        <Button
-                          size="sm"
-                          onClick={() =>
-                            initiateApprove(tx.transaction_id, false)
-                          }
-                          disabled={processingId === tx.transaction_id}
-                          className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30 h-8 text-xs px-3"
-                          data-testid={`approve-tx-${tx.transaction_id}`}
-                        >
-                          <CheckCircle className="w-3.5 h-3.5 mr-1" />
-                          Approve
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() =>
-                            initiateReject(tx.transaction_id, false)
-                          }
-                          disabled={processingId === tx.transaction_id}
-                          className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 h-8 text-xs px-3"
-                          data-testid={`reject-tx-${tx.transaction_id}`}
-                        >
-                          <XCircle className="w-3.5 h-3.5 mr-1" />
-                          Reject
-                        </Button>
+                          {tx.proof_image && (
+                            <ImageIcon className="w-3 h-3 text-[#66FCF1] mt-0.5" />
+                          )}
+                        </div>
+                        {/* Description */}
+                        <div className="min-w-0">
+                          <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">
+                            Desc
+                          </p>
+                          <p
+                            className="text-white text-[11px] truncate"
+                            title={tx.description || "-"}
+                          >
+                            {tx.description || "-"}
+                          </p>
+                        </div>
+                        {/* Client */}
+                        <div className="min-w-0">
+                          <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">
+                            Client
+                          </p>
+                          <p className="text-white text-sm truncate">
+                            {tx.client_name}
+                          </p>
+                        </div>
+                        {/* Type */}
+                        <div>
+                          <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">
+                            Type
+                          </p>
+                          {getTypeBadge(tx.transaction_type)}
+                        </div>
+                        {/* Amount */}
+                        <div>
+                          <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">
+                            Amount
+                          </p>
+                          <p
+                            className={`font-mono text-sm font-bold ${["deposit", "rebate"].includes(tx.transaction_type) ? "text-green-400" : "text-red-400"}`}
+                          >
+                            {["deposit", "rebate"].includes(tx.transaction_type)
+                              ? "+"
+                              : "-"}
+                            ${tx.amount?.toLocaleString()}
+                          </p>
+                          <p className="text-[10px] text-[#C5C6C7] font-mono">
+                            {tx.currency || "USD"}
+                            {tx.base_currency &&
+                            tx.base_currency !== "USD" &&
+                            tx.base_amount
+                              ? ` (${tx.base_amount?.toLocaleString()} ${tx.base_currency})`
+                              : ""}
+                          </p>
+                        </div>
+                        {/* Destination */}
+                        <div className="min-w-0">
+                          <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">
+                            Destination
+                          </p>
+                          {(() => {
+                            const hasProperDest =
+                              tx.destination_account_name ||
+                              tx.vendor_name ||
+                              tx.psp_name ||
+                              (tx.destination_type === "bank" &&
+                                tx.client_bank_name) ||
+                              (tx.destination_type === "usdt" &&
+                                tx.client_usdt_address);
+                            if (
+                              tx.destination_type === "bank" &&
+                              tx.client_bank_name
+                            ) {
+                              return (
+                                <div>
+                                  <p className="text-white text-xs font-medium truncate">
+                                    {tx.client_bank_name}
+                                  </p>
+                                  <p className="text-[10px] text-[#C5C6C7] font-mono truncate">
+                                    {tx.client_bank_account_number}
+                                  </p>
+                                  <p className="text-[10px] text-[#66FCF1]">
+                                    {tx.client_bank_currency || "USD"}
+                                  </p>
+                                </div>
+                              );
+                            }
+                            if (
+                              tx.destination_type === "usdt" &&
+                              tx.client_usdt_address
+                            ) {
+                              return (
+                                <div>
+                                  <p className="text-white text-xs font-mono truncate">
+                                    {tx.client_usdt_address?.slice(0, 8)}...
+                                    {tx.client_usdt_address?.slice(-4)}
+                                  </p>
+                                  <Badge className="bg-green-500/20 text-green-400 text-[10px] mt-0.5">
+                                    {tx.client_usdt_network || "USDT"}
+                                  </Badge>
+                                </div>
+                              );
+                            }
+                            if (hasProperDest) {
+                              return (
+                                <div>
+                                  <p className="text-white text-xs truncate">
+                                    {tx.destination_account_name ||
+                                      tx.vendor_name ||
+                                      tx.psp_name}
+                                  </p>
+                                  <p className="text-[10px] text-[#C5C6C7] truncate">
+                                    {tx.destination_bank_name ||
+                                      (tx.psp_name
+                                        ? "PSP"
+                                        : tx.vendor_name
+                                          ? "Exchanger"
+                                          : "")}
+                                  </p>
+                                </div>
+                              );
+                            }
+                            return (
+                              <div
+                                data-testid={`no-dest-warning-${tx.transaction_id}`}
+                              >
+                                <div className="flex items-center gap-1">
+                                  <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                                  <p className="text-red-400 text-xs font-semibold">
+                                    No Destination
+                                  </p>
+                                </div>
+                                <p className="text-[10px] text-red-400/70 mt-0.5">
+                                  Assign destination before approval
+                                </p>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                        {/* Created */}
+                        <div>
+                          <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">
+                            Created
+                          </p>
+                          <p className="text-white text-xs">
+                            {formatDate(tx.created_at)}
+                          </p>
+                          <p className="text-[10px] text-[#C5C6C7]">
+                            by {tx.created_by_name || "System"}
+                          </p>
+                        </div>
+                        {/* Actions */}
+                        <div className="flex items-center gap-1.5 justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setViewTransaction(tx)}
+                            className="text-[#C5C6C7] hover:text-white hover:bg-white/5 h-8 w-8 p-0"
+                            data-testid={`view-tx-${tx.transaction_id}`}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          {tx.transaction_type === "withdrawal" &&
+                            !tx.accountant_proof_image && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setUploadingProof(tx)}
+                                className="text-[#1FA21B] hover:text-white hover:bg-[#1FA21B]/10 h-8 w-8 p-0"
+                                data-testid={`upload-proof-${tx.transaction_id}`}
+                              >
+                                <Upload className="w-4 h-4" />
+                              </Button>
+                            )}
+                          {tx.accountant_proof_image && (
+                            <Badge className="bg-green-500/20 text-green-400 text-[10px]">
+                              <ImageIcon className="w-3 h-3 mr-0.5" />
+                              Proof
+                            </Badge>
+                          )}
+                          <Button
+                            size="sm"
+                            onClick={() =>
+                              initiateApprove(tx.transaction_id, false)
+                            }
+                            disabled={
+                              processingId === tx.transaction_id ||
+                              !hasProperDest
+                            }
+                            className={`h-8 text-xs px-3 ${!hasProperDest ? "bg-slate-500/20 text-slate-500 border border-slate-500/30 cursor-not-allowed" : "bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30"}`}
+                            data-testid={`approve-tx-${tx.transaction_id}`}
+                            title={
+                              !hasProperDest
+                                ? "Cannot approve: No destination assigned"
+                                : "Approve transaction"
+                            }
+                          >
+                            <CheckCircle className="w-3.5 h-3.5 mr-1" />
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() =>
+                              initiateReject(tx.transaction_id, false)
+                            }
+                            disabled={processingId === tx.transaction_id}
+                            className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 h-8 text-xs px-3"
+                            data-testid={`reject-tx-${tx.transaction_id}`}
+                          >
+                            <XCircle className="w-3.5 h-3.5 mr-1" />
+                            Reject
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
+                    </CardContent>
+                  </Card>
+                );
+              })
             )}
           </div>
         </TabsContent>
