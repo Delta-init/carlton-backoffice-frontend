@@ -2017,7 +2017,7 @@ export default function Transactions() {
 
                     {/* Commission Preview */}
                     {formData.psp_id && formData.amount && (
-                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                      <div className="p-3 bg-slate-50 rounded-sm border border-slate-200">
                         {(() => {
                           const selectedPsp = psps.find(
                             (p) => p.psp_id === formData.psp_id,
@@ -2035,24 +2035,54 @@ export default function Transactions() {
                                   grossAmount - parseFloat(commissionAmount)
                                 ).toFixed(2)
                               : grossAmount.toFixed(2);
+                          const hasPayCurrency =
+                            formData.base_currency &&
+                            formData.base_currency !== "USD" &&
+                            formData.base_amount;
+                          const baseGross = hasPayCurrency
+                            ? parseFloat(formData.base_amount) || 0
+                            : null;
+                          const baseComm = hasPayCurrency
+                            ? (baseGross * commissionRate).toFixed(2)
+                            : null;
+                          const baseNet = hasPayCurrency
+                            ? formData.commission_paid_by === "client"
+                              ? (baseGross - parseFloat(baseComm)).toFixed(2)
+                              : baseGross.toFixed(2)
+                            : null;
                           return (
                             <div className="space-y-2 text-sm">
                               <div className="flex justify-between">
                                 <span className="text-slate-500">
                                   Gross Amount
                                 </span>
-                                <span className="text-slate-800 font-mono">
-                                  ${grossAmount.toLocaleString()}
-                                </span>
+                                <div className="text-right">
+                                  <span className="text-slate-800 font-mono">
+                                    ${grossAmount.toLocaleString()}
+                                  </span>
+                                  {hasPayCurrency && (
+                                    <p className="text-[10px] text-blue-500 font-mono">
+                                      {parseFloat(baseGross).toLocaleString()}{" "}
+                                      {formData.base_currency}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-slate-500">
                                   PSP Commission ({selectedPsp.commission_rate}
                                   %)
                                 </span>
-                                <span className="text-red-400 font-mono">
-                                  -${commissionAmount}
-                                </span>
+                                <div className="text-right">
+                                  <span className="text-red-400 font-mono">
+                                    -${commissionAmount}
+                                  </span>
+                                  {hasPayCurrency && (
+                                    <p className="text-[10px] text-red-400 font-mono">
+                                      -{baseComm} {formData.base_currency}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
                               <div className="flex justify-between pt-2 border-t border-slate-200">
                                 <span className="text-slate-500">
@@ -2060,9 +2090,17 @@ export default function Transactions() {
                                     ? "Client Receives"
                                     : "Client Receives (Broker pays commission)"}
                                 </span>
-                                <span className="text-green-400 font-mono">
-                                  ${netAmount}
-                                </span>
+                                <div className="text-right">
+                                  <span className="text-green-400 font-mono">
+                                    ${netAmount}
+                                  </span>
+                                  {hasPayCurrency && (
+                                    <p className="text-[10px] text-green-500 font-mono font-bold">
+                                      {parseFloat(baseNet).toLocaleString()}{" "}
+                                      {formData.base_currency}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
                               <div className="flex justify-between text-xs">
                                 <span className="text-slate-500">
