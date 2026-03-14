@@ -1994,29 +1994,25 @@ export default function Reports() {
                 />
               </div>
 
-              <Card className="bg-foreground/10 border-slate-200">
+          <Card className="bg-[#1E293B] border-slate-200">
                 <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                  <CardTitle className="text-lg font-semibold text-slate-800">
-                    PSP Summary
-                  </CardTitle>
+                  <CardTitle className="text-lg font-semibold text-slate-800">PSP Summary</CardTitle>
                   <Button
                     size="sm"
                     variant="ghost"
                     className="text-[#94A3B8] hover:text-slate-800"
-                    onClick={() =>
-                      downloadCSV(pspReport.psps || [], "psp_summary", [
-                        { key: "psp_name", label: "PSP Name" },
-                        {
-                          key: "commission_rate",
-                          label: "Commission Rate (%)",
-                        },
-                        { key: "total_volume", label: "Total Volume" },
-                        { key: "total_commission", label: "Commission" },
-                        { key: "total_net", label: "Net Amount" },
-                        { key: "settled_count", label: "Settled" },
-                        { key: "pending_count", label: "Pending" },
-                      ])
-                    }
+                    onClick={() => downloadCSV(pspReport.psps || [], 'psp_summary', [
+                      { key: 'psp_name', label: 'PSP Name' },
+                      { key: 'payment_currency', label: 'Payment Currency' },
+                      { key: 'commission_rate', label: 'Commission Rate (%)' },
+                      { key: 'total_volume', label: 'Total Volume (USD)' },
+                      { key: 'total_base_volume', label: 'Total Volume (Pay Currency)' },
+                      { key: 'total_commission', label: 'Commission (USD)' },
+                      { key: 'total_extra_charges', label: 'Extra Charges (USD)' },
+                      { key: 'total_net', label: 'Net Amount (USD)' },
+                      { key: 'settled_count', label: 'Settled' },
+                      { key: 'pending_count', label: 'Pending' }
+                    ])}
                   >
                     <Download className="w-4 h-4 mr-2" />
                     Export CSV
@@ -2027,64 +2023,53 @@ export default function Reports() {
                     <Table>
                       <TableHeader>
                         <TableRow className="border-slate-200">
-                          <TableHead className="text-[#94A3B8] text-xs">
-                            PSP
-                          </TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs text-right">
-                            Rate
-                          </TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs text-right">
-                            Volume
-                          </TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs text-right">
-                            Commission
-                          </TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs text-right">
-                            Net
-                          </TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs text-right">
-                            Settled
-                          </TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs text-right">
-                            Pending
-                          </TableHead>
+                          <TableHead className="text-[#94A3B8] text-xs">PSP</TableHead>
+                          <TableHead className="text-[#94A3B8] text-xs">Pay Currency</TableHead>
+                          <TableHead className="text-[#94A3B8] text-xs text-right">Rate</TableHead>
+                          <TableHead className="text-[#94A3B8] text-xs text-right">Volume</TableHead>
+                          <TableHead className="text-[#94A3B8] text-xs text-right">Commission</TableHead>
+                          <TableHead className="text-[#94A3B8] text-xs text-right">Extra Charges</TableHead>
+                          <TableHead className="text-[#94A3B8] text-xs text-right">Net</TableHead>
+                          <TableHead className="text-[#94A3B8] text-xs text-right">Settled</TableHead>
+                          <TableHead className="text-[#94A3B8] text-xs text-right">Pending</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {(pspReport.psps || []).map((psp, i) => (
+                        {(pspReport.psps || []).map((psp, i) => {
+                          const hasPay = psp.payment_currency;
+                          const baseVol = psp.total_base_volume;
+                          const rate = baseVol && psp.total_volume ? (psp.total_volume / baseVol) : null;
+                          const baseComm = rate ? psp.total_commission / rate : null;
+                          const baseExtra = rate ? (psp.total_extra_charges || 0) / rate : null;
+                          const baseNet = rate ? psp.total_net / rate : null;
+                          return (
                           <TableRow key={i} className="border-slate-200">
-                            <TableCell className="text-slate-800 font-medium">
-                              {psp.psp_name}
+                            <TableCell className="text-slate-800 font-medium">{psp.psp_name}</TableCell>
+                            <TableCell className="text-slate-600 text-xs">{hasPay || 'USD'}</TableCell>
+                            <TableCell className="text-[#94A3B8] text-right">{psp.commission_rate}%</TableCell>
+                            <TableCell className="text-right">
+                              <span className="text-slate-800 font-mono">${(psp.total_volume || 0).toLocaleString()}</span>
+                              {hasPay && baseVol && <p className="text-[10px] text-blue-500">{baseVol.toLocaleString()} {hasPay}</p>}
                             </TableCell>
-                            <TableCell className="text-[#94A3B8] text-right">
-                              {psp.commission_rate}%
+                            <TableCell className="text-right">
+                              <span className="text-amber-400 font-mono">${(psp.total_commission || 0).toLocaleString()}</span>
+                              {hasPay && baseComm != null && <p className="text-[10px] text-blue-500">{baseComm.toLocaleString(undefined, {maximumFractionDigits: 2})} {hasPay}</p>}
                             </TableCell>
-                            <TableCell className="text-slate-800 font-mono text-right">
-                              ${(psp.total_volume || 0).toLocaleString()}
+                            <TableCell className="text-right">
+                              <span className="text-orange-400 font-mono">{(psp.total_extra_charges || 0) > 0 ? `$${psp.total_extra_charges.toLocaleString()}` : '-'}</span>
+                              {hasPay && baseExtra != null && baseExtra > 0 && <p className="text-[10px] text-blue-500">{baseExtra.toLocaleString(undefined, {maximumFractionDigits: 2})} {hasPay}</p>}
                             </TableCell>
-                            <TableCell className="text-amber-400 font-mono text-right">
-                              ${(psp.total_commission || 0).toLocaleString()}
+                            <TableCell className="text-right">
+                              <span className="text-emerald-400 font-mono">${(psp.total_net || 0).toLocaleString()}</span>
+                              {hasPay && baseNet != null && <p className="text-[10px] text-blue-500">{baseNet.toLocaleString(undefined, {maximumFractionDigits: 2})} {hasPay}</p>}
                             </TableCell>
-                            <TableCell className="text-emerald-400 font-mono text-right">
-                              ${(psp.total_net || 0).toLocaleString()}
-                            </TableCell>
-                            <TableCell className="text-[#94A3B8] text-right">
-                              {psp.settled_count || 0}
-                            </TableCell>
-                            <TableCell className="text-amber-400 text-right">
-                              {psp.pending_count || 0}
-                            </TableCell>
+                            <TableCell className="text-[#94A3B8] text-right">{psp.settled_count || 0}</TableCell>
+                            <TableCell className="text-amber-400 text-right">{psp.pending_count || 0}</TableCell>
                           </TableRow>
-                        ))}
+                          );
+                        })}
                         {(!pspReport.psps || pspReport.psps.length === 0) && (
-                          <TableRow>
-                            <TableCell
-                              colSpan={7}
-                              className="text-center text-[#94A3B8] py-8"
-                            >
-                              No PSP data
-                            </TableCell>
-                          </TableRow>
+                          <TableRow><TableCell colSpan={9} className="text-center text-[#94A3B8] py-8">No PSP data</TableCell></TableRow>
                         )}
                       </TableBody>
                     </Table>

@@ -303,19 +303,26 @@ export default function PSPs() {
     }
   };
 
+ 
   // Handle recording charges on a transaction
   const handleRecordCharges = async (e) => {
     e.preventDefault();
     if (!selectedTransaction) return;
     
     try {
+      const hasDiffCurrency = selectedTransaction?.base_currency && selectedTransaction?.base_currency !== 'USD';
+      const txRate = selectedTransaction?.exchange_rate || 1;
+      // Convert from payment currency to USD if needed
+      const extraInUsd = hasDiffCurrency ? (parseFloat(chargesForm.extra_charges) || 0) * txRate : (parseFloat(chargesForm.extra_charges) || 0);
+      const reserveInUsd = hasDiffCurrency ? (parseFloat(chargesForm.reserve_fund_amount) || 0) * txRate : (parseFloat(chargesForm.reserve_fund_amount) || 0);
+      
       const response = await fetch(`${API_URL}/api/psp/transactions/${selectedTransaction.transaction_id}/charges`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify({
-          reserve_fund_amount: parseFloat(chargesForm.reserve_fund_amount) || 0,
-          extra_charges: parseFloat(chargesForm.extra_charges) || 0,
+          reserve_fund_amount: reserveInUsd,
+          extra_charges: extraInUsd,
           charges_description: chargesForm.charges_description || null,
         }),
       });
@@ -336,9 +343,14 @@ export default function PSPs() {
 
   const openChargesDialog = (transaction) => {
     setSelectedTransaction(transaction);
+    const hasDiffCurrency = transaction.base_currency && transaction.base_currency !== 'USD';
+    const txRate = transaction.exchange_rate || 1;
+    // Convert existing USD charges back to payment currency for display
+    const reserveUsd = transaction.psp_reserve_fund_amount || transaction.psp_chargeback_amount || 0;
+    const extraUsd = transaction.psp_extra_charges || 0;
     setChargesForm({
-      reserve_fund_amount: (transaction.psp_reserve_fund_amount || transaction.psp_chargeback_amount || 0).toString(),
-      extra_charges: (transaction.psp_extra_charges || 0).toString(),
+      reserve_fund_amount: hasDiffCurrency ? (reserveUsd / txRate).toFixed(2) : reserveUsd.toString(),
+      extra_charges: hasDiffCurrency ? (extraUsd / txRate).toFixed(2) : extraUsd.toString(),
       charges_description: transaction.psp_charges_description || '',
     });
     setChargesDialogOpen(true);
@@ -1690,8 +1702,8 @@ export default function PSPs() {
                 />
               </div>
               
-              <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">Extra Charges (USD)</Label>
+                <div className="space-y-2">
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Extra Charges ({selectedTransaction?.base_currency && selectedTransaction?.base_currency !== 'USD' ? selectedTransaction.base_currency : 'USD'})</Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -1701,6 +1713,9 @@ export default function PSPs() {
                   className="bg-slate-50 border-slate-200 text-slate-800 font-mono"
                   placeholder="0.00"
                 />
+                {selectedTransaction?.base_currency && selectedTransaction?.base_currency !== 'USD' && selectedTransaction?.exchange_rate && (
+                  <p className="text-[10px] text-blue-500">= ${(parseFloat(chargesForm.extra_charges || 0) * (selectedTransaction.exchange_rate || 1)).toLocaleString(undefined, {maximumFractionDigits: 2})} USD (rate: {selectedTransaction.exchange_rate})</p>
+                )}
               </div>
               
               <div className="space-y-2">
@@ -1713,34 +1728,65 @@ export default function PSPs() {
                 />
               </div>
               
-              {/* Settlement Preview */}
+             {/* Settlement Preview */}
+              {(() => {
+                const txRate = selectedTransaction?.exchange_rate || 1;
+                const hasDiffCurrency = selectedTransaction?.base_currency && selectedTransaction?.base_currency !== 'USD';
+                const payCurr = hasDiffCurrency ? selectedTransaction.base_currency : null;
+                // Extra charges entered in payment currency → convert to USD for display
+                const extraInPayCurrency = parseFloat(chargesForm.extra_charges || 0);
+                const extraInUsd = hasDiffCurrency ? extraInPayCurrency * txRate : extraInPayCurrency;
+                const reserveInPayCurrency = parseFloat(chargesForm.reserve_fund_amount || 0);
+                const reserveInUsd = hasDiffCurrency ? reserveInPayCurrency * txRate : reserveInPayCurrency;
+                const grossUsd = selectedTransaction?.amount || 0;
+                const grossBase = selectedTransaction?.base_amount || grossUsd;
+                const commUsd = selectedTransaction?.psp_commission_amount || 0;
+                const commBase = hasDiffCurrency ? commUsd / txRate : commUsd;
+                const netUsd = grossUsd - commUsd - reserveInUsd - extraInUsd;
+                const netBase = hasDiffCurrency ? grossBase - commBase - reserveInPayCurrency - extraInPayCurrency : null;
+                return (
               <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
                 <p className="text-xs text-slate-500 uppercase mb-2">Settlement Preview</p>
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span className="text-slate-500">Gross Amount</span>
-                    <span className="text-slate-800 font-mono">${(selectedTransaction.amount || 0).toLocaleString()}</span>
+                    <div className="text-right">
+                      <span className="text-slate-800 font-mono">${grossUsd.toLocaleString()}</span>
+                      {payCurr && <p className="text-[10px] text-blue-500">{grossBase.toLocaleString()} {payCurr}</p>}
+                    </div>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500">Commission</span>
-                    <span className="text-red-400 font-mono">-${(selectedTransaction.psp_commission_amount || 0).toLocaleString()}</span>
+                    <div className="text-right">
+                      <span className="text-red-400 font-mono">-${commUsd.toLocaleString()}</span>
+                      {payCurr && <p className="text-[10px] text-blue-500">-{commBase.toLocaleString(undefined, {maximumFractionDigits: 2})} {payCurr}</p>}
+                    </div>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500">Reserve Fund</span>
-                    <span className="text-red-400 font-mono">-${parseFloat(chargesForm.reserve_fund_amount || 0).toLocaleString()}</span>
+                    <div className="text-right">
+                      <span className="text-red-400 font-mono">-${reserveInUsd.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                      {payCurr && <p className="text-[10px] text-blue-500">-{reserveInPayCurrency.toLocaleString()} {payCurr}</p>}
+                    </div>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500">Extra Charges</span>
-                    <span className="text-red-400 font-mono">-${parseFloat(chargesForm.extra_charges || 0).toLocaleString()}</span>
+                    <div className="text-right">
+                      <span className="text-red-400 font-mono">-${extraInUsd.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                      {payCurr && <p className="text-[10px] text-blue-500">-{extraInPayCurrency.toLocaleString()} {payCurr}</p>}
+                    </div>
                   </div>
                   <div className="flex justify-between pt-2 border-t border-slate-200">
                     <span className="text-slate-800 font-bold">Net Settlement</span>
-                    <span className="text-blue-600 font-mono font-bold">
-                      ${((selectedTransaction.amount || 0) - (selectedTransaction.psp_commission_amount || 0) - parseFloat(chargesForm.reserve_fund_amount || 0) - parseFloat(chargesForm.extra_charges || 0)).toLocaleString()}
-                    </span>
+                    <div className="text-right">
+                      <span className="text-blue-600 font-mono font-bold">${netUsd.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                      {payCurr && netBase != null && <p className="text-[10px] text-green-500 font-bold">{netBase.toLocaleString(undefined, {maximumFractionDigits: 2})} {payCurr}</p>}
+                    </div>
                   </div>
                 </div>
               </div>
+                );
+              })()}
               
               <div className="flex justify-end gap-3">
                 <Button type="button" variant="outline" onClick={() => setChargesDialogOpen(false)} className="border-slate-200 text-slate-500">
