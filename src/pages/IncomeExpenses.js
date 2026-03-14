@@ -3026,7 +3026,33 @@ export default function IncomeExpenses() {
               <p className="text-sm text-slate-500">
                 Filename: {viewInvoiceDialog.file.filename}
               </p>
-              {viewInvoiceDialog.file.content_type?.startsWith("image/") ? (
+              {viewInvoiceDialog.file.url ? (
+                viewInvoiceDialog.file.content_type?.startsWith("image/") ? (
+                  <img
+                    src={viewInvoiceDialog.file.url}
+                    alt="Invoice"
+                    className="max-w-full max-h-[60vh] object-contain mx-auto rounded"
+                  />
+                ) : viewInvoiceDialog.file.content_type ===
+                  "application/pdf" ? (
+                  <iframe
+                    src={viewInvoiceDialog.file.url}
+                    className="w-full h-[60vh] rounded"
+                    title="Invoice PDF"
+                  />
+                ) : (
+                  <div className="p-8 text-center bg-slate-50 rounded">
+                    <FileText className="w-12 h-12 text-slate-400 mx-auto mb-2" />
+                    <a
+                      href={viewInvoiceDialog.file.url}
+                      download={viewInvoiceDialog.file.filename}
+                      className="text-blue-600 text-sm hover:underline"
+                    >
+                      Download File
+                    </a>
+                  </div>
+                )
+              ) : viewInvoiceDialog.file.content_type?.startsWith("image/") ? (
                 <img
                   src={`data:${viewInvoiceDialog.file.content_type};base64,${viewInvoiceDialog.file.data}`}
                   alt="Invoice"

@@ -968,7 +968,7 @@ export default function AccountantDashboard() {
                             );
                           })()}
                         </div>
-                        
+
                         {/* Created */}
                         <div>
                           <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">
@@ -1382,7 +1382,11 @@ export default function AccountantDashboard() {
                     Proof of Payment
                   </p>
                   <img
-                    src={`data:image/png;base64,${viewTransaction.proof_image}`}
+                    src={
+                      viewTransaction.proof_image?.startsWith("http")
+                        ? viewTransaction.proof_image
+                        : `data:image/png;base64,${viewTransaction.proof_image}`
+                    }
                     alt="Proof of payment"
                     className="max-w-full rounded border border-slate-200"
                   />

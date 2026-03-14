@@ -290,6 +290,7 @@ export default function Transactions() {
     reference: "",
     transaction_mode: "bank",
     collecting_person_name: "",
+    transaction_date: new Date().toISOString().split("T")[0],
     collecting_person_number: "",
     // Client bank details (for withdrawal to bank)
     client_bank_name: "",
@@ -596,6 +597,9 @@ export default function Transactions() {
       }
       if (formData.reference) {
         formDataToSend.append("reference", formData.reference);
+      }
+      if (formData.transaction_date) {
+        formDataToSend.append("transaction_date", formData.transaction_date);
       }
       if (formData.crm_reference) {
         formDataToSend.append("crm_reference", formData.crm_reference);
@@ -2118,6 +2122,19 @@ export default function Transactions() {
                   </>
                 )}
 
+
+
+   <div className="space-y-2">
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Transaction Date</Label>
+                <Input
+                  type="date"
+                  value={formData.transaction_date}
+                  onChange={(e) => setFormData({ ...formData, transaction_date: e.target.value })}
+                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                  data-testid="tx-transaction-date"
+                />
+              </div>
+
                 <div className="space-y-2">
                   <Label className="text-slate-500 text-xs uppercase tracking-wider">
                     Reference (Optional)
@@ -2810,9 +2827,9 @@ export default function Transactions() {
                   <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">
                     Client Proof of Payment
                   </p>
-                  <img
-                    src={`data:image/png;base64,${viewTransaction.proof_image}`}
-                    alt="Client proof of payment"
+                 <img 
+                    src={viewTransaction.proof_image?.startsWith('http') ? viewTransaction.proof_image : `data:image/png;base64,${viewTransaction.proof_image}`} 
+                    alt="Client proof of payment" 
                     className="max-w-full rounded border border-slate-200"
                   />
                 </div>
@@ -2825,16 +2842,11 @@ export default function Transactions() {
                     Accountant Approval Proof
                   </p>
                   <div className="relative group">
-                    <img
-                      src={`data:image/png;base64,${viewTransaction.accountant_proof_image}`}
-                      alt="Accountant approval proof"
-                      className="w-full max-h-48 object-contain rounded border border-[#1FA21B]/30 bg-slate-50 cursor-pointer hover:border-[#1FA21B]"
-                      onClick={() =>
-                        window.open(
-                          `data:image/png;base64,${viewTransaction.accountant_proof_image}`,
-                          "_blank",
-                        )
-                      }
+                      <img 
+                      src={viewTransaction.accountant_proof_image?.startsWith('http') ? viewTransaction.accountant_proof_image : `data:image/png;base64,${viewTransaction.accountant_proof_image}`} 
+                      alt="Accountant approval proof" 
+                      className="w-full max-h-48 object-contain rounded border border-[#66FCF1]/30 bg-slate-50 cursor-pointer hover:border-[#66FCF1]"
+                      onClick={() => window.open(viewTransaction.accountant_proof_image?.startsWith('http') ? viewTransaction.accountant_proof_image : `data:image/png;base64,${viewTransaction.accountant_proof_image}`, '_blank')}
                       data-testid="accountant-proof-thumbnail"
                     />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded">
@@ -2859,16 +2871,11 @@ export default function Transactions() {
                     Exchanger Payment Proof
                   </p>
                   <div className="relative group">
-                    <img
-                      src={`data:image/png;base64,${viewTransaction.vendor_proof_image}`}
-                      alt="Exchanger payment proof"
+                    <img 
+                      src={viewTransaction.vendor_proof_image?.startsWith('http') ? viewTransaction.vendor_proof_image : `data:image/png;base64,${viewTransaction.vendor_proof_image}`} 
+                      alt="Exchanger payment proof" 
                       className="w-full max-h-48 object-contain rounded border border-orange-400/30 bg-slate-50 cursor-pointer hover:border-orange-400"
-                      onClick={() =>
-                        window.open(
-                          `data:image/png;base64,${viewTransaction.vendor_proof_image}`,
-                          "_blank",
-                        )
-                      }
+                      onClick={() => window.open(viewTransaction.vendor_proof_image?.startsWith('http') ? viewTransaction.vendor_proof_image : `data:image/png;base64,${viewTransaction.vendor_proof_image}`, '_blank')}
                       data-testid="vendor-proof-thumbnail"
                     />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded">
