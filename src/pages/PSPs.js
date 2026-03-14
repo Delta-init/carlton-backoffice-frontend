@@ -1148,7 +1148,8 @@ export default function PSPs() {
                                   </div>
                                 </TableCell>
                                 <TableCell>
-                                  <span className="text-xs text-slate-600">{tx.created_at ? new Date(tx.created_at).toLocaleDateString() : '-'}</span>
+                                                                <span className="text-xs text-slate-600">{(tx.transaction_date || tx.created_at) ? new Date(tx.transaction_date || tx.created_at).toLocaleDateString() : '-'}</span>
+
                                 </TableCell>
                                 <TableCell className="text-xs text-slate-800 font-medium" data-testid={`pay-currency-${tx.transaction_id}`}>
                                   {hasDiffCurrency ? tx.base_currency : tx.currency || 'USD'}
@@ -1574,7 +1575,8 @@ export default function PSPs() {
                                               <td className="py-1.5 text-right font-mono text-orange-400">
                                                 {(tx.psp_extra_charges || tx.psp_gateway_fee) ? `-$${((tx.psp_extra_charges || 0) + (tx.psp_gateway_fee || 0)).toLocaleString()}` : '-'}
                                               </td>
-                                              <td className="py-1.5 text-slate-500">{tx.created_at ? new Date(tx.created_at).toLocaleDateString() : '-'}</td>
+                                                                                          <td className="py-1.5 text-slate-500">{(tx.transaction_date || tx.created_at) ? new Date(tx.transaction_date || tx.created_at).toLocaleDateString() : '-'}</td>
+
                                             </tr>
                                           ))}
                                         </tbody>

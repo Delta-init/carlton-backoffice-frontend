@@ -761,24 +761,28 @@ export default function Transactions() {
     ).toLowerCase();
     const ref = (tx.reference || "").toLowerCase();
     const crmRef = (tx.crm_reference || "").toLowerCase();
-    const matchesType =
-      typeFilter === "all" || tx.transaction_type === typeFilter;
-    const matchesStatus = statusFilter === "all" || tx.status === statusFilter;
     const matchesSearch =
       clientName.includes(searchTerm.toLowerCase()) ||
       ref.includes(searchTerm.toLowerCase()) ||
       crmRef.includes(searchTerm.toLowerCase());
+    const matchesType =
+      typeFilter === "all" || tx.transaction_type === typeFilter;
+    const matchesStatus = statusFilter === "all" || tx.status === statusFilter;
     const matchesDestination =
       destinationFilter === "all" || tx.destination_type === destinationFilter;
 
     // Date filters
     let matchesDate = true;
     if (dateFrom) {
-      const txDate = new Date(tx.created_at).toISOString().split("T")[0];
+      const txDate = new Date(tx.transaction_date || tx.created_at)
+        .toISOString()
+        .split("T")[0];
       matchesDate = matchesDate && txDate >= dateFrom;
     }
     if (dateTo) {
-      const txDate = new Date(tx.created_at).toISOString().split("T")[0];
+      const txDate = new Date(tx.transaction_date || tx.created_at)
+        .toISOString()
+        .split("T")[0];
       matchesDate = matchesDate && txDate <= dateTo;
     }
 
@@ -818,7 +822,7 @@ export default function Transactions() {
       "Description",
     ];
     const rows = filteredTransactions.map((tx) => [
-      formatDate(tx.created_at),
+      formatDate(tx.transaction_date || tx.created_at),
       tx.client_name || getClientName(tx.client_id),
       tx.transaction_type,
       tx.amount,
@@ -867,7 +871,7 @@ export default function Transactions() {
       "Description",
     ];
     const rows = filteredTransactions.map((tx) => [
-      formatDate(tx.created_at),
+      formatDate(tx.transaction_date || tx.created_at),
       tx.client_name || getClientName(tx.client_id),
       tx.transaction_type,
       tx.amount,
@@ -890,7 +894,7 @@ export default function Transactions() {
       <head><meta charset="UTF-8"></head>
       <body>
         <table border="1">
-          <thead><tr>${headers.map((h) => `<th style="background:#141414;color:#fff;font-weight:bold;">${h}</th>`).join("")}</tr></thead>
+          <thead><tr>${headers.map((h) => `<th style="background:#1F2833;color:#fff;font-weight:bold;">${h}</th>`).join("")}</tr></thead>
           <tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join("")}</tr>`).join("")}</tbody>
         </table>
       </body>
@@ -918,7 +922,7 @@ export default function Transactions() {
       "Destination",
     ];
     const rows = filteredTransactions.map((tx) => [
-      formatDate(tx.created_at),
+      formatDate(tx.transaction_date || tx.created_at),
       tx.client_name || getClientName(tx.client_id),
       tx.transaction_type,
       `${tx.amount} ${tx.currency}`,
@@ -2122,18 +2126,23 @@ export default function Transactions() {
                   </>
                 )}
 
-
-
-   <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">Transaction Date</Label>
-                <Input
-                  type="date"
-                  value={formData.transaction_date}
-                  onChange={(e) => setFormData({ ...formData, transaction_date: e.target.value })}
-                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
-                  data-testid="tx-transaction-date"
-                />
-              </div>
+                <div className="space-y-2">
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                    Transaction Date
+                  </Label>
+                  <Input
+                    type="date"
+                    value={formData.transaction_date}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        transaction_date: e.target.value,
+                      })
+                    }
+                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                    data-testid="tx-transaction-date"
+                  />
+                </div>
 
                 <div className="space-y-2">
                   <Label className="text-slate-500 text-xs uppercase tracking-wider">
@@ -2414,6 +2423,8 @@ export default function Transactions() {
                   <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
                     Reference
                   </TableHead>
+                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Date</TableHead>
+
                   <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
                     CRM Ref
                   </TableHead>
@@ -2446,14 +2457,14 @@ export default function Transactions() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8">
+                    <TableCell colSpan={11} className="text-center py-8">
                       <div className="w-6 h-6 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
                 ) : filteredTransactions.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={10}
+                      colSpan={11}
                       className="text-center py-8 text-slate-500"
                     >
                       No transactions found
@@ -2492,6 +2503,9 @@ export default function Transactions() {
                             </span>
                           )}
                         </div>
+                      </TableCell>
+                      <TableCell className="text-slate-500 text-xs whitespace-nowrap">
+                        {formatDate(tx.transaction_date || tx.created_at)}
                       </TableCell>
                       <TableCell className="font-mono text-xs text-purple-600">
                         {tx.crm_reference || "-"}
@@ -2684,7 +2698,10 @@ export default function Transactions() {
                     Created
                   </p>
                   <p className="text-slate-800 text-sm">
-                    {formatDate(viewTransaction.created_at)}
+                    {formatDate(
+                      viewTransaction.transaction_date ||
+                        viewTransaction.created_at,
+                    )}
                   </p>
                 </div>
               </div>
@@ -2827,9 +2844,13 @@ export default function Transactions() {
                   <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">
                     Client Proof of Payment
                   </p>
-                 <img 
-                    src={viewTransaction.proof_image?.startsWith('http') ? viewTransaction.proof_image : `data:image/png;base64,${viewTransaction.proof_image}`} 
-                    alt="Client proof of payment" 
+                  <img
+                    src={
+                      viewTransaction.proof_image?.startsWith("http")
+                        ? viewTransaction.proof_image
+                        : `data:image/png;base64,${viewTransaction.proof_image}`
+                    }
+                    alt="Client proof of payment"
                     className="max-w-full rounded border border-slate-200"
                   />
                 </div>
@@ -2842,11 +2863,26 @@ export default function Transactions() {
                     Accountant Approval Proof
                   </p>
                   <div className="relative group">
-                      <img 
-                      src={viewTransaction.accountant_proof_image?.startsWith('http') ? viewTransaction.accountant_proof_image : `data:image/png;base64,${viewTransaction.accountant_proof_image}`} 
-                      alt="Accountant approval proof" 
+                    <img
+                      src={
+                        viewTransaction.accountant_proof_image?.startsWith(
+                          "http",
+                        )
+                          ? viewTransaction.accountant_proof_image
+                          : `data:image/png;base64,${viewTransaction.accountant_proof_image}`
+                      }
+                      alt="Accountant approval proof"
                       className="w-full max-h-48 object-contain rounded border border-[#66FCF1]/30 bg-slate-50 cursor-pointer hover:border-[#66FCF1]"
-                      onClick={() => window.open(viewTransaction.accountant_proof_image?.startsWith('http') ? viewTransaction.accountant_proof_image : `data:image/png;base64,${viewTransaction.accountant_proof_image}`, '_blank')}
+                      onClick={() =>
+                        window.open(
+                          viewTransaction.accountant_proof_image?.startsWith(
+                            "http",
+                          )
+                            ? viewTransaction.accountant_proof_image
+                            : `data:image/png;base64,${viewTransaction.accountant_proof_image}`,
+                          "_blank",
+                        )
+                      }
                       data-testid="accountant-proof-thumbnail"
                     />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded">
@@ -2871,11 +2907,22 @@ export default function Transactions() {
                     Exchanger Payment Proof
                   </p>
                   <div className="relative group">
-                    <img 
-                      src={viewTransaction.vendor_proof_image?.startsWith('http') ? viewTransaction.vendor_proof_image : `data:image/png;base64,${viewTransaction.vendor_proof_image}`} 
-                      alt="Exchanger payment proof" 
+                    <img
+                      src={
+                        viewTransaction.vendor_proof_image?.startsWith("http")
+                          ? viewTransaction.vendor_proof_image
+                          : `data:image/png;base64,${viewTransaction.vendor_proof_image}`
+                      }
+                      alt="Exchanger payment proof"
                       className="w-full max-h-48 object-contain rounded border border-orange-400/30 bg-slate-50 cursor-pointer hover:border-orange-400"
-                      onClick={() => window.open(viewTransaction.vendor_proof_image?.startsWith('http') ? viewTransaction.vendor_proof_image : `data:image/png;base64,${viewTransaction.vendor_proof_image}`, '_blank')}
+                      onClick={() =>
+                        window.open(
+                          viewTransaction.vendor_proof_image?.startsWith("http")
+                            ? viewTransaction.vendor_proof_image
+                            : `data:image/png;base64,${viewTransaction.vendor_proof_image}`,
+                          "_blank",
+                        )
+                      }
                       data-testid="vendor-proof-thumbnail"
                     />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded">

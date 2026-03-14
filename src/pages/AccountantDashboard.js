@@ -977,9 +977,8 @@ export default function AccountantDashboard() {
                           <p className="text-white text-xs">
                             {formatDate(tx.created_at)}
                           </p>
-                          <p className="text-[10px] text-[#C5C6C7]">
-                            by {tx.created_by_name || "System"}
-                          </p>
+                          <p className="text-white text-xs">{formatDate(tx.transaction_date || tx.created_at)}</p>
+                        <p className="text-[10px] text-[#C5C6C7]">by {tx.created_by_name || 'System'}</p>
                         </div>
                         {/* Actions */}
                         <div className="flex items-center gap-1.5 justify-end">
@@ -1277,9 +1276,8 @@ export default function AccountantDashboard() {
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
                     Created
                   </p>
-                  <p className="text-white text-sm">
-                    {formatDate(viewTransaction.created_at)}
-                  </p>
+                  <p className="text-white text-sm">{formatDate(viewTransaction.transaction_date || viewTransaction.created_at)}</p>
+                   
                 </div>
               </div>
               {viewTransaction.destination_account_name && (
