@@ -921,6 +921,10 @@ export default function TransactionRequests() {
   const [captcha, setCaptcha] = useState({ a: 0, b: 0 });
   const [captchaAnswer, setCaptchaAnswer] = useState("");
   const [processing, setProcessing] = useState(false);
+ // New request captcha
+  const [createReqCaptcha, setCreateReqCaptcha] = useState({ a: 0, b: 0 });
+  const [createReqCaptchaAnswer, setCreateReqCaptchaAnswer] = useState('');
+  const [showCreateReqCaptcha, setShowCreateReqCaptcha] = useState(false);
 
   // Data
   const [clients, setClients] = useState([]);
