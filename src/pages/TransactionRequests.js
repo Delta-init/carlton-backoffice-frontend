@@ -531,61 +531,41 @@ function EditableRequestCard({
               )}
 
               {/* Row 3: Destination Type */}
-              <div>
-                <Label className="text-xs text-slate-500 uppercase font-bold">
-                  Destination Type
-                </Label>
-                {form.transaction_type === "deposit" ? (
-                  <Select
-                    value={form.destination_type}
-                    onValueChange={(v) =>
-                      setForm({
-                        ...form,
-                        destination_type: v,
-                        vendor_id: "",
-                        psp_id: "",
-                        destination_account_id: "",
-                      })
-                    }
-                  >
-                    <SelectTrigger
-                      className="bg-slate-50 border-slate-200"
-                      data-testid={`edit-dest-${req.request_id}`}
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
+     <div>
+                <Label className="text-xs text-slate-500 uppercase font-bold">Destination Type</Label>
+                {form.transaction_type === 'deposit' ? (
+                  <Select value={form.destination_type} onValueChange={v => setForm({ ...form, destination_type: v, vendor_id: '', psp_id: '', destination_account_id: '' })}>
+                    <SelectTrigger className="bg-slate-50 border-slate-200" data-testid={`edit-dest-${req.request_id}`}><SelectValue /></SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="treasury">Treasury / Bank Account</SelectItem>
                       <SelectItem value="bank">Bank</SelectItem>
                       <SelectItem value="psp">PSP</SelectItem>
                       <SelectItem value="vendor">Exchanger</SelectItem>
                     </SelectContent>
                   </Select>
                 ) : (
-                  <Select
-                    value={form.destination_type}
-                    onValueChange={(v) =>
-                      setForm({
-                        ...form,
-                        destination_type: v,
-                        vendor_id: "",
-                        psp_id: "",
-                        destination_account_id: "",
-                      })
-                    }
-                  >
-                    <SelectTrigger
-                      className="bg-slate-50 border-slate-200"
-                      data-testid={`edit-dest-${req.request_id}`}
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
+                  <Select value={form.destination_type} onValueChange={v => setForm({ ...form, destination_type: v, vendor_id: '', psp_id: '', destination_account_id: '' })}>
+                    <SelectTrigger className="bg-slate-50 border-slate-200" data-testid={`edit-dest-${req.request_id}`}><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="bank">Bank</SelectItem>
                       <SelectItem value="usdt">USDT</SelectItem>
+                      <SelectItem value="vendor">Exchanger</SelectItem>
                     </SelectContent>
                   </Select>
                 )}
               </div>
+
+              {/* Conditional: Treasury selector (deposit to treasury) */}
+              {form.destination_type === 'treasury' && (
+                <div>
+                  <Label className="text-xs text-slate-500 uppercase font-bold">Treasury Account</Label>
+                  <Select value={form.destination_account_id} onValueChange={v => setForm({ ...form, destination_account_id: v })}>
+                    <SelectTrigger className="bg-slate-50 border-slate-200"><SelectValue placeholder="Select treasury account" /></SelectTrigger>
+                    <SelectContent>{treasuryAccounts.filter(a => a.account_type !== 'usdt').map(a => <SelectItem key={a.account_id} value={a.account_id}>{a.account_name} ({a.currency})</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              )}
+
 
               {/* Conditional: PSP selector (deposit only) */}
               {form.transaction_type === "deposit" &&
@@ -1676,25 +1656,25 @@ export default function TransactionRequests() {
               </div>
             )}
 
-            {form.transaction_type === "deposit" && (
+            {form.transaction_type === 'deposit' && (
               <div>
-                <Label className="text-xs text-slate-500 uppercase">
-                  Destination Type
-                </Label>
-                <Select
-                  value={form.destination_type}
-                  onValueChange={(v) =>
-                    setForm({ ...form, destination_type: v })
-                  }
-                >
-                  <SelectTrigger className="bg-slate-50">
-                    <SelectValue />
-                  </SelectTrigger>
+                <Label className="text-xs text-slate-500 uppercase">Destination Type</Label>
+                <Select value={form.destination_type} onValueChange={v => setForm({ ...form, destination_type: v, psp_id: '', vendor_id: '', destination_account_id: '' })}>
+                  <SelectTrigger className="bg-slate-50"><SelectValue /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="treasury">Treasury / Bank Account</SelectItem>
                     <SelectItem value="bank">Bank</SelectItem>
                     <SelectItem value="psp">PSP</SelectItem>
                     <SelectItem value="vendor">Exchanger</SelectItem>
                   </SelectContent>
+                </Select>
+              </div>
+            )}
+            {form.transaction_type === 'deposit' && form.destination_type === 'treasury' && (
+              <div><Label className="text-xs text-slate-500 uppercase">Treasury Account</Label>
+                <Select value={form.destination_account_id} onValueChange={v => setForm({ ...form, destination_account_id: v })}>
+                  <SelectTrigger className="bg-slate-50"><SelectValue placeholder="Select treasury account" /></SelectTrigger>
+                  <SelectContent>{treasuryAccounts.filter(a => a.account_type !== 'usdt').map(a => <SelectItem key={a.account_id} value={a.account_id}>{a.account_name} ({a.currency})</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             )}
