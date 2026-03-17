@@ -503,11 +503,7 @@ export default function Transactions() {
     const file = e.target.files[0];
     if (file) {
       setProofImage(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProofPreview(reader.result);
-      };
-      reader.readAsDataURL(file);
+      setProofPreview(URL.createObjectURL(file));
     }
   };
 
@@ -2324,17 +2320,17 @@ export default function Transactions() {
                     <label htmlFor="proof-upload" className="cursor-pointer">
                       {proofPreview ? (
                         <div className="space-y-2">
-                          <img
-                            src={proofPreview}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              if (typeof window !== "undefined") {
-                                window.open(proofPreview, "_blank");
-                              }
-                            }}
-                            alt="Proof preview"
-                            className="max-h-32 mx-auto rounded"
-                          />
+                          <a
+                            href={proofPreview}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <img
+                              src={proofPreview}
+                              alt="Proof preview"
+                              className="max-h-32 mx-auto rounded cursor-pointer"
+                            />
+                          </a>
                           <p className="text-xs text-blue-600">
                             Click to change
                           </p>

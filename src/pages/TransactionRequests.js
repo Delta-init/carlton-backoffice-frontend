@@ -1200,15 +1200,11 @@ const [proofPreview, setProofPreview] = useState(null);
     toast.success("Excel report downloaded");
   };
 
-    const handleImageChange = (e) => {
+  const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       setProofImage(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProofPreview(reader.result);
-      };
-      reader.readAsDataURL(file);
+      setProofPreview(URL.createObjectURL(file));
     }
   };
 
