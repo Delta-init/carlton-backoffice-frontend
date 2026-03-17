@@ -178,6 +178,7 @@ export default function AccountantDashboard() {
   const [showApprovalDialog, setShowApprovalDialog] = useState(null);
   const [approvalSourceAccount, setApprovalSourceAccount] = useState("");
   const [approvalProof, setApprovalProof] = useState(null);
+  const [bankReceiptDate, setBankReceiptDate] = useState('');
   const [approvalProofPreview, setApprovalProofPreview] = useState(null);
   const [treasuryAccounts, setTreasuryAccounts] = useState([]);
 
@@ -255,23 +256,17 @@ export default function AccountantDashboard() {
     fetchPendingTransactions();
     fetchPendingSettlements();
   }, 15000);
-
-  const initiateApprove = (transactionId, isSettlement = false) => {
+const initiateApprove = (transactionId, isSettlement = false) => {
     // For withdrawals and deposits, show approval dialog with screenshot requirement
     if (!isSettlement) {
-      const tx = pendingTransactions.find(
-        (t) => t.transaction_id === transactionId,
-      );
-      if (
-        tx &&
-        (tx.transaction_type === "withdrawal" ||
-          tx.transaction_type === "deposit")
-      ) {
+      const tx = pendingTransactions.find(t => t.transaction_id === transactionId);
+      if (tx && (tx.transaction_type === 'withdrawal' || tx.transaction_type === 'deposit')) {
         setShowApprovalDialog(tx);
+        setBankReceiptDate(tx.transaction_date || new Date().toISOString().split('T')[0]);
         return;
       }
     }
-    setCaptchaAction({ type: "approve", transactionId, isSettlement });
+    setCaptchaAction({ type: 'approve', transactionId, isSettlement });
     setShowCaptcha(true);
   };
 
@@ -297,27 +292,28 @@ export default function AccountantDashboard() {
   };
 
   const handleTransactionApproval = () => {
-    const isWithdrawal = showApprovalDialog.transaction_type === "withdrawal";
-
+    const isWithdrawal = showApprovalDialog.transaction_type === 'withdrawal';
+    
     // For withdrawals, validate source account
     if (isWithdrawal && !approvalSourceAccount) {
-      toast.error("Please select a source treasury/USDT account");
+      toast.error('Please select a source treasury/USDT account');
       return;
     }
-
+    
     // For both deposits and withdrawals, require proof (mandatory)
     if (!approvalProof) {
-      toast.error("Please upload proof of payment screenshot");
+      toast.error('Please upload proof of payment screenshot');
       return;
     }
-
+    
     // Proceed to captcha
-    setCaptchaAction({
-      type: "approve",
-      transactionId: showApprovalDialog.transaction_id,
+    setCaptchaAction({ 
+      type: 'approve', 
+      transactionId: showApprovalDialog.transaction_id, 
       isSettlement: false,
       sourceAccount: isWithdrawal ? approvalSourceAccount : null,
       proofFile: approvalProof,
+      bankReceiptDate: bankReceiptDate || null
     });
     setShowApprovalDialog(null);
     setShowCaptcha(true);
@@ -325,89 +321,81 @@ export default function AccountantDashboard() {
 
   const handleCaptchaVerified = async () => {
     if (!captchaAction) return;
-
+    
     setShowCaptcha(false);
-
-    if (captchaAction.type === "approve") {
+    
+    if (captchaAction.type === 'approve') {
       if (captchaAction.isSettlement) {
         await executeApproveSettlement(captchaAction.transactionId);
       } else {
-        await executeApprove(
-          captchaAction.transactionId,
-          captchaAction.sourceAccount,
-          captchaAction.proofFile,
-        );
+        await executeApprove(captchaAction.transactionId, captchaAction.sourceAccount, captchaAction.proofFile, captchaAction.bankReceiptDate);
       }
-    } else if (captchaAction.type === "reject") {
+    } else if (captchaAction.type === 'reject') {
       if (captchaAction.isSettlement) {
         await executeRejectSettlement(captchaAction.transactionId);
       } else {
         await executeReject(captchaAction.transactionId);
       }
     }
-
+    
     // Reset approval dialog state
-    setApprovalSourceAccount("");
+    setApprovalSourceAccount('');
     setApprovalProof(null);
     setApprovalProofPreview(null);
     setCaptchaAction(null);
   };
 
-  const executeApprove = async (
-    transactionId,
-    sourceAccount = null,
-    proofFile = null,
-  ) => {
+  const executeApprove = async (transactionId, sourceAccount = null, proofFile = null, bankReceiptDate = null) => {
     setProcessingId(transactionId);
     try {
       // If there's a proof file, upload it first
       if (proofFile) {
         const formData = new FormData();
-        formData.append("proof_image", proofFile);
-
-        const uploadResponse = await fetch(
-          `${API_URL}/api/transactions/${transactionId}/upload-proof`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-            },
-            credentials: "include",
-            body: formData,
+        formData.append('proof_image', proofFile);
+        
+        const uploadResponse = await fetch(`${API_URL}/api/transactions/${transactionId}/upload-proof`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
           },
-        );
-
+          credentials: 'include',
+          body: formData,
+        });
+        
         if (!uploadResponse.ok) {
           const error = await uploadResponse.json();
-          toast.error(error.detail || "Failed to upload proof");
+          toast.error(error.detail || 'Failed to upload proof');
           return;
         }
       }
-
-      // Approve the transaction (optionally with source account)
-      const url = sourceAccount
-        ? `${API_URL}/api/transactions/${transactionId}/approve?source_account_id=${sourceAccount}`
-        : `${API_URL}/api/transactions/${transactionId}/approve`;
-
+      
+      // Approve the transaction (optionally with source account and bank receipt date)
+      const params = new URLSearchParams();
+      if (sourceAccount) params.append('source_account_id', sourceAccount);
+      if (bankReceiptDate) params.append('bank_receipt_date', bankReceiptDate);
+      const queryStr = params.toString() ? `?${params.toString()}` : '';
+      const url = `${API_URL}/api/transactions/${transactionId}/approve${queryStr}`;
+        
       const response = await fetch(url, {
-        method: "POST",
+        method: 'POST',
         headers: getAuthHeaders(),
-        credentials: "include",
+        credentials: 'include',
       });
 
       if (response.ok) {
-        toast.success("Transaction approved");
+        toast.success('Transaction approved');
         fetchPendingTransactions();
       } else {
         const error = await response.json();
-        toast.error(error.detail || "Approval failed");
+        toast.error(error.detail || 'Approval failed');
       }
     } catch (error) {
-      toast.error("Approval failed");
+      toast.error('Approval failed');
     } finally {
       setProcessingId(null);
     }
   };
+
 
   const handleRejectWithCaptcha = () => {
     // Show captcha for reject
@@ -1839,6 +1827,7 @@ export default function AccountantDashboard() {
           setApprovalSourceAccount("");
           setApprovalProof(null);
           setApprovalProofPreview(null);
+          setBankReceiptDate('');
         }}
       >
         <DialogContent className="bg-white border-slate-200 text-white max-w-lg max-h-[90vh] overflow-y-auto">
@@ -2022,6 +2011,20 @@ export default function AccountantDashboard() {
                 </div>
               )}
 
+
+              {/* Bank Receipt Date - Optional */}
+              <div className="space-y-2">
+                <Label className="text-slate-600 text-xs uppercase tracking-wider">Bank Receipt Date (Actual payment date)</Label>
+                <Input
+                  type="date"
+                  value={bankReceiptDate}
+                  onChange={e => setBankReceiptDate(e.target.value)}
+                  className="bg-slate-50 border-slate-200 text-slate-800"
+                  data-testid="bank-receipt-date"
+                />
+                <p className="text-slate-400 text-xs">Date the payment was actually received in the bank. Used for reconciliation matching.</p>
+              </div>
+
               {/* Proof of Payment Upload - Required for both */}
               <div className="space-y-2">
                 <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">
@@ -2086,6 +2089,7 @@ export default function AccountantDashboard() {
                     setApprovalSourceAccount("");
                     setApprovalProof(null);
                     setApprovalProofPreview(null);
+                     setBankReceiptDate('');
                   }}
                   className="flex-1 border-slate-200 text-[#C5C6C7] hover:bg-white/5"
                 >
