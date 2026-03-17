@@ -313,7 +313,7 @@ function EditableRequestCard({
 
   return (
     <Card
-      className={`border transition-all duration-200 ${isPending ? "border-yellow-200 bg-white hover:shadow-md" : "border-green-200 bg-green-50/30"}`}
+      className={`border transition-all duration-200 ${isPending ? "border-yellow-200 bg-white hover:shadow-md" : "border-green-200/20 bg-green-50/5"}`}
       data-testid={`request-card-${req.request_id}`}
     >
       {/* Collapsed header - always visible */}
