@@ -1947,6 +1947,12 @@ const [proofPreview, setProofPreview] = useState(null);
                         <div className="space-y-2">
                           <img
                             src={proofPreview}
+                              onClick={(e)=>{
+                                e.preventDefault();
+                                if(typeof window !== 'undefined'){
+                                    window.open(proofPreview, '_blank');
+                                }
+                            }}  
                             alt="Proof preview"
                             className="max-h-32 mx-auto rounded"
                           />
