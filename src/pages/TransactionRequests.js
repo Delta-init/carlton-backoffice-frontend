@@ -58,6 +58,7 @@ import {
   Search,
   Check,
   ChevronsUpDown,
+  Upload
 } from "lucide-react";
 import PaginationControls from "../components/PaginationControls";
 import {
@@ -1170,17 +1171,7 @@ const [proofPreview, setProofPreview] = useState(null);
       "Created By",
       "Description",
     ];
-    const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setProofImage(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProofPreview(reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  
     const rows = requests.map((r) => [
       formatDate(r.created_at),
       r.transaction_type,
@@ -1207,6 +1198,18 @@ const [proofPreview, setProofPreview] = useState(null);
     link.click();
     URL.revokeObjectURL(link.href);
     toast.success("Excel report downloaded");
+  };
+
+    const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setProofImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProofPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
 
@@ -1979,7 +1982,7 @@ const [proofPreview, setProofPreview] = useState(null);
             </Button>
             {showCreateReqCaptcha && (
               <div
-                className="p-3 bg-amber-50 border border-amber-200 rounded-sm space-y-2 mt-2"
+                className="p-3 bg-foreground/5 border  rounded-lg space-y-2 mt-2"
                 data-testid="create-req-captcha"
               >
                 <p className="text-sm text-amber-800 font-medium">
