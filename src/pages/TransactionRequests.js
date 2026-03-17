@@ -272,6 +272,8 @@ function EditableRequestCard({
     }
   };
 
+   
+
   const handleBaseCurrencyChange = (val) => {
     if (val === "USD") {
       setForm({
@@ -905,7 +907,7 @@ export default function TransactionRequests() {
   const [createReqCaptcha, setCreateReqCaptcha] = useState({ a: 0, b: 0 });
   const [createReqCaptchaAnswer, setCreateReqCaptchaAnswer] = useState('');
   const [showCreateReqCaptcha, setShowCreateReqCaptcha] = useState(false);
-
+const [proofPreview, setProofPreview] = useState(null);
   // Data
   const [clients, setClients] = useState([]);
   const [treasuryAccounts, setTreasuryAccounts] = useState([]);
@@ -1039,7 +1041,9 @@ export default function TransactionRequests() {
         }
         setCreateOpen(false);
         setForm({ ...defaultForm });
+        
         setProofImage(null);
+        setProofPreview(null)
         fetchRequests();
       } else {
         const e = await res.json();
@@ -1166,6 +1170,17 @@ export default function TransactionRequests() {
       "Created By",
       "Description",
     ];
+    const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setProofImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProofPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
     const rows = requests.map((r) => [
       formatDate(r.created_at),
       r.transaction_type,
@@ -1193,6 +1208,9 @@ export default function TransactionRequests() {
     URL.revokeObjectURL(link.href);
     toast.success("Excel report downloaded");
   };
+
+
+
 
   const downloadPDF = () => {
     if (!requests.length) {
@@ -1897,7 +1915,7 @@ export default function TransactionRequests() {
                 rows={2}
               />
             </div>
-            <div>
+            {/* <div>
               <Label className="text-xs text-slate-500 uppercase">
                 Proof of Payment
               </Label>
@@ -1907,7 +1925,46 @@ export default function TransactionRequests() {
                 onChange={(e) => setProofImage(e.target.files[0])}
                 className="bg-slate-50"
               />
-            </div>
+            </div> */}
+             <div className="space-y-2">
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                    Proof of Payment (Screenshot)
+                  </Label>
+                  <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center hover:border-[#1FA21B]/50 transition-colors">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="hidden"
+                      id="proof-upload"
+                      data-testid="proof-upload"
+                    />
+                    <label htmlFor="proof-upload" className="cursor-pointer">
+                      {proofPreview ? (
+                        <div className="space-y-2">
+                          <img
+                            src={proofPreview}
+                            alt="Proof preview"
+                            className="max-h-32 mx-auto rounded"
+                          />
+                          <p className="text-xs text-blue-600">
+                            Click to change
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <Upload className="w-8 h-8 mx-auto text-slate-500" />
+                          <p className="text-sm text-slate-500">
+                            Click to upload proof of payment
+                          </p>
+                          <p className="text-xs text-slate-500/60">
+                            PNG, JPG up to 5MB
+                          </p>
+                        </div>
+                      )}
+                    </label>
+                  </div>
+                </div>
             <Button
               onClick={handlePreCreate}
               disabled={creating}
