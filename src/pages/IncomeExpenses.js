@@ -1860,7 +1860,7 @@ export default function IncomeExpenses() {
               <div className="max-h-32 overflow-y-auto border border-slate-200 rounded-xl bg-slate-50">
                 {/* Add New Category Option */}
                 <div
-                  className="px-3 py-2 cursor-pointer hover:bg-amber-50 text-amber-600 flex items-center gap-2 border-b border-slate-200"
+                  className="px-3 py-2 cursor-pointer hover:bg-amber-50/5text-amber-600 flex items-center gap-2 border-b border-slate-200"
                   onClick={() => {
                     setCategoryDialog({
                       open: true,
@@ -2179,7 +2179,7 @@ export default function IncomeExpenses() {
 
                 {/* Cash collecting person details */}
                 {formData.transaction_mode === "cash" && (
-                  <div className="grid grid-cols-2 gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                  <div className="grid grid-cols-2 gap-3 p-3 bg-amber-50/5border border-amber-200 rounded-xl">
                     <div className="space-y-1">
                       <Label className="text-amber-700 text-xs uppercase">
                         Collecting Person Name

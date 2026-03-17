@@ -1,9 +1,14 @@
-import { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Badge } from '../components/ui/badge';
+import { useEffect, useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import { Badge } from "../components/ui/badge";
 import {
   Table,
   TableBody,
@@ -11,38 +16,38 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '../components/ui/table';
+} from "../components/ui/table";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '../components/ui/dialog';
+} from "../components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../components/ui/select';
+} from "../components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '../components/ui/dropdown-menu';
-import { Switch } from '../components/ui/switch';
-import { ScrollArea } from '../components/ui/scroll-area';
+} from "../components/ui/dropdown-menu";
+import { Switch } from "../components/ui/switch";
+import { ScrollArea } from "../components/ui/scroll-area";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from '../components/ui/tabs';
-import { toast } from 'sonner';
-import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+} from "../components/ui/tabs";
+import { toast } from "sonner";
+import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 import {
   Settings as SettingsIcon,
   Users,
@@ -67,7 +72,7 @@ import {
   Calendar,
   Eye,
   Lock,
-} from 'lucide-react';
+} from "lucide-react";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -80,29 +85,29 @@ export default function Settings() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    name: '',
-    role: 'sub_admin',
-    role_id: '',
+    email: "",
+    password: "",
+    name: "",
+    role: "sub_admin",
+    role_id: "",
     deposit_commission: 0,
     withdrawal_commission: 0,
   });
-  
+
   // Email Settings State
   const [emailSettings, setEmailSettings] = useState({
-    smtp_host: 'smtp.gmail.com',
+    smtp_host: "smtp.gmail.com",
     smtp_port: 587,
-    smtp_email: '',
-    smtp_password: '',
-    smtp_from_email: '',
+    smtp_email: "",
+    smtp_password: "",
+    smtp_from_email: "",
     director_emails: [],
     report_enabled: false,
-    report_time: '03:00',
+    report_time: "03:00",
     monthly_report_enabled: false,
   });
   const [emailLoading, setEmailLoading] = useState(true);
-  const [newDirectorEmail, setNewDirectorEmail] = useState('');
+  const [newDirectorEmail, setNewDirectorEmail] = useState("");
   const [emailLogs, setEmailLogs] = useState([]);
   const [sendingTest, setSendingTest] = useState(false);
   const [sendingReport, setSendingReport] = useState(false);
@@ -114,7 +119,7 @@ export default function Settings() {
   const [fxRatesUpdatedAt, setFxRatesUpdatedAt] = useState(null);
   const [fxRatesUpdatedBy, setFxRatesUpdatedBy] = useState(null);
   const [savingFxRates, setSavingFxRates] = useState(false);
-  const [newFxCurrency, setNewFxCurrency] = useState('');
+  const [newFxCurrency, setNewFxCurrency] = useState("");
 
   // Security Settings State
   const [twofaEnabled, setTwofaEnabled] = useState(false);
@@ -122,23 +127,26 @@ export default function Settings() {
   const [approvalNotifications, setApprovalNotifications] = useState(true);
 
   const getAuthHeaders = () => {
-    const token = localStorage.getItem('auth_token');
+    const token = localStorage.getItem("auth_token");
     return {
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
   };
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/users`, { headers: getAuthHeaders(), credentials: 'include' });
+      const response = await fetch(`${API_URL}/api/users`, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
       if (response.ok) {
         setUsers(await response.json());
       } else if (response.status === 403) {
-        toast.error('Admin access required');
+        toast.error("Admin access required");
       }
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error("Error fetching users:", error);
     } finally {
       setLoading(false);
     }
@@ -146,54 +154,63 @@ export default function Settings() {
 
   const fetchRoles = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/roles`, { headers: getAuthHeaders(), credentials: 'include' });
+      const response = await fetch(`${API_URL}/api/roles`, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
       if (response.ok) {
         const rolesData = await response.json();
-        setRoles(rolesData.filter(r => r.is_active !== false));
+        setRoles(rolesData.filter((r) => r.is_active !== false));
       }
     } catch (error) {
-      console.error('Error fetching roles:', error);
+      console.error("Error fetching roles:", error);
     }
   };
-  
+
   const fetchEmailSettings = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/settings/email`, { headers: getAuthHeaders(), credentials: 'include' });
+      const response = await fetch(`${API_URL}/api/settings/email`, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
       if (response.ok) {
         const data = await response.json();
         setEmailSettings({
-          smtp_host: data.smtp_host || 'smtp.gmail.com',
+          smtp_host: data.smtp_host || "smtp.gmail.com",
           smtp_port: data.smtp_port || 587,
-          smtp_email: data.smtp_email || '',
-          smtp_password: '',
+          smtp_email: data.smtp_email || "",
+          smtp_password: "",
           smtp_password_set: data.smtp_password_set,
-          smtp_from_email: data.smtp_from_email || '',
+          smtp_from_email: data.smtp_from_email || "",
           director_emails: data.director_emails || [],
           report_enabled: data.report_enabled || false,
-          report_time: data.report_time || '03:00',
+          report_time: data.report_time || "03:00",
           monthly_report_enabled: data.monthly_report_enabled || false,
         });
       }
     } catch (error) {
-      console.error('Error fetching email settings:', error);
+      console.error("Error fetching email settings:", error);
     } finally {
       setEmailLoading(false);
     }
   };
-  
+
   const fetchEmailLogs = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/reports/email-logs?limit=10`, { headers: getAuthHeaders(), credentials: 'include' });
+      const response = await fetch(
+        `${API_URL}/api/reports/email-logs?limit=10`,
+        { headers: getAuthHeaders(), credentials: "include" },
+      );
       if (response.ok) {
         setEmailLogs(await response.json());
       }
     } catch (error) {
-      console.error('Error fetching email logs:', error);
+      console.error("Error fetching email logs:", error);
     }
   };
 
   useEffect(() => {
-    const isAdmin = user?.role === 'admin';
+    const isAdmin = user?.role === "admin";
     if (isAdmin) {
       fetchUsers();
       fetchRoles();
@@ -206,24 +223,31 @@ export default function Settings() {
 
   const fetchSecuritySettings = async () => {
     try {
-      const endpoint = user?.role === 'admin' ? '/api/settings/security' : '/api/auth/security-status';
-      const response = await fetch(`${API_URL}${endpoint}`, { headers: getAuthHeaders() });
+      const endpoint =
+        user?.role === "admin"
+          ? "/api/settings/security"
+          : "/api/auth/security-status";
+      const response = await fetch(`${API_URL}${endpoint}`, {
+        headers: getAuthHeaders(),
+      });
       if (response.ok) {
         const data = await response.json();
         setTwofaEnabled(data.twofa_enabled || false);
         setSessionTimeout(data.session_timeout_hours || 2);
       }
       // Fetch notification preferences for all users
-      const prefRes = await fetch(`${API_URL}/api/auth/notification-preferences`, { headers: getAuthHeaders() });
+      const prefRes = await fetch(
+        `${API_URL}/api/auth/notification-preferences`,
+        { headers: getAuthHeaders() },
+      );
       if (prefRes.ok) {
         const prefData = await prefRes.json();
         setApprovalNotifications(prefData.approval_notifications !== false);
       }
     } catch (error) {
-      console.error('Error fetching security settings:', error);
+      console.error("Error fetching security settings:", error);
     }
   };
-
 
   const fetchManualFxRates = async () => {
     try {
@@ -743,7 +767,7 @@ export default function Settings() {
                         {(formData.role === "vendor" ||
                           formData.role_id === "exchanger") &&
                           !selectedUser && (
-                            <div className="space-y-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                            <div className="space-y-3 p-3 bg-amber-50/5border border-amber-200 rounded-xl">
                               <p className="text-xs text-amber-700 font-semibold uppercase tracking-wider">
                                 Exchanger Commission Rates
                               </p>
@@ -1365,7 +1389,7 @@ export default function Settings() {
                   </div>
                 </CardContent>
               </Card>
-                {/* Security Settings Card */}
+              {/* Security Settings Card */}
               <Card className="bg-white border-slate-200">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
@@ -1376,8 +1400,12 @@ export default function Settings() {
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between p-3 bg-slate-50 rounded-sm border border-slate-200">
                     <div>
-                      <Label className="text-white">Enable 2FA (Email OTP)</Label>
-                      <p className="text-xs text-[#C5C6C7]">Require email verification code on every login</p>
+                      <Label className="text-white">
+                        Enable 2FA (Email OTP)
+                      </Label>
+                      <p className="text-xs text-[#C5C6C7]">
+                        Require email verification code on every login
+                      </p>
                     </div>
                     <Switch
                       checked={twofaEnabled}
@@ -1385,30 +1413,51 @@ export default function Settings() {
                         setTwofaEnabled(checked);
                         try {
                           await fetch(`${API_URL}/api/settings/security`, {
-                            method: 'PUT', headers: getAuthHeaders(),
+                            method: "PUT",
+                            headers: getAuthHeaders(),
                             body: JSON.stringify({ twofa_enabled: checked }),
                           });
-                          toast.success(checked ? '2FA enabled — all users will need email verification' : '2FA disabled');
-                        } catch { toast.error('Failed to update'); setTwofaEnabled(!checked); }
+                          toast.success(
+                            checked
+                              ? "2FA enabled — all users will need email verification"
+                              : "2FA disabled",
+                          );
+                        } catch {
+                          toast.error("Failed to update");
+                          setTwofaEnabled(!checked);
+                        }
                       }}
                       data-testid="twofa-toggle"
                     />
                   </div>
                   <div className="p-3 bg-slate-50 rounded-sm border border-slate-200">
                     <Label className="text-white">Session Timeout</Label>
-                    <p className="text-xs text-[#C5C6C7] mb-2">Auto-logout after inactivity (current: {sessionTimeout}h)</p>
+                    <p className="text-xs text-[#C5C6C7] mb-2">
+                      Auto-logout after inactivity (current: {sessionTimeout}h)
+                    </p>
                     <div className="flex items-center gap-2">
-                      <select value={sessionTimeout} onChange={async (e) => {
-                        const val = parseInt(e.target.value);
-                        setSessionTimeout(val);
-                        try {
-                          await fetch(`${API_URL}/api/settings/security`, {
-                            method: 'PUT', headers: getAuthHeaders(),
-                            body: JSON.stringify({ session_timeout_hours: val }),
-                          });
-                          toast.success(`Session timeout set to ${val} hours`);
-                        } catch { toast.error('Failed to update'); }
-                      }} className="bg-slate-50 border-slate-200 text-white px-3 py-1.5 rounded-md text-sm">
+                      <select
+                        value={sessionTimeout}
+                        onChange={async (e) => {
+                          const val = parseInt(e.target.value);
+                          setSessionTimeout(val);
+                          try {
+                            await fetch(`${API_URL}/api/settings/security`, {
+                              method: "PUT",
+                              headers: getAuthHeaders(),
+                              body: JSON.stringify({
+                                session_timeout_hours: val,
+                              }),
+                            });
+                            toast.success(
+                              `Session timeout set to ${val} hours`,
+                            );
+                          } catch {
+                            toast.error("Failed to update");
+                          }
+                        }}
+                        className="bg-slate-50 border-slate-200 text-white px-3 py-1.5 rounded-md text-sm"
+                      >
                         <option value="1">1 hour</option>
                         <option value="2">2 hours</option>
                         <option value="4">4 hours</option>
@@ -1419,20 +1468,37 @@ export default function Settings() {
                   <div className="p-3 bg-slate-50 rounded-sm border border-slate-200">
                     <div className="flex items-center justify-between">
                       <div>
-                        <Label className="text-white">My Approval Notifications</Label>
-                        <p className="text-xs text-[#C5C6C7]">Receive email when transactions need approval</p>
+                        <Label className="text-white">
+                          My Approval Notifications
+                        </Label>
+                        <p className="text-xs text-[#C5C6C7]">
+                          Receive email when transactions need approval
+                        </p>
                       </div>
                       <Switch
                         checked={approvalNotifications}
                         onCheckedChange={async (checked) => {
                           setApprovalNotifications(checked);
                           try {
-                            await fetch(`${API_URL}/api/auth/notification-preferences`, {
-                              method: 'PUT', headers: getAuthHeaders(),
-                              body: JSON.stringify({ approval_notifications: checked }),
-                            });
-                            toast.success(checked ? 'Notifications enabled' : 'Notifications disabled');
-                          } catch { toast.error('Failed to update'); setApprovalNotifications(!checked); }
+                            await fetch(
+                              `${API_URL}/api/auth/notification-preferences`,
+                              {
+                                method: "PUT",
+                                headers: getAuthHeaders(),
+                                body: JSON.stringify({
+                                  approval_notifications: checked,
+                                }),
+                              },
+                            );
+                            toast.success(
+                              checked
+                                ? "Notifications enabled"
+                                : "Notifications disabled",
+                            );
+                          } catch {
+                            toast.error("Failed to update");
+                            setApprovalNotifications(!checked);
+                          }
                         }}
                         data-testid="admin-approval-notif-toggle"
                       />
@@ -1634,7 +1700,9 @@ export default function Settings() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Current Password</Label>
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">
+                  Current Password
+                </Label>
                 <Input
                   type="password"
                   id="current-password"
@@ -1644,7 +1712,9 @@ export default function Settings() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">New Password</Label>
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">
+                  New Password
+                </Label>
                 <Input
                   type="password"
                   id="new-password"
@@ -1654,7 +1724,9 @@ export default function Settings() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">Confirm New Password</Label>
+                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">
+                  Confirm New Password
+                </Label>
                 <Input
                   type="password"
                   id="confirm-password"
@@ -1667,27 +1739,47 @@ export default function Settings() {
                 className="w-full bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase"
                 data-testid="change-password-btn"
                 onClick={async () => {
-                  const curPw = document.getElementById('current-password').value;
-                  const newPw = document.getElementById('new-password').value;
-                  const confirmPw = document.getElementById('confirm-password').value;
-                  if (!curPw || !newPw) { toast.error('Please fill all fields'); return; }
-                  if (newPw !== confirmPw) { toast.error('New passwords do not match'); return; }
-                  if (newPw.length < 6) { toast.error('Password must be at least 6 characters'); return; }
+                  const curPw =
+                    document.getElementById("current-password").value;
+                  const newPw = document.getElementById("new-password").value;
+                  const confirmPw =
+                    document.getElementById("confirm-password").value;
+                  if (!curPw || !newPw) {
+                    toast.error("Please fill all fields");
+                    return;
+                  }
+                  if (newPw !== confirmPw) {
+                    toast.error("New passwords do not match");
+                    return;
+                  }
+                  if (newPw.length < 6) {
+                    toast.error("Password must be at least 6 characters");
+                    return;
+                  }
                   try {
-                    const response = await fetch(`${API_URL}/api/auth/change-password`, {
-                      method: 'POST', headers: getAuthHeaders(),
-                      body: JSON.stringify({ current_password: curPw, new_password: newPw }),
-                    });
+                    const response = await fetch(
+                      `${API_URL}/api/auth/change-password`,
+                      {
+                        method: "POST",
+                        headers: getAuthHeaders(),
+                        body: JSON.stringify({
+                          current_password: curPw,
+                          new_password: newPw,
+                        }),
+                      },
+                    );
                     if (response.ok) {
-                      toast.success('Password changed successfully');
-                      document.getElementById('current-password').value = '';
-                      document.getElementById('new-password').value = '';
-                      document.getElementById('confirm-password').value = '';
+                      toast.success("Password changed successfully");
+                      document.getElementById("current-password").value = "";
+                      document.getElementById("new-password").value = "";
+                      document.getElementById("confirm-password").value = "";
                     } else {
                       const err = await response.json();
-                      toast.error(err.detail || 'Failed to change password');
+                      toast.error(err.detail || "Failed to change password");
                     }
-                  } catch { toast.error('Failed to change password'); }
+                  } catch {
+                    toast.error("Failed to change password");
+                  }
                 }}
               >
                 <CheckCircle2 className="w-4 h-4 mr-2" />
@@ -1709,10 +1801,18 @@ export default function Settings() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-white font-medium">2FA (Email OTP)</p>
-                    <p className="text-xs text-[#C5C6C7]">Email verification on every login</p>
+                    <p className="text-xs text-[#C5C6C7]">
+                      Email verification on every login
+                    </p>
                   </div>
-                  <Badge className={twofaEnabled ? 'bg-green-500/20 text-green-400' : 'bg-slate-500/20 text-slate-400'}>
-                    {twofaEnabled ? 'ENABLED' : 'DISABLED'}
+                  <Badge
+                    className={
+                      twofaEnabled
+                        ? "bg-green-500/20 text-green-400"
+                        : "bg-slate-500/20 text-slate-400"
+                    }
+                  >
+                    {twofaEnabled ? "ENABLED" : "DISABLED"}
                   </Badge>
                 </div>
               </div>
@@ -1720,29 +1820,52 @@ export default function Settings() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-white font-medium">Session Timeout</p>
-                    <p className="text-xs text-[#C5C6C7]">Auto-logout after inactivity</p>
+                    <p className="text-xs text-[#C5C6C7]">
+                      Auto-logout after inactivity
+                    </p>
                   </div>
-                  <Badge className="bg-blue-500/20 text-blue-400">{sessionTimeout} hours</Badge>
+                  <Badge className="bg-blue-500/20 text-blue-400">
+                    {sessionTimeout} hours
+                  </Badge>
                 </div>
               </div>
-              <p className="text-xs text-[#C5C6C7]">Security settings are managed by your system administrator.</p>
+              <p className="text-xs text-[#C5C6C7]">
+                Security settings are managed by your system administrator.
+              </p>
               <div className="p-3 bg-slate-50 rounded-sm border border-slate-200">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-white font-medium">Approval Notifications</p>
-                    <p className="text-xs text-[#C5C6C7]">Receive email when transactions need approval</p>
+                    <p className="text-white font-medium">
+                      Approval Notifications
+                    </p>
+                    <p className="text-xs text-[#C5C6C7]">
+                      Receive email when transactions need approval
+                    </p>
                   </div>
                   <Switch
                     checked={approvalNotifications}
                     onCheckedChange={async (checked) => {
                       setApprovalNotifications(checked);
                       try {
-                        await fetch(`${API_URL}/api/auth/notification-preferences`, {
-                          method: 'PUT', headers: getAuthHeaders(),
-                          body: JSON.stringify({ approval_notifications: checked }),
-                        });
-                        toast.success(checked ? 'Approval notifications enabled' : 'Approval notifications disabled');
-                      } catch { toast.error('Failed to update'); setApprovalNotifications(!checked); }
+                        await fetch(
+                          `${API_URL}/api/auth/notification-preferences`,
+                          {
+                            method: "PUT",
+                            headers: getAuthHeaders(),
+                            body: JSON.stringify({
+                              approval_notifications: checked,
+                            }),
+                          },
+                        );
+                        toast.success(
+                          checked
+                            ? "Approval notifications enabled"
+                            : "Approval notifications disabled",
+                        );
+                      } catch {
+                        toast.error("Failed to update");
+                        setApprovalNotifications(!checked);
+                      }
                     }}
                     data-testid="approval-notif-toggle"
                   />

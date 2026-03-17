@@ -2430,7 +2430,7 @@ export default function Loans() {
             {/* Exchange Rate Section - only shown when currencies differ */}
             {selectedLoan &&
               repaymentForm.currency !== selectedLoan.currency && (
-                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-3">
+                <div className="p-3 bg-amber-50/5border border-amber-200 rounded-xl space-y-3">
                   <p className="text-xs text-amber-700 uppercase tracking-wider font-semibold">
                     Currency Conversion
                   </p>
