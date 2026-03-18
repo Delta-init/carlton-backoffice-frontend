@@ -138,7 +138,7 @@ export default function Logs() {
   useEffect(() => {
     fetchLogs(activeTab === "all" ? "" : activeTab);
     fetchStats();
-  }, [activeTab]);
+  }, [activeTab, currentPage, pageSize]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSearch = () => {
     fetchLogs(activeTab === "all" ? "" : activeTab);

@@ -283,11 +283,11 @@ export default function AccountantDashboard() {
     loadData();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Re-fetch when select/date filters change
+  // Re-fetch when select/date/pageSize filters change
   useEffect(() => {
     setCurrentPage(1);
     fetchPendingTransactions(1);
-  }, [typeFilter, statusFilter, destFilter, dateFrom, dateTo]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [typeFilter, statusFilter, destFilter, dateFrom, dateTo, pageSize]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Debounced re-fetch for text inputs
   useEffect(() => {
@@ -1196,7 +1196,7 @@ export default function AccountantDashboard() {
                 onPageSizeChange={(s) => {
                   setPageSize(s);
                   setCurrentPage(1);
-                  fetchPendingTransactions(1);
+                  // pageSize in useEffect deps triggers re-fetch with the new value
                 }}
               />
             )}

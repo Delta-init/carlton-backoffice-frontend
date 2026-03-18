@@ -948,6 +948,7 @@ const [proofPreview, setProofPreview] = useState(null);
     },
     [
       page,
+      pageSize,
       statusFilter,
       typeFilter,
       searchQuery,
@@ -1526,7 +1527,7 @@ const [proofPreview, setProofPreview] = useState(null);
         onPageSizeChange={(s) => {
           setPageSize(s);
           setPage(1);
-          fetchRequests(1);
+          // pageSize in useCallback deps recreates fetchRequests → useEffect triggers re-fetch
         }}
       />
 

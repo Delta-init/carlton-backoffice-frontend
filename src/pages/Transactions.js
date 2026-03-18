@@ -499,11 +499,11 @@ export default function Transactions() {
     fetchExchangers();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Re-fetch transactions immediately when select/date filters change
+  // Re-fetch transactions immediately when select/date/pageSize filters change
   useEffect(() => {
     setCurrentPage(1);
     fetchTransactions(1);
-  }, [typeFilter, statusFilter, destinationFilter, dateFrom, dateTo]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [typeFilter, statusFilter, destinationFilter, dateFrom, dateTo, pageSize]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Re-fetch transactions with debounce for text inputs (search, email)
   useEffect(() => {
@@ -2805,7 +2805,7 @@ export default function Transactions() {
         onPageSizeChange={(s) => {
           setPageSize(s);
           setCurrentPage(1);
-          fetchTransactions(1);
+          // pageSize in useEffect deps triggers re-fetch with the new value
         }}
       />
 
