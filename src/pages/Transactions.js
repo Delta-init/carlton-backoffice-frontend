@@ -2445,7 +2445,7 @@ export default function Transactions() {
           <Input
             placeholder="Filter by client email..."
             value={emailFilter}
-            onChange={(e) => setEmailFilter(e.target.value)}
+            onChange={(e) => setEmailFilter(e.target.value?.trim())}
             className="pl-10 bg-white border-slate-200 text-slate-800 placeholder:text-slate-800/30 focus:border-[#66FCF1]"
             data-testid="filter-client-email"
           />
