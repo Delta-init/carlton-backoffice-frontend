@@ -339,8 +339,10 @@ export default function Transactions() {
         params.append("transaction_type", typeFilter);
       if (statusFilter && statusFilter !== "all")
         params.append("status", statusFilter);
+      if (destinationFilter && destinationFilter !== "all")
+        params.append("destination_type", destinationFilter);
       if (searchTerm) params.append("search", searchTerm);
-        if (emailFilter) params.append("client_email", emailFilter);
+      if (emailFilter) params.append("client_email", emailFilter);
       if (dateFrom) params.append("date_from", dateFrom);
       if (dateTo) params.append("date_to", dateTo);
 
@@ -487,6 +489,30 @@ export default function Transactions() {
     fetchPsps();
     fetchExchangers();
   }, [typeFilter, statusFilter]);
+
+
+  // Initial load of form dropdowns (once)
+  useEffect(() => {
+    fetchFormDropdowns();
+    fetchTreasuryAccounts();
+    fetchPsps();
+    fetchExchangers();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Re-fetch transactions immediately when select/date filters change
+  useEffect(() => {
+    setCurrentPage(1);
+    fetchTransactions(1);
+  }, [typeFilter, statusFilter, destinationFilter, dateFrom, dateTo]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Re-fetch transactions with debounce for text inputs (search, email)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCurrentPage(1);
+      fetchTransactions(1);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchTerm, emailFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-refresh: when user returns to tab or every 30s
   useAutoRefresh(fetchTransactions, 30000);
@@ -875,48 +901,8 @@ export default function Transactions() {
     }
   };
 
-  const filteredTransactions = transactions.filter((tx) => {
-    const clientName = (
-      tx.client_name || getClientName(tx.client_id)
-    ).toLowerCase();
-    const ref = (tx.reference || "").toLowerCase();
-    const crmRef = (tx.crm_reference || "").toLowerCase();
-    const matchesSearch =
-      clientName.includes(searchTerm.toLowerCase()) ||
-      ref.includes(searchTerm.toLowerCase()) ||
-      crmRef.includes(searchTerm.toLowerCase());
-       const matchesEmail =
-      !emailFilter ||
-      (tx.client_email || "").toLowerCase().includes(emailFilter.toLowerCase());
-    const matchesType =
-      typeFilter === "all" || tx.transaction_type === typeFilter;
-    const matchesStatus = statusFilter === "all" || tx.status === statusFilter;
-    const matchesDestination =
-      destinationFilter === "all" || tx.destination_type === destinationFilter;
+  const filteredTransactions = transactions;
 
-    // Date filters
-    let matchesDate = true;
-    if (dateFrom) {
-      const txDate = new Date(tx.transaction_date || tx.created_at)
-        .toISOString()
-        .split("T")[0];
-      matchesDate = matchesDate && txDate >= dateFrom;
-    }
-    if (dateTo) {
-      const txDate = new Date(tx.transaction_date || tx.created_at)
-        .toISOString()
-        .split("T")[0];
-      matchesDate = matchesDate && txDate <= dateTo;
-    }
-
-    return (
-      matchesSearch &&
-      matchesType &&
-      matchesStatus &&
-      matchesDestination &&
-      matchesDate
-    );
-  });
 
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
@@ -2568,7 +2554,10 @@ export default function Transactions() {
               data-testid="filter-date-to"
             />
           </div>
-           {(dateFrom || dateTo || destinationFilter !== "all" || emailFilter) && (
+          {(dateFrom ||
+            dateTo ||
+            destinationFilter !== "all" ||
+            emailFilter) && (
             <Button
               variant="ghost"
               size="sm"
