@@ -247,6 +247,7 @@ export default function Transactions() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [emailFilter, setEmailFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [destinationFilter, setDestinationFilter] = useState("all");
@@ -339,6 +340,7 @@ export default function Transactions() {
       if (statusFilter && statusFilter !== "all")
         params.append("status", statusFilter);
       if (searchTerm) params.append("search", searchTerm);
+        if (emailFilter) params.append("client_email", emailFilter);
       if (dateFrom) params.append("date_from", dateFrom);
       if (dateTo) params.append("date_to", dateTo);
 
@@ -883,6 +885,9 @@ export default function Transactions() {
       clientName.includes(searchTerm.toLowerCase()) ||
       ref.includes(searchTerm.toLowerCase()) ||
       crmRef.includes(searchTerm.toLowerCase());
+       const matchesEmail =
+      !emailFilter ||
+      (tx.client_email || "").toLowerCase().includes(emailFilter.toLowerCase());
     const matchesType =
       typeFilter === "all" || tx.transaction_type === typeFilter;
     const matchesStatus = statusFilter === "all" || tx.status === statusFilter;
@@ -2435,6 +2440,16 @@ export default function Transactions() {
             data-testid="search-transactions"
           />
         </div>
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          <Input
+            placeholder="Filter by client email..."
+            value={emailFilter}
+            onChange={(e) => setEmailFilter(e.target.value)}
+            className="pl-10 bg-white border-slate-200 text-slate-800 placeholder:text-slate-800/30 focus:border-[#66FCF1]"
+            data-testid="filter-client-email"
+          />
+        </div>
         <Select value={typeFilter} onValueChange={setTypeFilter}>
           <SelectTrigger
             className="w-full sm:w-40 bg-white border-slate-200 text-slate-800"
@@ -2553,7 +2568,7 @@ export default function Transactions() {
               data-testid="filter-date-to"
             />
           </div>
-          {(dateFrom || dateTo || destinationFilter !== "all") && (
+           {(dateFrom || dateTo || destinationFilter !== "all" || emailFilter) && (
             <Button
               variant="ghost"
               size="sm"
@@ -2561,6 +2576,7 @@ export default function Transactions() {
                 setDateFrom("");
                 setDateTo("");
                 setDestinationFilter("all");
+                setEmailFilter("");
               }}
               className="text-slate-500 hover:text-red-500"
             >
