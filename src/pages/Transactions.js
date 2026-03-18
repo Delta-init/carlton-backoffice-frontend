@@ -12,7 +12,7 @@ import { Label } from "../components/ui/label";
 import PaginationControls from "../components/PaginationControls";
 
 import { Badge } from "../components/ui/badge";
-import { useAutoRefresh } from "../hooks/useAutoRefresh";
+
 import {
   Table,
   TableBody,
@@ -515,7 +515,6 @@ export default function Transactions() {
   }, [searchTerm, emailFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-refresh: when user returns to tab or every 30s
-  useAutoRefresh(fetchTransactions, 30000);
 
   // Fetch client bank accounts when client changes and destination is bank or vendor
   useEffect(() => {
@@ -903,11 +902,21 @@ export default function Transactions() {
 
   const filteredTransactions = transactions;
 
-
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", {
+    // Date-only strings like "2024-03-19" must be parsed as local time
+    // (new Date("YYYY-MM-DD") treats them as UTC which can shift the day)
+    const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(dateStr);
+    if (isDateOnly) {
+      const [year, month, day] = dateStr.split("-").map(Number);
+      return new Date(year, month - 1, day).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    }
+    // Full ISO timestamp — show date + time
+    return new Date(dateStr).toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -915,6 +924,7 @@ export default function Transactions() {
       minute: "2-digit",
     });
   };
+  
 
   // Download functions
   const downloadCSV = () => {
