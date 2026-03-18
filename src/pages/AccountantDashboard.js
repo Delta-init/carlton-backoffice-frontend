@@ -11,7 +11,7 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
 import { ScrollArea } from "../components/ui/scroll-area";
-import { useAutoRefresh } from "../hooks/useAutoRefresh";
+import PaginationControls from "../components/PaginationControls";
 import {
   Dialog,
   DialogContent,
@@ -52,6 +52,7 @@ import {
   CreditCard,
   Filter,
   AlertTriangle,
+  Search,
 } from "lucide-react";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -171,15 +172,25 @@ export default function AccountantDashboard() {
 
   // Filters
   const [typeFilter, setTypeFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("pending");
   const [destFilter, setDestFilter] = useState("all");
   const [clientFilter, setClientFilter] = useState("");
+  const [emailFilter, setEmailFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [pageSize, setPageSize] = useState(25);
 
   // Withdrawal approval dialog
   const [showApprovalDialog, setShowApprovalDialog] = useState(null);
   const [approvalSourceAccount, setApprovalSourceAccount] = useState("");
   const [approvalProof, setApprovalProof] = useState(null);
-  const [bankReceiptDate, setBankReceiptDate] = useState('');
   const [approvalProofPreview, setApprovalProofPreview] = useState(null);
+  const [bankReceiptDate, setBankReceiptDate] = useState("");
   const [treasuryAccounts, setTreasuryAccounts] = useState([]);
 
   // Captcha states
@@ -209,14 +220,34 @@ export default function AccountantDashboard() {
     }
   };
 
-  const fetchPendingTransactions = async () => {
+  const fetchPendingTransactions = async (page = currentPage) => {
     try {
-      const response = await fetch(`${API_URL}/api/transactions/pending`, {
-        headers: getAuthHeaders(),
-        credentials: "include",
-      });
+      const params = new URLSearchParams();
+      params.append("page", page.toString());
+      params.append("page_size", pageSize.toString());
+      if (statusFilter) params.append("status", statusFilter);
+      if (typeFilter && typeFilter !== "all")
+        params.append("transaction_type", typeFilter);
+      if (destFilter && destFilter !== "all")
+        params.append("destination_type", destFilter);
+      if (clientFilter) params.append("search", clientFilter);
+      if (emailFilter) params.append("client_email", emailFilter);
+      if (dateFrom) params.append("date_from", dateFrom);
+      if (dateTo) params.append("date_to", dateTo);
+
+      const response = await fetch(
+        `${API_URL}/api/transactions/pending?${params.toString()}`,
+        {
+          headers: getAuthHeaders(),
+          credentials: "include",
+        },
+      );
       if (response.ok) {
-        setPendingTransactions(await response.json());
+        const data = await response.json();
+        setPendingTransactions(data.items || []);
+        setTotalItems(data.total || 0);
+        setTotalPages(data.total_pages || 1);
+        setCurrentPage(page);
       }
     } catch (error) {
       console.error("Error fetching pending transactions:", error);
@@ -238,38 +269,56 @@ export default function AccountantDashboard() {
     }
   };
 
+  // Initial load
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       await Promise.all([
-        fetchPendingTransactions(),
+        fetchPendingTransactions(1),
         fetchPendingSettlements(),
         fetchTreasuryAccounts(),
       ]);
       setLoading(false);
     };
     loadData();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-refresh: when user returns to tab or every 15s
-  useAutoRefresh(() => {
-    fetchPendingTransactions();
-    fetchPendingSettlements();
-  }, 15000);
-const initiateApprove = (transactionId, isSettlement = false) => {
+  // Re-fetch when select/date filters change
+  useEffect(() => {
+    setCurrentPage(1);
+    fetchPendingTransactions(1);
+  }, [typeFilter, statusFilter, destFilter, dateFrom, dateTo]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Debounced re-fetch for text inputs
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCurrentPage(1);
+      fetchPendingTransactions(1);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [clientFilter, emailFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const initiateApprove = (transactionId, isSettlement = false) => {
     // For withdrawals and deposits, show approval dialog with screenshot requirement
     if (!isSettlement) {
-      const tx = pendingTransactions.find(t => t.transaction_id === transactionId);
-      if (tx && (tx.transaction_type === 'withdrawal' || tx.transaction_type === 'deposit')) {
+      const tx = pendingTransactions.find(
+        (t) => t.transaction_id === transactionId,
+      );
+      if (
+        tx &&
+        (tx.transaction_type === "withdrawal" ||
+          tx.transaction_type === "deposit")
+      ) {
         setShowApprovalDialog(tx);
-        setBankReceiptDate(tx.transaction_date || new Date().toISOString().split('T')[0]);
+        setBankReceiptDate(
+          tx.transaction_date || new Date().toISOString().split("T")[0],
+        );
         return;
       }
     }
-    setCaptchaAction({ type: 'approve', transactionId, isSettlement });
+    setCaptchaAction({ type: "approve", transactionId, isSettlement });
     setShowCaptcha(true);
   };
-
   const initiateReject = (transactionId, isSettlement = false) => {
     setCaptchaAction({ type: "reject", transactionId, isSettlement });
     if (isSettlement) {
@@ -292,28 +341,28 @@ const initiateApprove = (transactionId, isSettlement = false) => {
   };
 
   const handleTransactionApproval = () => {
-    const isWithdrawal = showApprovalDialog.transaction_type === 'withdrawal';
-    
+    const isWithdrawal = showApprovalDialog.transaction_type === "withdrawal";
+
     // For withdrawals, validate source account
     if (isWithdrawal && !approvalSourceAccount) {
-      toast.error('Please select a source treasury/USDT account');
+      toast.error("Please select a source treasury/USDT account");
       return;
     }
-    
+
     // For both deposits and withdrawals, require proof (mandatory)
     if (!approvalProof) {
-      toast.error('Please upload proof of payment screenshot');
+      toast.error("Please upload proof of payment screenshot");
       return;
     }
-    
+
     // Proceed to captcha
-    setCaptchaAction({ 
-      type: 'approve', 
-      transactionId: showApprovalDialog.transaction_id, 
+    setCaptchaAction({
+      type: "approve",
+      transactionId: showApprovalDialog.transaction_id,
       isSettlement: false,
       sourceAccount: isWithdrawal ? approvalSourceAccount : null,
       proofFile: approvalProof,
-      bankReceiptDate: bankReceiptDate || null
+      bankReceiptDate: bankReceiptDate || null,
     });
     setShowApprovalDialog(null);
     setShowCaptcha(true);
@@ -321,81 +370,93 @@ const initiateApprove = (transactionId, isSettlement = false) => {
 
   const handleCaptchaVerified = async () => {
     if (!captchaAction) return;
-    
+
     setShowCaptcha(false);
-    
-    if (captchaAction.type === 'approve') {
+
+    if (captchaAction.type === "approve") {
       if (captchaAction.isSettlement) {
         await executeApproveSettlement(captchaAction.transactionId);
       } else {
-        await executeApprove(captchaAction.transactionId, captchaAction.sourceAccount, captchaAction.proofFile, captchaAction.bankReceiptDate);
+        await executeApprove(
+          captchaAction.transactionId,
+          captchaAction.sourceAccount,
+          captchaAction.proofFile,
+          captchaAction.bankReceiptDate,
+        );
       }
-    } else if (captchaAction.type === 'reject') {
+    } else if (captchaAction.type === "reject") {
       if (captchaAction.isSettlement) {
         await executeRejectSettlement(captchaAction.transactionId);
       } else {
         await executeReject(captchaAction.transactionId);
       }
     }
-    
+
     // Reset approval dialog state
-    setApprovalSourceAccount('');
+    setApprovalSourceAccount("");
     setApprovalProof(null);
     setApprovalProofPreview(null);
     setCaptchaAction(null);
   };
 
-  const executeApprove = async (transactionId, sourceAccount = null, proofFile = null, bankReceiptDate = null) => {
+  const executeApprove = async (
+    transactionId,
+    sourceAccount = null,
+    proofFile = null,
+    bankReceiptDate = null,
+  ) => {
     setProcessingId(transactionId);
     try {
       // If there's a proof file, upload it first
       if (proofFile) {
         const formData = new FormData();
-        formData.append('proof_image', proofFile);
-        
-        const uploadResponse = await fetch(`${API_URL}/api/transactions/${transactionId}/upload-proof`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        formData.append("proof_image", proofFile);
+
+        const uploadResponse = await fetch(
+          `${API_URL}/api/transactions/${transactionId}/upload-proof`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+            },
+            credentials: "include",
+            body: formData,
           },
-          credentials: 'include',
-          body: formData,
-        });
-        
+        );
+
         if (!uploadResponse.ok) {
           const error = await uploadResponse.json();
-          toast.error(error.detail || 'Failed to upload proof');
+          toast.error(error.detail || "Failed to upload proof");
           return;
         }
       }
-      
+
       // Approve the transaction (optionally with source account and bank receipt date)
       const params = new URLSearchParams();
-      if (sourceAccount) params.append('source_account_id', sourceAccount);
-      if (bankReceiptDate) params.append('bank_receipt_date', bankReceiptDate);
-      const queryStr = params.toString() ? `?${params.toString()}` : '';
+      if (sourceAccount) params.append("source_account_id", sourceAccount);
+      if (bankReceiptDate) params.append("bank_receipt_date", bankReceiptDate);
+      const queryStr = params.toString() ? `?${params.toString()}` : "";
       const url = `${API_URL}/api/transactions/${transactionId}/approve${queryStr}`;
-        
+
       const response = await fetch(url, {
-        method: 'POST',
+        method: "POST",
         headers: getAuthHeaders(),
-        credentials: 'include',
+        credentials: "include",
       });
 
       if (response.ok) {
-        toast.success('Transaction approved');
+        toast.success("Transaction approved");
         fetchPendingTransactions();
       } else {
         const error = await response.json();
-        toast.error(error.detail || 'Approval failed');
+        toast.error(error.detail || "Approval failed");
       }
     } catch (error) {
-      toast.error('Approval failed');
+      toast.error("Approval failed");
     } finally {
       setProcessingId(null);
     }
   };
-
 
   const handleRejectWithCaptcha = () => {
     // Show captcha for reject
@@ -562,20 +623,6 @@ const initiateApprove = (transactionId, isSettlement = false) => {
     });
   };
 
-  // Filter transactions
-  const filteredTransactions = pendingTransactions.filter((tx) => {
-    if (typeFilter !== "all" && tx.transaction_type !== typeFilter)
-      return false;
-    if (destFilter !== "all" && tx.destination_type !== destFilter)
-      return false;
-    if (
-      clientFilter &&
-      !tx.client_name?.toLowerCase().includes(clientFilter.toLowerCase())
-    )
-      return false;
-    return true;
-  });
-
   return (
     <div
       className="space-y-6 animate-fade-in"
@@ -606,11 +653,9 @@ const initiateApprove = (transactionId, isSettlement = false) => {
                 <p className="text-4xl font-bold font-mono text-yellow-400">
                   {filteredTransactions.length}
                 </p>
-                {filteredTransactions.length !== pendingTransactions.length && (
-                  <p className="text-xs text-[#C5C6C7]">
-                    ({pendingTransactions.length} total)
-                  </p>
-                )}
+                <p className="text-4xl font-bold font-mono text-yellow-400">
+                  {totalItems}
+                </p>
               </div>
               <div className="p-4 bg-yellow-500/10 rounded-xl">
                 <Clock className="w-8 h-8 text-yellow-400" />
@@ -641,111 +686,210 @@ const initiateApprove = (transactionId, isSettlement = false) => {
       {/* Filters */}
       <Card className="bg-white border-slate-200">
         <CardContent className="p-4">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-[#1FA21B]" />
-              <span className="text-[#C5C6C7] text-sm uppercase tracking-wider">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 shrink-0">
+              <Filter className="w-4 h-4 text-[#66FCF1]" />
+              <span className="text-slate-600 text-sm uppercase tracking-wider">
                 Filters
               </span>
             </div>
-            <div className="flex-1 flex flex-wrap gap-4">
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-[150px] bg-slate-50 border-slate-200 text-white">
-                  <SelectValue placeholder="Type" />
-                </SelectTrigger>
-                <SelectContent className="bg-white border-slate-200">
-                  <SelectItem
-                    value="all"
-                    className="text-white hover:bg-white/5"
-                  >
-                    All Types
-                  </SelectItem>
-                  <SelectItem
-                    value="deposit"
-                    className="text-white hover:bg-white/5"
-                  >
-                    Deposit
-                  </SelectItem>
-                  <SelectItem
-                    value="withdrawal"
-                    className="text-white hover:bg-white/5"
-                  >
-                    Withdrawal
-                  </SelectItem>
-                  <SelectItem
-                    value="transfer"
-                    className="text-white hover:bg-white/5"
-                  >
-                    Transfer
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={destFilter} onValueChange={setDestFilter}>
-                <SelectTrigger className="w-[180px] bg-slate-50 border-slate-200 text-white">
-                  <SelectValue placeholder="Destination" />
-                </SelectTrigger>
-                <SelectContent className="bg-white border-slate-200">
-                  <SelectItem
-                    value="all"
-                    className="text-white hover:bg-white/5"
-                  >
-                    All Destinations
-                  </SelectItem>
-                  <SelectItem
-                    value="treasury"
-                    className="text-white hover:bg-white/5"
-                  >
-                    Treasury
-                  </SelectItem>
-                  <SelectItem
-                    value="bank"
-                    className="text-white hover:bg-white/5"
-                  >
-                    Client Bank
-                  </SelectItem>
-                  <SelectItem
-                    value="usdt"
-                    className="text-white hover:bg-white/5"
-                  >
-                    USDT
-                  </SelectItem>
-                  <SelectItem
-                    value="psp"
-                    className="text-white hover:bg-white/5"
-                  >
-                    PSP
-                  </SelectItem>
-                  <SelectItem
-                    value="vendor"
-                    className="text-white hover:bg-white/5"
-                  >
-                    Exchanger
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+
+            {/* Search by name / reference */}
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
               <Input
                 value={clientFilter}
                 onChange={(e) => setClientFilter(e.target.value)}
-                placeholder="Search client..."
-                className="w-[200px] bg-slate-50 border-slate-200 text-white focus:border-[#1FA21B]"
+                placeholder="Search client / reference..."
+                className="pl-8 w-[200px] bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-[#66FCF1] h-9"
               />
-              {(typeFilter !== "all" ||
-                destFilter !== "all" ||
-                clientFilter) && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setTypeFilter("all");
-                    setDestFilter("all");
-                    setClientFilter("");
-                  }}
-                  className="text-[#1FA21B] hover:bg-[#1FA21B]/10"
-                >
-                  Clear Filters
-                </Button>
-              )}
             </div>
+
+            {/* Email filter */}
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+              <Input
+                value={emailFilter}
+                onChange={(e) => setEmailFilter(e.target.value)}
+                placeholder="Filter by email..."
+                className="pl-8 w-[190px] bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-[#66FCF1] h-9"
+              />
+            </div>
+
+            {/* Status filter */}
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[140px] bg-slate-50 border-slate-200 text-slate-800 h-9">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent className="bg-white border-slate-200">
+                <SelectItem
+                  value="pending"
+                  className="text-slate-800 hover:bg-slate-100"
+                >
+                  Pending
+                </SelectItem>
+                <SelectItem
+                  value="approved"
+                  className="text-slate-800 hover:bg-slate-100"
+                >
+                  Approved
+                </SelectItem>
+                <SelectItem
+                  value="completed"
+                  className="text-slate-800 hover:bg-slate-100"
+                >
+                  Completed
+                </SelectItem>
+                <SelectItem
+                  value="rejected"
+                  className="text-slate-800 hover:bg-slate-100"
+                >
+                  Rejected
+                </SelectItem>
+                <SelectItem
+                  value="cancelled"
+                  className="text-slate-800 hover:bg-slate-100"
+                >
+                  Cancelled
+                </SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Type filter */}
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-[140px] bg-slate-50 border-slate-200 text-slate-800 h-9">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent className="bg-white border-slate-200">
+                <SelectItem
+                  value="all"
+                  className="text-slate-800 hover:bg-slate-100"
+                >
+                  All Types
+                </SelectItem>
+                <SelectItem
+                  value="deposit"
+                  className="text-slate-800 hover:bg-slate-100"
+                >
+                  Deposit
+                </SelectItem>
+                <SelectItem
+                  value="withdrawal"
+                  className="text-slate-800 hover:bg-slate-100"
+                >
+                  Withdrawal
+                </SelectItem>
+                <SelectItem
+                  value="transfer"
+                  className="text-slate-800 hover:bg-slate-100"
+                >
+                  Transfer
+                </SelectItem>
+                <SelectItem
+                  value="commission"
+                  className="text-slate-800 hover:bg-slate-100"
+                >
+                  Commission
+                </SelectItem>
+                <SelectItem
+                  value="rebate"
+                  className="text-slate-800 hover:bg-slate-100"
+                >
+                  Rebate
+                </SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Destination filter */}
+            <Select value={destFilter} onValueChange={setDestFilter}>
+              <SelectTrigger className="w-[155px] bg-slate-50 border-slate-200 text-slate-800 h-9">
+                <SelectValue placeholder="Destination" />
+              </SelectTrigger>
+              <SelectContent className="bg-white border-slate-200">
+                <SelectItem
+                  value="all"
+                  className="text-slate-800 hover:bg-slate-100"
+                >
+                  All Destinations
+                </SelectItem>
+                <SelectItem
+                  value="treasury"
+                  className="text-slate-800 hover:bg-slate-100"
+                >
+                  Treasury
+                </SelectItem>
+                <SelectItem
+                  value="bank"
+                  className="text-slate-800 hover:bg-slate-100"
+                >
+                  Client Bank
+                </SelectItem>
+                <SelectItem
+                  value="usdt"
+                  className="text-slate-800 hover:bg-slate-100"
+                >
+                  USDT
+                </SelectItem>
+                <SelectItem
+                  value="psp"
+                  className="text-slate-800 hover:bg-slate-100"
+                >
+                  PSP
+                </SelectItem>
+                <SelectItem
+                  value="vendor"
+                  className="text-slate-800 hover:bg-slate-100"
+                >
+                  Exchanger
+                </SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Date range */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-slate-500">From:</span>
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="w-[135px] bg-slate-50 border-slate-200 text-slate-800 h-9"
+              />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-slate-500">To:</span>
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="w-[135px] bg-slate-50 border-slate-200 text-slate-800 h-9"
+              />
+            </div>
+
+            {/* Clear all */}
+            {(typeFilter !== "all" ||
+              statusFilter !== "pending" ||
+              destFilter !== "all" ||
+              clientFilter ||
+              emailFilter ||
+              dateFrom ||
+              dateTo) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setTypeFilter("all");
+                  setStatusFilter("pending");
+                  setDestFilter("all");
+                  setClientFilter("");
+                  setEmailFilter("");
+                  setDateFrom("");
+                  setDateTo("");
+                }}
+                className="text-red-500 hover:text-red-600 hover:bg-red-50 h-9"
+              >
+                Clear Filters
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -757,7 +901,7 @@ const initiateApprove = (transactionId, isSettlement = false) => {
             value="transactions"
             className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10]"
           >
-            Transactions ({filteredTransactions.length})
+            Transactions ({totalItems})
           </TabsTrigger>
           <TabsTrigger
             value="settlements"
@@ -774,7 +918,7 @@ const initiateApprove = (transactionId, isSettlement = false) => {
               <div className="flex justify-center py-12">
                 <div className="w-8 h-8 border-2 border-[#1FA21B] border-t-transparent rounded-full animate-spin" />
               </div>
-            ) : filteredTransactions.length === 0 ? (
+            ) : pendingTransactions.length === 0 ? (
               <Card className="bg-white border-slate-200">
                 <CardContent className="p-12 text-center">
                   <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
@@ -785,7 +929,7 @@ const initiateApprove = (transactionId, isSettlement = false) => {
                 </CardContent>
               </Card>
             ) : (
-              filteredTransactions.map((tx) => {
+              pendingTransactions.map((tx) => {
                 const hasProperDest =
                   tx.destination_account_name ||
                   tx.vendor_name ||
@@ -965,8 +1109,12 @@ const initiateApprove = (transactionId, isSettlement = false) => {
                           <p className="text-white text-xs">
                             {formatDate(tx.created_at)}
                           </p>
-                          <p className="text-white text-xs">{formatDate(tx.transaction_date || tx.created_at)}</p>
-                        <p className="text-[10px] text-[#C5C6C7]">by {tx.created_by_name || 'System'}</p>
+                          <p className="text-white text-xs">
+                            {formatDate(tx.transaction_date || tx.created_at)}
+                          </p>
+                          <p className="text-[10px] text-[#C5C6C7]">
+                            by {tx.created_by_name || "System"}
+                          </p>
                         </div>
                         {/* Actions */}
                         <div className="flex items-center gap-1.5 justify-end">
@@ -1035,6 +1183,22 @@ const initiateApprove = (transactionId, isSettlement = false) => {
                   </Card>
                 );
               })
+            )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <PaginationControls
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                pageSize={pageSize}
+                onPageChange={(p) => fetchPendingTransactions(p)}
+                onPageSizeChange={(s) => {
+                  setPageSize(s);
+                  setCurrentPage(1);
+                  fetchPendingTransactions(1);
+                }}
+              />
             )}
           </div>
         </TabsContent>
@@ -1264,8 +1428,12 @@ const initiateApprove = (transactionId, isSettlement = false) => {
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
                     Created
                   </p>
-                  <p className="text-white text-sm">{formatDate(viewTransaction.transaction_date || viewTransaction.created_at)}</p>
-                   
+                  <p className="text-white text-sm">
+                    {formatDate(
+                      viewTransaction.transaction_date ||
+                        viewTransaction.created_at,
+                    )}
+                  </p>
                 </div>
               </div>
               {viewTransaction.destination_account_name && (
@@ -1827,7 +1995,7 @@ const initiateApprove = (transactionId, isSettlement = false) => {
           setApprovalSourceAccount("");
           setApprovalProof(null);
           setApprovalProofPreview(null);
-          setBankReceiptDate('');
+          setBankReceiptDate("");
         }}
       >
         <DialogContent className="bg-white border-slate-200 text-white max-w-lg max-h-[90vh] overflow-y-auto">
@@ -2011,18 +2179,22 @@ const initiateApprove = (transactionId, isSettlement = false) => {
                 </div>
               )}
 
-
               {/* Bank Receipt Date - Optional */}
               <div className="space-y-2">
-                <Label className="text-slate-600 text-xs uppercase tracking-wider">Bank Receipt Date (Actual payment date)</Label>
+                <Label className="text-slate-600 text-xs uppercase tracking-wider">
+                  Bank Receipt Date (Actual payment date)
+                </Label>
                 <Input
                   type="date"
                   value={bankReceiptDate}
-                  onChange={e => setBankReceiptDate(e.target.value)}
+                  onChange={(e) => setBankReceiptDate(e.target.value)}
                   className="bg-slate-50 border-slate-200 text-slate-800"
                   data-testid="bank-receipt-date"
                 />
-                <p className="text-slate-400 text-xs">Date the payment was actually received in the bank. Used for reconciliation matching.</p>
+                <p className="text-slate-400 text-xs">
+                  Date the payment was actually received in the bank. Used for
+                  reconciliation matching.
+                </p>
               </div>
 
               {/* Proof of Payment Upload - Required for both */}
@@ -2089,7 +2261,7 @@ const initiateApprove = (transactionId, isSettlement = false) => {
                     setApprovalSourceAccount("");
                     setApprovalProof(null);
                     setApprovalProofPreview(null);
-                     setBankReceiptDate('');
+                    setBankReceiptDate("");
                   }}
                   className="flex-1 border-slate-200 text-[#C5C6C7] hover:bg-white/5"
                 >
