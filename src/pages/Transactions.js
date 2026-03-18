@@ -277,7 +277,7 @@ export default function Transactions() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = useState(10);
   const [fieldEditTx, setFieldEditTx] = useState(null);
   const [fieldEditForm, setFieldEditForm] = useState({
     crm_reference: "",
@@ -489,7 +489,6 @@ export default function Transactions() {
     fetchPsps();
     fetchExchangers();
   }, [typeFilter, statusFilter]);
-
 
   // Initial load of form dropdowns (once)
   useEffect(() => {
@@ -924,7 +923,6 @@ export default function Transactions() {
       minute: "2-digit",
     });
   };
-  
 
   // Download functions
   const downloadCSV = () => {

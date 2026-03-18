@@ -183,7 +183,7 @@ export default function AccountantDashboard() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = useState(10);
 
   // Withdrawal approval dialog
   const [showApprovalDialog, setShowApprovalDialog] = useState(null);
