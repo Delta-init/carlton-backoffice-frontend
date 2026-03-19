@@ -651,7 +651,7 @@ export default function AccountantDashboard() {
                   Pending Transactions
                 </p>
                 <p className="text-4xl font-bold font-mono text-yellow-400">
-                  {filteredTransactions.length}
+                
                 </p>
                 <p className="text-4xl font-bold font-mono text-yellow-400">
                   {totalItems}
