@@ -87,6 +87,7 @@ export default function PSPs() {
   const [selectedSettleTxIds, setSelectedSettleTxIds] = useState([]);
   const [batchSettleDialogOpen, setBatchSettleDialogOpen] = useState(false);
   const [batchSettleDestination, setBatchSettleDestination] = useState('');
+   const [batchSettleDate, setBatchSettleDate] = useState('');
   const [batchSettling, setBatchSettling] = useState(false);
   const [expandedSettlement, setExpandedSettlement] = useState(null);
   const [expandedTxs, setExpandedTxs] = useState([]);
@@ -527,6 +528,7 @@ export default function PSPs() {
         body: JSON.stringify({
           transaction_ids: selectedSettleTxIds,
           destination_account_id: destId || null,
+          settlement_date: batchSettleDate || null,
         }),
       });
       if (response.ok) {
@@ -535,6 +537,7 @@ export default function PSPs() {
         setBatchSettleDialogOpen(false);
         setSelectedSettleTxIds([]);
         setBatchSettleDestination('');
+         setBatchSettleDate('');
         fetchPendingTransactions(viewPsp.psp_id);
         fetchSettlements(viewPsp.psp_id);
         fetchPsps();
@@ -1288,7 +1291,7 @@ export default function PSPs() {
                         </Button>
                         <Button
                           size="sm"
-                          onClick={() => setBatchSettleDialogOpen(true)}
+                          onClick={() => { setBatchSettleDate(new Date().toISOString().split('T')[0]); setBatchSettleDialogOpen(true); }}
                           className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#66FCF1]/80 h-7 text-xs font-bold"
                           data-testid="settle-selected-btn"
                         >
@@ -1652,6 +1655,19 @@ export default function PSPs() {
                 </Select>
               </div>
               
+               {/* Settlement Date */}
+            <div className="space-y-1.5">
+              <Label className="text-slate-600 text-xs uppercase tracking-wider">Settlement Date (When credited to bank)</Label>
+              <Input
+                type="date"
+                value={batchSettleDate}
+                onChange={e => setBatchSettleDate(e.target.value)}
+                className="border-slate-200 bg-white text-slate-800"
+                data-testid="batch-settle-date"
+              />
+              <p className="text-[10px] text-slate-400">Date the PSP settlement was received in the bank. Used for reconciliation matching.</p>
+            </div>
+
               <div className="flex justify-end gap-3 pt-4">
                 <Button
                   type="button"
