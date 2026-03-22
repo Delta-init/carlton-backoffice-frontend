@@ -1786,6 +1786,7 @@ export default function Reconciliation() {
                                 setHistoryDialog({ open: true, item })
                               }
                               data-testid={`view-history-${item.recon_id}`}
+                                title="View details"
                             >
                               <Eye className="w-4 h-4" />
                             </Button>
@@ -2089,7 +2090,7 @@ export default function Reconciliation() {
       {/* History Detail Dialog */}
       <Dialog
         open={historyDialog.open}
-        onOpenChange={(open) => setHistoryDialog({ ...historyDialog, open })}
+         onOpenChange={(open) => { if (!open) setHistoryDialog({ open: false, item: null }); }}
       >
         <DialogContent className="max-w-2xl">
           <DialogHeader>
