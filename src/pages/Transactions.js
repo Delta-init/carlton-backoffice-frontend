@@ -852,60 +852,93 @@ export default function Transactions() {
     setFieldEditForm(newForm);
   };
 
+
   const handleSaveFieldEdit = async () => {
     if (!fieldEditTx) return;
     setFieldEditSaving(true);
     try {
       const payload = {};
-      if (fieldEditForm.crm_reference !== (fieldEditTx.crm_reference || ""))
-        payload.crm_reference = fieldEditForm.crm_reference;
-      if (fieldEditForm.reference !== (fieldEditTx.reference || ""))
-        payload.reference = fieldEditForm.reference;
-      if (fieldEditForm.amount !== (fieldEditTx.amount?.toString() || ""))
-        payload.amount = parseFloat(fieldEditForm.amount);
-      if (
-        fieldEditForm.base_amount !==
-        (fieldEditTx.base_amount?.toString() || "")
-      )
-        payload.base_amount = parseFloat(fieldEditForm.base_amount) || null;
-      if (fieldEditForm.base_currency !== (fieldEditTx.base_currency || "USD"))
-        payload.base_currency = fieldEditForm.base_currency;
-      if (
-        fieldEditForm.exchange_rate !==
-        (fieldEditTx.exchange_rate?.toString() || "")
-      )
-        payload.exchange_rate = parseFloat(fieldEditForm.exchange_rate) || null;
-      if (
-        fieldEditForm.transaction_date !== (fieldEditTx.transaction_date || "")
-      )
-        payload.transaction_date = fieldEditForm.transaction_date;
-      if (Object.keys(payload).length === 0) {
-        toast.info("No changes");
-        setFieldEditTx(null);
-        setFieldEditSaving(false);
-        return;
-      }
-      const response = await fetch(
-        `${API_URL}/api/transactions/${fieldEditTx.transaction_id}`,
-        {
-          method: "PUT",
-          headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        },
-      );
+      if (fieldEditForm.crm_reference !== (fieldEditTx.crm_reference || '')) payload.crm_reference = fieldEditForm.crm_reference;
+      if (fieldEditForm.reference !== (fieldEditTx.reference || '')) payload.reference = fieldEditForm.reference;
+      if (fieldEditForm.amount !== (fieldEditTx.amount?.toString() || '')) payload.amount = parseFloat(fieldEditForm.amount);
+      if (fieldEditForm.base_amount !== (fieldEditTx.base_amount?.toString() || '')) payload.base_amount = parseFloat(fieldEditForm.base_amount) || null;
+      if (fieldEditForm.base_currency !== (fieldEditTx.base_currency || 'USD')) payload.base_currency = fieldEditForm.base_currency;
+      if (fieldEditForm.exchange_rate !== (fieldEditTx.exchange_rate?.toString() || '')) payload.exchange_rate = parseFloat(fieldEditForm.exchange_rate) || null;
+      if (fieldEditForm.transaction_date !== (fieldEditTx.transaction_date || '')) payload.transaction_date = fieldEditForm.transaction_date;
+      if (Object.keys(payload).length === 0) { toast.info('No changes'); setFieldEditTx(null); setFieldEditSaving(false); return; }
+      const response = await fetch(`${API_URL}/api/transactions/${fieldEditTx.transaction_id}`, {
+        method: 'PUT',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
       if (response.ok) {
-        toast.success("Transaction updated");
+        toast.success('Transaction updated');
         setFieldEditTx(null);
         fetchTransactions();
       } else {
         const err = await response.json();
-        toast.error(err.detail || "Failed to update");
+        toast.error(err.detail || 'Failed to update');
       }
-    } catch {
-      toast.error("Failed to update");
-    } finally {
-      setFieldEditSaving(false);
-    }
+    } catch { toast.error('Failed to update'); }
+    finally { setFieldEditSaving(false); }
+  };
+
+  // Bulk upload handlers
+  const handleBulkValidate = async () => {
+    if (!bulkFile) return;
+    setBulkLoading(true);
+    setBulkValidation(null);
+    try {
+      const fd = new FormData();
+      fd.append('file', bulkFile);
+      const res = await fetch(`${API_URL}/api/transactions/bulk-validate`, {
+        method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }, body: fd
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setBulkValidation(data);
+      } else {
+        const err = await res.json();
+        toast.error(err.detail || 'Validation failed');
+      }
+    } catch (e) { toast.error('Failed to validate file: ' + (e.message || 'Network error')); }
+    finally { setBulkLoading(false); }
+  };
+
+  const handleBulkCreate = async () => {
+    if (!bulkValidation?.can_proceed) return;
+    setBulkCreating(true);
+    try {
+      const res = await fetch(`${API_URL}/api/transactions/bulk-create`, {
+        method: 'POST', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows: bulkValidation.rows })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        toast.success(`Successfully created ${data.created} transactions`);
+        setBulkOpen(false); setBulkFile(null); setBulkValidation(null);
+        fetchTransactions();
+      } else {
+        const err = await res.json();
+        toast.error(err.detail || 'Bulk creation failed');
+      }
+    } catch { toast.error('Failed to create transactions'); }
+    finally { setBulkCreating(false); }
+  };
+
+  const handleDownloadTemplate = async (format) => {
+    try {
+      const res = await fetch(`${API_URL}/api/transactions/bulk-template?format=${format}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+      });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url;
+        a.download = `bulk_transactions_template.${format}`; a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch { toast.error('Failed to download template'); }
   };
 
   const filteredTransactions = transactions;
