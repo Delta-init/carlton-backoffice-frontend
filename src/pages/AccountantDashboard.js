@@ -192,6 +192,8 @@ export default function AccountantDashboard() {
   const [approvalProofPreview, setApprovalProofPreview] = useState(null);
   const [bankReceiptDate, setBankReceiptDate] = useState("");
   const [treasuryAccounts, setTreasuryAccounts] = useState([]);
+   const [psps, setPsps] = useState([]);
+
 
   // Captcha states
   const [showCaptcha, setShowCaptcha] = useState(false);
@@ -217,6 +219,22 @@ export default function AccountantDashboard() {
       }
     } catch (error) {
       console.error("Error fetching treasury accounts:", error);
+    }
+  };
+
+
+  const fetchPsps = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/psp`, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
+      if (response.ok) {
+        const d = await response.json();
+        setPsps(Array.isArray(d) ? d : d.items || []);
+      }
+    } catch (error) {
+      console.error("Error fetching PSPs:", error);
     }
   };
 
@@ -277,6 +295,7 @@ export default function AccountantDashboard() {
         fetchPendingTransactions(1),
         fetchPendingSettlements(),
         fetchTreasuryAccounts(),
+              fetchPsps(),
       ]);
       setLoading(false);
     };
@@ -2149,9 +2168,14 @@ export default function AccountantDashboard() {
                       className="bg-slate-50 border-slate-200 text-white"
                       data-testid="approval-source-account"
                     >
-                      <SelectValue placeholder="Select treasury/USDT account" />
+                     <SelectValue placeholder="Select treasury, USDT or PSP account" />
                     </SelectTrigger>
-                    <SelectContent className="bg-white border-slate-200 max-h-[200px]">
+                  <SelectContent className="bg-white border-slate-200 max-h-[250px]">
+                        {treasuryAccounts.length > 0 && (
+                        <div className="px-2 py-1 text-[10px] text-slate-400 uppercase tracking-wider font-bold border-b border-slate-100">
+                          Treasury / USDT
+                        </div>
+                      )}
                       {treasuryAccounts.map((account) => (
                         <SelectItem
                           key={account.account_id}
@@ -2169,8 +2193,33 @@ export default function AccountantDashboard() {
                               ({account.currency})
                             </span>
                             <span className="text-[#1FA21B] font-mono text-xs">
-                              ${account.balance?.toLocaleString()}
+                               {account.balance?.toLocaleString()}
                             </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                      {psps.length > 0 && (
+                        <div className="px-2 py-1 text-[10px] text-slate-400 uppercase tracking-wider font-bold border-b border-slate-100 mt-1">
+                          PSP
+                        </div>
+                      )}
+                      {psps
+                        .filter((p) => p.status === "active")
+                        .map((psp) => (
+                          <SelectItem
+                            key={`psp_${psp.psp_id}`}
+                            value={`psp_${psp.psp_id}`}
+                            className="text-white hover:bg-white/5"
+                          >
+                            <div className="flex items-center gap-2">
+                              <CreditCard className="w-3 h-3 text-purple-400" />
+                              <span>{psp.psp_name}</span>
+                              <span className="text-[#C5C6C7] text-xs">
+                                ({psp.currency || "USD"})
+                              </span>
+                              <span className="text-purple-400 font-mono text-xs">
+                                {psp.current_balance?.toLocaleString() || "0"}
+                              </span>
                           </div>
                         </SelectItem>
                       ))}

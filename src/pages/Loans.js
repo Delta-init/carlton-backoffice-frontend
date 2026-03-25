@@ -68,6 +68,9 @@ import {
   Filter,
   RotateCcw,
   FileText,
+    Paperclip,
+  Upload,
+  ExternalLink,
 } from "lucide-react";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -178,6 +181,9 @@ export default function Loans() {
     new_interest_rate: "",
     new_due_date: "",
   });
+
+
+  const [loanFiles, setLoanFiles] = useState([]);
 
   const isAdmin = user?.role === "admin";
 
@@ -359,9 +365,29 @@ export default function Loans() {
       });
 
       if (response.ok) {
+         const newLoan = await response.json();
+
+        // Upload attachments if any
+        if (loanFiles.length > 0) {
+          const fileFormData = new FormData();
+          loanFiles.forEach((f) => fileFormData.append("files", f));
+          try {
+            await fetch(`${API_URL}/api/loans/${newLoan.loan_id}/attachments`, {
+              method: "POST",
+              headers: { Authorization: getAuthHeaders()["Authorization"] },
+              credentials: "include",
+              body: fileFormData,
+            });
+          } catch (err) {
+            console.error("File upload error:", err);
+            toast.error("Loan created but file upload failed");
+          }
+        }
+
         toast.success("Loan created successfully");
         setIsLoanDialogOpen(false);
         resetLoanForm();
+        setLoanFiles([]);
         fetchLoans();
         fetchSummary();
         fetchDashboard();
@@ -1160,6 +1186,7 @@ export default function Loans() {
                       <TableHead className="text-slate-500 text-xs">
                         Status
                       </TableHead>
+                      
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1714,6 +1741,9 @@ export default function Loans() {
                         Status
                       </TableHead>
                       <TableHead className="text-slate-500 text-xs">
+                        Attachments
+                      </TableHead>
+                      <TableHead className="text-slate-500 text-xs">
                         By
                       </TableHead>
                     </TableRow>
@@ -1807,6 +1837,37 @@ export default function Loans() {
                           >
                             {tx.status || "Completed"}
                           </Badge>
+                        </TableCell>
+                        <TableCell className="text-slate-400 text-sm">
+                          {tx.attachments && tx.attachments.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {tx.attachments.map((att) => (
+                                <a
+                                  key={att.attachment_id}
+                                  href={att.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded hover:bg-blue-100 transition-colors"
+                                  title={att.filename}
+                                  data-testid={`attachment-${att.attachment_id}`}
+                                >
+                                  {att.file_type === "pdf" ? (
+                                    <FileText className="w-3 h-3" />
+                                  ) : att.file_type === "xlsx" ||
+                                    att.file_type === "xls" ? (
+                                    <FileText className="w-3 h-3" />
+                                  ) : (
+                                    <ExternalLink className="w-3 h-3" />
+                                  )}
+                                  {att.filename.length > 15
+                                    ? att.filename.slice(0, 12) + "..."
+                                    : att.filename}
+                                </a>
+                              ))}
+                            </div>
+                          ) : (
+                            "-"
+                          )}
                         </TableCell>
                         <TableCell className="text-slate-400 text-sm">
                           {tx.created_by_name}
@@ -2276,6 +2337,73 @@ export default function Loans() {
                 </p>
               </div>
             )}
+
+                {/* Attachments */}
+            <div className="space-y-2">
+              <Label className="text-slate-500 text-xs uppercase tracking-wider flex items-center gap-2">
+                <Paperclip className="w-3 h-3" /> Attachments (Optional)
+              </Label>
+              <div className="border-2 border-dashed border-slate-200 rounded-sm p-4 hover:border-[#66FCF1] transition-colors">
+                <input
+                  type="file"
+                  multiple
+                  accept=".pdf,.xlsx,.xls,.csv,.png,.jpg,.jpeg,.gif,.webp"
+                  onChange={(e) => {
+                    const newFiles = Array.from(e.target.files);
+                    setLoanFiles((prev) => [...prev, ...newFiles]);
+                    e.target.value = "";
+                  }}
+                  className="hidden"
+                  id="loan-file-input"
+                  data-testid="loan-file-input"
+                />
+                <label
+                  htmlFor="loan-file-input"
+                  className="cursor-pointer flex flex-col items-center gap-1"
+                >
+                  <Upload className="w-5 h-5 text-slate-400" />
+                  <span className="text-xs text-slate-500">
+                    Click to attach files
+                  </span>
+                  <span className="text-[10px] text-slate-400">
+                    PDF, Excel, Images (max 10MB each)
+                  </span>
+                </label>
+              </div>
+              {loanFiles.length > 0 && (
+                <div className="space-y-1.5">
+                  {loanFiles.map((file, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-sm border border-slate-200"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <FileText className="w-4 h-4 text-blue-500 shrink-0" />
+                        <span className="text-sm text-slate-700 truncate">
+                          {file.name}
+                        </span>
+                        <span className="text-[10px] text-slate-400 shrink-0">
+                          ({(file.size / 1024).toFixed(0)} KB)
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          setLoanFiles((prev) =>
+                            prev.filter((_, i) => i !== idx),
+                          )
+                        }
+                        className="h-6 w-6 p-0 text-red-400 hover:text-red-600 shrink-0"
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* Notes */}
             <div className="space-y-2">
@@ -2772,6 +2900,99 @@ export default function Loans() {
                 )}
               </div>
 
+
+ {/* Attachments Section */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                    <Paperclip className="w-3 h-3" /> Attachments
+                  </p>
+                  <label htmlFor="detail-file-input" className="cursor-pointer">
+                    <span className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100 transition-colors">
+                      <Upload className="w-3 h-3" /> Add Files
+                    </span>
+                    <input
+                      type="file"
+                      multiple
+                      accept=".pdf,.xlsx,.xls,.csv,.png,.jpg,.jpeg,.gif,.webp"
+                      onChange={async (e) => {
+                        if (!e.target.files.length || !selectedLoan) return;
+                        const fd = new FormData();
+                        Array.from(e.target.files).forEach((f) =>
+                          fd.append("files", f),
+                        );
+                        try {
+                          const resp = await fetch(
+                            `${API_URL}/api/loans/${selectedLoan.loan_id}/attachments`,
+                            {
+                              method: "POST",
+                              headers: {
+                                Authorization:
+                                  getAuthHeaders()["Authorization"],
+                              },
+                              credentials: "include",
+                              body: fd,
+                            },
+                          );
+                          if (resp.ok) {
+                            toast.success("Files uploaded");
+                            const updated = await fetch(
+                              `${API_URL}/api/loans/${selectedLoan.loan_id}`,
+                              {
+                                headers: getAuthHeaders(),
+                                credentials: "include",
+                              },
+                            );
+                            if (updated.ok)
+                              setSelectedLoan(await updated.json());
+                            fetchLoanTransactions();
+                          } else {
+                            const err = await resp.json();
+                            toast.error(err.detail || "Upload failed");
+                          }
+                        } catch {
+                          toast.error("Upload failed");
+                        }
+                        e.target.value = "";
+                      }}
+                      className="hidden"
+                      id="detail-file-input"
+                      data-testid="detail-file-input"
+                    />
+                  </label>
+                </div>
+                {selectedLoan.attachments &&
+                selectedLoan.attachments.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-1.5">
+                    {selectedLoan.attachments.map((att) => (
+                      <div
+                        key={att.attachment_id}
+                        className="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-sm border border-slate-200"
+                      >
+                        <a
+                          href={att.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 text-sm text-blue-600 hover:underline min-w-0 truncate"
+                          data-testid={`detail-att-${att.attachment_id}`}
+                        >
+                          <FileText className="w-4 h-4 shrink-0" />
+                          <span className="truncate">{att.filename}</span>
+                          <span className="text-[10px] text-slate-400 shrink-0">
+                            ({(att.size / 1024).toFixed(0)} KB)
+                          </span>
+                        </a>
+                        <span className="text-[10px] text-slate-400 ml-2 shrink-0">
+                          {att.uploaded_by_name} -{" "}
+                          {new Date(att.uploaded_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-slate-400 text-xs">No attachments</p>
+                )}
+              </div>
               {/* Action Button */}
               {selectedLoan.status !== "fully_paid" && (
                 <div className="flex justify-end">

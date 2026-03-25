@@ -71,6 +71,8 @@ export default function PSPs() {
   const [psps, setPsps] = useState([]);
   const [treasuryAccounts, setTreasuryAccounts] = useState([]);
   const [pendingTransactions, setPendingTransactions] = useState([]);
+  const [pspWithdrawals, setPspWithdrawals] = useState([]);
+  const [extraCommDialog, setExtraCommDialog] = useState({ open: false, tx: null, amount: '', note: '', type: 'withdrawal' });
   const [settlements, setSettlements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -87,10 +89,15 @@ export default function PSPs() {
   const [selectedSettleTxIds, setSelectedSettleTxIds] = useState([]);
   const [batchSettleDialogOpen, setBatchSettleDialogOpen] = useState(false);
   const [batchSettleDestination, setBatchSettleDestination] = useState('');
-   const [batchSettleDate, setBatchSettleDate] = useState('');
+  const [batchSettleDate, setBatchSettleDate] = useState('');
   const [batchSettling, setBatchSettling] = useState(false);
   const [expandedSettlement, setExpandedSettlement] = useState(null);
   const [expandedTxs, setExpandedTxs] = useState([]);
+  // Net settlement state
+  const [netSettleDialogOpen, setNetSettleDialogOpen] = useState(false);
+  const [netSettleDestination, setNetSettleDestination] = useState('');
+  const [netSettleDate, setNetSettleDate] = useState('');
+  const [netSettling, setNetSettling] = useState(false);
   const [formData, setFormData] = useState({
     psp_name: '',
     commission_rate: '',
@@ -167,6 +174,44 @@ export default function PSPs() {
     } catch (error) {
       console.error('Error fetching pending transactions:', error);
     }
+  };
+
+  const fetchPspWithdrawals = async (pspId) => {
+    try {
+      const response = await fetch(`${API_URL}/api/psp/${pspId}/withdrawal-transactions`, { headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) {
+        setPspWithdrawals(await response.json());
+      }
+    } catch (error) {
+      console.error('Error fetching PSP withdrawals:', error);
+    }
+  };
+
+  const handleExtraCommission = async () => {
+    if (!extraCommDialog.tx) return;
+    const endpoint = extraCommDialog.type === 'deposit' ? 'deposit-extra-commission' : 'withdrawal-extra-commission';
+    try {
+      const response = await fetch(`${API_URL}/api/psp/${viewPsp.psp_id}/${endpoint}`, {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          transaction_id: extraCommDialog.tx.transaction_id,
+          extra_commission: parseFloat(extraCommDialog.amount) || 0,
+          note: extraCommDialog.note,
+        }),
+      });
+      if (response.ok) {
+        toast.success('Extra commission updated');
+        setExtraCommDialog({ open: false, tx: null, amount: '', note: '', type: 'withdrawal' });
+        fetchPendingTransactions(viewPsp.psp_id);
+        fetchPspWithdrawals(viewPsp.psp_id);
+        fetchPsps();
+      } else {
+        const err = await response.json();
+        toast.error(err.detail || 'Failed');
+      }
+    } catch { toast.error('Failed to update extra commission'); }
   };
 
   const fetchSettlements = async (pspId) => {
@@ -252,6 +297,7 @@ export default function PSPs() {
   useEffect(() => {
     if (viewPsp) {
       fetchPendingTransactions(viewPsp.psp_id);
+      fetchPspWithdrawals(viewPsp.psp_id);
       fetchSettlements(viewPsp.psp_id);
       fetchReserveFundLedger(viewPsp.psp_id);
     }
@@ -304,7 +350,6 @@ export default function PSPs() {
     }
   };
 
- 
   // Handle recording charges on a transaction
   const handleRecordCharges = async (e) => {
     e.preventDefault();
@@ -537,7 +582,7 @@ export default function PSPs() {
         setBatchSettleDialogOpen(false);
         setSelectedSettleTxIds([]);
         setBatchSettleDestination('');
-         setBatchSettleDate('');
+        setBatchSettleDate('');
         fetchPendingTransactions(viewPsp.psp_id);
         fetchSettlements(viewPsp.psp_id);
         fetchPsps();
@@ -551,6 +596,44 @@ export default function PSPs() {
       setBatchSettling(false);
     }
   };
+
+  // Handle net settlement (all deposits + withdrawals)
+  const handleNetSettle = async () => {
+    if (!viewPsp) return;
+    setNetSettling(true);
+    try {
+      const destId = netSettleDestination || viewPsp.settlement_destination_id;
+      const response = await fetch(`${API_URL}/api/psp/${viewPsp.psp_id}/net-settle`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({
+          destination_account_id: destId || null,
+          settlement_date: netSettleDate || null,
+        }),
+      });
+      if (response.ok) {
+        const result = await response.json();
+        toast.success(`Net settlement created: ${result.deposit_count} deposits + ${result.withdrawal_count} withdrawals, Net $${result.net_amount?.toLocaleString()}`);
+        setNetSettleDialogOpen(false);
+        setNetSettleDestination('');
+        setNetSettleDate('');
+        setSelectedSettleTxIds([]);
+        fetchPendingTransactions(viewPsp.psp_id);
+        fetchPspWithdrawals(viewPsp.psp_id);
+        fetchSettlements(viewPsp.psp_id);
+        fetchPsps();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Net settlement failed');
+      }
+    } catch (error) {
+      toast.error('Net settlement failed');
+    } finally {
+      setNetSettling(false);
+    }
+  };
+
 
   // Toggle expanded settlement detail to show included transactions
   const toggleSettlementDetail = async (settlement) => {
@@ -1016,7 +1099,7 @@ export default function PSPs() {
       </div>
 
       {/* View PSP Details Dialog */}
-      <Dialog open={!!viewPsp} onOpenChange={() => { setViewPsp(null); setPendingTransactions([]); setSettlements([]); setSelectedSettleTxIds([]); }}>
+      <Dialog open={!!viewPsp} onOpenChange={() => { setViewPsp(null); setPendingTransactions([]); setPspWithdrawals([]); setSettlements([]); setSelectedSettleTxIds([]); }}>
         <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-6xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-3" style={{ fontFamily: 'Barlow Condensed' }}>
@@ -1045,8 +1128,36 @@ export default function PSPs() {
                   <p className="text-xl font-mono text-slate-800">T+{viewPsp.settlement_days}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Pending Amount</p>
-                  <p className="text-xl font-mono text-yellow-400">${(viewPsp.pending_amount || 0).toLocaleString()}</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Net Pending</p>
+                  {(() => {
+                    const totalDeposits = pendingTransactions.reduce((s, tx) => s + (tx.amount || 0), 0);
+                    const totalWithdrawals = pspWithdrawals.filter(tx => tx.status === 'approved').reduce((s, tx) => s + (tx.amount || 0), 0);
+                    const totalComm = pendingTransactions.reduce((s, tx) => s + (tx.psp_commission_amount || 0), 0);
+                    const totalDepExtraCharges = pendingTransactions.reduce((s, tx) => s + (tx.psp_extra_charges || 0), 0);
+                    const totalDepExtraComm = pendingTransactions.reduce((s, tx) => s + (tx.psp_extra_commission || 0), 0);
+                    const totalDepReserve = pendingTransactions.reduce((s, tx) => s + (tx.psp_reserve_fund_amount || tx.psp_chargeback_amount || 0), 0);
+                    const totalWdrExtraComm = pspWithdrawals.filter(tx => tx.status === 'approved').reduce((s, tx) => s + (tx.psp_withdrawal_extra_commission || 0), 0);
+                    const totalAllDeductions = totalComm + totalDepExtraCharges + totalDepExtraComm + totalDepReserve + totalWdrExtraComm;
+                    const rawNet = totalDeposits - totalWithdrawals - totalAllDeductions;
+                    const net = Math.max(rawNet, 0);
+                    const hasItems = pendingTransactions.length > 0 || pspWithdrawals.filter(tx => tx.status === 'approved').length > 0;
+                    return (
+                      <div>
+                        <p className={`text-xl font-mono ${net === 0 ? 'text-slate-400' : 'text-yellow-400'}`}>${net.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
+                        {hasItems && <p className="text-[10px] text-slate-400">Dep: ${totalDeposits.toLocaleString()} - Wdr: ${totalWithdrawals.toLocaleString()} - Ded: ${totalAllDeductions.toLocaleString()}</p>}
+                        {net > 0 && hasItems && (
+                          <Button
+                            size="sm"
+                            className="mt-2 bg-green-600 text-white hover:bg-green-700 h-7 text-xs font-bold"
+                            onClick={() => { setNetSettleDate(new Date().toISOString().split('T')[0]); setNetSettleDialogOpen(true); }}
+                            data-testid="net-settle-btn"
+                          >
+                            <ArrowRight className="w-3 h-3 mr-1" /> Settle Net ${net.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div>
                   <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Settlement To</p>
@@ -1076,7 +1187,10 @@ export default function PSPs() {
               <Tabs defaultValue="pending" className="w-full">
                 <TabsList className="bg-slate-50 border border-slate-200">
                   <TabsTrigger value="pending" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
-                    Pending Settlements ({pendingTransactions.length})
+                    Deposits ({pendingTransactions.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="withdrawals" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
+                    Withdrawals ({pspWithdrawals.length})
                   </TabsTrigger>
                   <TabsTrigger value="reserve-fund" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]" data-testid="reserve-fund-tab">
                     Reserve Fund
@@ -1112,6 +1226,7 @@ export default function PSPs() {
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Gross</TableHead>
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Deductions</TableHead>
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Net</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Extra Comm.</TableHead>
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Holding</TableHead>
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Release Date</TableHead>
                             <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
@@ -1122,8 +1237,8 @@ export default function PSPs() {
                           {pendingTransactions.map((tx) => {
                             const overdue = isOverdue(tx.psp_expected_settlement_date);
                             const holdingReleaseOverdue = isOverdue(tx.psp_holding_release_date);
-                            const netAmount = (tx.amount || 0) - (tx.psp_commission_amount || 0) - (tx.psp_reserve_fund_amount || tx.psp_chargeback_amount || 0) - (tx.psp_extra_charges || 0);
-                            const totalDeductions = (tx.psp_commission_amount || 0) + (tx.psp_reserve_fund_amount || tx.psp_chargeback_amount || 0) + (tx.psp_extra_charges || 0);
+                            const netAmount = (tx.amount || 0) - (tx.psp_commission_amount || 0) - (tx.psp_reserve_fund_amount || tx.psp_chargeback_amount || 0) - (tx.psp_extra_charges || 0) - (tx.psp_extra_commission || 0);
+                            const totalDeductions = (tx.psp_commission_amount || 0) + (tx.psp_reserve_fund_amount || tx.psp_chargeback_amount || 0) + (tx.psp_extra_charges || 0) + (tx.psp_extra_commission || 0);
                             const holdingDays = tx.psp_holding_days || viewPsp?.holding_days || 0;
                             const isReleased = tx.psp_holding_release_date && new Date(tx.psp_holding_release_date) <= new Date();
                             const hasDiffCurrency = tx.base_currency && tx.base_currency !== 'USD' && tx.base_currency !== tx.currency;
@@ -1151,8 +1266,7 @@ export default function PSPs() {
                                   </div>
                                 </TableCell>
                                 <TableCell>
-                                                                <span className="text-xs text-slate-600">{(tx.transaction_date || tx.created_at) ? new Date(tx.transaction_date || tx.created_at).toLocaleDateString() : '-'}</span>
-
+                                  <span className="text-xs text-slate-600">{(tx.transaction_date || tx.created_at) ? new Date(tx.transaction_date || tx.created_at).toLocaleDateString() : '-'}</span>
                                 </TableCell>
                                 <TableCell className="text-xs text-slate-800 font-medium" data-testid={`pay-currency-${tx.transaction_id}`}>
                                   {hasDiffCurrency ? tx.base_currency : tx.currency || 'USD'}
@@ -1210,6 +1324,18 @@ export default function PSPs() {
                                   <div className="font-mono text-blue-600 font-bold">
                                     ${netAmount.toLocaleString()}
                                     {hasDiffCurrency && <p className="text-[10px] text-blue-500 font-normal">{baseNet?.toLocaleString(undefined, {maximumFractionDigits: 2})} {tx.base_currency}</p>}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="cursor-pointer" onClick={() => setExtraCommDialog({ open: true, tx, amount: (tx.psp_extra_commission || '').toString(), note: tx.psp_extra_commission_note || '', type: 'deposit' })}>
+                                    {tx.psp_extra_commission > 0 ? (
+                                      <div>
+                                        <span className="font-mono text-orange-400 text-xs hover:underline">${tx.psp_extra_commission.toLocaleString()}</span>
+                                        {tx.psp_extra_commission_note && <p className="text-[10px] text-slate-400 truncate max-w-[80px]" title={tx.psp_extra_commission_note}>{tx.psp_extra_commission_note}</p>}
+                                      </div>
+                                    ) : (
+                                      <span className="text-[10px] text-orange-400 hover:text-orange-600">+ Add</span>
+                                    )}
                                   </div>
                                 </TableCell>
                                 <TableCell>
@@ -1300,6 +1426,93 @@ export default function PSPs() {
                       </div>
                     </div>
                   )}
+                </TabsContent>
+
+                {/* Withdrawals Tab */}
+                <TabsContent value="withdrawals" className="mt-4">
+                  {/* Withdrawal Summary */}
+                  <div className="grid grid-cols-4 gap-3 mb-4">
+                    <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 text-center">
+                      <p className="text-[10px] text-slate-500 uppercase tracking-wider">Total Withdrawals</p>
+                      <p className="text-lg font-mono text-red-500 font-bold">${pspWithdrawals.reduce((s, tx) => s + (tx.amount || 0), 0).toLocaleString()}</p>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 text-center">
+                      <p className="text-[10px] text-slate-500 uppercase tracking-wider">Commission</p>
+                      <p className="text-lg font-mono text-yellow-500 font-bold">${pspWithdrawals.reduce((s, tx) => s + (tx.psp_commission_amount || 0), 0).toLocaleString()}</p>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 text-center">
+                      <p className="text-[10px] text-slate-500 uppercase tracking-wider">Extra Commission</p>
+                      <p className="text-lg font-mono text-orange-400 font-bold">${pspWithdrawals.reduce((s, tx) => s + (tx.psp_withdrawal_extra_commission || 0), 0).toLocaleString()}</p>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 text-center">
+                      <p className="text-[10px] text-slate-500 uppercase tracking-wider">Count</p>
+                      <p className="text-lg font-mono text-slate-800 font-bold">{pspWithdrawals.length}</p>
+                    </div>
+                  </div>
+
+                  <ScrollArea className="h-[300px]">
+                    {pspWithdrawals.length === 0 ? (
+                      <div className="text-center py-8 text-slate-500">
+                        <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-green-500" />
+                        No withdrawal transactions
+                      </div>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-slate-200 hover:bg-transparent">
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reference</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Tx Date</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Client</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Amount</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Commission</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Extra Comm.</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
+                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {pspWithdrawals.map((tx) => (
+                            <TableRow key={tx.transaction_id} className="border-slate-200 hover:bg-slate-100">
+                              <TableCell>
+                                <div>
+                                  <span className="font-mono text-slate-800 text-xs">{tx.reference}</span>
+                                  <p className="text-[10px] text-slate-500">{tx.crm_reference || ''}</p>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-xs text-slate-600">
+                                {(tx.transaction_date || tx.created_at) ? new Date(tx.transaction_date || tx.created_at).toLocaleDateString() : '-'}
+                              </TableCell>
+                              <TableCell className="text-xs text-slate-600">{tx.client_name || '-'}</TableCell>
+                              <TableCell className="font-mono text-right text-red-500 text-sm">${tx.amount?.toLocaleString()}</TableCell>
+                              <TableCell className="font-mono text-right text-yellow-500 text-xs">${(tx.psp_commission_amount || 0).toLocaleString()}</TableCell>
+                              <TableCell className="font-mono text-right text-orange-400 text-xs">
+                                {tx.psp_withdrawal_extra_commission ? `$${tx.psp_withdrawal_extra_commission.toLocaleString()}` : '-'}
+                                {tx.psp_withdrawal_extra_commission_note && (
+                                  <p className="text-[10px] text-slate-400 truncate max-w-[100px]" title={tx.psp_withdrawal_extra_commission_note}>{tx.psp_withdrawal_extra_commission_note}</p>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className={`text-xs ${tx.status === 'approved' ? 'text-green-600 border-green-300' : 'text-yellow-600 border-yellow-300'}`}>
+                                  {tx.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setExtraCommDialog({ open: true, tx, amount: tx.psp_withdrawal_extra_commission?.toString() || '', note: tx.psp_withdrawal_extra_commission_note || '' })}
+                                  className="h-7 text-xs text-orange-400 hover:text-orange-600 hover:bg-orange-50"
+                                  data-testid={`extra-comm-${tx.transaction_id}`}
+                                >
+                                  <DollarSign className="w-3 h-3 mr-1" /> Extra Comm.
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </ScrollArea>
                 </TabsContent>
                 
                 {/* Reserve Fund Ledger Tab */}
@@ -1474,7 +1687,8 @@ export default function PSPs() {
                             const extraUsd = (settlement.extra_charges || 0) + (settlement.gateway_fees || 0);
                             const baseExtra = hasDiffCurrency && baseGross ? (extraUsd / rate) : null;
                             const baseNet = hasDiffCurrency && baseGross ? (baseGross - (baseComm || 0) - (baseReserve || 0) - (baseExtra || 0)) : null;
-                            const isCompound = settlement.settlement_type === 'compound' || (settlement.transaction_count > 1);
+                            const isCompound = settlement.settlement_type === 'compound' || settlement.settlement_type === 'net_settlement' || (settlement.transaction_count > 1);
+                            const isNetSettle = settlement.settlement_type === 'net_settlement';
                             const isExpanded = expandedSettlement === settlement.settlement_id;
                             return (
                             <React.Fragment key={settlement.settlement_id}>
@@ -1493,9 +1707,15 @@ export default function PSPs() {
                                   <div>
                                     <span className="font-mono text-slate-800 text-xs">{settlement.reference || settlement.settlement_id}</span>
                                     {settlement.transaction_count > 1 && (
-                                      <p className="text-[10px] text-slate-500">{settlement.transaction_count} transactions</p>
+                                      <p className="text-[10px] text-slate-500">
+                                        {isNetSettle 
+                                          ? `${settlement.deposit_count || 0} deposits + ${settlement.withdrawal_count || 0} withdrawals`
+                                          : `${settlement.transaction_count} transactions`}
+                                      </p>
                                     )}
-                                    {isCompound && (
+                                    {isNetSettle ? (
+                                      <Badge className="bg-green-100 text-green-700 border-green-300 text-[9px] mt-0.5">Net Settlement</Badge>
+                                    ) : isCompound && (
                                       <Badge className="bg-[#66FCF1]/10 text-[#0B0C10] border-[#66FCF1]/30 text-[9px] mt-0.5">Compound</Badge>
                                     )}
                                   </div>
@@ -1543,7 +1763,14 @@ export default function PSPs() {
                               <TableRow className="bg-slate-50/80">
                                 <TableCell colSpan={9} className="p-0">
                                   <div className="px-6 py-3 border-l-2 border-[#66FCF1] ml-4">
-                                    <p className="text-xs text-slate-500 font-bold mb-2 uppercase tracking-wider">Included Transactions ({expandedTxs.length})</p>
+                                    <p className="text-xs text-slate-500 font-bold mb-2 uppercase tracking-wider">
+                                      Included Transactions ({expandedTxs.length})
+                                      {isNetSettle && expandedTxs.length > 0 && (
+                                        <span className="normal-case font-normal ml-2">
+                                          — {expandedTxs.filter(t => t.transaction_type === 'deposit').length} Deposits, {expandedTxs.filter(t => t.transaction_type === 'withdrawal').length} Withdrawals
+                                        </span>
+                                      )}
+                                    </p>
                                     {expandedTxs.length === 0 ? (
                                       <p className="text-xs text-slate-400">Loading...</p>
                                     ) : (
@@ -1551,37 +1778,54 @@ export default function PSPs() {
                                         <thead>
                                           <tr className="text-slate-400 border-b border-slate-200">
                                             <th className="text-left py-1 font-medium">Reference</th>
+                                            <th className="text-left py-1 font-medium">Type</th>
                                             <th className="text-left py-1 font-medium">Client</th>
-                                            <th className="text-left py-1 font-medium">Currency</th>
                                             <th className="text-right py-1 font-medium">Amount (USD)</th>
-                                            <th className="text-right py-1 font-medium">Pay Amount</th>
                                             <th className="text-right py-1 font-medium">Commission</th>
                                             <th className="text-right py-1 font-medium">Extra Charges</th>
+                                            <th className="text-right py-1 font-medium">Extra Comm.</th>
+                                            <th className="text-right py-1 font-medium">Net</th>
                                             <th className="text-left py-1 font-medium">Date</th>
                                           </tr>
                                         </thead>
                                         <tbody>
-                                          {expandedTxs.map((tx) => (
+                                          {expandedTxs.map((tx) => {
+                                            const isWithdrawal = tx.transaction_type === 'withdrawal';
+                                            const comm = tx.psp_commission_amount || 0;
+                                            const extraCharges = (tx.psp_extra_charges || 0) + (tx.psp_gateway_fee || 0);
+                                            const extraComm = isWithdrawal ? (tx.psp_withdrawal_extra_commission || 0) : (tx.psp_extra_commission || 0);
+                                            const reserve = tx.psp_reserve_fund_amount || tx.psp_chargeback_amount || 0;
+                                            const netAmt = isWithdrawal
+                                              ? -(tx.amount + extraComm)
+                                              : (tx.amount - comm - extraCharges - extraComm - reserve);
+                                            return (
                                             <tr key={tx.transaction_id} className="border-b border-slate-100">
                                               <td className="py-1.5 font-mono text-slate-700">{tx.reference || tx.transaction_id}</td>
+                                              <td className="py-1.5">
+                                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${isWithdrawal ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
+                                                  {tx.transaction_type || '-'}
+                                                </span>
+                                              </td>
                                               <td className="py-1.5 text-slate-600">{tx.client_name || '-'}</td>
-                                              <td className="py-1.5 text-slate-600">{tx.base_currency || 'USD'}</td>
-                                              <td className="py-1.5 text-right font-mono text-slate-800">${tx.amount?.toLocaleString()}</td>
-                                              <td className="py-1.5 text-right font-mono text-blue-500">
-                                                {tx.base_amount && tx.base_currency && tx.base_currency !== 'USD'
-                                                  ? `${tx.base_amount.toLocaleString()} ${tx.base_currency}`
-                                                  : '-'}
+                                              <td className={`py-1.5 text-right font-mono ${isWithdrawal ? 'text-red-500' : 'text-slate-800'}`}>
+                                                {isWithdrawal ? '-' : ''}${tx.amount?.toLocaleString()}
                                               </td>
                                               <td className="py-1.5 text-right font-mono text-yellow-500">
-                                                {tx.psp_commission_amount ? `-$${tx.psp_commission_amount.toLocaleString()}` : '-'}
+                                                {comm > 0 ? `-$${comm.toLocaleString()}` : '-'}
                                               </td>
                                               <td className="py-1.5 text-right font-mono text-orange-400">
-                                                {(tx.psp_extra_charges || tx.psp_gateway_fee) ? `-$${((tx.psp_extra_charges || 0) + (tx.psp_gateway_fee || 0)).toLocaleString()}` : '-'}
+                                                {extraCharges > 0 ? `-$${extraCharges.toLocaleString()}` : '-'}
                                               </td>
-                                                                                          <td className="py-1.5 text-slate-500">{(tx.transaction_date || tx.created_at) ? new Date(tx.transaction_date || tx.created_at).toLocaleDateString() : '-'}</td>
-
+                                              <td className="py-1.5 text-right font-mono text-orange-400">
+                                                {extraComm > 0 ? `-$${extraComm.toLocaleString()}` : '-'}
+                                              </td>
+                                              <td className={`py-1.5 text-right font-mono font-bold ${netAmt >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                                {netAmt >= 0 ? '+' : ''}${netAmt.toLocaleString(undefined, {maximumFractionDigits: 2})}
+                                              </td>
+                                              <td className="py-1.5 text-slate-500">{(tx.transaction_date || tx.created_at) ? new Date(tx.transaction_date || tx.created_at).toLocaleDateString() : '-'}</td>
                                             </tr>
-                                          ))}
+                                            );
+                                          })}
                                         </tbody>
                                       </table>
                                     )}
@@ -1655,19 +1899,6 @@ export default function PSPs() {
                 </Select>
               </div>
               
-               {/* Settlement Date */}
-            <div className="space-y-1.5">
-              <Label className="text-slate-600 text-xs uppercase tracking-wider">Settlement Date (When credited to bank)</Label>
-              <Input
-                type="date"
-                value={batchSettleDate}
-                onChange={e => setBatchSettleDate(e.target.value)}
-                className="border-slate-200 bg-white text-slate-800"
-                data-testid="batch-settle-date"
-              />
-              <p className="text-[10px] text-slate-400">Date the PSP settlement was received in the bank. Used for reconciliation matching.</p>
-            </div>
-
               <div className="flex justify-end gap-3 pt-4">
                 <Button
                   type="button"
@@ -1720,7 +1951,7 @@ export default function PSPs() {
                 />
               </div>
               
-                <div className="space-y-2">
+              <div className="space-y-2">
                 <Label className="text-slate-500 text-xs uppercase tracking-wider">Extra Charges ({selectedTransaction?.base_currency && selectedTransaction?.base_currency !== 'USD' ? selectedTransaction.base_currency : 'USD'})</Label>
                 <Input
                   type="number"
@@ -1746,7 +1977,7 @@ export default function PSPs() {
                 />
               </div>
               
-             {/* Settlement Preview */}
+              {/* Settlement Preview */}
               {(() => {
                 const txRate = selectedTransaction?.exchange_rate || 1;
                 const hasDiffCurrency = selectedTransaction?.base_currency && selectedTransaction?.base_currency !== 'USD';
@@ -2044,6 +2275,19 @@ export default function PSPs() {
               )}
             </div>
 
+            {/* Settlement Date */}
+            <div className="space-y-1.5">
+              <Label className="text-slate-600 text-xs uppercase tracking-wider">Settlement Date (When credited to bank)</Label>
+              <Input
+                type="date"
+                value={batchSettleDate}
+                onChange={e => setBatchSettleDate(e.target.value)}
+                className="border-slate-200 bg-white text-slate-800"
+                data-testid="batch-settle-date"
+              />
+              <p className="text-[10px] text-slate-400">Date the PSP settlement was received in the bank. Used for reconciliation matching.</p>
+            </div>
+
             <div className="flex justify-end gap-2 pt-2">
               <Button
                 variant="outline"
@@ -2061,6 +2305,186 @@ export default function PSPs() {
                 data-testid="confirm-batch-settle-btn"
               >
                 {batchSettling ? 'Processing...' : `Settle $${batchSummary.net.toLocaleString(undefined, {maximumFractionDigits: 2})}`}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Extra Commission Dialog */}
+      <Dialog open={extraCommDialog.open} onOpenChange={(open) => { if (!open) setExtraCommDialog({ open: false, tx: null, amount: '', note: '' }); }}>
+        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold">Extra Commission</DialogTitle>
+          </DialogHeader>
+          {extraCommDialog.tx && (
+            <div className="space-y-4">
+              <div className="p-3 bg-slate-50 rounded-sm border border-slate-200">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500">Reference:</span>
+                  <span className="font-mono text-slate-800">{extraCommDialog.tx.reference}</span>
+                </div>
+                <div className="flex justify-between text-sm mt-1">
+                  <span className="text-slate-500">Amount:</span>
+                  <span className="font-mono text-red-500">${extraCommDialog.tx.amount?.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-sm mt-1">
+                  <span className="text-slate-500">Client:</span>
+                  <span className="text-slate-800">{extraCommDialog.tx.client_name || '-'}</span>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Extra Commission Amount (USD)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={extraCommDialog.amount}
+                  onChange={(e) => setExtraCommDialog(prev => ({ ...prev, amount: e.target.value }))}
+                  className="border-slate-200 bg-white text-slate-800"
+                  placeholder="0.00"
+                  data-testid="extra-comm-amount"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Note (Optional)</Label>
+                <Input
+                  value={extraCommDialog.note}
+                  onChange={(e) => setExtraCommDialog(prev => ({ ...prev, note: e.target.value }))}
+                  className="border-slate-200 bg-white text-slate-800"
+                  placeholder="Reason for extra commission"
+                  data-testid="extra-comm-note"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={() => setExtraCommDialog({ open: false, tx: null, amount: '', note: '' })} className="border-slate-200 text-slate-600">Cancel</Button>
+                <Button size="sm" onClick={handleExtraCommission} className="bg-orange-500 text-white hover:bg-orange-600" data-testid="save-extra-comm-btn">Save Extra Commission</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+      {/* Net Settlement Dialog */}
+      <Dialog open={netSettleDialogOpen} onOpenChange={setNetSettleDialogOpen}>
+        <DialogContent className="sm:max-w-lg bg-white border border-slate-200">
+          <DialogHeader>
+            <DialogTitle className="text-slate-800 flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-green-600" />
+              Net Pending Settlement
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-slate-500">
+              This will settle <strong className="text-slate-800">all pending deposits and approved withdrawals</strong> for <strong className="text-[#66FCF1]">{viewPsp?.psp_name}</strong> as a single net amount to your treasury.
+            </p>
+
+            {(() => {
+              const deps = pendingTransactions;
+              const wdrs = pspWithdrawals.filter(tx => tx.status === 'approved');
+              const depGross = deps.reduce((s, tx) => s + (tx.amount || 0), 0);
+              const depComm = deps.reduce((s, tx) => s + (tx.psp_commission_amount || 0), 0);
+              const depExtraCharges = deps.reduce((s, tx) => s + (tx.psp_extra_charges || 0), 0);
+              const depExtraComm = deps.reduce((s, tx) => s + (tx.psp_extra_commission || 0), 0);
+              const depReserve = deps.reduce((s, tx) => s + (tx.psp_reserve_fund_amount || tx.psp_chargeback_amount || 0), 0);
+              const depGateway = deps.reduce((s, tx) => s + (tx.psp_gateway_fee || 0), 0);
+              const depDeductions = depComm + depExtraCharges + depExtraComm + depReserve + depGateway;
+              const depNet = depGross - depDeductions;
+              const wdrGross = wdrs.reduce((s, tx) => s + (tx.amount || 0), 0);
+              const wdrExtraComm = wdrs.reduce((s, tx) => s + (tx.psp_withdrawal_extra_commission || 0), 0);
+              const wdrTotal = wdrGross + wdrExtraComm;
+              const netAmount = depNet - wdrTotal;
+              return (
+                <div className="bg-slate-50 border border-slate-200 rounded-sm p-4 space-y-2">
+                  <p className="text-xs text-slate-500 uppercase tracking-wider font-bold mb-2">Deposits ({deps.length})</p>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-500">Gross Amount</span>
+                    <span className="font-mono text-slate-800">${depGross.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                  </div>
+                  {depDeductions > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Deductions (Comm + Extra + Reserve)</span>
+                      <span className="font-mono text-yellow-600">-${depDeductions.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm font-medium">
+                    <span className="text-slate-600">Deposit Net</span>
+                    <span className="font-mono text-slate-800">${depNet.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                  </div>
+
+                  {wdrs.length > 0 && (
+                    <>
+                      <div className="border-t border-slate-200 my-2" />
+                      <p className="text-xs text-slate-500 uppercase tracking-wider font-bold mb-2">Withdrawals ({wdrs.length})</p>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-500">Withdrawal Amount</span>
+                        <span className="font-mono text-red-500">-${wdrGross.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                      </div>
+                      {wdrExtraComm > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-500">Withdrawal Extra Commission</span>
+                          <span className="font-mono text-red-500">-${wdrExtraComm.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  <div className="border-t border-slate-300 pt-2 flex justify-between text-sm font-bold">
+                    <span className="text-slate-700">Net to Treasury</span>
+                    <span className="font-mono text-green-600">${netAmount.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div className="space-y-1.5">
+              <Label className="text-slate-600 text-xs uppercase tracking-wider">Destination Treasury Account</Label>
+              <Select
+                value={netSettleDestination || viewPsp?.settlement_destination_id || ''}
+                onValueChange={setNetSettleDestination}
+              >
+                <SelectTrigger className="border-slate-200 bg-white text-slate-800" data-testid="net-settle-destination">
+                  <SelectValue placeholder="Use PSP default destination" />
+                </SelectTrigger>
+                <SelectContent>
+                  {treasuryAccounts.map((account) => (
+                    <SelectItem key={account.account_id} value={account.account_id}>
+                      {account.account_name} - {account.bank_name} ({account.currency})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {viewPsp?.settlement_destination_name && !netSettleDestination && (
+                <p className="text-[10px] text-slate-400">Default: {viewPsp.settlement_destination_name}</p>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-slate-600 text-xs uppercase tracking-wider">Settlement Date</Label>
+              <Input
+                type="date"
+                value={netSettleDate}
+                onChange={e => setNetSettleDate(e.target.value)}
+                className="border-slate-200 bg-white text-slate-800"
+                data-testid="net-settle-date"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setNetSettleDialogOpen(false)}
+                className="border-slate-200 text-slate-600"
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleNetSettle}
+                disabled={netSettling}
+                className="bg-green-600 text-white hover:bg-green-700 font-bold"
+                data-testid="confirm-net-settle-btn"
+              >
+                {netSettling ? 'Processing...' : 'Confirm Net Settlement'}
               </Button>
             </div>
           </div>
