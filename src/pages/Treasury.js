@@ -120,6 +120,7 @@ export default function Treasury() {
     amount: "",
     exchange_rate: "1",
     notes: "",
+     transfer_date: new Date().toISOString().split('T')[0],
   });
   const [transferProcessing, setTransferProcessing] = useState(false);
   const [showCaptcha, setShowCaptcha] = useState(false);
@@ -326,6 +327,7 @@ export default function Treasury() {
       amount: '',
       exchange_rate: '1',
       notes: '',
+         transfer_date: new Date().toISOString().split('T')[0],
     });
     setIsTransferDialogOpen(true);
   };
@@ -375,6 +377,7 @@ export default function Treasury() {
           amount: parseFloat(transferData.amount),
           exchange_rate: parseFloat(transferData.exchange_rate) || 1,
           notes: transferData.notes || null,
+             transfer_date: transferData.transfer_date || null,
         }),
       });
 
@@ -1817,6 +1820,18 @@ export default function Treasury() {
                   data-testid="transfer-notes"
                 />
               </div>
+               <div className="space-y-2">
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Transfer Date *</Label>
+                <Input
+                  type="date"
+                  value={transferData.transfer_date}
+                  onChange={(e) => setTransferData({ ...transferData, transfer_date: e.target.value })}
+                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                  data-testid="transfer-date"
+                />
+                <p className="text-[10px] text-slate-400">Date of the transfer. This date will appear in treasury records.</p>
+              </div>
+
 
               <div className="flex justify-end gap-3 pt-4">
                 <Button
