@@ -760,7 +760,7 @@ export default function PSPs() {
   const totalOverdue = psps.reduce((sum, psp) => sum + (psp.overdue_count || 0), 0);
 
   return (
-    <div className="space-y-6 animate-fade-in" data-testid="psp-page">
+    <div className="space-y-6 h-[100vh] animate-fade-in" data-testid="psp-page">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-4xl font-bold uppercase tracking-tight text-slate-800" style={{ fontFamily: 'Barlow Condensed' }}>
