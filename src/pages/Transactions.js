@@ -775,8 +775,11 @@ export default function Transactions() {
       } else {
          let errorMsg = `Server error (${response.status})`;
         try {
-          const errorData = await response.json();
-          errorMsg = errorData.detail || errorMsg;
+           if (Array.isArray(errorData.detail)) {
+            errorMsg = errorData.detail.map(e => e.msg || e.message || JSON.stringify(e)).join(', ');
+          } else {
+            errorMsg = errorData.detail || errorMsg;
+          }
         } catch {
           const text = await response.text();
           if (text) errorMsg = text.substring(0, 200);

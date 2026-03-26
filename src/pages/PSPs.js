@@ -42,6 +42,7 @@ import {
 } from '../components/ui/tabs';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
+import PaginationControls from '../components/PaginationControls';
 import {
   CreditCard,
   Plus,
@@ -106,6 +107,20 @@ export default function PSPs() {
   const [wdrDateTo, setWdrDateTo] = useState('');
   const [stlDateFrom, setStlDateFrom] = useState('');
   const [stlDateTo, setStlDateTo] = useState('');
+  // Pagination state
+  const [pspPage, setPspPage] = useState(1);
+  const [pspTotalPages, setPspTotalPages] = useState(1);
+  const [pspTotal, setPspTotal] = useState(0);
+  const [pspPageSize, setPspPageSize] = useState(20);
+  const [depPage, setDepPage] = useState(1);
+  const [depTotalPages, setDepTotalPages] = useState(1);
+  const [depTotal, setDepTotal] = useState(0);
+  const [wdrPage, setWdrPage] = useState(1);
+  const [wdrTotalPages, setWdrTotalPages] = useState(1);
+  const [wdrTotal, setWdrTotal] = useState(0);
+  const [stlPage, setStlPage] = useState(1);
+  const [stlTotalPages, setStlTotalPages] = useState(1);
+  const [stlTotal, setStlTotal] = useState(0);
   const [formData, setFormData] = useState({
     psp_name: '',
     commission_rate: '',
@@ -147,11 +162,15 @@ export default function PSPs() {
     };
   };
 
-  const fetchPsps = async () => {
+  const fetchPsps = async (pg = pspPage) => {
     try {
-      const response = await fetch(`${API_URL}/api/psp-summary`, { headers: getAuthHeaders(), credentials: 'include' });
+      const response = await fetch(`${API_URL}/api/psp-summary?page=${pg}&page_size=${pspPageSize}`, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
-        setPsps(await response.json());
+        const data = await response.json();
+        setPsps(data.items || data);
+        setPspTotalPages(data.total_pages || 1);
+        setPspTotal(data.total || 0);
+        setPspPage(pg);
       }
     } catch (error) {
       console.error('Error fetching PSPs:', error);
@@ -173,22 +192,36 @@ export default function PSPs() {
     }
   };
 
-  const fetchPendingTransactions = async (pspId) => {
+  const fetchPendingTransactions = async (pspId, pg = 1) => {
     try {
-      const response = await fetch(`${API_URL}/api/psp/${pspId}/pending-transactions`, { headers: getAuthHeaders(), credentials: 'include' });
+      const params = new URLSearchParams({ page: pg, page_size: 20 });
+      if (depDateFrom) params.append('date_from', depDateFrom);
+      if (depDateTo) params.append('date_to', depDateTo);
+      const response = await fetch(`${API_URL}/api/psp/${pspId}/pending-transactions?${params}`, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
-        setPendingTransactions(await response.json());
+        const data = await response.json();
+        setPendingTransactions(data.items || data);
+        setDepTotalPages(data.total_pages || 1);
+        setDepTotal(data.total || 0);
+        setDepPage(pg);
       }
     } catch (error) {
       console.error('Error fetching pending transactions:', error);
     }
   };
 
-  const fetchPspWithdrawals = async (pspId) => {
+  const fetchPspWithdrawals = async (pspId, pg = 1) => {
     try {
-      const response = await fetch(`${API_URL}/api/psp/${pspId}/withdrawal-transactions`, { headers: getAuthHeaders(), credentials: 'include' });
+      const params = new URLSearchParams({ page: pg, page_size: 20 });
+      if (wdrDateFrom) params.append('date_from', wdrDateFrom);
+      if (wdrDateTo) params.append('date_to', wdrDateTo);
+      const response = await fetch(`${API_URL}/api/psp/${pspId}/withdrawal-transactions?${params}`, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
-        setPspWithdrawals(await response.json());
+        const data = await response.json();
+        setPspWithdrawals(data.items || data);
+        setWdrTotalPages(data.total_pages || 1);
+        setWdrTotal(data.total || 0);
+        setWdrPage(pg);
       }
     } catch (error) {
       console.error('Error fetching PSP withdrawals:', error);
@@ -222,11 +255,18 @@ export default function PSPs() {
     } catch { toast.error('Failed to update extra commission'); }
   };
 
-  const fetchSettlements = async (pspId) => {
+  const fetchSettlements = async (pspId, pg = 1) => {
     try {
-      const response = await fetch(`${API_URL}/api/psp/${pspId}/settlements`, { headers: getAuthHeaders(), credentials: 'include' });
+      const params = new URLSearchParams({ page: pg, page_size: 20 });
+      if (stlDateFrom) params.append('date_from', stlDateFrom);
+      if (stlDateTo) params.append('date_to', stlDateTo);
+      const response = await fetch(`${API_URL}/api/psp/${pspId}/settlements?${params}`, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
-        setSettlements(await response.json());
+        const data = await response.json();
+        setSettlements(data.items || data);
+        setStlTotalPages(data.total_pages || 1);
+        setStlTotal(data.total || 0);
+        setStlPage(pg);
       }
     } catch (error) {
       console.error('Error fetching settlements:', error);
@@ -304,12 +344,23 @@ export default function PSPs() {
 
   useEffect(() => {
     if (viewPsp) {
-      fetchPendingTransactions(viewPsp.psp_id);
-      fetchPspWithdrawals(viewPsp.psp_id);
-      fetchSettlements(viewPsp.psp_id);
+      fetchPendingTransactions(viewPsp.psp_id, 1);
+      fetchPspWithdrawals(viewPsp.psp_id, 1);
+      fetchSettlements(viewPsp.psp_id, 1);
       fetchReserveFundLedger(viewPsp.psp_id);
     }
   }, [viewPsp]);
+
+  // Re-fetch when date filters change
+  useEffect(() => {
+    if (viewPsp) { setDepPage(1); fetchPendingTransactions(viewPsp.psp_id, 1); }
+  }, [depDateFrom, depDateTo]);
+  useEffect(() => {
+    if (viewPsp) { setWdrPage(1); fetchPspWithdrawals(viewPsp.psp_id, 1); }
+  }, [wdrDateFrom, wdrDateTo]);
+  useEffect(() => {
+    if (viewPsp) { setStlPage(1); fetchSettlements(viewPsp.psp_id, 1); }
+  }, [stlDateFrom, stlDateTo]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1105,11 +1156,16 @@ export default function PSPs() {
           ))
         )}
       </div>
+      {pspTotalPages > 1 && (
+        <div className="mt-4">
+          <PaginationControls currentPage={pspPage} totalPages={pspTotalPages} totalItems={pspTotal} pageSize={pspPageSize} onPageChange={(p) => fetchPsps(p)} onPageSizeChange={() => {}} />
+        </div>
+      )}
 
       {/* View PSP Details - Full Page */}
       {viewPsp && (
-      <div className="fixed inset-0 z-50 bg-white overflow-y-auto">
-        <div className="max-w-[1600px] mx-auto px-6 py-4">
+      <div className="fixed inset-0 z-50 bg-white overflow-y-auto dark:bg-slate-900">
+        <div className="max-w-[1600px] mx-auto px-6 py-4 min-h-screen flex flex-col">
           {/* Header */}
           <div className="flex items-center justify-between mb-6 border-b border-slate-200 pb-4">
             <div className="flex items-center gap-4">
@@ -1122,7 +1178,7 @@ export default function PSPs() {
               </div>
             </div>
           </div>
-            <div className="space-y-4">
+            <div className="space-y-4 flex-1 flex flex-col">
               {/* PSP Info */}
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4 p-4 bg-slate-50 rounded-sm">
                 <div>
@@ -1198,7 +1254,7 @@ export default function PSPs() {
               )}
 
               {/* Tabs */}
-              <Tabs defaultValue="pending" className="w-full">
+              <Tabs defaultValue="pending" className="w-full flex-1 flex flex-col">
                 <TabsList className="bg-slate-50 border border-slate-200">
                   <TabsTrigger value="pending" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
                     Deposits ({pendingTransactions.length})
@@ -1214,24 +1270,17 @@ export default function PSPs() {
                   </TabsTrigger>
                 </TabsList>
                 
-                <TabsContent value="pending" className="mt-4">
+                <TabsContent value="pending" className="mt-4 flex-1 flex flex-col">
                   {/* Date Filter */}
                   <div className="flex items-center gap-2 mb-3 flex-wrap">
                     <Input type="date" value={depDateFrom} onChange={e => setDepDateFrom(e.target.value)} className="w-36 h-8 text-xs bg-white border-slate-200 text-slate-800" placeholder="From" data-testid="dep-date-from" />
                     <span className="text-slate-400 text-xs">to</span>
                     <Input type="date" value={depDateTo} onChange={e => setDepDateTo(e.target.value)} className="w-36 h-8 text-xs bg-white border-slate-200 text-slate-800" placeholder="To" data-testid="dep-date-to" />
                     {(depDateFrom || depDateTo) && <Button variant="ghost" size="sm" onClick={() => { setDepDateFrom(''); setDepDateTo(''); }} className="text-slate-400 hover:text-red-500 h-8 text-xs">Clear</Button>}
-                    <span className="text-xs text-slate-400 ml-auto">{(() => { const f = pendingTransactions.filter(tx => { const d = tx.transaction_date || tx.created_at || ''; if (depDateFrom && d < depDateFrom) return false; if (depDateTo && d > depDateTo + 'T23:59:59') return false; return true; }); return `${f.length} of ${pendingTransactions.length} deposits`; })()}</span>
+                    <span className="text-xs text-slate-400 ml-auto">{depTotal} deposits</span>
                   </div>
-                  <ScrollArea className="max-h-[calc(100vh-420px)]">
-                    {(() => {
-                      const filteredDeps = pendingTransactions.filter(tx => {
-                        const d = tx.transaction_date || tx.created_at || '';
-                        if (depDateFrom && d < depDateFrom) return false;
-                        if (depDateTo && d > depDateTo + 'T23:59:59') return false;
-                        return true;
-                      });
-                      return filteredDeps.length === 0 ? (
+                  <ScrollArea className="h-[calc(100vh-480px)]">
+                    {pendingTransactions.length === 0 ? (
                       <div className="text-center py-8 text-slate-500">
                         <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-green-500" />
                         No pending settlements
@@ -1263,7 +1312,7 @@ export default function PSPs() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {filteredDeps.map((tx) => {
+                          {pendingTransactions.map((tx) => {
                             const overdue = isOverdue(tx.psp_expected_settlement_date);
                             const holdingReleaseOverdue = isOverdue(tx.psp_holding_release_date);
                             const netAmount = (tx.amount || 0) - (tx.psp_commission_amount || 0) - (tx.psp_reserve_fund_amount || tx.psp_chargeback_amount || 0) - (tx.psp_extra_charges || 0) - (tx.psp_extra_commission || 0);
@@ -1421,9 +1470,13 @@ export default function PSPs() {
                           })}
                         </TableBody>
                       </Table>
-                    );
-                    })()}
+                    )}
                   </ScrollArea>
+                  {depTotalPages > 1 && (
+                    <div className="mt-2">
+                      <PaginationControls currentPage={depPage} totalPages={depTotalPages} totalItems={depTotal} pageSize={20} onPageChange={(p) => fetchPendingTransactions(viewPsp.psp_id, p)} onPageSizeChange={() => {}} />
+                    </div>
+                  )}
 
                   {/* Batch Settlement Action Bar */}
                   {selectedSettleTxIds.length > 0 && (
@@ -1459,46 +1512,38 @@ export default function PSPs() {
                 </TabsContent>
 
                 {/* Withdrawals Tab */}
-                <TabsContent value="withdrawals" className="mt-4">
+                <TabsContent value="withdrawals" className="mt-4 flex-1 flex flex-col">
                   {/* Date Filter */}
                   <div className="flex items-center gap-2 mb-3 flex-wrap">
                     <Input type="date" value={wdrDateFrom} onChange={e => setWdrDateFrom(e.target.value)} className="w-36 h-8 text-xs bg-white border-slate-200 text-slate-800" data-testid="wdr-date-from" />
                     <span className="text-slate-400 text-xs">to</span>
                     <Input type="date" value={wdrDateTo} onChange={e => setWdrDateTo(e.target.value)} className="w-36 h-8 text-xs bg-white border-slate-200 text-slate-800" data-testid="wdr-date-to" />
                     {(wdrDateFrom || wdrDateTo) && <Button variant="ghost" size="sm" onClick={() => { setWdrDateFrom(''); setWdrDateTo(''); }} className="text-slate-400 hover:text-red-500 h-8 text-xs">Clear</Button>}
+                    <span className="text-xs text-slate-400 ml-auto">{wdrTotal} withdrawals</span>
                   </div>
 
                   {/* Withdrawal Summary */}
-                  {(() => {
-                    const filteredWdrs = pspWithdrawals.filter(tx => {
-                      const d = tx.transaction_date || tx.created_at || '';
-                      if (wdrDateFrom && d < wdrDateFrom) return false;
-                      if (wdrDateTo && d > wdrDateTo + 'T23:59:59') return false;
-                      return true;
-                    });
-                    return (
-                    <>
                   <div className="grid grid-cols-4 gap-3 mb-4">
                     <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 text-center">
                       <p className="text-[10px] text-slate-500 uppercase tracking-wider">Total Withdrawals</p>
-                      <p className="text-lg font-mono text-red-500 font-bold">${filteredWdrs.reduce((s, tx) => s + (tx.amount || 0), 0).toLocaleString()}</p>
+                      <p className="text-lg font-mono text-red-500 font-bold">${pspWithdrawals.reduce((s, tx) => s + (tx.amount || 0), 0).toLocaleString()}</p>
                     </div>
                     <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 text-center">
                       <p className="text-[10px] text-slate-500 uppercase tracking-wider">Commission</p>
-                      <p className="text-lg font-mono text-yellow-500 font-bold">${filteredWdrs.reduce((s, tx) => s + (tx.psp_commission_amount || 0), 0).toLocaleString()}</p>
+                      <p className="text-lg font-mono text-yellow-500 font-bold">${pspWithdrawals.reduce((s, tx) => s + (tx.psp_commission_amount || 0), 0).toLocaleString()}</p>
                     </div>
                     <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 text-center">
                       <p className="text-[10px] text-slate-500 uppercase tracking-wider">Extra Commission</p>
-                      <p className="text-lg font-mono text-orange-400 font-bold">${filteredWdrs.reduce((s, tx) => s + (tx.psp_withdrawal_extra_commission || 0), 0).toLocaleString()}</p>
+                      <p className="text-lg font-mono text-orange-400 font-bold">${pspWithdrawals.reduce((s, tx) => s + (tx.psp_withdrawal_extra_commission || 0), 0).toLocaleString()}</p>
                     </div>
                     <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 text-center">
                       <p className="text-[10px] text-slate-500 uppercase tracking-wider">Count</p>
-                      <p className="text-lg font-mono text-slate-800 font-bold">{filteredWdrs.length}</p>
+                      <p className="text-lg font-mono text-slate-800 font-bold">{wdrTotal}</p>
                     </div>
                   </div>
 
-                  <ScrollArea className="max-h-[calc(100vh-480px)]">
-                    {filteredWdrs.length === 0 ? (
+                  <ScrollArea className="h-[calc(100vh-540px)]">
+                    {pspWithdrawals.length === 0 ? (
                       <div className="text-center py-8 text-slate-500">
                         <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-green-500" />
                         No withdrawal transactions
@@ -1518,7 +1563,7 @@ export default function PSPs() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {filteredWdrs.map((tx) => (
+                          {pspWithdrawals.map((tx) => (
                             <TableRow key={tx.transaction_id} className="border-slate-200 hover:bg-slate-100">
                               <TableCell>
                                 <div>
@@ -1560,13 +1605,15 @@ export default function PSPs() {
                       </Table>
                     )}
                   </ScrollArea>
-                  </>
-                    );
-                  })()}
+                  {wdrTotalPages > 1 && (
+                    <div className="mt-2">
+                      <PaginationControls currentPage={wdrPage} totalPages={wdrTotalPages} totalItems={wdrTotal} pageSize={20} onPageChange={(p) => fetchPspWithdrawals(viewPsp.psp_id, p)} onPageSizeChange={() => {}} />
+                    </div>
+                  )}
                 </TabsContent>
                 
                 {/* Reserve Fund Ledger Tab */}
-                <TabsContent value="reserve-fund" className="mt-4">
+                <TabsContent value="reserve-fund" className="mt-4 flex-1 flex flex-col">
                   {reserveFundLoading ? (
                     <div className="flex justify-center py-8">
                       <div className="w-6 h-6 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
@@ -1706,7 +1753,7 @@ export default function PSPs() {
                   )}
                 </TabsContent>
 
-                <TabsContent value="history" className="mt-4">
+                <TabsContent value="history" className="mt-4 flex-1 flex flex-col">
                   {/* Date Filter */}
                   <div className="flex items-center gap-2 mb-3 flex-wrap">
                     <Input type="date" value={stlDateFrom} onChange={e => setStlDateFrom(e.target.value)} className="w-36 h-8 text-xs bg-white border-slate-200 text-slate-800" data-testid="stl-date-from" />
@@ -1722,7 +1769,7 @@ export default function PSPs() {
                       return true;
                     });
                     return (
-                  <ScrollArea className="max-h-[calc(100vh-420px)]">
+                  <ScrollArea className="h-[calc(100vh-420px)]">
                     {filteredStls.length === 0 ? (
                       <div className="text-center py-8 text-slate-500">
                         No settlement history
@@ -1907,6 +1954,11 @@ export default function PSPs() {
                   </ScrollArea>
                     );
                   })()}
+                  {stlTotalPages > 1 && (
+                    <div className="mt-2">
+                      <PaginationControls currentPage={stlPage} totalPages={stlTotalPages} totalItems={stlTotal} pageSize={20} onPageChange={(p) => fetchSettlements(viewPsp.psp_id, p)} onPageSizeChange={() => {}} />
+                    </div>
+                  )}
                 </TabsContent>
               </Tabs>
             </div>
