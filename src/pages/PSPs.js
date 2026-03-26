@@ -62,6 +62,7 @@ import {
   Timer,
   Shield,
   ChevronDown,
+  ArrowLeft,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -98,6 +99,13 @@ export default function PSPs() {
   const [netSettleDestination, setNetSettleDestination] = useState('');
   const [netSettleDate, setNetSettleDate] = useState('');
   const [netSettling, setNetSettling] = useState(false);
+  // PSP detail date filters
+  const [depDateFrom, setDepDateFrom] = useState('');
+  const [depDateTo, setDepDateTo] = useState('');
+  const [wdrDateFrom, setWdrDateFrom] = useState('');
+  const [wdrDateTo, setWdrDateTo] = useState('');
+  const [stlDateFrom, setStlDateFrom] = useState('');
+  const [stlDateTo, setStlDateTo] = useState('');
   const [formData, setFormData] = useState({
     psp_name: '',
     commission_rate: '',
@@ -1098,16 +1106,22 @@ export default function PSPs() {
         )}
       </div>
 
-      {/* View PSP Details Dialog */}
-      <Dialog open={!!viewPsp} onOpenChange={() => { setViewPsp(null); setPendingTransactions([]); setPspWithdrawals([]); setSettlements([]); setSelectedSettleTxIds([]); }}>
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-6xl max-h-[90vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-3" style={{ fontFamily: 'Barlow Condensed' }}>
-              <CreditCard className="w-6 h-6 text-blue-600" />
-              {viewPsp?.psp_name}
-            </DialogTitle>
-          </DialogHeader>
-          {viewPsp && (
+      {/* View PSP Details - Full Page */}
+      {viewPsp && (
+      <div className="fixed inset-0 z-50 bg-white overflow-y-auto">
+        <div className="max-w-[1600px] mx-auto px-6 py-4">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6 border-b border-slate-200 pb-4">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="sm" onClick={() => { setViewPsp(null); setPendingTransactions([]); setPspWithdrawals([]); setSettlements([]); setSelectedSettleTxIds([]); setDepDateFrom(''); setDepDateTo(''); setWdrDateFrom(''); setWdrDateTo(''); setStlDateFrom(''); setStlDateTo(''); }} className="text-slate-600 hover:text-slate-800" data-testid="psp-detail-back">
+                <ArrowLeft className="w-4 h-4 mr-1" /> Back
+              </Button>
+              <div className="flex items-center gap-3">
+                <CreditCard className="w-7 h-7 text-blue-600" />
+                <h1 className="text-3xl font-bold uppercase tracking-tight text-slate-800" style={{ fontFamily: 'Barlow Condensed' }}>{viewPsp.psp_name}</h1>
+              </div>
+            </div>
+          </div>
             <div className="space-y-4">
               {/* PSP Info */}
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4 p-4 bg-slate-50 rounded-sm">
@@ -1201,8 +1215,23 @@ export default function PSPs() {
                 </TabsList>
                 
                 <TabsContent value="pending" className="mt-4">
-                  <ScrollArea className="h-[350px]">
-                    {pendingTransactions.length === 0 ? (
+                  {/* Date Filter */}
+                  <div className="flex items-center gap-2 mb-3 flex-wrap">
+                    <Input type="date" value={depDateFrom} onChange={e => setDepDateFrom(e.target.value)} className="w-36 h-8 text-xs bg-white border-slate-200 text-slate-800" placeholder="From" data-testid="dep-date-from" />
+                    <span className="text-slate-400 text-xs">to</span>
+                    <Input type="date" value={depDateTo} onChange={e => setDepDateTo(e.target.value)} className="w-36 h-8 text-xs bg-white border-slate-200 text-slate-800" placeholder="To" data-testid="dep-date-to" />
+                    {(depDateFrom || depDateTo) && <Button variant="ghost" size="sm" onClick={() => { setDepDateFrom(''); setDepDateTo(''); }} className="text-slate-400 hover:text-red-500 h-8 text-xs">Clear</Button>}
+                    <span className="text-xs text-slate-400 ml-auto">{(() => { const f = pendingTransactions.filter(tx => { const d = tx.transaction_date || tx.created_at || ''; if (depDateFrom && d < depDateFrom) return false; if (depDateTo && d > depDateTo + 'T23:59:59') return false; return true; }); return `${f.length} of ${pendingTransactions.length} deposits`; })()}</span>
+                  </div>
+                  <ScrollArea className="max-h-[calc(100vh-420px)]">
+                    {(() => {
+                      const filteredDeps = pendingTransactions.filter(tx => {
+                        const d = tx.transaction_date || tx.created_at || '';
+                        if (depDateFrom && d < depDateFrom) return false;
+                        if (depDateTo && d > depDateTo + 'T23:59:59') return false;
+                        return true;
+                      });
+                      return filteredDeps.length === 0 ? (
                       <div className="text-center py-8 text-slate-500">
                         <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-green-500" />
                         No pending settlements
@@ -1234,7 +1263,7 @@ export default function PSPs() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {pendingTransactions.map((tx) => {
+                          {filteredDeps.map((tx) => {
                             const overdue = isOverdue(tx.psp_expected_settlement_date);
                             const holdingReleaseOverdue = isOverdue(tx.psp_holding_release_date);
                             const netAmount = (tx.amount || 0) - (tx.psp_commission_amount || 0) - (tx.psp_reserve_fund_amount || tx.psp_chargeback_amount || 0) - (tx.psp_extra_charges || 0) - (tx.psp_extra_commission || 0);
@@ -1392,7 +1421,8 @@ export default function PSPs() {
                           })}
                         </TableBody>
                       </Table>
-                    )}
+                    );
+                    })()}
                   </ScrollArea>
 
                   {/* Batch Settlement Action Bar */}
@@ -1430,28 +1460,45 @@ export default function PSPs() {
 
                 {/* Withdrawals Tab */}
                 <TabsContent value="withdrawals" className="mt-4">
+                  {/* Date Filter */}
+                  <div className="flex items-center gap-2 mb-3 flex-wrap">
+                    <Input type="date" value={wdrDateFrom} onChange={e => setWdrDateFrom(e.target.value)} className="w-36 h-8 text-xs bg-white border-slate-200 text-slate-800" data-testid="wdr-date-from" />
+                    <span className="text-slate-400 text-xs">to</span>
+                    <Input type="date" value={wdrDateTo} onChange={e => setWdrDateTo(e.target.value)} className="w-36 h-8 text-xs bg-white border-slate-200 text-slate-800" data-testid="wdr-date-to" />
+                    {(wdrDateFrom || wdrDateTo) && <Button variant="ghost" size="sm" onClick={() => { setWdrDateFrom(''); setWdrDateTo(''); }} className="text-slate-400 hover:text-red-500 h-8 text-xs">Clear</Button>}
+                  </div>
+
                   {/* Withdrawal Summary */}
+                  {(() => {
+                    const filteredWdrs = pspWithdrawals.filter(tx => {
+                      const d = tx.transaction_date || tx.created_at || '';
+                      if (wdrDateFrom && d < wdrDateFrom) return false;
+                      if (wdrDateTo && d > wdrDateTo + 'T23:59:59') return false;
+                      return true;
+                    });
+                    return (
+                    <>
                   <div className="grid grid-cols-4 gap-3 mb-4">
                     <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 text-center">
                       <p className="text-[10px] text-slate-500 uppercase tracking-wider">Total Withdrawals</p>
-                      <p className="text-lg font-mono text-red-500 font-bold">${pspWithdrawals.reduce((s, tx) => s + (tx.amount || 0), 0).toLocaleString()}</p>
+                      <p className="text-lg font-mono text-red-500 font-bold">${filteredWdrs.reduce((s, tx) => s + (tx.amount || 0), 0).toLocaleString()}</p>
                     </div>
                     <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 text-center">
                       <p className="text-[10px] text-slate-500 uppercase tracking-wider">Commission</p>
-                      <p className="text-lg font-mono text-yellow-500 font-bold">${pspWithdrawals.reduce((s, tx) => s + (tx.psp_commission_amount || 0), 0).toLocaleString()}</p>
+                      <p className="text-lg font-mono text-yellow-500 font-bold">${filteredWdrs.reduce((s, tx) => s + (tx.psp_commission_amount || 0), 0).toLocaleString()}</p>
                     </div>
                     <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 text-center">
                       <p className="text-[10px] text-slate-500 uppercase tracking-wider">Extra Commission</p>
-                      <p className="text-lg font-mono text-orange-400 font-bold">${pspWithdrawals.reduce((s, tx) => s + (tx.psp_withdrawal_extra_commission || 0), 0).toLocaleString()}</p>
+                      <p className="text-lg font-mono text-orange-400 font-bold">${filteredWdrs.reduce((s, tx) => s + (tx.psp_withdrawal_extra_commission || 0), 0).toLocaleString()}</p>
                     </div>
                     <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 text-center">
                       <p className="text-[10px] text-slate-500 uppercase tracking-wider">Count</p>
-                      <p className="text-lg font-mono text-slate-800 font-bold">{pspWithdrawals.length}</p>
+                      <p className="text-lg font-mono text-slate-800 font-bold">{filteredWdrs.length}</p>
                     </div>
                   </div>
 
-                  <ScrollArea className="h-[300px]">
-                    {pspWithdrawals.length === 0 ? (
+                  <ScrollArea className="max-h-[calc(100vh-480px)]">
+                    {filteredWdrs.length === 0 ? (
                       <div className="text-center py-8 text-slate-500">
                         <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-green-500" />
                         No withdrawal transactions
@@ -1471,7 +1518,7 @@ export default function PSPs() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {pspWithdrawals.map((tx) => (
+                          {filteredWdrs.map((tx) => (
                             <TableRow key={tx.transaction_id} className="border-slate-200 hover:bg-slate-100">
                               <TableCell>
                                 <div>
@@ -1513,6 +1560,9 @@ export default function PSPs() {
                       </Table>
                     )}
                   </ScrollArea>
+                  </>
+                    );
+                  })()}
                 </TabsContent>
                 
                 {/* Reserve Fund Ledger Tab */}
@@ -1657,8 +1707,23 @@ export default function PSPs() {
                 </TabsContent>
 
                 <TabsContent value="history" className="mt-4">
-                  <ScrollArea className="h-[300px]">
-                    {settlements.length === 0 ? (
+                  {/* Date Filter */}
+                  <div className="flex items-center gap-2 mb-3 flex-wrap">
+                    <Input type="date" value={stlDateFrom} onChange={e => setStlDateFrom(e.target.value)} className="w-36 h-8 text-xs bg-white border-slate-200 text-slate-800" data-testid="stl-date-from" />
+                    <span className="text-slate-400 text-xs">to</span>
+                    <Input type="date" value={stlDateTo} onChange={e => setStlDateTo(e.target.value)} className="w-36 h-8 text-xs bg-white border-slate-200 text-slate-800" data-testid="stl-date-to" />
+                    {(stlDateFrom || stlDateTo) && <Button variant="ghost" size="sm" onClick={() => { setStlDateFrom(''); setStlDateTo(''); }} className="text-slate-400 hover:text-red-500 h-8 text-xs">Clear</Button>}
+                  </div>
+                  {(() => {
+                    const filteredStls = settlements.filter(s => {
+                      const d = s.settlement_date || s.created_at || '';
+                      if (stlDateFrom && d < stlDateFrom) return false;
+                      if (stlDateTo && d > stlDateTo + 'T23:59:59') return false;
+                      return true;
+                    });
+                    return (
+                  <ScrollArea className="max-h-[calc(100vh-420px)]">
+                    {filteredStls.length === 0 ? (
                       <div className="text-center py-8 text-slate-500">
                         No settlement history
                       </div>
@@ -1678,7 +1743,7 @@ export default function PSPs() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {settlements.map((settlement) => {
+                          {filteredStls.map((settlement) => {
                             const hasDiffCurrency = settlement.payment_currency && settlement.payment_currency !== 'USD';
                             const rate = settlement.avg_exchange_rate || 1;
                             const baseGross = hasDiffCurrency ? settlement.base_gross_amount : null;
@@ -1840,12 +1905,14 @@ export default function PSPs() {
                       </Table>
                     )}
                   </ScrollArea>
+                    );
+                  })()}
                 </TabsContent>
               </Tabs>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+        </div>
+      </div>
+      )}
 
       {/* Settle Transaction Dialog */}
       <Dialog open={settleDialogOpen} onOpenChange={() => { setSettleDialogOpen(false); setSelectedTransaction(null); setSettlementDestination(''); }}>

@@ -914,6 +914,8 @@ const [proofPreview, setProofPreview] = useState(null);
   const [treasuryAccounts, setTreasuryAccounts] = useState([]);
   const [psps, setPsps] = useState([]);
   const [vendors, setVendors] = useState([]);
+   const [clientTags, setClientTags] = useState([]);
+  const [formTags, setFormTags] = useState([]);
 
   const authHeaders = useCallback(() => {
     const token = localStorage.getItem("auth_token");
@@ -990,6 +992,11 @@ const [proofPreview, setProofPreview] = useState(null);
           const d = await vRes.json();
           setVendors(d.items || d || []);
         }
+         // Fetch client tags
+        const tagRes = await fetch(`${API_URL}/api/client-tags`, {
+          headers: authHeaders(),
+        });
+        if (tagRes.ok) setClientTags(await tagRes.json());
       } catch (e) {
         console.error(e);
       }
@@ -1025,6 +1032,7 @@ const [proofPreview, setProofPreview] = useState(null);
         if (v) fd.append(k, v);
       });
       if (proofImage) fd.append("proof_image", proofImage);
+            if (formTags.length > 0) fd.append("client_tags", formTags.join(","));
       const headers = authHeaders();
       delete headers["Content-Type"];
       const res = await fetch(`${API_URL}/api/transaction-requests`, {
@@ -1043,7 +1051,7 @@ const [proofPreview, setProofPreview] = useState(null);
         }
         setCreateOpen(false);
         setForm({ ...defaultForm });
-        
+        setFormTags([]);
         setProofImage(null);
         setProofPreview(null)
         fetchRequests();
@@ -1570,7 +1578,11 @@ const [proofPreview, setProofPreview] = useState(null);
                 <ClientSearchPicker
                   clients={clients}
                   value={form.client_id}
-                  onChange={(v) => setForm({ ...form, client_id: v })}
+                 onChange={(v) => {
+                    setForm({ ...form, client_id: v });
+                    const cl = clients.find((c) => c.client_id === v);
+                    if (cl?.tags) setFormTags(cl.tags);
+                  }}
                   testId="create-client-search"
                   authHeaders={authHeaders}
                 />
@@ -1901,7 +1913,61 @@ const [proofPreview, setProofPreview] = useState(null);
                 data-testid="txreq-transaction-date"
               />
             </div>
-
+<div>
+              <Label className="text-xs text-slate-500 uppercase">
+                Client Tags
+              </Label>
+              <div className="flex flex-wrap gap-1.5 min-h-[36px] p-2 bg-slate-50 border border-slate-200 rounded-sm">
+                {formTags.map((tag) => {
+                  const tagObj = clientTags.find((t) => t.name === tag);
+                  return (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium text-white"
+                      style={{ backgroundColor: tagObj?.color || "#64748B" }}
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormTags(formTags.filter((t) => t !== tag))
+                        }
+                        className="ml-0.5 hover:bg-white/20 rounded-full w-3.5 h-3.5 flex items-center justify-center text-[9px]"
+                      >
+                        &times;
+                      </button>
+                    </span>
+                  );
+                })}
+                <Select
+                  onValueChange={(val) => {
+                    if (!formTags.includes(val))
+                      setFormTags([...formTags, val]);
+                  }}
+                >
+                  <SelectTrigger className="w-auto h-6 border-0 bg-transparent text-xs text-slate-400 p-0 px-1 shadow-none">
+                    <span>+ Add tag</span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clientTags.map((tag) => (
+                      <SelectItem
+                        key={tag.tag_id}
+                        value={tag.name}
+                        disabled={formTags.includes(tag.name)}
+                      >
+                        <span className="flex items-center gap-2">
+                          <span
+                            className="w-2 h-2 rounded-full"
+                            style={{ backgroundColor: tag.color }}
+                          />{" "}
+                          {tag.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             <div>
               <Label className="text-xs text-slate-500 uppercase">
                 Description
