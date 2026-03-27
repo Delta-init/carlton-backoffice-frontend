@@ -1130,9 +1130,7 @@ export default function AccountantDashboard() {
                           <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">
                             Created
                           </p>
-                          <p className="text-white text-xs">
-                            {formatDate(tx.created_at)}
-                          </p>
+
                           <p className="text-white text-xs">
                             {formatDate(tx.transaction_date || tx.created_at)}
                           </p>
