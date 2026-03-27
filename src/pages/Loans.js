@@ -719,6 +719,10 @@ export default function Loans() {
     }
 
     switch (loan.status) {
+      case "pending_approval":
+        return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">Pending Approval</Badge>;
+      case "rejected":
+        return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Rejected</Badge>;
       case "active":
         return (
           <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">

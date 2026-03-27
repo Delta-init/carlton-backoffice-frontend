@@ -69,20 +69,22 @@ export default function Layout() {
     const headers = { Authorization: `Bearer ${token}` };
 
     try {
-      // Fetch pending transactions count (for Approvals)
-      const txResponse = await fetch(
-        `${API_URL}/api/transactions?status=pending&page_size=1`,
-        { headers },
-      );
+      // Fetch all pending approvals count
+      const [txResponse, allPendingRes] = await Promise.all([
+        fetch(`${API_URL}/api/transactions?status=pending&page_size=1`, { headers }),
+        fetch(`${API_URL}/api/pending-approvals/all`, { headers }),
+      ]);
+      let totalPending = 0;
       if (txResponse.ok) {
         const txData = await txResponse.json();
-        const pendingCount =
-          txData.total || (Array.isArray(txData) ? txData.length : 0);
-        setNotificationCounts((prev) => ({
-          ...prev,
-          approvals: pendingCount,
-        }));
+        totalPending += txData.total || (Array.isArray(txData) ? txData.length : 0);
       }
+      if (allPendingRes.ok) {
+        const apData = await allPendingRes.json();
+        const c = apData.counts || {};
+        totalPending += (c.income_expenses || 0) + (c.loans || 0) + (c.loan_repayments || 0) + (c.psp_settlements || 0);
+      }
+      setNotificationCounts((prev) => ({ ...prev, approvals: totalPending }));
 
       // Fetch unread messages count
       const msgResponse = await fetch(`${API_URL}/api/messages/unread-count`, {
