@@ -68,6 +68,7 @@ import {
     ChevronRight,
     ChevronsLeft,
     ChevronsRight,
+  ImageIcon,
 } from "lucide-react";
 
 import PaginationControls from "../components/PaginationControls";
@@ -99,6 +100,7 @@ export default function Treasury() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [viewAccount, setViewAccount] = useState(null);
+  const [proofGallery, setProofGallery] = useState(null);
   const [historyAccount, setHistoryAccount] = useState(null);
   const [historyData, setHistoryData] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -1539,7 +1541,16 @@ export default function Treasury() {
                                 <span className="capitalize text-xs">{(tx.transaction_type || 'N/A').replace(/_/g, ' ')}</span>
                               </div>
                             </TableCell>
-                            <TableCell className="text-slate-800 text-xs max-w-[160px] truncate font-mono">{tx.reference || '-'}</TableCell>
+                            <TableCell className="text-slate-800 text-xs max-w-[160px] font-mono">
+                              <div className="flex items-center gap-1">
+                                <span className="truncate">{tx.reference || '-'}</span>
+                                {(tx.proof_images?.length || tx.proof_image) && (
+                                  <button onClick={() => { const imgs = tx.proof_images?.length ? tx.proof_images : [tx.proof_image]; setProofGallery({ images: imgs, label: tx.reference }); }} className="text-blue-500 hover:text-blue-700 flex-shrink-0" title="View proof images">
+                                    <ImageIcon className="w-3 h-3" />
+                                  </button>
+                                )}
+                              </div>
+                            </TableCell>
                             <TableCell className="text-slate-500 text-xs max-w-[140px] truncate">{tx.client_name || tx.notes || '-'}</TableCell>
                             <TableCell className="font-mono text-right text-red-500 text-sm">
                               {!isIncoming ? Math.abs(tx.amount || 0).toLocaleString() : ''}
@@ -1943,6 +1954,24 @@ export default function Treasury() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Proof Images Gallery Modal */}
+      <Dialog open={!!proofGallery} onOpenChange={() => setProofGallery(null)}>
+        <DialogContent className="bg-white border-slate-200 max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-slate-800 text-sm font-bold uppercase">
+              <ImageIcon className="w-4 h-4 inline mr-2 text-blue-500" />
+              Proof Images — {proofGallery?.label} ({proofGallery?.images?.length})
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3 mt-2">
+            {proofGallery?.images?.map((url, i) => {
+              const src = url?.startsWith('http') ? url : `data:image/png;base64,${url}`;
+              return <img key={i} src={src} alt={`Proof ${i+1}`} className="w-full rounded border border-slate-200 cursor-pointer hover:opacity-80" onClick={() => window.open(src, '_blank')} />;
+            })}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

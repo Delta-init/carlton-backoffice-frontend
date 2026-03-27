@@ -73,8 +73,8 @@ export default function ExchangerDashboard() {
   const [captchaQuestion, setCaptchaQuestion] = useState({ num1: 0, num2: 0 });
   const [captchaAnswer, setCaptchaAnswer] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
-  const [proofImage, setProofImage] = useState(null);
-  const [proofPreview, setProofPreview] = useState(null);
+  const [proofImages, setProofImages] = useState([]);
+  const [proofPreviews, setProofPreviews] = useState([]);
   const [settlements, setSettlements] = useState([]);
   const [statementData, setStatementData] = useState(null);
   const [statementOpen, setStatementOpen] = useState(false);
@@ -348,22 +348,26 @@ export default function ExchangerDashboard() {
     setSelectedTransaction(tx);
     setActionType(action);
     generateCaptcha();
-    setProofImage(null);
-    setProofPreview(null);
+    setProofImages([]);
+    setProofPreviews([]);
     setRejectionReason("");
     setActionDialogOpen(true);
   };
 
   const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setProofImage(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProofPreview(reader.result);
-      };
-      reader.readAsDataURL(file);
+    const files = Array.from(e.target.files);
+    if (files.length) {
+      setProofImages(prev => [...prev, ...files]);
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onloadend = () => setProofPreviews(prev => [...prev, reader.result]);
+        reader.readAsDataURL(file);
+      });
     }
+  };
+  const removeProofImage = (idx) => {
+    setProofImages(prev => prev.filter((_, i) => i !== idx));
+    setProofPreviews(prev => prev.filter((_, i) => i !== idx));
   };
 
   const executeAction = async () => {
@@ -383,7 +387,7 @@ export default function ExchangerDashboard() {
       if (actionType === "approve") {
         // Only withdrawals require proof upload when approving
         // Deposits can be approved without proof
-        if (isWithdrawal && !proofImage) {
+        if (isWithdrawal && !proofImages.length) {
           toast.error(
             "Please upload proof screenshot before approving withdrawal",
           );
@@ -391,9 +395,9 @@ export default function ExchangerDashboard() {
         }
 
         // Upload proof only if provided (required for withdrawals, optional for deposits)
-        if (proofImage) {
+        if (proofImages.length) {
           const formData = new FormData();
-          formData.append("proof_image", proofImage);
+          proofImages.forEach(img => formData.append("proof_images", img));
 
           const token = localStorage.getItem("auth_token");
           const uploadResponse = await fetch(
@@ -440,13 +444,13 @@ export default function ExchangerDashboard() {
         );
       } else if (actionType === "complete") {
         // For withdrawals - must upload proof
-        if (!proofImage) {
+        if (!proofImages.length) {
           toast.error("Please upload proof of payment screenshot");
           return;
         }
 
         const formData = new FormData();
-        formData.append("proof_image", proofImage);
+        proofImages.forEach(img => formData.append("proof_images", img));
 
         response = await fetch(
           `${API_URL}/api/vendor/transactions/${selectedTransaction.transaction_id}/complete`,
@@ -2572,40 +2576,30 @@ export default function ExchangerDashboard() {
                           </div>
                         </div>
                       )}
-                    {viewTransaction.proof_image && (
-                      <div className="pt-4 border-t border-slate-200">
-                        <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">
-                          Proof of Payment
-                        </p>
-                        <img
-                          src={
-                            viewTransaction.proof_image?.startsWith("http")
-                              ? viewTransaction.proof_image
-                              : `data:image/png;base64,${viewTransaction.proof_image}`
-                          }
-                          alt="Proof of payment"
-                          className="max-w-full rounded border border-slate-200"
-                        />
-                      </div>
-                    )}
-                    {viewTransaction.vendor_proof_image && (
-                      <div className="pt-4 border-t border-slate-200">
-                        <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">
-                          Exchanger Proof (Withdrawal)
-                        </p>
-                        <img
-                          src={
-                            viewTransaction.vendor_proof_image?.startsWith(
-                              "http",
-                            )
-                              ? viewTransaction.vendor_proof_image
-                              : `data:image/png;base64,${viewTransaction.vendor_proof_image}`
-                          }
-                          alt="Exchanger proof"
-                          className="max-w-full rounded border border-slate-200"
-                        />
-                      </div>
-                    )}
+                    {(() => {
+                      const imgs = viewTransaction.proof_images?.length ? viewTransaction.proof_images : viewTransaction.proof_image ? [viewTransaction.proof_image] : [];
+                      if (!imgs.length) return null;
+                      return (
+                        <div className="pt-4 border-t border-slate-200">
+                          <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Proof of Payment ({imgs.length})</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            {imgs.map((url, i) => { const src = url?.startsWith("http") ? url : `data:image/png;base64,${url}`; return <img key={i} src={src} alt={`Proof ${i+1}`} className="w-full rounded border border-slate-200 cursor-pointer hover:opacity-80" onClick={() => window.open(src, "_blank")} />; })}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                    {(() => {
+                      const imgs = viewTransaction.vendor_proof_images?.length ? viewTransaction.vendor_proof_images : viewTransaction.vendor_proof_image ? [viewTransaction.vendor_proof_image] : [];
+                      if (!imgs.length) return null;
+                      return (
+                        <div className="pt-4 border-t border-slate-200">
+                          <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Exchanger Proof ({imgs.length})</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            {imgs.map((url, i) => { const src = url?.startsWith("http") ? url : `data:image/png;base64,${url}`; return <img key={i} src={src} alt={`Proof ${i+1}`} className="w-full rounded border border-slate-200 cursor-pointer hover:opacity-80" onClick={() => window.open(src, "_blank")} />; })}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </>
                 );
               })()}
@@ -2741,6 +2735,7 @@ export default function ExchangerDashboard() {
                           <input
                             type="file"
                             accept="image/*"
+                            multiple
                             onChange={handleImageChange}
                             className="hidden"
                             id="vendor-proof-upload"
@@ -2748,18 +2743,19 @@ export default function ExchangerDashboard() {
                           />
                           <label
                             htmlFor="vendor-proof-upload"
-                            className="cursor-pointer"
+                            className="cursor-pointer block"
                           >
-                            {proofPreview ? (
+                            {proofPreviews.length > 0 ? (
                               <div className="space-y-2">
-                                <img
-                                  src={proofPreview}
-                                  alt="Proof preview"
-                                  className="max-h-32 mx-auto rounded"
-                                />
-                                <p className="text-xs text-blue-600">
-                                  Click to change
-                                </p>
+                                <div className="grid grid-cols-3 gap-2">
+                                  {proofPreviews.map((src, i) => (
+                                    <div key={i} className="relative group">
+                                      <img src={src} alt={`Proof ${i+1}`} className="w-full h-20 object-cover rounded border border-slate-200 cursor-pointer" onClick={(e) => { e.preventDefault(); window.open(src, "_blank"); }} />
+                                      <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeProofImage(i); }} className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full w-4 h-4 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">×</button>
+                                    </div>
+                                  ))}
+                                </div>
+                                <p className="text-xs text-blue-600 text-center">{proofPreviews.length} image(s) — click to add more</p>
                               </div>
                             ) : (
                               <div className="space-y-2">
@@ -2768,7 +2764,7 @@ export default function ExchangerDashboard() {
                                   Click to upload proof screenshot
                                 </p>
                                 <p className="text-xs text-slate-500/60">
-                                  PNG, JPG up to 5MB
+                                  PNG, JPG up to 5MB · multiple allowed
                                 </p>
                               </div>
                             )}

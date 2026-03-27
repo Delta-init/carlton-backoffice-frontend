@@ -74,6 +74,7 @@ import {
   ChevronRight,
   RefreshCw,
   ArrowLeft,
+  ImageIcon,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -91,6 +92,7 @@ export default function Exchangers() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedExchanger, setSelectedExchanger] = useState(null);
   const [viewExchanger, setViewExchanger] = useState(null);
+  const [proofGallery, setProofGallery] = useState(null);
   const [settleDialogOpen, setSettleDialogOpen] = useState(false);
   const [statementData, setStatementData] = useState(null);
   const [statementOpen, setStatementOpen] = useState(false);
@@ -687,7 +689,16 @@ export default function Exchangers() {
                             const displayAmount = tx.base_amount || tx.amount;
                             return (
                             <TableRow key={tx.transaction_id} className="border-slate-200 hover:bg-slate-100">
-                              <TableCell className="font-mono text-slate-800">{tx.reference}</TableCell>
+                              <TableCell className="font-mono text-slate-800">
+                              <div className="flex items-center gap-1">
+                                {tx.reference}
+                                {(tx.proof_images?.length || tx.proof_image) && (
+                                  <button onClick={() => { const imgs = tx.proof_images?.length ? tx.proof_images : [tx.proof_image]; setProofGallery({ images: imgs, label: tx.reference }); }} className="text-blue-500 hover:text-blue-700" title="View proof images">
+                                    <ImageIcon className="w-3 h-3" />
+                                  </button>
+                                )}
+                              </div>
+                              </TableCell>
                               <TableCell>
                                 <span className={`flex items-center gap-1 ${tx.transaction_type === 'deposit' ? 'text-green-400' : 'text-red-400'}`}>
                                   {tx.transaction_type === 'deposit' ? <ArrowDownRight className="w-3 h-3" /> : <ArrowUpRight className="w-3 h-3" />}
@@ -1806,6 +1817,24 @@ export default function Exchangers() {
           })() : (
             <div className="py-10 text-center text-gray-400">No data available</div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Proof Images Gallery Modal */}
+      <Dialog open={!!proofGallery} onOpenChange={() => setProofGallery(null)}>
+        <DialogContent className="bg-white border-slate-200 max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-slate-800 text-sm font-bold uppercase">
+              <ImageIcon className="w-4 h-4 inline mr-2 text-blue-500" />
+              Proof Images — {proofGallery?.label} ({proofGallery?.images?.length})
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3 mt-2">
+            {proofGallery?.images?.map((url, i) => {
+              const src = url?.startsWith('http') ? url : `data:image/png;base64,${url}`;
+              return <img key={i} src={src} alt={`Proof ${i+1}`} className="w-full rounded border border-slate-200 cursor-pointer hover:opacity-80" onClick={() => window.open(src, '_blank')} />;
+            })}
+          </div>
         </DialogContent>
       </Dialog>
     </>

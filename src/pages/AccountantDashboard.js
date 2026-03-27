@@ -188,8 +188,8 @@ export default function AccountantDashboard() {
   // Withdrawal approval dialog
   const [showApprovalDialog, setShowApprovalDialog] = useState(null);
   const [approvalSourceAccount, setApprovalSourceAccount] = useState("");
-  const [approvalProof, setApprovalProof] = useState(null);
-  const [approvalProofPreview, setApprovalProofPreview] = useState(null);
+  const [approvalProofs, setApprovalProofs] = useState([]);
+  const [approvalProofPreviews, setApprovalProofPreviews] = useState([]);
   const [bankReceiptDate, setBankReceiptDate] = useState("");
   const [treasuryAccounts, setTreasuryAccounts] = useState([]);
    const [psps, setPsps] = useState([]);
@@ -348,15 +348,19 @@ export default function AccountantDashboard() {
   };
 
   const handleApprovalProofChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setApprovalProof(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setApprovalProofPreview(reader.result);
-      };
-      reader.readAsDataURL(file);
+    const files = Array.from(e.target.files);
+    if (files.length) {
+      setApprovalProofs(prev => [...prev, ...files]);
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onloadend = () => setApprovalProofPreviews(prev => [...prev, reader.result]);
+        reader.readAsDataURL(file);
+      });
     }
+  };
+  const removeApprovalProof = (idx) => {
+    setApprovalProofs(prev => prev.filter((_, i) => i !== idx));
+    setApprovalProofPreviews(prev => prev.filter((_, i) => i !== idx));
   };
 
   const handleTransactionApproval = () => {
@@ -369,7 +373,7 @@ export default function AccountantDashboard() {
     }
 
     // For both deposits and withdrawals, require proof (mandatory)
-    if (!approvalProof) {
+    if (!approvalProofs.length) {
       toast.error("Please upload proof of payment screenshot");
       return;
     }
@@ -380,7 +384,8 @@ export default function AccountantDashboard() {
       transactionId: showApprovalDialog.transaction_id,
       isSettlement: false,
       sourceAccount: isWithdrawal ? approvalSourceAccount : null,
-      proofFile: approvalProof,
+      proofFile: approvalProofs[0],
+      proofFiles: approvalProofs,
       bankReceiptDate: bankReceiptDate || null,
     });
     setShowApprovalDialog(null);
@@ -399,7 +404,7 @@ export default function AccountantDashboard() {
         await executeApprove(
           captchaAction.transactionId,
           captchaAction.sourceAccount,
-          captchaAction.proofFile,
+          captchaAction.proofFiles || (captchaAction.proofFile ? [captchaAction.proofFile] : []),
           captchaAction.bankReceiptDate,
         );
       }
@@ -413,23 +418,23 @@ export default function AccountantDashboard() {
 
     // Reset approval dialog state
     setApprovalSourceAccount("");
-    setApprovalProof(null);
-    setApprovalProofPreview(null);
+    setApprovalProofs([]);
+    setApprovalProofPreviews([]);
     setCaptchaAction(null);
   };
 
   const executeApprove = async (
     transactionId,
     sourceAccount = null,
-    proofFile = null,
+    proofFiles = [],
     bankReceiptDate = null,
   ) => {
     setProcessingId(transactionId);
     try {
-      // If there's a proof file, upload it first
-      if (proofFile) {
+      // Upload all proof files
+      if (proofFiles && proofFiles.length) {
         const formData = new FormData();
-        formData.append("proof_image", proofFile);
+        proofFiles.forEach(f => formData.append("proof_images", f));
 
         const uploadResponse = await fetch(
           `${API_URL}/api/transactions/${transactionId}/upload-proof`,
@@ -1549,22 +1554,23 @@ export default function AccountantDashboard() {
                   <p className="text-white">{viewTransaction.description}</p>
                 </div>
               )}
-              {viewTransaction.proof_image && (
-                <div className="pt-4 border-t border-slate-200">
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">
-                    Proof of Payment
-                  </p>
-                  <img
-                    src={
-                      viewTransaction.proof_image?.startsWith("http")
-                        ? viewTransaction.proof_image
-                        : `data:image/png;base64,${viewTransaction.proof_image}`
-                    }
-                    alt="Proof of payment"
-                    className="max-w-full rounded border border-slate-200"
-                  />
-                </div>
-              )}
+              {(() => {
+                const imgs = viewTransaction.proof_images?.length
+                  ? viewTransaction.proof_images
+                  : viewTransaction.proof_image ? [viewTransaction.proof_image] : [];
+                if (!imgs.length) return null;
+                return (
+                  <div className="pt-4 border-t border-slate-200">
+                    <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">Proof of Payment ({imgs.length})</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {imgs.map((url, i) => {
+                        const src = url?.startsWith("http") ? url : `data:image/png;base64,${url}`;
+                        return <img key={i} src={src} alt={`Proof ${i+1}`} className="w-full rounded border border-slate-200 cursor-pointer hover:opacity-80" onClick={() => window.open(src, "_blank")} />;
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
               <div className="flex gap-2 pt-4">
                 <Button
                   onClick={() => {
@@ -2012,8 +2018,8 @@ export default function AccountantDashboard() {
         onOpenChange={() => {
           setShowApprovalDialog(null);
           setApprovalSourceAccount("");
-          setApprovalProof(null);
-          setApprovalProofPreview(null);
+          setApprovalProofs([]);
+          setApprovalProofPreviews([]);
           setBankReceiptDate("");
         }}
       >
@@ -2255,47 +2261,28 @@ export default function AccountantDashboard() {
                     : "Payment"}{" "}
                   (Screenshot) *
                 </Label>
-                {approvalProofPreview ? (
-                  <div className="relative">
-                    <img
-                      src={approvalProofPreview}
-                      alt="Proof preview"
-                      className="w-full h-40 object-contain bg-slate-50 rounded-xl"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setApprovalProof(null);
-                        setApprovalProofPreview(null);
-                      }}
-                      className="absolute top-2 right-2 bg-red-500/80 text-white hover:bg-red-500"
-                    >
-                      Remove
-                    </Button>
+                {approvalProofPreviews.length > 0 ? (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-3 gap-2">
+                      {approvalProofPreviews.map((src, i) => (
+                        <div key={i} className="relative group">
+                          <img src={src} alt={`Proof ${i+1}`} className="w-full h-20 object-cover rounded border border-white/20 cursor-pointer" onClick={() => window.open(src, "_blank")} />
+                          <button type="button" onClick={() => removeApprovalProof(i)} className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full w-4 h-4 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">×</button>
+                        </div>
+                      ))}
+                    </div>
+                    <Label htmlFor="approval-proof-input" className="cursor-pointer inline-block px-3 py-1 bg-[#66FCF1]/20 text-[#66FCF1] text-xs rounded-sm hover:bg-[#66FCF1]/30">{approvalProofPreviews.length} image(s) — add more</Label>
+                    <Input type="file" accept="image/*" multiple onChange={handleApprovalProofChange} className="hidden" id="approval-proof-input" />
                   </div>
                 ) : (
-                  <div className="border-2 border-dashed border-white/20 rounded-xl p-6 text-center">
+                  <div className="border-2 border-dashed border-white/20 rounded-sm p-6 text-center">
                     <Upload className="w-6 h-6 text-[#C5C6C7] mx-auto mb-2" />
                     <p className="text-[#C5C6C7] text-sm mb-2">
-                      Upload{" "}
-                      {showApprovalDialog.transaction_type === "deposit"
-                        ? "deposit confirmation"
-                        : "payment confirmation"}{" "}
-                      screenshot
+                      Upload {showApprovalDialog.transaction_type === "deposit" ? "deposit confirmation" : "payment confirmation"} screenshot
                     </p>
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleApprovalProofChange}
-                      className="hidden"
-                      id="approval-proof-input"
-                    />
-                    <Label
-                      htmlFor="approval-proof-input"
-                      className="cursor-pointer inline-block px-4 py-2 bg-[#1FA21B] text-[#0B0C10] font-bold uppercase text-sm rounded-xl hover:bg-[#45A29E]"
-                    >
-                      Choose File
+                    <Input type="file" accept="image/*" multiple onChange={handleApprovalProofChange} className="hidden" id="approval-proof-input" />
+                    <Label htmlFor="approval-proof-input" className="cursor-pointer inline-block px-4 py-2 bg-[#66FCF1] text-[#0B0C10] font-bold uppercase text-sm rounded-sm hover:bg-[#45A29E]">
+                      Choose File(s)
                     </Label>
                   </div>
                 )}
@@ -2308,8 +2295,8 @@ export default function AccountantDashboard() {
                   onClick={() => {
                     setShowApprovalDialog(null);
                     setApprovalSourceAccount("");
-                    setApprovalProof(null);
-                    setApprovalProofPreview(null);
+                    setApprovalProofs([]);
+                    setApprovalProofPreviews([]);
                     setBankReceiptDate("");
                   }}
                   className="flex-1 border-slate-200 text-[#C5C6C7] hover:bg-white/5"
@@ -2321,7 +2308,7 @@ export default function AccountantDashboard() {
                   disabled={
                     (showApprovalDialog.transaction_type === "withdrawal" &&
                       !approvalSourceAccount) ||
-                    !approvalProof
+                    !approvalProofs.length
                   }
                   className="flex-1 bg-green-500 text-white hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
                   data-testid="confirm-transaction-approval"
