@@ -166,6 +166,23 @@ export default function Treasury() {
     setCaptchaAnswer("");
   }, []);
 
+
+   const fetchAccounts = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/treasury?page=${currentPage}&page_size=${pageSize}`, { headers: getAuthHeaders(), credentials: 'include' });
+        if (response.ok) {
+          const data = await response.json();
+          setAccounts(data.items || data);
+          setTotalPages(data.total_pages || 1);
+          setTotalItems(data.total || 0);
+        }
+      } catch (error) {
+        console.error('Error fetching treasury accounts:', error);
+        toast.error('Failed to load treasury accounts');
+      } finally {
+        setLoading(false);
+      }
+    };
   const fetchAccountHistory = async (accountId, page = historyPage) => {
     setHistoryLoading(true);
     try {
