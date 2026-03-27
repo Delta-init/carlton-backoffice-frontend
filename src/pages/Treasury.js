@@ -116,6 +116,9 @@ export default function Treasury() {
 
   // Transfer state
   const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
+  const [balanceFixAccount, setBalanceFixAccount] = useState(null);
+  const [balanceFixForm, setBalanceFixForm] = useState({ actual_balance: '', effective_date: '', reason: '' });
+  const [balanceFixSaving, setBalanceFixSaving] = useState(false);
   const [transferData, setTransferData] = useState({
     source_account_id: "",
     destination_account_id: "",
@@ -491,6 +494,41 @@ export default function Treasury() {
       }
     } catch (error) {
       toast.error('Delete failed');
+    }
+  };
+
+  const openBalanceFix = (account) => {
+    setBalanceFixAccount(account);
+    setBalanceFixForm({ actual_balance: '', effective_date: new Date().toISOString().split('T')[0], reason: '' });
+  };
+
+  const handleBalanceFix = async () => {
+    if (!balanceFixAccount || balanceFixForm.actual_balance === '') return;
+    setBalanceFixSaving(true);
+    try {
+      const response = await fetch(`${API_URL}/api/treasury/${balanceFixAccount.account_id}/balance-fix`, {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          actual_balance: parseFloat(balanceFixForm.actual_balance),
+          effective_date: balanceFixForm.effective_date ? new Date(balanceFixForm.effective_date).toISOString() : undefined,
+          reason: balanceFixForm.reason || undefined,
+        }),
+      });
+      if (response.ok) {
+        const result = await response.json();
+        toast.success(result.message);
+        setBalanceFixAccount(null);
+        fetchAccounts();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Balance fix failed');
+      }
+    } catch (error) {
+      toast.error('Balance fix failed');
+    } finally {
+      setBalanceFixSaving(false);
     }
   };
 
@@ -1126,6 +1164,11 @@ export default function Treasury() {
                         >
                           <Edit className="w-4 h-4 mr-2" /> Edit
                         </DropdownMenuItem>
+                        {user?.role === 'admin' && (
+                          <DropdownMenuItem onClick={() => openBalanceFix(account)} className="text-amber-600 hover:bg-amber-50 cursor-pointer" data-testid={`fix-balance-${account.account_id}`}>
+                            <Calculator className="w-4 h-4 mr-2" /> Fix Balance
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem
                           onClick={() => handleDelete(account.account_id)}
                           className="text-red-600 hover:bg-red-50 cursor-pointer"
@@ -1420,8 +1463,7 @@ export default function Treasury() {
                     </SelectContent>
                   </Select>
                 </div>
-                {(historyFilters.period === 'custom' || (!historyFilters.period && (historyFilters.startDate || historyFilters.endDate))) && (
-                  <>
+                {/* Always show date inputs */}
                     <div className="min-w-[140px] space-y-1">
                       <Label className="text-slate-500 text-xs uppercase tracking-wider">From</Label>
                       <Input
@@ -1442,8 +1484,6 @@ export default function Treasury() {
                         data-testid="history-end-date"
                       />
                     </div>
-                  </>
-                )}
                 <div className="min-w-[140px] space-y-1">
                   <Label className="text-slate-500 text-xs uppercase tracking-wider">Type</Label>
                   <Select
@@ -1967,6 +2007,75 @@ export default function Treasury() {
                   data-testid="transfer-confirm-btn"
                 >
                   {transferProcessing ? "Processing..." : "Confirm Transfer"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Balance Fix Dialog */}
+      <Dialog open={!!balanceFixAccount} onOpenChange={(open) => { if (!open) setBalanceFixAccount(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Calculator className="w-5 h-5 text-amber-500" />
+              Fix Balance - {balanceFixAccount?.account_name}
+            </DialogTitle>
+          </DialogHeader>
+          {balanceFixAccount && (
+            <div className="space-y-4">
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1">
+                <p className="text-xs text-slate-500 uppercase tracking-wider">Current System Balance</p>
+                <p className="text-xl font-bold text-slate-800">
+                  {balanceFixAccount.currency} {Number(balanceFixAccount.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Correct Running Balance on This Date <span className="text-red-500">*</span></Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={balanceFixForm.actual_balance}
+                  onChange={(e) => setBalanceFixForm({ ...balanceFixForm, actual_balance: e.target.value })}
+                  placeholder="Enter the correct balance for this date"
+                  data-testid="balance-fix-amount"
+                />
+                {balanceFixForm.actual_balance !== '' && (
+                  <p className="text-xs text-slate-500">
+                    The system will insert an adjustment at the start of this date, then recalculate all transactions forward to fix the current balance. Any previous balance fix on the same date will be replaced.
+                  </p>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Effective Date</Label>
+                <Input
+                  type="date"
+                  value={balanceFixForm.effective_date}
+                  onChange={(e) => setBalanceFixForm({ ...balanceFixForm, effective_date: e.target.value })}
+                  data-testid="balance-fix-date"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Reason / Notes</Label>
+                <Textarea
+                  value={balanceFixForm.reason}
+                  onChange={(e) => setBalanceFixForm({ ...balanceFixForm, reason: e.target.value })}
+                  placeholder="e.g., Bank statement reconciliation, Opening balance entry"
+                  rows={2}
+                  data-testid="balance-fix-reason"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t">
+                <Button variant="outline" size="sm" onClick={() => setBalanceFixAccount(null)}>Cancel</Button>
+                <Button
+                  size="sm"
+                  onClick={handleBalanceFix}
+                  disabled={balanceFixSaving || balanceFixForm.actual_balance === ''}
+                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                  data-testid="balance-fix-submit"
+                >
+                  {balanceFixSaving ? 'Fixing...' : 'Fix Balance'}
                 </Button>
               </div>
             </div>

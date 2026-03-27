@@ -53,7 +53,12 @@ import {
   Filter,
   AlertTriangle,
   Search,
+  DollarSign,
+  HandCoins,
+  ReceiptText,
+  Landmark,
 } from "lucide-react";
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -158,13 +163,19 @@ export default function AccountantDashboard() {
   const { user } = useAuth();
   const [pendingTransactions, setPendingTransactions] = useState([]);
   const [pendingSettlements, setPendingSettlements] = useState([]);
+  const [pendingIE, setPendingIE] = useState([]);
+  const [pendingLoans, setPendingLoans] = useState([]);
+  const [pendingRepayments, setPendingRepayments] = useState([]);
+  const [pendingPSPSettlements, setPendingPSPSettlements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewTransaction, setViewTransaction] = useState(null);
   const [viewSettlement, setViewSettlement] = useState(null);
+  const [viewItem, setViewItem] = useState(null); // Generic view for IE/Loan/Repayment/PSP
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectDialog, setShowRejectDialog] = useState(null);
   const [showSettlementRejectDialog, setShowSettlementRejectDialog] =
     useState(null);
+  const [showGenericRejectDialog, setShowGenericRejectDialog] = useState(null); // { type, id }
   const [processingId, setProcessingId] = useState(null);
   const [activeTab, setActiveTab] = useState("transactions");
   const [uploadingProof, setUploadingProof] = useState(null);
@@ -288,6 +299,24 @@ export default function AccountantDashboard() {
     }
   };
 
+  const fetchPendingApprovals = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/pending-approvals/all`, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setPendingIE(data.income_expenses || []);
+        setPendingLoans(data.loans || []);
+        setPendingRepayments(data.loan_repayments || []);
+        setPendingPSPSettlements(data.psp_settlements || []);
+      }
+    } catch (error) {
+      console.error("Error fetching pending approvals:", error);
+    }
+  };
+
   const fetchClientTags = async () => {
     try {
       const response = await fetch(`${API_URL}/api/tags/clients`, {
@@ -307,14 +336,21 @@ export default function AccountantDashboard() {
       await Promise.all([
         fetchPendingTransactions(1),
         fetchPendingSettlements(),
+        fetchPendingApprovals(),
         fetchTreasuryAccounts(),
-              fetchPsps(),
+        fetchPsps(),
         fetchClientTags(),
       ]);
       setLoading(false);
     };
     loadData();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useAutoRefresh(() => {
+    fetchPendingTransactions(currentPage);
+    fetchPendingSettlements();
+    fetchPendingApprovals();
+  }, 15000); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Re-fetch when select/date/pageSize filters change
   useEffect(() => {
@@ -414,6 +450,8 @@ export default function AccountantDashboard() {
     if (captchaAction.type === "approve") {
       if (captchaAction.isSettlement) {
         await executeApproveSettlement(captchaAction.transactionId);
+      } else if (captchaAction.genericType) {
+        await executeGenericApprove(captchaAction.genericType, captchaAction.genericId);
       } else {
         await executeApprove(
           captchaAction.transactionId,
@@ -425,6 +463,8 @@ export default function AccountantDashboard() {
     } else if (captchaAction.type === "reject") {
       if (captchaAction.isSettlement) {
         await executeRejectSettlement(captchaAction.transactionId);
+      } else if (captchaAction.genericType) {
+        await executeGenericReject(captchaAction.genericType, captchaAction.genericId);
       } else {
         await executeReject(captchaAction.transactionId);
       }
@@ -588,6 +628,82 @@ export default function AccountantDashboard() {
     }
   };
 
+  // ---- Generic Approve/Reject for IE, Loans, Repayments, PSP Settlements ----
+  const initiateGenericApprove = (type, id) => {
+    setCaptchaAction({ type: "approve", genericType: type, genericId: id });
+    setShowCaptcha(true);
+  };
+
+  const initiateGenericReject = (type, id) => {
+    setCaptchaAction({ type: "reject", genericType: type, genericId: id });
+    setShowGenericRejectDialog({ type, id });
+  };
+
+  const handleGenericRejectWithCaptcha = () => {
+    setShowGenericRejectDialog(null);
+    setShowCaptcha(true);
+  };
+
+  const executeGenericApprove = async (type, id) => {
+    setProcessingId(id);
+    const urlMap = {
+      ie: `/api/income-expenses/${id}/approve`,
+      loan: `/api/loans/${id}/approve-disbursement`,
+      repayment: `/api/loan-repayments/${id}/approve`,
+      psp_settlement: `/api/psp-settlements/${id}/approve`,
+    };
+    try {
+      const response = await fetch(`${API_URL}${urlMap[type]}`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
+      if (response.ok) {
+        toast.success("Approved successfully");
+        fetchPendingApprovals();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || "Approval failed");
+      }
+    } catch {
+      toast.error("Approval failed");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const executeGenericReject = async (type, id) => {
+    setProcessingId(id);
+    const urlMap = {
+      ie: `/api/income-expenses/${id}/reject`,
+      loan: `/api/loans/${id}/reject-disbursement`,
+      repayment: `/api/loan-repayments/${id}/reject`,
+      psp_settlement: `/api/psp-settlements/${id}/reject`,
+    };
+    try {
+      const response = await fetch(
+        `${API_URL}${urlMap[type]}?reason=${encodeURIComponent(rejectReason)}`,
+        {
+          method: "POST",
+          headers: getAuthHeaders(),
+          credentials: "include",
+        },
+      );
+      if (response.ok) {
+        toast.success("Rejected successfully");
+        setRejectReason("");
+        fetchPendingApprovals();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || "Rejection failed");
+      }
+    } catch {
+      toast.error("Rejection failed");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   const handleProofUpload = async (e) => {
     const file = e.target.files[0];
     if (!file || !uploadingProof) return;
@@ -634,7 +750,7 @@ export default function AccountantDashboard() {
   };
 
   const getTypeBadge = (type) => {
-    const isIncoming = ["deposit", "rebate"].includes(type);
+    const isIncoming = ["deposit", "rebate", "income"].includes(type);
     return (
       <div
         className={`flex items-center gap-1 ${isIncoming ? "text-green-400" : "text-red-400"}`}
@@ -661,6 +777,11 @@ export default function AccountantDashboard() {
     });
   };
 
+  const formatCurrency = (amount, currency = "USD") => {
+    if (amount == null) return "-";
+    return `${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
+  };
+
   return (
     <div
       className="space-y-6 animate-fade-in"
@@ -680,48 +801,35 @@ export default function AccountantDashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="bg-white border-slate-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
-                  Pending Transactions
-                </p>
-                <p className="text-4xl font-bold font-mono text-yellow-400">
-                
-                </p>
-                <p className="text-4xl font-bold font-mono text-yellow-400">
-                  {totalItems}
-                </p>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        {[
+          { label: "Transactions", count: totalItems, icon: Clock, color: "yellow", tab: "transactions" },
+          { label: "Vendor Settlements", count: pendingSettlements.length, icon: Store, color: "purple", tab: "settlements" },
+          { label: "Income/Expenses", count: pendingIE.length, icon: ReceiptText, color: "blue", tab: "ie" },
+          { label: "Loan Disbursements", count: pendingLoans.length, icon: HandCoins, color: "orange", tab: "loans" },
+          { label: "Loan Repayments", count: pendingRepayments.length, icon: DollarSign, color: "emerald", tab: "repayments" },
+          { label: "PSP Settlements", count: pendingPSPSettlements.length, icon: Landmark, color: "pink", tab: "psp_settlements" },
+        ].map(({ label, count, icon: Icon, color, tab }) => (
+          <Card
+            key={tab}
+            className={`bg-white border-slate-200 cursor-pointer transition-colors ${activeTab === tab ? `border-${color}-400` : `hover:border-${color}-400/50`}`}
+            onClick={() => setActiveTab(tab)}
+          >
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-1">{label}</p>
+                  <p className={`text-2xl font-bold font-mono text-${color}-400`}>{count}</p>
+                </div>
+                <Icon className={`w-5 h-5 text-${color}-400 opacity-50`} />
               </div>
-              <div className="p-4 bg-yellow-500/10 rounded-xl">
-                <Clock className="w-8 h-8 text-yellow-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white border-slate-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
-                  Pending Settlements
-                </p>
-                <p className="text-4xl font-bold font-mono text-purple-400">
-                  {pendingSettlements.length}
-                </p>
-              </div>
-              <div className="p-4 bg-purple-500/10 rounded-xl">
-                <Wallet className="w-8 h-8 text-purple-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Filters */}
+      {/* Filters (for Transactions tab only) */}
+      {activeTab === "transactions" && (
       <Card className="bg-white border-slate-200">
         <CardContent className="p-4">
           <div className="flex flex-wrap items-center gap-3">
@@ -931,21 +1039,46 @@ export default function AccountantDashboard() {
           </div>
         </CardContent>
       </Card>
+      )}
 
-      {/* Tabs for Transactions and Settlements */}
+      {/* Tabs for Transactions, Settlements, and More */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-slate-50 border border-slate-200 mb-4">
+        <TabsList className="bg-slate-50 border border-slate-200 mb-4 flex-wrap h-auto gap-1 p-1">
           <TabsTrigger
             value="transactions"
-            className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10]"
+            className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10] text-xs"
           >
             Transactions ({totalItems})
           </TabsTrigger>
           <TabsTrigger
             value="settlements"
-            className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10]"
+            className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10] text-xs"
           >
-            Settlements ({pendingSettlements.length})
+            Vendor Settl. ({pendingSettlements.length})
+          </TabsTrigger>
+          <TabsTrigger
+            value="ie"
+            className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10] text-xs"
+          >
+            Income/Exp ({pendingIE.length})
+          </TabsTrigger>
+          <TabsTrigger
+            value="loans"
+            className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10] text-xs"
+          >
+            Loans ({pendingLoans.length})
+          </TabsTrigger>
+          <TabsTrigger
+            value="repayments"
+            className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10] text-xs"
+          >
+            Repayments ({pendingRepayments.length})
+          </TabsTrigger>
+          <TabsTrigger
+            value="psp_settlements"
+            className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10] text-xs"
+          >
+            PSP Settl. ({pendingPSPSettlements.length})
           </TabsTrigger>
         </TabsList>
 
@@ -1410,6 +1543,230 @@ export default function AccountantDashboard() {
                           <XCircle className="w-4 h-4 mr-2" />
                           Reject
                         </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </TabsContent>
+
+        {/* ===== Income/Expenses Tab ===== */}
+        <TabsContent value="ie">
+          <div className="space-y-3">
+            {loading ? (
+              <div className="flex justify-center py-12">
+                <div className="w-8 h-8 border-2 border-[#1FA21B] border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : pendingIE.length === 0 ? (
+              <Card className="bg-white border-slate-200">
+                <CardContent className="p-12 text-center">
+                  <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
+                  <p className="text-white text-lg">All caught up!</p>
+                  <p className="text-[#C5C6C7] mt-2">No pending income/expense entries</p>
+                </CardContent>
+              </Card>
+            ) : (
+              pendingIE.map((ie) => (
+                <Card key={ie.entry_id} className="bg-white border-slate-200">
+                  <CardContent className="p-4">
+                    <div className="flex flex-wrap items-center gap-4">
+                      <div className="flex-1 min-w-[120px]">
+                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Description</p>
+                        <p className="text-white text-sm truncate">{ie.description || ie.category || ie.ie_category_name || "-"}</p>
+                        {ie.vendor_name && <p className="text-[10px] text-[#C5C6C7]">Exchanger: {ie.vendor_name}</p>}
+                        {ie.client_name && <p className="text-[10px] text-[#C5C6C7]">Client: {ie.client_name}</p>}
+                      </div>
+                      <div className="min-w-[80px]">
+                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Type</p>
+                        {getTypeBadge(ie.entry_type)}
+                      </div>
+                      <div className="min-w-[120px]">
+                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Amount</p>
+                        <p className={`font-mono text-sm font-bold ${ie.entry_type === "income" ? "text-green-400" : "text-red-400"}`}>
+                          {ie.entry_type === "income" ? "+" : "-"}{formatCurrency(ie.amount, ie.currency)}
+                        </p>
+                        {ie.base_currency && ie.base_currency !== ie.currency && ie.base_amount && (
+                          <p className="text-[10px] text-[#C5C6C7]">{ie.base_amount?.toLocaleString()} {ie.base_currency}</p>
+                        )}
+                      </div>
+                      <div className="min-w-[100px]">
+                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Treasury</p>
+                        <p className="text-white text-xs truncate">{ie.treasury_account_name || "-"}</p>
+                      </div>
+                      <div className="min-w-[80px]">
+                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Date</p>
+                        <p className="text-white text-xs">{ie.date || formatDate(ie.created_at)}</p>
+                      </div>
+                      <div className="flex items-center gap-1.5 ml-auto">
+                        <Button variant="ghost" size="sm" onClick={() => setViewItem({ ...ie, _viewType: "ie" })} className="text-[#C5C6C7] hover:text-white hover:bg-white/5 h-8 w-8 p-0" data-testid={`view-ie-${ie.entry_id}`}><Eye className="w-4 h-4" /></Button>
+                        <Button size="sm" onClick={() => initiateGenericApprove("ie", ie.entry_id)} disabled={processingId === ie.entry_id} className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30 h-8 text-xs px-3" data-testid={`approve-ie-${ie.entry_id}`}><CheckCircle className="w-3.5 h-3.5 mr-1" />Approve</Button>
+                        <Button size="sm" onClick={() => initiateGenericReject("ie", ie.entry_id)} disabled={processingId === ie.entry_id} className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 h-8 text-xs px-3" data-testid={`reject-ie-${ie.entry_id}`}><XCircle className="w-3.5 h-3.5 mr-1" />Reject</Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </TabsContent>
+
+        {/* ===== Loan Disbursements Tab ===== */}
+        <TabsContent value="loans">
+          <div className="space-y-3">
+            {loading ? (
+              <div className="flex justify-center py-12">
+                <div className="w-8 h-8 border-2 border-[#1FA21B] border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : pendingLoans.length === 0 ? (
+              <Card className="bg-white border-slate-200">
+                <CardContent className="p-12 text-center">
+                  <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
+                  <p className="text-white text-lg">All caught up!</p>
+                  <p className="text-[#C5C6C7] mt-2">No pending loan disbursements</p>
+                </CardContent>
+              </Card>
+            ) : (
+              pendingLoans.map((loan) => (
+                <Card key={loan.loan_id} className="bg-white border-slate-200">
+                  <CardContent className="p-4">
+                    <div className="flex flex-wrap items-center gap-4">
+                      <div className="flex-1 min-w-[120px]">
+                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Borrower</p>
+                        <p className="text-white text-sm font-medium">{loan.borrower_name}</p>
+                        {loan.vendor_name && <p className="text-[10px] text-[#C5C6C7]">Exchanger: {loan.vendor_name}</p>}
+                      </div>
+                      <div className="min-w-[120px]">
+                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Amount</p>
+                        <p className="font-mono text-sm font-bold text-red-400">-{formatCurrency(loan.amount, loan.currency)}</p>
+                      </div>
+                      <div className="min-w-[80px]">
+                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Interest</p>
+                        <p className="text-white text-xs">{loan.interest_rate}%</p>
+                      </div>
+                      <div className="min-w-[100px]">
+                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Source</p>
+                        <p className="text-white text-xs truncate">{loan.source_vendor_name || "Treasury"}</p>
+                      </div>
+                      <div className="min-w-[80px]">
+                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Due Date</p>
+                        <p className="text-white text-xs">{loan.due_date?.split("T")[0]}</p>
+                      </div>
+                      <div className="flex items-center gap-1.5 ml-auto">
+                        <Button variant="ghost" size="sm" onClick={() => setViewItem({ ...loan, _viewType: "loan" })} className="text-[#C5C6C7] hover:text-white hover:bg-white/5 h-8 w-8 p-0" data-testid={`view-loan-${loan.loan_id}`}><Eye className="w-4 h-4" /></Button>
+                        <Button size="sm" onClick={() => initiateGenericApprove("loan", loan.loan_id)} disabled={processingId === loan.loan_id} className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30 h-8 text-xs px-3" data-testid={`approve-loan-${loan.loan_id}`}><CheckCircle className="w-3.5 h-3.5 mr-1" />Approve</Button>
+                        <Button size="sm" onClick={() => initiateGenericReject("loan", loan.loan_id)} disabled={processingId === loan.loan_id} className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 h-8 text-xs px-3" data-testid={`reject-loan-${loan.loan_id}`}><XCircle className="w-3.5 h-3.5 mr-1" />Reject</Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </TabsContent>
+
+        {/* ===== Loan Repayments Tab ===== */}
+        <TabsContent value="repayments">
+          <div className="space-y-3">
+            {loading ? (
+              <div className="flex justify-center py-12">
+                <div className="w-8 h-8 border-2 border-[#1FA21B] border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : pendingRepayments.length === 0 ? (
+              <Card className="bg-white border-slate-200">
+                <CardContent className="p-12 text-center">
+                  <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
+                  <p className="text-white text-lg">All caught up!</p>
+                  <p className="text-[#C5C6C7] mt-2">No pending loan repayments</p>
+                </CardContent>
+              </Card>
+            ) : (
+              pendingRepayments.map((rep) => (
+                <Card key={rep.repayment_id} className="bg-white border-slate-200">
+                  <CardContent className="p-4">
+                    <div className="flex flex-wrap items-center gap-4">
+                      <div className="flex-1 min-w-[120px]">
+                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Borrower</p>
+                        <p className="text-white text-sm font-medium">{rep.borrower_name || "-"}</p>
+                        <p className="text-[10px] text-[#C5C6C7] font-mono">{rep.loan_id}</p>
+                      </div>
+                      <div className="min-w-[120px]">
+                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Amount</p>
+                        <p className="font-mono text-sm font-bold text-green-400">+{formatCurrency(rep.amount, rep.currency)}</p>
+                        {rep.currency !== rep.loan_currency && (
+                          <p className="text-[10px] text-[#C5C6C7]">{formatCurrency(rep.amount_in_loan_currency, rep.loan_currency)}</p>
+                        )}
+                      </div>
+                      <div className="min-w-[80px]">
+                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Payment Date</p>
+                        <p className="text-white text-xs">{rep.payment_date}</p>
+                      </div>
+                      <div className="min-w-[80px]">
+                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Reference</p>
+                        <p className="text-white text-xs truncate">{rep.reference || "-"}</p>
+                      </div>
+                      <div className="flex items-center gap-1.5 ml-auto">
+                        <Button variant="ghost" size="sm" onClick={() => setViewItem({ ...rep, _viewType: "repayment" })} className="text-[#C5C6C7] hover:text-white hover:bg-white/5 h-8 w-8 p-0" data-testid={`view-rep-${rep.repayment_id}`}><Eye className="w-4 h-4" /></Button>
+                        <Button size="sm" onClick={() => initiateGenericApprove("repayment", rep.repayment_id)} disabled={processingId === rep.repayment_id} className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30 h-8 text-xs px-3" data-testid={`approve-rep-${rep.repayment_id}`}><CheckCircle className="w-3.5 h-3.5 mr-1" />Approve</Button>
+                        <Button size="sm" onClick={() => initiateGenericReject("repayment", rep.repayment_id)} disabled={processingId === rep.repayment_id} className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 h-8 text-xs px-3" data-testid={`reject-rep-${rep.repayment_id}`}><XCircle className="w-3.5 h-3.5 mr-1" />Reject</Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </TabsContent>
+
+        {/* ===== PSP Settlements Tab ===== */}
+        <TabsContent value="psp_settlements">
+          <div className="space-y-3">
+            {loading ? (
+              <div className="flex justify-center py-12">
+                <div className="w-8 h-8 border-2 border-[#1FA21B] border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : pendingPSPSettlements.length === 0 ? (
+              <Card className="bg-white border-slate-200">
+                <CardContent className="p-12 text-center">
+                  <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
+                  <p className="text-white text-lg">All caught up!</p>
+                  <p className="text-[#C5C6C7] mt-2">No pending PSP settlements</p>
+                </CardContent>
+              </Card>
+            ) : (
+              pendingPSPSettlements.map((stl) => (
+                <Card key={stl.settlement_id} className="bg-white border-slate-200">
+                  <CardContent className="p-4">
+                    <div className="flex flex-wrap items-center gap-4">
+                      <div className="flex-1 min-w-[120px]">
+                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">PSP</p>
+                        <div className="flex items-center gap-2">
+                          <CreditCard className="w-4 h-4 text-purple-400" />
+                          <p className="text-white text-sm">{stl.psp_name}</p>
+                        </div>
+                        <Badge className="mt-1 bg-slate-100 text-[#C5C6C7] text-[10px]">{stl.settlement_type || "standard"}</Badge>
+                      </div>
+                      <div className="min-w-[100px]">
+                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Gross</p>
+                        <p className="font-mono text-sm text-white">${stl.gross_amount?.toLocaleString()}</p>
+                      </div>
+                      <div className="min-w-[100px]">
+                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Net Amount</p>
+                        <p className="font-mono text-sm font-bold text-green-400">${stl.net_amount?.toLocaleString()}</p>
+                      </div>
+                      <div className="min-w-[80px]">
+                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Txns</p>
+                        <p className="text-white text-sm">{stl.transaction_count}</p>
+                      </div>
+                      <div className="min-w-[120px]">
+                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Destination</p>
+                        <p className="text-white text-xs truncate">{stl.settlement_destination_name || "-"}</p>
+                      </div>
+                      <div className="flex items-center gap-1.5 ml-auto">
+                        <Button variant="ghost" size="sm" onClick={() => setViewItem({ ...stl, _viewType: "psp_settlement" })} className="text-[#C5C6C7] hover:text-white hover:bg-white/5 h-8 w-8 p-0" data-testid={`view-psp-${stl.settlement_id}`}><Eye className="w-4 h-4" /></Button>
+                        <Button size="sm" onClick={() => initiateGenericApprove("psp_settlement", stl.settlement_id)} disabled={processingId === stl.settlement_id} className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30 h-8 text-xs px-3" data-testid={`approve-psp-${stl.settlement_id}`}><CheckCircle className="w-3.5 h-3.5 mr-1" />Approve</Button>
+                        <Button size="sm" onClick={() => initiateGenericReject("psp_settlement", stl.settlement_id)} disabled={processingId === stl.settlement_id} className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 h-8 text-xs px-3" data-testid={`reject-psp-${stl.settlement_id}`}><XCircle className="w-3.5 h-3.5 mr-1" />Reject</Button>
                       </div>
                     </div>
                   </CardContent>
@@ -2364,6 +2721,203 @@ export default function AccountantDashboard() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Generic View Item Dialog (IE / Loan / Repayment / PSP Settlement) */}
+      <Dialog open={!!viewItem} onOpenChange={() => setViewItem(null)}>
+        <DialogContent className="bg-white border-slate-200 text-white max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle
+              className="text-2xl font-bold uppercase tracking-tight"
+              style={{ fontFamily: "Barlow Condensed" }}
+            >
+              {viewItem?._viewType === "ie"
+                ? "Income/Expense Details"
+                : viewItem?._viewType === "loan"
+                  ? "Loan Details"
+                  : viewItem?._viewType === "repayment"
+                    ? "Repayment Details"
+                    : "PSP Settlement Details"}
+            </DialogTitle>
+          </DialogHeader>
+          {viewItem && (
+            <div className="space-y-4">
+              <GenericDetailView
+                item={viewItem}
+                formatCurrency={formatCurrency}
+                formatDate={formatDate}
+                getTypeBadge={getTypeBadge}
+              />
+              <div className="flex gap-2 pt-4">
+                <Button
+                  onClick={() => {
+                    const type = viewItem._viewType;
+                    const id =
+                      type === "ie"
+                        ? viewItem.entry_id
+                        : type === "loan"
+                          ? viewItem.loan_id
+                          : type === "repayment"
+                            ? viewItem.repayment_id
+                            : viewItem.settlement_id;
+                    setViewItem(null);
+                    initiateGenericApprove(type, id);
+                  }}
+                  className="flex-1 bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />Approve
+                </Button>
+                <Button
+                  onClick={() => {
+                    const type = viewItem._viewType;
+                    const id =
+                      type === "ie"
+                        ? viewItem.entry_id
+                        : type === "loan"
+                          ? viewItem.loan_id
+                          : type === "repayment"
+                            ? viewItem.repayment_id
+                            : viewItem.settlement_id;
+                    setViewItem(null);
+                    initiateGenericReject(type, id);
+                  }}
+                  className="flex-1 bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"
+                >
+                  <XCircle className="w-4 h-4 mr-2" />Reject
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Generic Reject Reason Dialog (IE / Loans / Repayments / PSP Settlements) */}
+      <Dialog
+        open={!!showGenericRejectDialog}
+        onOpenChange={() => {
+          setShowGenericRejectDialog(null);
+          setRejectReason("");
+        }}
+      >
+        <DialogContent className="bg-white border-slate-200 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle
+              className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2"
+              style={{ fontFamily: "Barlow Condensed" }}
+            >
+              <AlertCircle className="w-6 h-6 text-red-400" />Reject Item
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-[#C5C6C7]">Please provide a reason for rejection:</p>
+            <Textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Enter rejection reason..."
+              className="bg-slate-50 border-slate-200 text-white focus:border-[#1FA21B]"
+              rows={3}
+              data-testid="generic-reject-reason"
+            />
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowGenericRejectDialog(null);
+                  setRejectReason("");
+                }}
+                className="flex-1 border-slate-200 text-[#C5C6C7] hover:bg-white/5"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleGenericRejectWithCaptcha}
+                className="flex-1 bg-red-500 text-white hover:bg-red-600"
+                data-testid="continue-generic-reject-btn"
+              >
+                Continue
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
+}
+
+// ---- Helper Components ----
+
+function GenericDetailView({ item, formatCurrency, formatDate, getTypeBadge }) {
+  if (item._viewType === "ie")
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Badge className={item.entry_type === "income" ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}>{item.entry_type}</Badge>
+          <Badge className="bg-yellow-500/20 text-yellow-400 text-xs uppercase">Pending</Badge>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Description</p><p className="text-white">{item.description || item.category || item.ie_category_name || "-"}</p></div>
+          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Amount</p><p className={`font-mono text-xl ${item.entry_type === "income" ? "text-green-400" : "text-red-400"}`}>{formatCurrency(item.amount, item.currency)}</p></div>
+          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Treasury</p><p className="text-white">{item.treasury_account_name || "-"}</p></div>
+          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Date</p><p className="text-white">{item.date || formatDate(item.created_at)}</p></div>
+          {item.vendor_name && <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Exchanger</p><p className="text-white">{item.vendor_name}</p></div>}
+          {item.client_name && <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Client</p><p className="text-white">{item.client_name}</p></div>}
+          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Created By</p><p className="text-white">{item.created_by_name}</p></div>
+          {item.reference && <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Reference</p><p className="text-white font-mono text-sm">{item.reference}</p></div>}
+        </div>
+      </div>
+    );
+  if (item._viewType === "loan")
+    return (
+      <div className="space-y-4">
+        <Badge className="bg-yellow-500/20 text-yellow-400 text-xs uppercase">Pending Approval</Badge>
+        <div className="grid grid-cols-2 gap-4">
+          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Borrower</p><p className="text-white text-lg">{item.borrower_name}</p></div>
+          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Amount</p><p className="font-mono text-xl text-red-400">-{formatCurrency(item.amount, item.currency)}</p></div>
+          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Interest Rate</p><p className="text-white">{item.interest_rate}%</p></div>
+          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Loan Type</p><p className="text-white capitalize">{item.loan_type?.replace("_", " ")}</p></div>
+          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Loan Date</p><p className="text-white">{item.loan_date?.split("T")[0]}</p></div>
+          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Due Date</p><p className="text-white">{item.due_date?.split("T")[0]}</p></div>
+          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Source</p><p className="text-white">{item.source_vendor_name || "Treasury"}</p></div>
+          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Created By</p><p className="text-white">{item.created_by_name}</p></div>
+        </div>
+        {item.notes && <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Notes</p><p className="text-white">{item.notes}</p></div>}
+      </div>
+    );
+  if (item._viewType === "repayment")
+    return (
+      <div className="space-y-4">
+        <Badge className="bg-yellow-500/20 text-yellow-400 text-xs uppercase">Pending Approval</Badge>
+        <div className="grid grid-cols-2 gap-4">
+          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Borrower</p><p className="text-white text-lg">{item.borrower_name}</p></div>
+          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Repayment Amount</p><p className="font-mono text-xl text-green-400">+{formatCurrency(item.amount, item.currency)}</p></div>
+          {item.currency !== item.loan_currency && (
+            <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">In Loan Currency</p><p className="text-white font-mono">{formatCurrency(item.amount_in_loan_currency, item.loan_currency)}</p></div>
+          )}
+          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Payment Date</p><p className="text-white">{item.payment_date}</p></div>
+          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Loan ID</p><p className="text-white font-mono text-xs">{item.loan_id}</p></div>
+          {item.reference && <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Reference</p><p className="text-white">{item.reference}</p></div>}
+          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Created By</p><p className="text-white">{item.created_by_name}</p></div>
+        </div>
+        {item.notes && <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Notes</p><p className="text-white">{item.notes}</p></div>}
+      </div>
+    );
+  if (item._viewType === "psp_settlement")
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2"><CreditCard className="w-5 h-5 text-purple-400" /><span className="text-white text-lg">{item.psp_name}</span></div>
+          <Badge className="bg-yellow-500/20 text-yellow-400 text-xs uppercase">Pending</Badge>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Type</p><Badge className="bg-purple-500/20 text-purple-400">{item.settlement_type || "standard"}</Badge></div>
+          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Transactions</p><p className="text-white font-mono">{item.transaction_count}</p></div>
+          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Gross Amount</p><p className="text-white font-mono text-xl">${item.gross_amount?.toLocaleString()}</p></div>
+          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Net Amount</p><p className="text-green-400 font-mono text-xl">${item.net_amount?.toLocaleString()}</p></div>
+          {item.commission_amount > 0 && <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Commission</p><p className="text-red-400 font-mono">-${item.commission_amount?.toLocaleString()}</p></div>}
+          {item.reserve_fund_amount > 0 && <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Reserve Fund</p><p className="text-red-400 font-mono">-${item.reserve_fund_amount?.toLocaleString()}</p></div>}
+          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Destination</p><p className="text-white">{item.settlement_destination_name}</p></div>
+          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Created By</p><p className="text-white">{item.created_by_name}</p><p className="text-xs text-[#C5C6C7]">{formatDate(item.created_at)}</p></div>
+        </div>
+      </div>
+    );
+  return null;
 }

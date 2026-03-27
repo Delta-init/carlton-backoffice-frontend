@@ -104,7 +104,12 @@ export default function Exchangers() {
   const [settlementCharges, setSettlementCharges] = useState('');
   const [settlementChargesDescription, setSettlementChargesDescription] = useState('');
   const [settlementAmountInDestCurrency, setSettlementAmountInDestCurrency] = useState('');
-  
+  const [settlementMode, setSettlementMode] = useState('full'); // 'full' or 'custom'
+  const [customAmount, setCustomAmount] = useState('');
+  const [customCurrency, setCustomCurrency] = useState('USD');
+  const [isDirectTransfer, setIsDirectTransfer] = useState(false);
+  const [settlementNotes, setSettlementNotes] = useState('');
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -416,56 +421,60 @@ export default function Exchangers() {
   };
 
   const handleSettleExchanger = async () => {
-    if (!viewExchanger || !settlementDestination) {
+    const isCustom = settlementMode === 'custom';
+    const isDirect = isDirectTransfer;
+
+    // Validations
+    if (!viewExchanger) return;
+    if (!isDirect && !settlementDestination) {
       toast.error('Please select a settlement destination');
       return;
     }
-    
-    // Get destination account to check currency
-    const destAccount = treasuryAccounts.find(a => a.account_id === settlementDestination);
-    const destCurrency = destAccount?.currency || 'USD';
-    
-    // Get transaction/base currency
+    if (isCustom && (!customAmount || parseFloat(customAmount) <= 0)) {
+      toast.error('Please enter a valid custom settlement amount');
+      return;
+    }
+
+    const destAccount = !isDirect ? treasuryAccounts.find(a => a.account_id === settlementDestination) : null;
+    const destCurrency = destAccount?.currency || customCurrency || 'USD';
     const baseCurrencyData = viewExchanger?.settlement_by_currency?.[0];
-    const baseCurrency = baseCurrencyData?.currency || 'USD';
-    
-    // Only require manual amount entry if currencies are different
+    const baseCurrency = isCustom ? customCurrency : (baseCurrencyData?.currency || 'USD');
     const isSameCurrency = destCurrency === baseCurrency;
-    if (!isSameCurrency && !settlementAmountInDestCurrency) {
+
+    if (!isCustom && !isSameCurrency && !settlementAmountInDestCurrency && !isDirect) {
       toast.error(`Please enter the settlement amount in ${destCurrency}`);
       return;
     }
-    
+
     try {
-      // Get the commission from settlement_by_currency
-      const baseCurrencyData = viewExchanger?.settlement_by_currency?.find(c => c.currency === baseCurrency);
-      const preCalculatedCommission = baseCurrencyData?.commission_earned_base || 0;
-      
+      const preCalculatedCommission = isCustom ? 0 : (baseCurrencyData?.commission_earned_base || 0);
+
+      const payload = {
+        settlement_type: settlementType,
+        destination_account_id: isDirect ? null : settlementDestination,
+        commission_amount: preCalculatedCommission,
+        charges_amount: parseFloat(settlementCharges) || 0,
+        charges_description: settlementChargesDescription || null,
+        source_currency: baseCurrency,
+        destination_currency: isDirect ? baseCurrency : destCurrency,
+        settlement_amount_in_dest_currency: settlementAmountInDestCurrency ? parseFloat(settlementAmountInDestCurrency) : null,
+        settlement_mode: settlementMode,
+        custom_amount: isCustom ? parseFloat(customAmount) : null,
+        custom_currency: isCustom ? customCurrency : null,
+        is_direct_transfer: isDirect,
+        notes: settlementNotes || null,
+      };
+
       const response = await fetch(`${API_URL}/api/vendors/${viewExchanger.vendor_id}/settle`, {
         method: 'POST',
         headers: getAuthHeaders(),
         credentials: 'include',
-        body: JSON.stringify({
-          settlement_type: settlementType,
-          destination_account_id: settlementDestination,
-          commission_amount: preCalculatedCommission,  // Use pre-calculated commission
-          charges_amount: parseFloat(settlementCharges) || 0,
-          charges_description: settlementChargesDescription || null,
-          source_currency: baseCurrency,
-          destination_currency: destCurrency,
-          settlement_amount_in_dest_currency: settlementAmountInDestCurrency ? parseFloat(settlementAmountInDestCurrency) : null
-        }),
+        body: JSON.stringify(payload),
       });
-      
+
       if (response.ok) {
         toast.success('Settlement submitted for approval');
-        setSettleDialogOpen(false);
-        setSettlementType('bank');
-        setSettlementDestination('');
-        setSettlementCommission('');
-        setSettlementCharges('');
-        setSettlementChargesDescription('');
-        setSettlementAmountInDestCurrency('');
+        resetSettleDialog();
         fetchExchangerTransactions(viewExchanger.vendor_id);
         fetchExchangerSettlements(viewExchanger.vendor_id);
         fetchExchangers(currentPage, searchTerm);
@@ -476,6 +485,21 @@ export default function Exchangers() {
     } catch (error) {
       toast.error('Settlement failed');
     }
+  };
+
+  const resetSettleDialog = () => {
+    setSettleDialogOpen(false);
+    setSettlementType('bank');
+    setSettlementDestination('');
+    setSettlementCommission('');
+    setSettlementCharges('');
+    setSettlementChargesDescription('');
+    setSettlementAmountInDestCurrency('');
+    setSettlementMode('full');
+    setCustomAmount('');
+    setCustomCurrency('USD');
+    setIsDirectTransfer(false);
+    setSettlementNotes('');
   };
 
   const resetForm = () => {
@@ -610,6 +634,13 @@ export default function Exchangers() {
                             <span>Commission:</span>
                             <span>-{item.commission_earned_base?.toLocaleString()}</span>
                           </div>
+                          {/* Custom Settled */}
+                          {(item.custom_settled > 0) && (
+                            <div className="flex justify-between text-blue-500">
+                              <span>Custom Settled:</span>
+                              <span>-{item.custom_settled?.toLocaleString()}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -1345,15 +1376,7 @@ export default function Exchangers() {
     )}
 
       {/* Settle Exchanger Dialog */}
-      <Dialog open={settleDialogOpen} onOpenChange={() => { 
-        setSettleDialogOpen(false); 
-        setSettlementType('bank'); 
-        setSettlementDestination(''); 
-        setSettlementCommission('');
-        setSettlementCharges('');
-        setSettlementChargesDescription('');
-        setSettlementAmountInDestCurrency('');
-      }}>
+      <Dialog open={settleDialogOpen} onOpenChange={() => resetSettleDialog()}>
         <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
@@ -1362,54 +1385,119 @@ export default function Exchangers() {
           </DialogHeader>
           {viewExchanger && (
             <div className="space-y-4">
+              {/* Settlement Mode Toggle */}
+              <div className="flex border border-slate-200 rounded-sm overflow-hidden">
+                <button
+                  onClick={() => setSettlementMode('full')}
+                  className={`flex-1 py-2 px-3 text-sm font-medium transition-colors ${settlementMode === 'full' ? 'bg-blue-500 text-white' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
+                  data-testid="settle-mode-full"
+                >
+                  Settle All
+                </button>
+                <button
+                  onClick={() => setSettlementMode('custom')}
+                  className={`flex-1 py-2 px-3 text-sm font-medium transition-colors ${settlementMode === 'custom' ? 'bg-blue-500 text-white' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
+                  data-testid="settle-mode-custom"
+                >
+                  Custom Amount
+                </button>
+              </div>
+
+              {/* Exchanger Info */}
               <div className="p-4 bg-slate-50 rounded-sm space-y-3">
                 <div className="flex justify-between">
                   <span className="text-slate-500">Exchanger</span>
                   <span className="text-slate-800">{viewExchanger.vendor_name}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Transactions to Settle</span>
-                  <span className="text-slate-800">{pendingTransactions.filter(t => (t.status === 'approved' || t.status === 'completed') && !t.settled).length}</span>
-                </div>
-                
-                {/* Show breakdown by currency */}
-                {viewExchanger?.settlement_by_currency?.map((item, idx) => (
-                  <div key={idx} className="border-t border-slate-200 pt-2 space-y-1">
-                    <div className="flex justify-between items-center">
-                      <Badge className={`text-xs ${
-                        item.currency === 'USD' ? 'bg-green-500/20 text-green-400' :
-                        item.currency === 'EUR' ? 'bg-blue-500/20 text-blue-400' :
-                        item.currency === 'AED' ? 'bg-purple-500/20 text-purple-400' :
-                        item.currency === 'GBP' ? 'bg-yellow-500/20 text-yellow-400' :
-                        item.currency === 'INR' ? 'bg-orange-500/20 text-orange-400' :
-                        'bg-gray-500/20 text-gray-400'
-                      }`}>
-                        {item.currency}
-                      </Badge>
-                      <span className="text-slate-800 font-mono font-bold">
-                        {item.amount?.toLocaleString()} {item.currency}
-                      </span>
+
+                {settlementMode === 'full' ? (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Transactions to Settle</span>
+                      <span className="text-slate-800">{pendingTransactions.filter(t => (t.status === 'approved' || t.status === 'completed') && !t.settled).length}</span>
                     </div>
-                    <div className="text-xs space-y-0.5 pl-1">
-                      <div className="flex justify-between text-green-500"><span>Money In (Dep + I&E + Loan)</span><span>+{item.total_in?.toLocaleString()}</span></div>
-                      <div className="flex justify-between text-red-400"><span>Money Out (Wdr + I&E + Loan)</span><span>-{item.total_out?.toLocaleString()}</span></div>
-                      <div className="flex justify-between text-yellow-400"><span>Commission</span><span>-{item.commission_earned_base?.toLocaleString()}</span></div>
+
+                    {viewExchanger?.settlement_by_currency?.map((item, idx) => (
+                      <div key={idx} className="border-t border-slate-200 pt-2 space-y-1">
+                        <div className="flex justify-between items-center">
+                          <Badge className={`text-xs ${
+                            item.currency === 'USD' ? 'bg-green-500/20 text-green-400' :
+                            item.currency === 'EUR' ? 'bg-blue-500/20 text-blue-400' :
+                            item.currency === 'AED' ? 'bg-purple-500/20 text-purple-400' :
+                            item.currency === 'GBP' ? 'bg-yellow-500/20 text-yellow-400' :
+                            item.currency === 'INR' ? 'bg-orange-500/20 text-orange-400' :
+                            'bg-gray-500/20 text-gray-400'
+                          }`}>
+                            {item.currency}
+                          </Badge>
+                          <span className="text-slate-800 font-mono font-bold">
+                            {item.amount?.toLocaleString()} {item.currency}
+                          </span>
+                        </div>
+                        <div className="text-xs space-y-0.5 pl-1">
+                          <div className="flex justify-between text-green-500"><span>Money In (Dep + I&E + Loan)</span><span>+{item.total_in?.toLocaleString()}</span></div>
+                          <div className="flex justify-between text-red-400"><span>Money Out (Wdr + I&E + Loan)</span><span>-{item.total_out?.toLocaleString()}</span></div>
+                          <div className="flex justify-between text-yellow-400"><span>Commission</span><span>-{item.commission_earned_base?.toLocaleString()}</span></div>
+                        {(item.custom_settled > 0) && <div className="flex justify-between text-blue-400"><span>Custom Settled</span><span>-{item.custom_settled?.toLocaleString()}</span></div>}
+                        </div>
+                        {item.currency !== 'USD' && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-slate-500">USD Equivalent</span>
+                            <span className="text-slate-500">${item.usd_equivalent?.toLocaleString()}</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    <div className="flex justify-between border-t border-slate-200 pt-2">
+                      <span className="text-blue-600 font-semibold">Total Net (USD)</span>
+                      <span className="text-blue-600 font-mono font-bold">${viewExchanger?.settlement_by_currency?.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0).toLocaleString() || '0'}</span>
                     </div>
-                    {item.currency !== 'USD' && (
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-500">USD Equivalent</span>
-                        <span className="text-slate-500">${item.usd_equivalent?.toLocaleString()}</span>
+                  </>
+                ) : (
+                  /* Custom Amount Mode */
+                  <div className="border-t border-slate-200 pt-3 space-y-3">
+                    <div className="space-y-2">
+                      <Label className="text-slate-500 text-xs uppercase tracking-wider">Settlement Currency *</Label>
+                      <Select value={customCurrency} onValueChange={setCustomCurrency}>
+                        <SelectTrigger className="bg-white border-slate-200 text-slate-800" data-testid="custom-currency">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white border-slate-200">
+                          {['USD', 'AED', 'EUR', 'GBP', 'INR', 'USDT', 'SAR', 'BHD', 'OMR', 'QAR', 'KWD'].map(c => (
+                            <SelectItem key={c} value={c} className="text-slate-800 hover:bg-slate-100">{c}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-slate-500 text-xs uppercase tracking-wider">Settlement Amount *</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={customAmount}
+                        onChange={(e) => setCustomAmount(e.target.value)}
+                        className="bg-white border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono text-lg"
+                        placeholder={`0.00 ${customCurrency}`}
+                        data-testid="custom-amount"
+                      />
+                    </div>
+                    {viewExchanger?.settlement_by_currency?.length > 0 && (
+                      <div className="text-xs text-slate-400 space-y-0.5">
+                        <p className="font-medium text-slate-500">Outstanding Balances:</p>
+                        {viewExchanger.settlement_by_currency.map((item, idx) => (
+                          <div key={idx} className="flex justify-between">
+                            <span>{item.currency}</span>
+                            <span className="font-mono">{item.amount?.toLocaleString()} {item.currency}</span>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
-                ))}
-                
-                <div className="flex justify-between border-t border-slate-200 pt-2">
-                  <span className="text-blue-600 font-semibold">Total Net (USD)</span>
-                  <span className="text-blue-600 font-mono font-bold">${viewExchanger?.settlement_by_currency?.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0).toLocaleString() || '0'}</span>
-                </div>
+                )}
               </div>
-              
+
+              {/* Settlement Type */}
               <div className="space-y-2">
                 <Label className="text-slate-500 text-xs uppercase tracking-wider">Settlement Type *</Label>
                 <Select value={settlementType} onValueChange={setSettlementType}>
@@ -1418,60 +1506,67 @@ export default function Exchangers() {
                   </SelectTrigger>
                   <SelectContent className="bg-white border-slate-200">
                     <SelectItem value="bank" className="text-slate-800 hover:bg-slate-100">
-                      <span className="flex items-center gap-2">
-                        <Building2 className="w-4 h-4" /> Bank Transfer
-                      </span>
+                      <span className="flex items-center gap-2"><Building2 className="w-4 h-4" /> Bank Transfer</span>
                     </SelectItem>
                     <SelectItem value="cash" className="text-slate-800 hover:bg-slate-100">
-                      <span className="flex items-center gap-2">
-                        <Banknote className="w-4 h-4" /> Cash
-                      </span>
+                      <span className="flex items-center gap-2"><Banknote className="w-4 h-4" /> Cash</span>
                     </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              
-              <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">Settlement Destination *</Label>
-                <Select
-                  value={settlementDestination}
-                  onValueChange={setSettlementDestination}
+
+              {/* Direct Transfer Toggle */}
+              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-sm border border-slate-200">
+                <div>
+                  <p className="text-sm font-medium text-slate-800">Direct Transfer</p>
+                  <p className="text-xs text-slate-400">Record payment without linking to a treasury account</p>
+                </div>
+                <button
+                  onClick={() => { setIsDirectTransfer(!isDirectTransfer); if (!isDirectTransfer) setSettlementDestination(''); }}
+                  className={`w-10 h-5 rounded-full transition-colors relative ${isDirectTransfer ? 'bg-blue-500' : 'bg-slate-300'}`}
+                  data-testid="direct-transfer-toggle"
                 >
-                  <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800">
-                    <SelectValue placeholder="Select treasury account" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border-slate-200">
-                    {treasuryAccounts.map((account) => (
-                      <SelectItem key={account.account_id} value={account.account_id} className="text-slate-800 hover:bg-slate-100">
-                        {account.account_name} - {account.bank_name} ({account.currency})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform shadow ${isDirectTransfer ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                </button>
               </div>
-              
-              {/* Additional Charges - shows after destination is selected */}
-              {settlementDestination && (() => {
-                const destAccount = treasuryAccounts.find(a => a.account_id === settlementDestination);
-                const destCurrency = destAccount?.currency || 'USD';
-                return (
-                  <div className="space-y-2">
-                    <Label className="text-slate-500 text-xs uppercase tracking-wider">
-                      Additional Charges in {destCurrency} (Optional)
-                    </Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={settlementCharges}
-                      onChange={(e) => setSettlementCharges(e.target.value)}
-                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
-                      placeholder={`0.00 ${destCurrency}`}
-                      data-testid="settlement-charges"
-                    />
-                  </div>
-                );
-              })()}
-              
+
+              {/* Settlement Destination (hidden if Direct Transfer) */}
+              {!isDirectTransfer && (
+                <div className="space-y-2">
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Settlement Destination *</Label>
+                  <Select value={settlementDestination} onValueChange={setSettlementDestination}>
+                    <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800">
+                      <SelectValue placeholder="Select treasury account" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border-slate-200">
+                      {treasuryAccounts.map((account) => (
+                        <SelectItem key={account.account_id} value={account.account_id} className="text-slate-800 hover:bg-slate-100">
+                          {account.account_name} - {account.bank_name} ({account.currency})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Additional Charges */}
+              {(settlementDestination || isDirectTransfer) && (
+                <div className="space-y-2">
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                    Additional Charges (Optional)
+                  </Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={settlementCharges}
+                    onChange={(e) => setSettlementCharges(e.target.value)}
+                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
+                    placeholder="0.00"
+                    data-testid="settlement-charges"
+                  />
+                </div>
+              )}
+
               {settlementCharges && parseFloat(settlementCharges) > 0 && (
                 <div className="space-y-2">
                   <Label className="text-slate-500 text-xs uppercase tracking-wider">Charges Description</Label>
@@ -1484,47 +1579,34 @@ export default function Exchangers() {
                   />
                 </div>
               )}
-              
-              {/* Settlement Preview */}
-              {settlementDestination && (() => {
+
+              {/* Settlement Preview for full mode with cross-currency */}
+              {settlementMode === 'full' && !isDirectTransfer && settlementDestination && (() => {
                 const destAccount = treasuryAccounts.find(a => a.account_id === settlementDestination);
                 const destCurrency = destAccount?.currency || 'USD';
-                
-                // Get base currency info (transaction currency)
                 const baseCurrencyData = viewExchanger?.settlement_by_currency?.[0];
                 const baseCurrency = baseCurrencyData?.currency || 'USD';
                 const netSettlementBase = baseCurrencyData?.amount || 0;
-                
-                // Charges are entered in destination currency
                 const additionalChargesDest = parseFloat(settlementCharges) || 0;
-                
-                // Calculate final in destination currency
-                // If destination = base currency, simple subtraction
-                // If different, we need the final amount input
                 const isSameCurrency = destCurrency === baseCurrency;
                 const finalAmountDest = isSameCurrency ? (netSettlementBase - additionalChargesDest) : null;
-                
+
                 return (
                   <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 space-y-3">
                     <p className="text-xs text-blue-600 uppercase tracking-wider flex items-center gap-1">
                       <Receipt className="w-3 h-3" /> Settlement Preview
                     </p>
                     <div className="space-y-2 text-sm">
-                      {/* Base/Transaction Currency */}
                       <div className="flex justify-between items-center">
                         <span className="text-slate-500">Net Settlement</span>
                         <span className="text-slate-800 font-mono">{netSettlementBase.toLocaleString()} {baseCurrency}</span>
                       </div>
-                      
-                      {/* Charges in destination currency */}
                       {additionalChargesDest > 0 && (
                         <div className="flex justify-between">
                           <span className="text-slate-500">Additional Charges</span>
                           <span className="text-red-400 font-mono">-{additionalChargesDest.toLocaleString()} {destCurrency}</span>
                         </div>
                       )}
-                      
-                      {/* Final amount */}
                       {isSameCurrency ? (
                         <div className="flex justify-between pt-2 border-t border-slate-200">
                           <span className="text-blue-600 font-semibold">Final Amount to Pay</span>
@@ -1532,9 +1614,7 @@ export default function Exchangers() {
                         </div>
                       ) : (
                         <div className="pt-3 border-t border-slate-200 space-y-2">
-                          <p className="text-xs text-yellow-400">
-                            Destination: {destCurrency} (different from {baseCurrency})
-                          </p>
+                          <p className="text-xs text-yellow-500">Destination: {destCurrency} (different from {baseCurrency})</p>
                           <div className="space-y-1">
                             <Label className="text-slate-500 text-xs">Final Settlement Amount in {destCurrency} *</Label>
                             <Input
@@ -1550,9 +1630,7 @@ export default function Exchangers() {
                           {settlementAmountInDestCurrency && (
                             <div className="flex justify-between pt-2">
                               <span className="text-blue-600 font-semibold">Amount to Transfer</span>
-                              <span className="text-green-400 font-mono text-lg">
-                                {parseFloat(settlementAmountInDestCurrency).toLocaleString()} {destCurrency}
-                              </span>
+                              <span className="text-green-500 font-mono text-lg">{parseFloat(settlementAmountInDestCurrency).toLocaleString()} {destCurrency}</span>
                             </div>
                           )}
                         </div>
@@ -1561,20 +1639,50 @@ export default function Exchangers() {
                   </div>
                 );
               })()}
-              
+
+              {/* Custom mode preview */}
+              {settlementMode === 'custom' && customAmount && parseFloat(customAmount) > 0 && (
+                <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 space-y-2">
+                  <p className="text-xs text-blue-600 uppercase tracking-wider flex items-center gap-1">
+                    <Receipt className="w-3 h-3" /> Custom Settlement Preview
+                  </p>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-500">Amount</span>
+                    <span className="text-slate-800 font-mono font-bold">{parseFloat(customAmount).toLocaleString()} {customCurrency}</span>
+                  </div>
+                  {parseFloat(settlementCharges) > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Charges</span>
+                      <span className="text-red-400 font-mono">-{parseFloat(settlementCharges).toLocaleString()}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm pt-2 border-t border-slate-200">
+                    <span className="text-blue-600 font-semibold">Net Settlement</span>
+                    <span className="text-blue-600 font-mono font-bold">{(parseFloat(customAmount) - (parseFloat(settlementCharges) || 0)).toLocaleString()} {customCurrency}</span>
+                  </div>
+                  {isDirectTransfer && (
+                    <p className="text-xs text-amber-500 flex items-center gap-1 pt-1">Direct transfer — no treasury account linked</p>
+                  )}
+                </div>
+              )}
+
+              {/* Notes */}
+              <div className="space-y-2">
+                <Label className="text-slate-500 text-xs uppercase tracking-wider">Notes (Optional)</Label>
+                <Input
+                  value={settlementNotes}
+                  onChange={(e) => setSettlementNotes(e.target.value)}
+                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                  placeholder="Settlement reference or notes"
+                  data-testid="settlement-notes"
+                />
+              </div>
+
               <div className="flex justify-end gap-3 pt-4">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => { 
-                    setSettleDialogOpen(false); 
-                    setSettlementType('bank'); 
-                    setSettlementDestination(''); 
-                    setSettlementCommission('');
-                    setSettlementCharges('');
-                    setSettlementChargesDescription('');
-                    setSettlementAmountInDestCurrency('');
-                  }}
+                  onClick={resetSettleDialog}
                   className="border-slate-200 text-slate-500 hover:bg-slate-100"
                 >
                   Cancel
@@ -1585,7 +1693,7 @@ export default function Exchangers() {
                   data-testid="confirm-settle-vendor-btn"
                 >
                   <CheckCircle2 className="w-4 h-4 mr-2" />
-                  Confirm Settlement
+                  {settlementMode === 'custom' ? 'Submit Custom Settlement' : 'Confirm Settlement'}
                 </Button>
               </div>
             </div>
