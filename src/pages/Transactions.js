@@ -307,6 +307,9 @@ export default function Transactions() {
     transaction_date: "",
   });
   const [fieldEditSaving, setFieldEditSaving] = useState(false);
+  const [tagEditTx, setTagEditTx] = useState(null);
+  const [tagEditTags, setTagEditTags] = useState([]);
+  const [tagEditSaving, setTagEditSaving] = useState(false);
   const [formData, setFormData] = useState({
     client_id: "",
     transaction_type: "deposit",
@@ -997,6 +1000,38 @@ export default function Transactions() {
       toast.error("Failed to update");
     } finally {
       setFieldEditSaving(false);
+    }
+  };
+
+  const openTagEdit = (tx) => {
+    setTagEditTx(tx);
+    setTagEditTags(tx.client_tags || []);
+  };
+
+  const handleSaveTagEdit = async () => {
+    if (!tagEditTx) return;
+    setTagEditSaving(true);
+    try {
+      const response = await fetch(
+        `${API_URL}/api/transactions/${tagEditTx.transaction_id}`,
+        {
+          method: "PUT",
+          headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+          body: JSON.stringify({ client_tags: tagEditTags }),
+        },
+      );
+      if (response.ok) {
+        toast.success("Tags updated");
+        setTagEditTx(null);
+        fetchTransactions();
+      } else {
+        const err = await response.json();
+        toast.error(err.detail || "Failed to update tags");
+      }
+    } catch {
+      toast.error("Failed to update tags");
+    } finally {
+      setTagEditSaving(false);
     }
   };
 
@@ -3056,23 +3091,39 @@ export default function Transactions() {
                         )}
                       </TableCell>
                        <TableCell>
-                        <div className="flex flex-wrap gap-0.5">
-                          {(tx.client_tags || []).map((tag) => {
-                            const tagObj = clientTags.find(
-                              (t) => t.name === tag,
-                            );
-                            return (
-                              <span
-                                key={tag}
-                                className="px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white whitespace-nowrap"
-                                style={{
-                                  backgroundColor: tagObj?.color || "#64748B",
-                                }}
-                              >
-                                {tag}
-                              </span>
-                            );
-                          })}
+                        <div className="flex items-center gap-1">
+                          <div className="flex flex-wrap gap-0.5 flex-1 min-w-0">
+                            {(tx.client_tags || []).length > 0 ? (
+                              tx.client_tags.map((tag) => {
+                                const tagObj = clientTags.find(
+                                  (t) => t.name === tag,
+                                );
+                                return (
+                                  <span
+                                    key={tag}
+                                    className="px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white whitespace-nowrap"
+                                    style={{
+                                      backgroundColor:
+                                        tagObj?.color || "#64748B",
+                                    }}
+                                  >
+                                    {tag}
+                                  </span>
+                                );
+                              })
+                            ) : (
+                              <span className="text-xs text-slate-400">-</span>
+                            )}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openTagEdit(tx)}
+                            className="text-slate-400 hover:text-blue-600 hover:bg-blue-50 h-6 w-6 p-0 shrink-0"
+                            title="Edit Tags"
+                          >
+                            <Pencil className="w-3 h-3" />
+                          </Button>
                         </div>
                       </TableCell>
                       <TableCell>{getStatusBadge(tx.status)}</TableCell>
@@ -4179,6 +4230,97 @@ export default function Transactions() {
                   </div>
                 ))
               )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Tag Edit Dialog */}
+      <Dialog
+        open={!!tagEditTx}
+        onOpenChange={(open) => {
+          if (!open) setTagEditTx(null);
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-base">
+              Edit Tags - {tagEditTx?.reference || tagEditTx?.transaction_id}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-1.5">
+              {tagEditTags.map((tag) => {
+                const tagObj = clientTags.find((t) => t.name === tag);
+                return (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium text-white"
+                    style={{ backgroundColor: tagObj?.color || "#64748B" }}
+                  >
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setTagEditTags(tagEditTags.filter((t) => t !== tag))
+                      }
+                      className="hover:bg-white/20 rounded-full w-4 h-4 flex items-center justify-center text-[10px]"
+                    >
+                      &times;
+                    </button>
+                  </span>
+                );
+              })}
+              {tagEditTags.length === 0 && (
+                <span className="text-sm text-slate-400">No tags assigned</span>
+              )}
+            </div>
+            <Select
+              onValueChange={(val) => {
+                if (!tagEditTags.includes(val))
+                  setTagEditTags([...tagEditTags, val]);
+              }}
+            >
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="Add a tag..." />
+              </SelectTrigger>
+              <SelectContent>
+                {clientTags
+                  .filter((t) => !tagEditTags.includes(t.name))
+                  .map((tag) => (
+                    <SelectItem key={tag.tag_id} value={tag.name}>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="w-2.5 h-2.5 rounded-full"
+                          style={{ backgroundColor: tag.color }}
+                        />
+                        {tag.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                {clientTags.filter((t) => !tagEditTags.includes(t.name))
+                  .length === 0 && (
+                  <SelectItem value="_none" disabled>
+                    All tags assigned
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setTagEditTx(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSaveTagEdit}
+                disabled={tagEditSaving}
+              >
+                {tagEditSaving ? "Saving..." : "Save Tags"}
+              </Button>
             </div>
           </div>
         </DialogContent>

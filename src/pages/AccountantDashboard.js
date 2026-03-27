@@ -174,6 +174,7 @@ export default function AccountantDashboard() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("pending");
   const [destFilter, setDestFilter] = useState("all");
+  const [clientTags, setClientTags] = useState([]);
   const [clientFilter, setClientFilter] = useState("");
   const [emailFilter, setEmailFilter] = useState("");
   const [dateFrom, setDateFrom] = useState("");
@@ -287,6 +288,18 @@ export default function AccountantDashboard() {
     }
   };
 
+  const fetchClientTags = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/tags/clients`, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
+      if (response.ok) setClientTags(await response.json());
+    } catch (error) {
+      console.error("Error fetching client tags:", error);
+    }
+  };
+
   // Initial load
   useEffect(() => {
     const loadData = async () => {
@@ -296,6 +309,7 @@ export default function AccountantDashboard() {
         fetchPendingSettlements(),
         fetchTreasuryAccounts(),
               fetchPsps(),
+        fetchClientTags(),
       ]);
       setLoading(false);
     };
@@ -966,7 +980,7 @@ export default function AccountantDashboard() {
                     className="bg-white border-slate-200"
                   >
                     <CardContent className="p-4">
-                      <div className="grid grid-cols-[140px_80px_120px_90px_120px_150px_140px_auto] items-center gap-3">
+                      <div className="grid grid-cols-[140px_80px_120px_90px_120px_150px_100px_100px_auto] items-center gap-3">
                         {/* Reference + CRM Ref */}
                         <div className="min-w-0">
                           <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">
@@ -1137,6 +1151,37 @@ export default function AccountantDashboard() {
                           <p className="text-[10px] text-[#C5C6C7]">
                             by {tx.created_by_name || "System"}
                           </p>
+                        </div>
+                        {/* Tags */}
+                        <div className="min-w-0">
+                          <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">
+                            Tags
+                          </p>
+                          <div className="flex flex-wrap gap-0.5">
+                            {(tx.client_tags || []).length > 0 ? (
+                              tx.client_tags.map((tag) => {
+                                const tagObj = clientTags.find(
+                                  (t) => t.name === tag,
+                                );
+                                return (
+                                  <span
+                                    key={tag}
+                                    className="px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white whitespace-nowrap"
+                                    style={{
+                                      backgroundColor:
+                                        tagObj?.color || "#64748B",
+                                    }}
+                                  >
+                                    {tag}
+                                  </span>
+                                );
+                              })
+                            ) : (
+                              <span className="text-[10px] text-[#C5C6C7]">
+                                -
+                              </span>
+                            )}
+                          </div>
                         </div>
                         {/* Actions */}
                         <div className="flex items-center gap-1.5 justify-end">
