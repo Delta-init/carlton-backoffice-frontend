@@ -490,7 +490,7 @@ export default function Layout() {
           </div>
         </header>
 
-        <main className="flex-1 p-4 md:p-6 lg:p-8">
+        <main className="flex-1 bg-background p-4 md:p-6 lg:p-8">
           <Outlet />
         </main>
       </div>
