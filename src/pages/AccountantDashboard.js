@@ -211,6 +211,10 @@ export default function AccountantDashboard() {
   const [showCaptcha, setShowCaptcha] = useState(false);
   const [captchaAction, setCaptchaAction] = useState(null); // { type: 'approve' | 'reject', transactionId: string, isSettlement?: boolean }
 
+  // Generic approval dialog (for IE, Loan, Repayment, PSP Settlement, Vendor Settlement)
+  const [showGenericApprovalDialog, setShowGenericApprovalDialog] = useState(null); // { type, id, item }
+  const [genericApprovalDate, setGenericApprovalDate] = useState('');
+
   const getAuthHeaders = () => {
     const token = localStorage.getItem("auth_token");
     return {
@@ -368,22 +372,27 @@ export default function AccountantDashboard() {
   }, [clientFilter, emailFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const initiateApprove = (transactionId, isSettlement = false) => {
+    if (isSettlement) {
+      // Vendor settlements also go through the date approval dialog
+      const s = pendingSettlements.find(st => st.settlement_id === transactionId);
+      setShowGenericApprovalDialog({ type: 'vendor_settlement', id: transactionId, item: s || null });
+      setGenericApprovalDate(getItemOriginalDate('vendor_settlement', s));
+      return;
+    }
     // For withdrawals and deposits, show approval dialog with screenshot requirement
-    if (!isSettlement) {
-      const tx = pendingTransactions.find(
-        (t) => t.transaction_id === transactionId,
+    const tx = pendingTransactions.find(
+      (t) => t.transaction_id === transactionId,
+    );
+    if (
+      tx &&
+      (tx.transaction_type === "withdrawal" ||
+        tx.transaction_type === "deposit")
+    ) {
+      setShowApprovalDialog(tx);
+      setBankReceiptDate(
+        tx.transaction_date || new Date().toISOString().split("T")[0],
       );
-      if (
-        tx &&
-        (tx.transaction_type === "withdrawal" ||
-          tx.transaction_type === "deposit")
-      ) {
-        setShowApprovalDialog(tx);
-        setBankReceiptDate(
-          tx.transaction_date || new Date().toISOString().split("T")[0],
-        );
-        return;
-      }
+      return;
     }
     setCaptchaAction({ type: "approve", transactionId, isSettlement });
     setShowCaptcha(true);
@@ -449,9 +458,9 @@ export default function AccountantDashboard() {
 
     if (captchaAction.type === "approve") {
       if (captchaAction.isSettlement) {
-        await executeApproveSettlement(captchaAction.transactionId);
+        await executeApproveSettlement(captchaAction.transactionId, captchaAction.approvalDate);
       } else if (captchaAction.genericType) {
-        await executeGenericApprove(captchaAction.genericType, captchaAction.genericId);
+        await executeGenericApprove(captchaAction.genericType, captchaAction.genericId, captchaAction.approvalDate);
       } else {
         await executeApprove(
           captchaAction.transactionId,
@@ -575,11 +584,14 @@ export default function AccountantDashboard() {
     }
   };
 
-  const executeApproveSettlement = async (settlementId) => {
+  const executeApproveSettlement = async (settlementId, approvalDate = null) => {
     setProcessingId(settlementId);
     try {
+      const params = new URLSearchParams();
+      if (approvalDate) params.append('approval_date', approvalDate);
+      const queryStr = params.toString() ? `?${params.toString()}` : '';
       const response = await fetch(
-        `${API_URL}/api/settlements/${settlementId}/approve`,
+        `${API_URL}/api/settlements/${settlementId}/approve${queryStr}`,
         {
           method: "POST",
           headers: getAuthHeaders(),
@@ -629,8 +641,33 @@ export default function AccountantDashboard() {
   };
 
   // ---- Generic Approve/Reject for IE, Loans, Repayments, PSP Settlements ----
-  const initiateGenericApprove = (type, id) => {
-    setCaptchaAction({ type: "approve", genericType: type, genericId: id });
+  const getItemOriginalDate = (type, item) => {
+    if (!item) return new Date().toISOString().split('T')[0];
+    let raw = null;
+    if (type === 'ie') raw = item.date || item.created_at;
+    else if (type === 'loan') raw = item.loan_date || item.created_at;
+    else if (type === 'repayment') raw = item.payment_date || item.created_at;
+    else if (type === 'psp_settlement') raw = item.settlement_date || item.created_at;
+    else if (type === 'vendor_settlement') raw = item.created_at;
+    if (!raw) return new Date().toISOString().split('T')[0];
+    return raw.split('T')[0];
+  };
+
+  const initiateGenericApprove = (type, id, item = null) => {
+    setShowGenericApprovalDialog({ type, id, item });
+    setGenericApprovalDate(getItemOriginalDate(type, item));
+  };
+
+  const handleGenericApprovalConfirm = () => {
+    if (!showGenericApprovalDialog) return;
+    const { type, id } = showGenericApprovalDialog;
+    const approvalDate = genericApprovalDate || null;
+    if (type === 'vendor_settlement') {
+      setCaptchaAction({ type: 'approve', transactionId: id, isSettlement: true, approvalDate });
+    } else {
+      setCaptchaAction({ type: 'approve', genericType: type, genericId: id, approvalDate });
+    }
+    setShowGenericApprovalDialog(null);
     setShowCaptcha(true);
   };
 
@@ -644,7 +681,7 @@ export default function AccountantDashboard() {
     setShowCaptcha(true);
   };
 
-  const executeGenericApprove = async (type, id) => {
+  const executeGenericApprove = async (type, id, approvalDate = null) => {
     setProcessingId(id);
     const urlMap = {
       ie: `/api/income-expenses/${id}/approve`,
@@ -653,7 +690,10 @@ export default function AccountantDashboard() {
       psp_settlement: `/api/psp-settlements/${id}/approve`,
     };
     try {
-      const response = await fetch(`${API_URL}${urlMap[type]}`, {
+      const params = new URLSearchParams();
+      if (approvalDate) params.append('approval_date', approvalDate);
+      const queryStr = params.toString() ? `?${params.toString()}` : '';
+      const response = await fetch(`${API_URL}${urlMap[type]}${queryStr}`, {
         method: "POST",
         headers: getAuthHeaders(),
         credentials: "include",
@@ -1601,7 +1641,7 @@ export default function AccountantDashboard() {
                       </div>
                       <div className="flex items-center gap-1.5 ml-auto">
                         <Button variant="ghost" size="sm" onClick={() => setViewItem({ ...ie, _viewType: "ie" })} className="text-[#C5C6C7] hover:text-white hover:bg-white/5 h-8 w-8 p-0" data-testid={`view-ie-${ie.entry_id}`}><Eye className="w-4 h-4" /></Button>
-                        <Button size="sm" onClick={() => initiateGenericApprove("ie", ie.entry_id)} disabled={processingId === ie.entry_id} className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30 h-8 text-xs px-3" data-testid={`approve-ie-${ie.entry_id}`}><CheckCircle className="w-3.5 h-3.5 mr-1" />Approve</Button>
+                        <Button size="sm" onClick={() => initiateGenericApprove("ie", ie.entry_id, ie)} disabled={processingId === ie.entry_id} className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30 h-8 text-xs px-3" data-testid={`approve-ie-${ie.entry_id}`}><CheckCircle className="w-3.5 h-3.5 mr-1" />Approve</Button>
                         <Button size="sm" onClick={() => initiateGenericReject("ie", ie.entry_id)} disabled={processingId === ie.entry_id} className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 h-8 text-xs px-3" data-testid={`reject-ie-${ie.entry_id}`}><XCircle className="w-3.5 h-3.5 mr-1" />Reject</Button>
                       </div>
                     </div>
@@ -1655,7 +1695,7 @@ export default function AccountantDashboard() {
                       </div>
                       <div className="flex items-center gap-1.5 ml-auto">
                         <Button variant="ghost" size="sm" onClick={() => setViewItem({ ...loan, _viewType: "loan" })} className="text-[#C5C6C7] hover:text-white hover:bg-white/5 h-8 w-8 p-0" data-testid={`view-loan-${loan.loan_id}`}><Eye className="w-4 h-4" /></Button>
-                        <Button size="sm" onClick={() => initiateGenericApprove("loan", loan.loan_id)} disabled={processingId === loan.loan_id} className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30 h-8 text-xs px-3" data-testid={`approve-loan-${loan.loan_id}`}><CheckCircle className="w-3.5 h-3.5 mr-1" />Approve</Button>
+                        <Button size="sm" onClick={() => initiateGenericApprove("loan", loan.loan_id, loan)} disabled={processingId === loan.loan_id} className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30 h-8 text-xs px-3" data-testid={`approve-loan-${loan.loan_id}`}><CheckCircle className="w-3.5 h-3.5 mr-1" />Approve</Button>
                         <Button size="sm" onClick={() => initiateGenericReject("loan", loan.loan_id)} disabled={processingId === loan.loan_id} className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 h-8 text-xs px-3" data-testid={`reject-loan-${loan.loan_id}`}><XCircle className="w-3.5 h-3.5 mr-1" />Reject</Button>
                       </div>
                     </div>
@@ -1708,7 +1748,7 @@ export default function AccountantDashboard() {
                       </div>
                       <div className="flex items-center gap-1.5 ml-auto">
                         <Button variant="ghost" size="sm" onClick={() => setViewItem({ ...rep, _viewType: "repayment" })} className="text-[#C5C6C7] hover:text-white hover:bg-white/5 h-8 w-8 p-0" data-testid={`view-rep-${rep.repayment_id}`}><Eye className="w-4 h-4" /></Button>
-                        <Button size="sm" onClick={() => initiateGenericApprove("repayment", rep.repayment_id)} disabled={processingId === rep.repayment_id} className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30 h-8 text-xs px-3" data-testid={`approve-rep-${rep.repayment_id}`}><CheckCircle className="w-3.5 h-3.5 mr-1" />Approve</Button>
+                        <Button size="sm" onClick={() => initiateGenericApprove("repayment", rep.repayment_id, rep)} disabled={processingId === rep.repayment_id} className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30 h-8 text-xs px-3" data-testid={`approve-rep-${rep.repayment_id}`}><CheckCircle className="w-3.5 h-3.5 mr-1" />Approve</Button>
                         <Button size="sm" onClick={() => initiateGenericReject("repayment", rep.repayment_id)} disabled={processingId === rep.repayment_id} className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 h-8 text-xs px-3" data-testid={`reject-rep-${rep.repayment_id}`}><XCircle className="w-3.5 h-3.5 mr-1" />Reject</Button>
                       </div>
                     </div>
@@ -1765,7 +1805,7 @@ export default function AccountantDashboard() {
                       </div>
                       <div className="flex items-center gap-1.5 ml-auto">
                         <Button variant="ghost" size="sm" onClick={() => setViewItem({ ...stl, _viewType: "psp_settlement" })} className="text-[#C5C6C7] hover:text-white hover:bg-white/5 h-8 w-8 p-0" data-testid={`view-psp-${stl.settlement_id}`}><Eye className="w-4 h-4" /></Button>
-                        <Button size="sm" onClick={() => initiateGenericApprove("psp_settlement", stl.settlement_id)} disabled={processingId === stl.settlement_id} className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30 h-8 text-xs px-3" data-testid={`approve-psp-${stl.settlement_id}`}><CheckCircle className="w-3.5 h-3.5 mr-1" />Approve</Button>
+                        <Button size="sm" onClick={() => initiateGenericApprove("psp_settlement", stl.settlement_id, stl)} disabled={processingId === stl.settlement_id} className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30 h-8 text-xs px-3" data-testid={`approve-psp-${stl.settlement_id}`}><CheckCircle className="w-3.5 h-3.5 mr-1" />Approve</Button>
                         <Button size="sm" onClick={() => initiateGenericReject("psp_settlement", stl.settlement_id)} disabled={processingId === stl.settlement_id} className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 h-8 text-xs px-3" data-testid={`reject-psp-${stl.settlement_id}`}><XCircle className="w-3.5 h-3.5 mr-1" />Reject</Button>
                       </div>
                     </div>
@@ -1991,6 +2031,77 @@ export default function AccountantDashboard() {
                 >
                   <XCircle className="w-4 h-4 mr-2" />
                   Reject
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Generic Approval Dialog with Date (for IE, Loan, Repayment, PSP Settlement, Vendor Settlement) */}
+      <Dialog open={!!showGenericApprovalDialog} onOpenChange={() => { setShowGenericApprovalDialog(null); setGenericApprovalDate(''); }}>
+        <DialogContent className="bg-white border-slate-200 text-white max-w-md" data-testid="generic-approval-dialog">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
+              <CheckCircle className="w-6 h-6 text-green-400" />
+              Approve {showGenericApprovalDialog?.type === 'ie' ? 'Income/Expense' : showGenericApprovalDialog?.type === 'loan' ? 'Loan Disbursement' : showGenericApprovalDialog?.type === 'repayment' ? 'Loan Repayment' : showGenericApprovalDialog?.type === 'psp_settlement' ? 'PSP Settlement' : 'Vendor Settlement'}
+            </DialogTitle>
+          </DialogHeader>
+          {showGenericApprovalDialog && (
+            <div className="space-y-4">
+              <div className="p-4 bg-slate-50 rounded-sm">
+                {showGenericApprovalDialog.type === 'ie' && showGenericApprovalDialog.item && (
+                  <>
+                    <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">{showGenericApprovalDialog.item.entry_type}</p>
+                    <p className="text-white text-sm">{showGenericApprovalDialog.item.description || showGenericApprovalDialog.item.category || '-'}</p>
+                    <p className={`font-mono text-lg font-bold mt-1 ${showGenericApprovalDialog.item.entry_type === 'income' ? 'text-green-400' : 'text-red-400'}`}>
+                      {formatCurrency(showGenericApprovalDialog.item.amount, showGenericApprovalDialog.item.currency)}
+                    </p>
+                  </>
+                )}
+                {showGenericApprovalDialog.type === 'loan' && showGenericApprovalDialog.item && (
+                  <>
+                    <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Loan Disbursement</p>
+                    <p className="text-white text-sm">Borrower: {showGenericApprovalDialog.item.borrower_name}</p>
+                    <p className="font-mono text-lg font-bold text-red-400 mt-1">-{formatCurrency(showGenericApprovalDialog.item.amount, showGenericApprovalDialog.item.currency)}</p>
+                  </>
+                )}
+                {showGenericApprovalDialog.type === 'repayment' && showGenericApprovalDialog.item && (
+                  <>
+                    <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Loan Repayment</p>
+                    <p className="text-white text-sm">From: {showGenericApprovalDialog.item.borrower_name || '-'}</p>
+                    <p className="font-mono text-lg font-bold text-green-400 mt-1">+{formatCurrency(showGenericApprovalDialog.item.amount, showGenericApprovalDialog.item.currency)}</p>
+                  </>
+                )}
+                {showGenericApprovalDialog.type === 'psp_settlement' && showGenericApprovalDialog.item && (
+                  <>
+                    <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">PSP Settlement</p>
+                    <p className="text-white text-sm">{showGenericApprovalDialog.item.psp_name}</p>
+                    <p className="font-mono text-lg font-bold text-green-400 mt-1">${showGenericApprovalDialog.item.net_amount?.toLocaleString()}</p>
+                  </>
+                )}
+                {showGenericApprovalDialog.type === 'vendor_settlement' && showGenericApprovalDialog.item && (
+                  <>
+                    <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Vendor Settlement</p>
+                    <p className="text-white text-sm">{showGenericApprovalDialog.item.vendor_name}</p>
+                    <p className="font-mono text-lg font-bold text-green-400 mt-1">{showGenericApprovalDialog.item.settlement_amount?.toLocaleString()} {showGenericApprovalDialog.item.destination_currency || 'USD'}</p>
+                  </>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label className="text-slate-600 text-xs uppercase tracking-wider">Date (Actual transaction/settlement date)</Label>
+                <Input
+                  type="date"
+                  value={genericApprovalDate}
+                  onChange={e => setGenericApprovalDate(e.target.value)}
+                  className="bg-slate-50 border-slate-200 text-slate-800"
+                  data-testid="generic-approval-date"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <Button variant="outline" onClick={() => { setShowGenericApprovalDialog(null); setGenericApprovalDate(''); }} className="flex-1 border-slate-200 text-[#C5C6C7] hover:bg-white/5">Cancel</Button>
+                <Button onClick={handleGenericApprovalConfirm} className="flex-1 bg-green-500 text-white hover:bg-green-600" data-testid="confirm-generic-approval">
+                  <CheckCircle className="w-4 h-4 mr-2" />Continue to Approve
                 </Button>
               </div>
             </div>
@@ -2760,7 +2871,7 @@ export default function AccountantDashboard() {
                             ? viewItem.repayment_id
                             : viewItem.settlement_id;
                     setViewItem(null);
-                    initiateGenericApprove(type, id);
+                    initiateGenericApprove(type, id, viewItem);
                   }}
                   className="flex-1 bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30"
                 >
