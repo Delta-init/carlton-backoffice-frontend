@@ -671,7 +671,7 @@ function EditableRequestCard({
                       className="bg-white border-slate-200 font-mono"
                     />
                     <Input
-                      placeholder="SWIFT / IBAN"
+                      placeholder="IFSC / IBAN"
                       value={form.client_bank_swift_iban}
                       onChange={(e) =>
                         setForm({
