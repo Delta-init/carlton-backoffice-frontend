@@ -1229,6 +1229,8 @@ export default function TransactionRequests() {
       setProofPreviews(prev => [...prev, ...files.map(f => URL.createObjectURL(f))]);
     }
   };
+  const isFilePdf = (file) => file?.type === 'application/pdf' || file?.name?.toLowerCase().endsWith('.pdf');
+  const isPdfUrl = (url) => url && url.toLowerCase().includes('.pdf');
   const removeProofImage = (idx) => {
     setProofImages(prev => prev.filter((_, i) => i !== idx));
     setProofPreviews(prev => prev.filter((_, i) => i !== idx));
@@ -2017,7 +2019,7 @@ export default function TransactionRequests() {
                   <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center hover:border-[#1FA21B]/50 transition-colors">
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/*,application/pdf,.pdf"
                       multiple
                       onChange={handleImageChange}
                       className="hidden"
@@ -2030,12 +2032,19 @@ export default function TransactionRequests() {
                           <div className="grid grid-cols-3 gap-2">
                             {proofPreviews.map((src, i) => (
                               <div key={i} className="relative group">
-                                <img src={src} alt={`Proof ${i+1}`} className="w-full h-20 object-cover rounded border border-slate-200 cursor-pointer" onClick={(e) => { e.preventDefault(); window.open(src, "_blank"); }} />
+                                {isFilePdf(proofImages[i]) ? (
+                                  <div className="w-full h-20 flex flex-col items-center justify-center rounded border border-red-200 bg-red-50 cursor-pointer" onClick={(e) => { e.preventDefault(); window.open(src, "_blank"); }}>
+                                    <FileText className="w-6 h-6 text-red-500 mb-1" />
+                                    <span className="text-xs text-red-600 truncate w-full px-1 text-center">{proofImages[i]?.name || 'PDF'}</span>
+                                  </div>
+                                ) : (
+                                  <img src={src} alt={`Proof ${i+1}`} className="w-full h-20 object-cover rounded border border-slate-200 cursor-pointer" onClick={(e) => { e.preventDefault(); window.open(src, "_blank"); }} />
+                                )}
                                 <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeProofImage(i); }} className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full w-4 h-4 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">×</button>
                               </div>
                             ))}
                           </div>
-                          <p className="text-xs text-blue-600 text-center">{proofPreviews.length} image(s) — click to add more</p>
+                          <p className="text-xs text-blue-600 text-center">{proofPreviews.length} file(s) — click to add more</p>
                         </div>
                       ) : (
                         <div className="space-y-2">
@@ -2044,7 +2053,7 @@ export default function TransactionRequests() {
                             Click to upload proof of payment
                           </p>
                           <p className="text-xs text-slate-500/60">
-                            PNG, JPG up to 5MB · multiple allowed
+                            PNG, JPG, PDF up to 10MB · multiple allowed
                           </p>
                         </div>
                       )}
@@ -2157,6 +2166,14 @@ export default function TransactionRequests() {
                     <div className="grid grid-cols-3 gap-2">
                       {imgs.map((url, i) => {
                         const src = url?.startsWith("http") ? url : `data:image/png;base64,${url}`;
+                        if (isPdfUrl(url)) {
+                          return (
+                            <a key={i} href={src} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center h-16 rounded border border-red-200 bg-red-50 hover:bg-red-100 cursor-pointer">
+                              <FileText className="w-5 h-5 text-red-500 mb-1" />
+                              <span className="text-xs text-red-600">PDF {i+1}</span>
+                            </a>
+                          );
+                        }
                         return <img key={i} src={src} alt={`Proof ${i+1}`} className="w-full h-16 object-cover rounded border border-slate-200 cursor-pointer hover:opacity-80" onClick={() => window.open(src, "_blank")} />;
                       })}
                     </div>

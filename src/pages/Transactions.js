@@ -3419,6 +3419,14 @@ export default function Transactions() {
                     <div className="grid grid-cols-2 gap-2">
                       {imgs.map((url, i) => {
                         const src = url?.startsWith("http") ? url : `data:image/png;base64,${url}`;
+                         if (url?.toLowerCase().includes('.pdf')) {
+                          return (
+                            <a key={i} href={src} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center p-4 rounded border border-red-200 bg-red-50 hover:bg-red-100 cursor-pointer">
+                              <FileText className="w-8 h-8 text-red-500 mb-1" />
+                              <span className="text-xs text-red-600">PDF {i + 1}</span>
+                            </a>
+                          );
+                        }
                         return (
                           <img key={i} src={src} alt={`Proof ${i+1}`}
                             className="w-full rounded border border-slate-200 cursor-pointer hover:opacity-80"
@@ -3436,6 +3444,12 @@ export default function Transactions() {
                     <ImageIcon className="w-4 h-4" />
                     Accountant Approval Proof
                   </p>
+                {viewTransaction.accountant_proof_image?.toLowerCase().includes('.pdf') ? (
+                    <a href={viewTransaction.accountant_proof_image} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center p-6 rounded border border-red-200 bg-red-50 hover:bg-red-100 cursor-pointer">
+                      <FileText className="w-10 h-10 text-red-500 mb-2" />
+                      <span className="text-sm text-red-600">View PDF</span>
+                    </a>
+                  ) : (
                   <div className="relative group">
                     <img
                       src={
@@ -3465,6 +3479,7 @@ export default function Transactions() {
                       </span>
                     </div>
                   </div>
+                  )}
                   {viewTransaction.proof_uploaded_at && (
                     <p className="text-xs text-slate-500 mt-2">
                       Uploaded: {formatDate(viewTransaction.proof_uploaded_at)}{" "}
@@ -3480,6 +3495,12 @@ export default function Transactions() {
                     <ImageIcon className="w-4 h-4" />
                     Exchanger Payment Proof
                   </p>
+                   {viewTransaction.vendor_proof_image?.toLowerCase().includes('.pdf') ? (
+                    <a href={viewTransaction.vendor_proof_image} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center p-6 rounded border border-red-200 bg-red-50 hover:bg-red-100 cursor-pointer">
+                      <FileText className="w-10 h-10 text-red-500 mb-2" />
+                      <span className="text-sm text-red-600">View PDF</span>
+                    </a>
+                  ) : (
                   <div className="relative group">
                     <img
                       src={
@@ -3505,6 +3526,7 @@ export default function Transactions() {
                       </span>
                     </div>
                   </div>
+                  )}
                   {viewTransaction.vendor_proof_uploaded_at && (
                     <p className="text-xs text-slate-500 mt-2">
                       Uploaded:{" "}
