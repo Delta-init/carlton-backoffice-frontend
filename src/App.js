@@ -27,6 +27,7 @@ import Reconciliation from "./pages/Reconciliation";
 import Messages from "./pages/Messages";
 import AuditCompliance from "./pages/AuditCompliance";
 import LogsManagement from "./pages/Logs";
+import ReinstateCenter from "./pages/ReinstateCenter";
 import Layout from "./components/Layout";
 import TransactionRequests from "./pages/TransactionRequests";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -186,6 +187,7 @@ function AppRouter() {
             </ProtectedRoute>
           }
         />
+        <Route path="reinstate" element={<ReinstateCenter />} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
