@@ -2799,7 +2799,9 @@ export default function ExchangerDashboard() {
                                         src={src}
                                         alt={`Proof ${i + 1}`}
                                         className="w-full h-20 object-cover rounded border border-slate-200 cursor-pointer"
-                                        onClick={() => {
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          
                                           if (src.startsWith("data:")) {
                                             fetch(src)
                                               .then((r) => r.blob())
