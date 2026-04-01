@@ -357,17 +357,18 @@ export default function ExchangerDashboard() {
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
     if (files.length) {
-      setProofImages(prev => [...prev, ...files]);
-      files.forEach(file => {
+      setProofImages((prev) => [...prev, ...files]);
+      files.forEach((file) => {
         const reader = new FileReader();
-        reader.onloadend = () => setProofPreviews(prev => [...prev, reader.result]);
+        reader.onloadend = () =>
+          setProofPreviews((prev) => [...prev, reader.result]);
         reader.readAsDataURL(file);
       });
     }
   };
   const removeProofImage = (idx) => {
-    setProofImages(prev => prev.filter((_, i) => i !== idx));
-    setProofPreviews(prev => prev.filter((_, i) => i !== idx));
+    setProofImages((prev) => prev.filter((_, i) => i !== idx));
+    setProofPreviews((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const executeAction = async () => {
@@ -397,7 +398,7 @@ export default function ExchangerDashboard() {
         // Upload proof only if provided (required for withdrawals, optional for deposits)
         if (proofImages.length) {
           const formData = new FormData();
-          proofImages.forEach(img => formData.append("proof_images", img));
+          proofImages.forEach((img) => formData.append("proof_images", img));
 
           const token = localStorage.getItem("auth_token");
           const uploadResponse = await fetch(
@@ -450,7 +451,7 @@ export default function ExchangerDashboard() {
         }
 
         const formData = new FormData();
-        proofImages.forEach(img => formData.append("proof_images", img));
+        proofImages.forEach((img) => formData.append("proof_images", img));
 
         response = await fetch(
           `${API_URL}/api/vendor/transactions/${selectedTransaction.transaction_id}/complete`,
@@ -1578,7 +1579,9 @@ export default function ExchangerDashboard() {
                                 )}
                             </TableCell>
                             <TableCell>{getStatusBadge(tx.status)}</TableCell>
-                            <TableCell className="text-slate-500 text-sm">{formatDate(tx.transaction_date || tx.created_at)}</TableCell>
+                            <TableCell className="text-slate-500 text-sm">
+                              {formatDate(tx.transaction_date || tx.created_at)}
+                            </TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-2">
                                 <Button
@@ -1928,8 +1931,12 @@ export default function ExchangerDashboard() {
                                     : tx.status?.toUpperCase()}
                                 </Badge>
                               </TableCell>
-                                                           <TableCell className="text-slate-500 text-xs">{formatDate(tx.transaction_date || tx.created_at)}</TableCell>
-                             
+                              <TableCell className="text-slate-500 text-xs">
+                                {formatDate(
+                                  tx.transaction_date || tx.created_at,
+                                )}
+                              </TableCell>
+
                               <TableCell className="text-right">
                                 {isPending && (
                                   <div className="flex gap-1 justify-end">
@@ -2577,25 +2584,63 @@ export default function ExchangerDashboard() {
                         </div>
                       )}
                     {(() => {
-                      const imgs = viewTransaction.proof_images?.length ? viewTransaction.proof_images : viewTransaction.proof_image ? [viewTransaction.proof_image] : [];
+                      const imgs = viewTransaction.proof_images?.length
+                        ? viewTransaction.proof_images
+                        : viewTransaction.proof_image
+                          ? [viewTransaction.proof_image]
+                          : [];
                       if (!imgs.length) return null;
                       return (
                         <div className="pt-4 border-t border-slate-200">
-                          <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Proof of Payment ({imgs.length})</p>
+                          <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">
+                            Proof of Payment ({imgs.length})
+                          </p>
                           <div className="grid grid-cols-2 gap-2">
-                            {imgs.map((url, i) => { const src = url?.startsWith("http") ? url : `data:image/png;base64,${url}`; return <img key={i} src={src} alt={`Proof ${i+1}`} className="w-full rounded border border-slate-200 cursor-pointer hover:opacity-80" onClick={() => window.open(src, "_blank")} />; })}
+                            {imgs.map((url, i) => {
+                              const src = url?.startsWith("http")
+                                ? url
+                                : `data:image/png;base64,${url}`;
+                              return (
+                                <img
+                                  key={i}
+                                  src={src}
+                                  alt={`Proof ${i + 1}`}
+                                  className="w-full rounded border border-slate-200 cursor-pointer hover:opacity-80"
+                                  onClick={() => window.open(src, "_blank")}
+                                />
+                              );
+                            })}
                           </div>
                         </div>
                       );
                     })()}
                     {(() => {
-                      const imgs = viewTransaction.vendor_proof_images?.length ? viewTransaction.vendor_proof_images : viewTransaction.vendor_proof_image ? [viewTransaction.vendor_proof_image] : [];
+                      const imgs = viewTransaction.vendor_proof_images?.length
+                        ? viewTransaction.vendor_proof_images
+                        : viewTransaction.vendor_proof_image
+                          ? [viewTransaction.vendor_proof_image]
+                          : [];
                       if (!imgs.length) return null;
                       return (
                         <div className="pt-4 border-t border-slate-200">
-                          <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Exchanger Proof ({imgs.length})</p>
+                          <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">
+                            Exchanger Proof ({imgs.length})
+                          </p>
                           <div className="grid grid-cols-2 gap-2">
-                            {imgs.map((url, i) => { const src = url?.startsWith("http") ? url : `data:image/png;base64,${url}`; return <img key={i} src={src} alt={`Proof ${i+1}`} className="w-full rounded border border-slate-200 cursor-pointer hover:opacity-80" onClick={() => window.open(src, "_blank")} />; })}
+                            {imgs.map((url, i) => {
+                              const src = url?.startsWith("http")
+                                ? url
+                                : `data:image/png;base64,${url}`;
+                              return (
+                                <img
+                                  key={i}
+                                  src={src}
+                                  alt={`Proof ${i + 1}`}
+                                  className="w-full rounded border border-slate-200 cursor-pointer hover:opacity-80"
+                                  onClick={() => window.open(src, "_blank")}
+                                />
+                              );
+                            })}
                           </div>
                         </div>
                       );
@@ -2750,12 +2795,42 @@ export default function ExchangerDashboard() {
                                 <div className="grid grid-cols-3 gap-2">
                                   {proofPreviews.map((src, i) => (
                                     <div key={i} className="relative group">
-                                      <img src={src} alt={`Proof ${i+1}`} className="w-full h-20 object-cover rounded border border-slate-200 cursor-pointer" onClick={(e) => { e.preventDefault(); window.open(src, "_blank"); }} />
-                                      <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeProofImage(i); }} className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full w-4 h-4 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">×</button>
+                                      <img
+                                        src={src}
+                                        alt={`Proof ${i + 1}`}
+                                        className="w-full h-20 object-cover rounded border border-slate-200 cursor-pointer"
+                                        onClick={() => {
+                                          if (src.startsWith("data:")) {
+                                            fetch(src)
+                                              .then((r) => r.blob())
+                                              .then((blob) => {
+                                                const url =
+                                                  URL.createObjectURL(blob);
+                                                window.open(url, "_blank");
+                                              });
+                                          } else {
+                                            window.open(src, "_blank");
+                                          }
+                                        }}
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          removeProofImage(i);
+                                        }}
+                                        className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full w-4 h-4 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                      >
+                                        ×
+                                      </button>
                                     </div>
                                   ))}
                                 </div>
-                                <p className="text-xs text-blue-600 text-center">{proofPreviews.length} image(s) — click to add more</p>
+                                <p className="text-xs text-blue-600 text-center">
+                                  {proofPreviews.length} image(s) — click to add
+                                  more
+                                </p>
                               </div>
                             ) : (
                               <div className="space-y-2">
