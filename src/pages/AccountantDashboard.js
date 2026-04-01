@@ -2005,7 +2005,9 @@ export default function AccountantDashboard() {
                     <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">Proof of Payment ({imgs.length})</p>
                     <div className="grid grid-cols-2 gap-2">
                       {imgs.map((url, i) => {
-                        const src = url?.startsWith("http") ? url : `data:image/png;base64,${url}`;
+                        const src = url?.startsWith("https") ? url : `data:image/png;base64,${url}`;
+                        console.log(src);
+                        
                         if (url?.toLowerCase().includes('.pdf')) {
                           return (
                             <a key={i} href={src} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center p-4 rounded border border-red-200 bg-red-50 hover:bg-red-100 cursor-pointer">
@@ -2489,6 +2491,7 @@ export default function AccountantDashboard() {
                     </div>
                   ) : (
                     <img
+                      onClick={() => window.open(proofPreview, '_blank')}
                       src={proofPreview}
                       alt="Proof preview"
                       className="w-full h-48 object-contain bg-slate-50 rounded-xl"
@@ -2805,9 +2808,18 @@ export default function AccountantDashboard() {
                 {approvalProofPreviews.length > 0 ? (
                   <div className="space-y-2">
                     <div className="grid grid-cols-3 gap-2">
-                      {approvalProofPreviews.map((src, i) => (
+                    {approvalProofPreviews.map((src, i) => (
                         <div key={i} className="relative group">
-                          <img src={src} alt={`Proof ${i+1}`} className="w-full h-20 object-cover rounded border border-white/20 cursor-pointer" onClick={() => window.open(src, "_blank")} />
+                          <img onClick={() => {
+                            if (src.startsWith("data:")) {
+                              fetch(src).then(r => r.blob()).then(blob => {
+                                const url = URL.createObjectURL(blob);
+                                window.open(url, "_blank");
+                              });
+                            } else {
+                              window.open(src, "_blank");
+                            }
+                          }} src={src} alt={`Proof ${i+1}`} className="w-full h-20 object-cover rounded border border-white/20 cursor-pointer" />
                           <button type="button" onClick={() => removeApprovalProof(i)} className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full w-4 h-4 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">×</button>
                         </div>
                       ))}
