@@ -3473,11 +3473,11 @@ export default function Transactions() {
                       }
                       data-testid="accountant-proof-thumbnail"
                     />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded">
+                    {/* <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded">
                       <span className="text-slate-800 text-sm">
                         Click to view full size
                       </span>
-                    </div>
+                    </div> */}
                   </div>
                   )}
                   {viewTransaction.proof_uploaded_at && (
