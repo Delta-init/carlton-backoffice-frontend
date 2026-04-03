@@ -190,7 +190,7 @@ export default function Layout() {
       label: "Roles & Permissions",
       module: "roles",
     },
-    { to: "/reinstate", icon: RotateCcw, label: "Reinstate Center", module: null, adminOnly: true },
+    { to: "/reinstate", icon: RotateCcw, label: "Reinstate Center", module: "reinstate", adminOnly: true },
     { to: "/settings", icon: Settings, label: "Settings", module: null },
   ];
 

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
@@ -28,6 +28,8 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
+  Search,
+  X,
 } from "lucide-react";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -321,8 +323,6 @@ function PreviewSummary({ preview }) {
   );
 }
 
-const PAGE_SIZE = 25;
-
 const tabConfig = [
   {
     key: "transactions",
@@ -414,13 +414,19 @@ function ReinstateTab({ tabCfg }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
 
   // confirm flow state
-  const [previewLoading, setPreviewLoading] = useState(null); // id being previewed
-  const [confirmData, setConfirmData] = useState(null); // { item, preview }
+  const [previewLoading, setPreviewLoading] = useState(null);
+  const [confirmData, setConfirmData] = useState(null);
   const [showCaptcha, setShowCaptcha] = useState(false);
   const [processing, setProcessing] = useState(null);
+
+  const debounceRef = useRef(null);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem("auth_token");
@@ -428,16 +434,19 @@ function ReinstateTab({ tabCfg }) {
   };
 
   const fetchItems = useCallback(
-    async (p = 1) => {
+    async (p, ps, q) => {
       setLoading(true);
       try {
+        const params = new URLSearchParams({ page: p, page_size: ps });
+        if (q) params.set("search", q);
         const res = await fetch(
-          `${API_URL}/api/reinstate/${tabCfg.endpoint}?page=${p}&page_size=${PAGE_SIZE}`,
+          `${API_URL}/api/reinstate/${tabCfg.endpoint}?${params.toString()}`,
           { headers: getAuthHeaders() }
         );
         if (!res.ok) throw new Error("Failed to fetch");
         const data = await res.json();
         setItems(data.items || data.data || []);
+        setTotalItems(data.total || 0);
         setTotalPages(data.total_pages || 1);
       } catch {
         toast.error(`Failed to load ${tabCfg.label}`);
@@ -449,8 +458,22 @@ function ReinstateTab({ tabCfg }) {
   );
 
   useEffect(() => {
-    fetchItems(page);
-  }, [fetchItems, page]);
+    fetchItems(page, pageSize, search);
+  }, [fetchItems, page, pageSize, search]);
+
+  const handleSearchChange = (val) => {
+    setSearchInput(val);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setPage(1);
+      setSearch(val.trim());
+    }, 400);
+  };
+
+  const handlePageSizeChange = (ps) => {
+    setPageSize(ps);
+    setPage(1);
+  };
 
   const handleReinstateClick = async (item) => {
     const id = item[tabCfg.idField];
@@ -484,7 +507,7 @@ function ReinstateTab({ tabCfg }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Reinstate failed");
       toast.success("Reinstated successfully");
-      fetchItems(page);
+      fetchItems(page, pageSize, search);
     } catch (e) {
       toast.error(e.message);
     } finally {
@@ -497,71 +520,88 @@ function ReinstateTab({ tabCfg }) {
     setShowCaptcha(false);
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20 text-[#C5C6C7]">
-        <RefreshCw className="w-5 h-5 animate-spin mr-2" />
-        Loading...
-      </div>
-    );
-  }
-
-  if (items.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 text-[#C5C6C7] gap-3">
-        <tabCfg.icon className="w-10 h-10 opacity-30" />
-        <p className="text-sm">No items available for reinstatement</p>
-      </div>
-    );
-  }
-
   return (
     <>
-      <div className="space-y-3">
-        {items.map((item) => {
-          const id = item[tabCfg.idField];
-          const fields = tabCfg.displayFields(item);
-          const isLoadingThis = previewLoading === id;
-          return (
-            <div
-              key={id}
-              className="bg-[#1F2833] border border-[#45A29E]/20 rounded-sm p-4 flex items-start justify-between gap-4"
-            >
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-6 gap-y-1 flex-1">
-                {fields.map((f) => (
-                  <div key={f.label}>
-                    <p className="text-[#C5C6C7] text-xs uppercase tracking-wider">{f.label}</p>
-                    <p className="text-white text-sm font-mono truncate">{f.value}</p>
-                  </div>
-                ))}
-              </div>
-              <Button
-                size="sm"
-                className="bg-orange-500 hover:bg-orange-600 text-white shrink-0"
-                onClick={() => handleReinstateClick(item)}
-                disabled={isLoadingThis || processing === id}
-              >
-                {isLoadingThis || processing === id ? (
-                  <RefreshCw className="w-3 h-3 animate-spin mr-1" />
-                ) : (
-                  <RotateCcw className="w-3 h-3 mr-1" />
-                )}
-                Reinstate
-              </Button>
-            </div>
-          );
-        })}
+      {/* Search bar */}
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#C5C6C7]" />
+        <input
+          type="text"
+          value={searchInput}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          placeholder={`Search by ID, reference, name...`}
+          className="w-full pl-9 pr-9 py-2 bg-[#1F2833] border border-[#45A29E]/30 rounded-sm text-white text-sm placeholder-[#C5C6C7]/50 focus:outline-none focus:border-[#66FCF1]"
+        />
+        {searchInput && (
+          <button
+            onClick={() => handleSearchChange("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-[#C5C6C7] hover:text-white"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
-      {totalPages > 1 && (
-        <div className="mt-4">
-          <PaginationControls
-            currentPage={page}
-            totalPages={totalPages}
-            onPageChange={setPage}
-          />
+      {loading ? (
+        <div className="flex items-center justify-center py-20 text-[#C5C6C7]">
+          <RefreshCw className="w-5 h-5 animate-spin mr-2" />
+          Loading...
+        </div>
+      ) : items.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-[#C5C6C7] gap-3">
+          <tabCfg.icon className="w-10 h-10 opacity-30" />
+          <p className="text-sm">
+            {search ? `No results for "${search}"` : "No items available for reinstatement"}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {items.map((item) => {
+            const id = item[tabCfg.idField];
+            const fields = tabCfg.displayFields(item);
+            const isLoadingThis = previewLoading === id;
+            return (
+              <div
+                key={id}
+                className="bg-[#1F2833] border border-[#45A29E]/20 rounded-sm p-4 flex items-start justify-between gap-4"
+              >
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-6 gap-y-1 flex-1">
+                  {fields.map((f) => (
+                    <div key={f.label}>
+                      <p className="text-[#C5C6C7] text-xs uppercase tracking-wider">{f.label}</p>
+                      <p className="text-white text-sm font-mono truncate">{f.value}</p>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  size="sm"
+                  className="bg-orange-500 hover:bg-orange-600 text-white shrink-0"
+                  onClick={() => handleReinstateClick(item)}
+                  disabled={isLoadingThis || processing === id}
+                >
+                  {isLoadingThis || processing === id ? (
+                    <RefreshCw className="w-3 h-3 animate-spin mr-1" />
+                  ) : (
+                    <RotateCcw className="w-3 h-3 mr-1" />
+                  )}
+                  Reinstate
+                </Button>
+              </div>
+            );
+          })}
         </div>
       )}
+
+      <div className="mt-2">
+        <PaginationControls
+          currentPage={page}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={handlePageSizeChange}
+        />
+      </div>
 
       {/* Confirm Dialog with Preview Summary */}
       <Dialog open={!!confirmData && !showCaptcha} onOpenChange={(open) => { if (!open) closeConfirm(); }}>
@@ -615,19 +655,26 @@ function ReinstateTab({ tabCfg }) {
 }
 
 export default function ReinstateCenter() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("transactions");
 
-  const isAdmin = user?.role === "admin";
-
   useEffect(() => {
-    if (!isAdmin) {
+    if (!loading && user && user.role !== "admin") {
       navigate("/dashboard");
     }
-  }, [isAdmin, navigate]);
+  }, [loading, user, navigate]);
 
-  if (!isAdmin) return null;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh] text-[#C5C6C7]">
+        <RefreshCw className="w-5 h-5 animate-spin mr-2" />
+        Loading...
+      </div>
+    );
+  }
+
+  if (!user || user.role !== "admin") return null;
 
   return (
     <div className="p-6 space-y-6">
