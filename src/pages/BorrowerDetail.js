@@ -326,7 +326,17 @@ export default function BorrowerDetail() {
                       {loan.currency} {loan.amount?.toLocaleString()}
                     </TableCell>
                     <TableCell className="text-[#1FA21B] text-sm font-mono text-right font-semibold">
-                      ${loan.outstanding_balance?.toLocaleString()}
+                      {(() => {
+                        const outstanding = Math.max(0, (loan.amount || 0) + (loan.total_interest || 0) - (loan.total_repaid || 0));
+                        return (
+                          <div>
+                            <div>{loan.currency} {outstanding.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+                            {loan.currency !== "USD" && (
+                              <div className="text-[10px] text-slate-400 font-normal">${(loan.outstanding_balance_usd || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} USD</div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell className="text-green-600 text-sm font-mono text-right">
                       ${(loan.total_repaid || 0).toLocaleString()}
