@@ -1179,7 +1179,10 @@ export default function Loans() {
                         Total Loans
                       </TableHead>
                       <TableHead className="text-slate-500 text-xs text-right">
-                        Disbursed
+                        Disbursed (USD)
+                      </TableHead>
+                      <TableHead className="text-slate-500 text-xs text-center">
+                        Payment Currency
                       </TableHead>
                       <TableHead className="text-slate-500 text-xs text-right">
                         Outstanding
@@ -1212,6 +1215,13 @@ export default function Loans() {
                         </TableCell>
                         <TableCell className="text-slate-800 font-mono text-right">
                           ${v.loan_stats.total_disbursed_usd?.toLocaleString()}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex flex-wrap gap-1 justify-center">
+                            {(v.loan_stats.currencies || ["USD"]).map((cur) => (
+                              <Badge key={cur} className="bg-purple-500/20 text-purple-600 text-[10px] px-1.5 py-0">{cur}</Badge>
+                            ))}
+                          </div>
                         </TableCell>
                         <TableCell className="text-blue-600 font-mono text-right font-semibold">
                           $
