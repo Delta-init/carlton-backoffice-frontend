@@ -113,7 +113,7 @@ export default function BorrowerDetail() {
   const stats = {
     total: loans.length,
     totalDisbursed: loans.reduce((s, l) => s + (l.amount_usd || l.amount || 0), 0),
-    outstanding: loans.reduce((s, l) => s + (l.outstanding_balance || 0), 0),
+    outstanding: loans.reduce((s, l) => s + (l.outstanding_balance_usd || l.outstanding_balance || 0), 0),
     totalRepaid: loans.reduce((s, l) => s + (l.total_repaid || 0), 0),
     active: loans.filter((l) => l.status === "active").length,
     overdue: loans.filter((l) => l.is_overdue || (l.status === "active" && l.due_date && new Date(l.due_date) < new Date())).length,
