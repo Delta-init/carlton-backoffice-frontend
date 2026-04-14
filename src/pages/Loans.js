@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -98,6 +99,7 @@ const installmentFrequencies = [
 
 export default function Loans() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [loans, setLoans] = useState([]);
   const [treasuryAccounts, setTreasuryAccounts] = useState([]);
   const [vendors, setExchangers] = useState([]);
@@ -1193,14 +1195,17 @@ export default function Loans() {
                       <TableHead className="text-slate-500 text-xs">
                         Status
                       </TableHead>
-                      
+                      <TableHead className="text-slate-500 text-xs text-center">
+                        Action
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {vendors.map((v) => (
                       <TableRow
                         key={v.vendor_id}
-                        className="border-slate-200 hover:bg-slate-100"
+                        className="border-slate-200 hover:bg-slate-100 cursor-pointer"
+                        onClick={() => navigate(`/loans/borrower/${v.vendor_id}`)}
                       >
                         <TableCell>
                           <div className="text-slate-800 font-medium">
@@ -1248,6 +1253,16 @@ export default function Loans() {
                           >
                             {v.status}
                           </Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-[#1FA21B] hover:bg-green-50 text-xs"
+                            onClick={(e) => { e.stopPropagation(); navigate(`/loans/borrower/${v.vendor_id}`); }}
+                          >
+                            <Eye className="w-3.5 h-3.5 mr-1" /> View
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
