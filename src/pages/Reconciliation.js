@@ -546,40 +546,42 @@ export default function Reconciliation() {
     }
   }, [getAuthHeaders]);
 
- // Fetch accounts
-   // Fetch accounts
+  // Fetch accounts
+  // Fetch accounts
   const fetchAccounts = useCallback(async () => {
     try {
       const [treasuryRes, pspRes, exchangerRes] = await Promise.all([
-        fetch(`${API_URL}/api/treasury?page_size=200`, { headers: getAuthHeaders() }),
+        fetch(`${API_URL}/api/treasury?page_size=200`, {
+          headers: getAuthHeaders(),
+        }),
         fetch(`${API_URL}/api/psp`, { headers: getAuthHeaders() }),
-        fetch(`${API_URL}/api/vendors?page_size=100`, { headers: getAuthHeaders() })
+        fetch(`${API_URL}/api/vendors?page_size=100`, {
+          headers: getAuthHeaders(),
+        }),
       ]);
-      
+
       if (treasuryRes.ok) {
         const data = await treasuryRes.json();
         setTreasuryAccounts(data.items || (Array.isArray(data) ? data : []));
       } else {
-        console.error('Error fetching treasury:', treasuryRes.status);
+        console.error("Error fetching treasury:", treasuryRes.status);
       }
       if (pspRes.ok) {
         const data = await pspRes.json();
         setPsps(Array.isArray(data) ? data : []);
       } else {
-        console.error('Error fetching psps:', pspRes.status);
+        console.error("Error fetching psps:", pspRes.status);
       }
       if (exchangerRes.ok) {
         const data = await exchangerRes.json();
         setExchangers(data.items || data || []);
       } else {
-        console.error('Error fetching exchangers:', exchangerRes.status);
+        console.error("Error fetching exchangers:", exchangerRes.status);
       }
     } catch (error) {
-      console.error('Error fetching accounts:', error);
+      console.error("Error fetching accounts:", error);
     }
   }, [getAuthHeaders]);
-
-
 
   // Fetch daily summary
   const fetchDailySummary = useCallback(
@@ -1786,7 +1788,7 @@ export default function Reconciliation() {
                                 setHistoryDialog({ open: true, item })
                               }
                               data-testid={`view-history-${item.recon_id}`}
-                                title="View details"
+                              title="View details"
                             >
                               <Eye className="w-4 h-4" />
                             </Button>
@@ -1806,7 +1808,7 @@ export default function Reconciliation() {
           <div className="space-y-4">
             {/* Summary Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Card className="bg-yellow-50 border-yellow-200">
+              <Card className="bg-yellow-50/50border-yellow-200">
                 <CardContent className="p-4 flex items-center justify-between">
                   <div>
                     <p className="text-xs text-yellow-600 uppercase tracking-wider">
@@ -2090,7 +2092,9 @@ export default function Reconciliation() {
       {/* History Detail Dialog */}
       <Dialog
         open={historyDialog.open}
-         onOpenChange={(open) => { if (!open) setHistoryDialog({ open: false, item: null }); }}
+        onOpenChange={(open) => {
+          if (!open) setHistoryDialog({ open: false, item: null });
+        }}
       >
         <DialogContent className="max-w-2xl">
           <DialogHeader>

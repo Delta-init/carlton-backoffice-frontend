@@ -58,7 +58,7 @@ import {
   Search,
   Check,
   ChevronsUpDown,
-  Upload
+  Upload,
 } from "lucide-react";
 import PaginationControls from "../components/PaginationControls";
 import {
@@ -273,8 +273,6 @@ function EditableRequestCard({
       setSaving(false);
     }
   };
-
-   
 
   const handleBaseCurrencyChange = (val) => {
     if (val === "USD") {
@@ -547,21 +545,57 @@ function EditableRequestCard({
               )}
 
               {/* Row 3: Destination Type */}
-     <div>
-                <Label className="text-xs text-slate-500 uppercase font-bold">Destination Type</Label>
-                {form.transaction_type === 'deposit' ? (
-                  <Select value={form.destination_type} onValueChange={v => setForm({ ...form, destination_type: v, vendor_id: '', psp_id: '', destination_account_id: '' })}>
-                    <SelectTrigger className="bg-slate-50 border-slate-200" data-testid={`edit-dest-${req.request_id}`}><SelectValue /></SelectTrigger>
+              <div>
+                <Label className="text-xs text-slate-500 uppercase font-bold">
+                  Destination Type
+                </Label>
+                {form.transaction_type === "deposit" ? (
+                  <Select
+                    value={form.destination_type}
+                    onValueChange={(v) =>
+                      setForm({
+                        ...form,
+                        destination_type: v,
+                        vendor_id: "",
+                        psp_id: "",
+                        destination_account_id: "",
+                      })
+                    }
+                  >
+                    <SelectTrigger
+                      className="bg-slate-50 border-slate-200"
+                      data-testid={`edit-dest-${req.request_id}`}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="treasury">Treasury / Bank Account</SelectItem>
+                      <SelectItem value="treasury">
+                        Treasury / Bank Account
+                      </SelectItem>
                       <SelectItem value="bank">Bank</SelectItem>
                       <SelectItem value="psp">PSP</SelectItem>
                       <SelectItem value="vendor">Exchanger</SelectItem>
                     </SelectContent>
                   </Select>
                 ) : (
-                  <Select value={form.destination_type} onValueChange={v => setForm({ ...form, destination_type: v, vendor_id: '', psp_id: '', destination_account_id: '' })}>
-                    <SelectTrigger className="bg-slate-50 border-slate-200" data-testid={`edit-dest-${req.request_id}`}><SelectValue /></SelectTrigger>
+                  <Select
+                    value={form.destination_type}
+                    onValueChange={(v) =>
+                      setForm({
+                        ...form,
+                        destination_type: v,
+                        vendor_id: "",
+                        psp_id: "",
+                        destination_account_id: "",
+                      })
+                    }
+                  >
+                    <SelectTrigger
+                      className="bg-slate-50 border-slate-200"
+                      data-testid={`edit-dest-${req.request_id}`}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="bank">Bank</SelectItem>
                       <SelectItem value="usdt">USDT</SelectItem>
@@ -572,16 +606,32 @@ function EditableRequestCard({
               </div>
 
               {/* Conditional: Treasury selector (deposit to treasury) */}
-              {form.destination_type === 'treasury' && (
+              {form.destination_type === "treasury" && (
                 <div>
-                  <Label className="text-xs text-slate-500 uppercase font-bold">Treasury Account</Label>
-                  <Select value={form.destination_account_id} onValueChange={v => setForm({ ...form, destination_account_id: v })}>
-                    <SelectTrigger className="bg-slate-50 border-slate-200"><SelectValue placeholder="Select treasury account" /></SelectTrigger>
-                    <SelectContent>{treasuryAccounts.filter(a => a.account_type !== 'usdt').map(a => <SelectItem key={a.account_id} value={a.account_id}>{a.account_name} ({a.currency})</SelectItem>)}</SelectContent>
+                  <Label className="text-xs text-slate-500 uppercase font-bold">
+                    Treasury Account
+                  </Label>
+                  <Select
+                    value={form.destination_account_id}
+                    onValueChange={(v) =>
+                      setForm({ ...form, destination_account_id: v })
+                    }
+                  >
+                    <SelectTrigger className="bg-slate-50 border-slate-200">
+                      <SelectValue placeholder="Select treasury account" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {treasuryAccounts
+                        .filter((a) => a.account_type !== "usdt")
+                        .map((a) => (
+                          <SelectItem key={a.account_id} value={a.account_id}>
+                            {a.account_name} ({a.currency})
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
                   </Select>
                 </div>
               )}
-
 
               {/* Conditional: PSP selector (deposit only) */}
               {form.transaction_type === "deposit" &&
@@ -920,14 +970,14 @@ export default function TransactionRequests() {
   const [processing, setProcessing] = useState(false);
   // New request captcha
   const [createReqCaptcha, setCreateReqCaptcha] = useState({ a: 0, b: 0 });
-  const [createReqCaptchaAnswer, setCreateReqCaptchaAnswer] = useState('');
+  const [createReqCaptchaAnswer, setCreateReqCaptchaAnswer] = useState("");
   const [showCreateReqCaptcha, setShowCreateReqCaptcha] = useState(false);
   // Data
   const [clients, setClients] = useState([]);
   const [treasuryAccounts, setTreasuryAccounts] = useState([]);
   const [psps, setPsps] = useState([]);
   const [vendors, setVendors] = useState([]);
-   const [clientTags, setClientTags] = useState([]);
+  const [clientTags, setClientTags] = useState([]);
   const [formTags, setFormTags] = useState([]);
 
   const authHeaders = useCallback(() => {
@@ -1005,7 +1055,7 @@ export default function TransactionRequests() {
           const d = await vRes.json();
           setVendors(d.items || d || []);
         }
-         // Fetch client tags
+        // Fetch client tags
         const tagRes = await fetch(`${API_URL}/api/client-tags`, {
           headers: authHeaders(),
         });
@@ -1044,7 +1094,7 @@ export default function TransactionRequests() {
       Object.entries(form).forEach(([k, v]) => {
         if (v) fd.append(k, v);
       });
-      proofImages.forEach(img => fd.append("proof_images", img));
+      proofImages.forEach((img) => fd.append("proof_images", img));
       if (formTags.length > 0) fd.append("client_tags", formTags.join(","));
       const headers = authHeaders();
       delete headers["Content-Type"];
@@ -1193,7 +1243,7 @@ export default function TransactionRequests() {
       "Created By",
       "Description",
     ];
-  
+
     const rows = requests.map((r) => [
       formatDate(r.created_at),
       r.transaction_type,
@@ -1225,19 +1275,21 @@ export default function TransactionRequests() {
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
     if (files.length) {
-      setProofImages(prev => [...prev, ...files]);
-      setProofPreviews(prev => [...prev, ...files.map(f => URL.createObjectURL(f))]);
+      setProofImages((prev) => [...prev, ...files]);
+      setProofPreviews((prev) => [
+        ...prev,
+        ...files.map((f) => URL.createObjectURL(f)),
+      ]);
     }
   };
-  const isFilePdf = (file) => file?.type === 'application/pdf' || file?.name?.toLowerCase().endsWith('.pdf');
-  const isPdfUrl = (url) => url && url.toLowerCase().includes('.pdf');
+  const isFilePdf = (file) =>
+    file?.type === "application/pdf" ||
+    file?.name?.toLowerCase().endsWith(".pdf");
+  const isPdfUrl = (url) => url && url.toLowerCase().includes(".pdf");
   const removeProofImage = (idx) => {
-    setProofImages(prev => prev.filter((_, i) => i !== idx));
-    setProofPreviews(prev => prev.filter((_, i) => i !== idx));
+    setProofImages((prev) => prev.filter((_, i) => i !== idx));
+    setProofPreviews((prev) => prev.filter((_, i) => i !== idx));
   };
-
-
-
 
   const downloadPDF = () => {
     if (!requests.length) {
@@ -1366,7 +1418,7 @@ export default function TransactionRequests() {
       {/* Summary */}
       {/* Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="bg-yellow-50 border-yellow-200">
+        <Card className="bg-yellow-50/50border-yellow-200">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs text-yellow-600 uppercase">Pending</p>
@@ -1598,7 +1650,7 @@ export default function TransactionRequests() {
                 <ClientSearchPicker
                   clients={clients}
                   value={form.client_id}
-                 onChange={(v) => {
+                  onChange={(v) => {
                     setForm({ ...form, client_id: v });
                     const cl = clients.find((c) => c.client_id === v);
                     if (cl?.tags) setFormTags(cl.tags);
@@ -1706,13 +1758,30 @@ export default function TransactionRequests() {
               </div>
             )}
 
-            {form.transaction_type === 'deposit' && (
+            {form.transaction_type === "deposit" && (
               <div>
-                <Label className="text-xs text-slate-500 uppercase">Destination Type</Label>
-                <Select value={form.destination_type} onValueChange={v => setForm({ ...form, destination_type: v, psp_id: '', vendor_id: '', destination_account_id: '' })}>
-                  <SelectTrigger className="bg-slate-50"><SelectValue /></SelectTrigger>
+                <Label className="text-xs text-slate-500 uppercase">
+                  Destination Type
+                </Label>
+                <Select
+                  value={form.destination_type}
+                  onValueChange={(v) =>
+                    setForm({
+                      ...form,
+                      destination_type: v,
+                      psp_id: "",
+                      vendor_id: "",
+                      destination_account_id: "",
+                    })
+                  }
+                >
+                  <SelectTrigger className="bg-slate-50">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="treasury">Treasury / Bank Account</SelectItem>
+                    <SelectItem value="treasury">
+                      Treasury / Bank Account
+                    </SelectItem>
                     <SelectItem value="bank">Bank</SelectItem>
                     <SelectItem value="psp">PSP</SelectItem>
                     <SelectItem value="vendor">Exchanger</SelectItem>
@@ -1720,14 +1789,33 @@ export default function TransactionRequests() {
                 </Select>
               </div>
             )}
-            {form.transaction_type === 'deposit' && form.destination_type === 'treasury' && (
-              <div><Label className="text-xs text-slate-500 uppercase">Treasury Account</Label>
-                <Select value={form.destination_account_id} onValueChange={v => setForm({ ...form, destination_account_id: v })}>
-                  <SelectTrigger className="bg-slate-50"><SelectValue placeholder="Select treasury account" /></SelectTrigger>
-                  <SelectContent>{treasuryAccounts.filter(a => a.account_type !== 'usdt').map(a => <SelectItem key={a.account_id} value={a.account_id}>{a.account_name} ({a.currency})</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-            )}
+            {form.transaction_type === "deposit" &&
+              form.destination_type === "treasury" && (
+                <div>
+                  <Label className="text-xs text-slate-500 uppercase">
+                    Treasury Account
+                  </Label>
+                  <Select
+                    value={form.destination_account_id}
+                    onValueChange={(v) =>
+                      setForm({ ...form, destination_account_id: v })
+                    }
+                  >
+                    <SelectTrigger className="bg-slate-50">
+                      <SelectValue placeholder="Select treasury account" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {treasuryAccounts
+                        .filter((a) => a.account_type !== "usdt")
+                        .map((a) => (
+                          <SelectItem key={a.account_id} value={a.account_id}>
+                            {a.account_name} ({a.currency})
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             {form.transaction_type === "deposit" &&
               form.destination_type === "psp" && (
                 <div>
@@ -1933,7 +2021,7 @@ export default function TransactionRequests() {
                 data-testid="txreq-transaction-date"
               />
             </div>
-<div>
+            <div>
               <Label className="text-xs text-slate-500 uppercase">
                 Client Tags
               </Label>
@@ -2012,54 +2100,82 @@ export default function TransactionRequests() {
                 className="bg-slate-50"
               />
             </div> */}
-             <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
-                    Proof of Payment (Screenshot)
-                  </Label>
-                  <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center hover:border-[#1FA21B]/50 transition-colors">
-                    <input
-                      type="file"
-                      accept="image/*,application/pdf,.pdf"
-                      multiple
-                      onChange={handleImageChange}
-                      className="hidden"
-                      id="proof-upload"
-                      data-testid="proof-upload"
-                    />
-                    <label htmlFor="proof-upload" className="cursor-pointer block">
-                      {proofPreviews.length > 0 ? (
-                        <div className="space-y-2">
-                          <div className="grid grid-cols-3 gap-2">
-                            {proofPreviews.map((src, i) => (
-                              <div key={i} className="relative group">
-                                {isFilePdf(proofImages[i]) ? (
-                                  <div className="w-full h-20 flex flex-col items-center justify-center rounded border border-red-200 bg-red-50 cursor-pointer" onClick={(e) => { e.preventDefault(); window.open(src, "_blank"); }}>
-                                    <FileText className="w-6 h-6 text-red-500 mb-1" />
-                                    <span className="text-xs text-red-600 truncate w-full px-1 text-center">{proofImages[i]?.name || 'PDF'}</span>
-                                  </div>
-                                ) : (
-                                  <img src={src} alt={`Proof ${i+1}`} className="w-full h-20 object-cover rounded border border-slate-200 cursor-pointer" onClick={(e) => { e.preventDefault(); window.open(src, "_blank"); }} />
-                                )}
-                                <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeProofImage(i); }} className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full w-4 h-4 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">×</button>
+            <div className="space-y-2">
+              <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                Proof of Payment (Screenshot)
+              </Label>
+              <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center hover:border-[#1FA21B]/50 transition-colors">
+                <input
+                  type="file"
+                  accept="image/*,application/pdf,.pdf"
+                  multiple
+                  onChange={handleImageChange}
+                  className="hidden"
+                  id="proof-upload"
+                  data-testid="proof-upload"
+                />
+                <label htmlFor="proof-upload" className="cursor-pointer block">
+                  {proofPreviews.length > 0 ? (
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-3 gap-2">
+                        {proofPreviews.map((src, i) => (
+                          <div key={i} className="relative group">
+                            {isFilePdf(proofImages[i]) ? (
+                              <div
+                                className="w-full h-20 flex flex-col items-center justify-center rounded border border-red-200 bg-red-50 cursor-pointer"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  window.open(src, "_blank");
+                                }}
+                              >
+                                <FileText className="w-6 h-6 text-red-500 mb-1" />
+                                <span className="text-xs text-red-600 truncate w-full px-1 text-center">
+                                  {proofImages[i]?.name || "PDF"}
+                                </span>
                               </div>
-                            ))}
+                            ) : (
+                              <img
+                                src={src}
+                                alt={`Proof ${i + 1}`}
+                                className="w-full h-20 object-cover rounded border border-slate-200 cursor-pointer"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  window.open(src, "_blank");
+                                }}
+                              />
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                removeProofImage(i);
+                              }}
+                              className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full w-4 h-4 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              ×
+                            </button>
                           </div>
-                          <p className="text-xs text-blue-600 text-center">{proofPreviews.length} file(s) — click to add more</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          <Upload className="w-8 h-8 mx-auto text-slate-500" />
-                          <p className="text-sm text-slate-500">
-                            Click to upload proof of payment
-                          </p>
-                          <p className="text-xs text-slate-500/60">
-                            PNG, JPG, PDF up to 10MB · multiple allowed
-                          </p>
-                        </div>
-                      )}
-                    </label>
-                  </div>
-                </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-blue-600 text-center">
+                        {proofPreviews.length} file(s) — click to add more
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Upload className="w-8 h-8 mx-auto text-slate-500" />
+                      <p className="text-sm text-slate-500">
+                        Click to upload proof of payment
+                      </p>
+                      <p className="text-xs text-slate-500/60">
+                        PNG, JPG, PDF up to 10MB · multiple allowed
+                      </p>
+                    </div>
+                  )}
+                </label>
+              </div>
+            </div>
             <Button
               onClick={handlePreCreate}
               disabled={creating}
@@ -2158,29 +2274,51 @@ export default function TransactionRequests() {
               {(() => {
                 const imgs = processDialog?.proof_images?.length
                   ? processDialog.proof_images
-                  : processDialog?.proof_image ? [processDialog.proof_image] : [];
+                  : processDialog?.proof_image
+                    ? [processDialog.proof_image]
+                    : [];
                 if (!imgs.length) return null;
                 return (
                   <div className="pt-2 border-t border-slate-200">
-                    <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Proof of Payment ({imgs.length})</p>
+                    <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">
+                      Proof of Payment ({imgs.length})
+                    </p>
                     <div className="grid grid-cols-3 gap-2">
                       {imgs.map((url, i) => {
-                        const src = url?.startsWith("http") ? url : `data:image/png;base64,${url}`;
+                        const src = url?.startsWith("http")
+                          ? url
+                          : `data:image/png;base64,${url}`;
                         if (isPdfUrl(url)) {
                           return (
-                            <a key={i} href={src} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center h-16 rounded border border-red-200 bg-red-50 hover:bg-red-100 cursor-pointer">
+                            <a
+                              key={i}
+                              href={src}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="flex flex-col items-center justify-center h-16 rounded border border-red-200 bg-red-50 hover:bg-red-100 cursor-pointer"
+                            >
                               <FileText className="w-5 h-5 text-red-500 mb-1" />
-                              <span className="text-xs text-red-600">PDF {i+1}</span>
+                              <span className="text-xs text-red-600">
+                                PDF {i + 1}
+                              </span>
                             </a>
                           );
                         }
-                        return <img key={i} src={src} alt={`Proof ${i+1}`} className="w-full h-16 object-cover rounded border border-slate-200 cursor-pointer hover:opacity-80" onClick={() => window.open(src, "_blank")} />;
+                        return (
+                          <img
+                            key={i}
+                            src={src}
+                            alt={`Proof ${i + 1}`}
+                            className="w-full h-16 object-cover rounded border border-slate-200 cursor-pointer hover:opacity-80"
+                            onClick={() => window.open(src, "_blank")}
+                          />
+                        );
                       })}
                     </div>
                   </div>
                 );
               })()}
-              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded">
+              <div className="p-4 bg-yellow-50/5 border border-yellow-200/5 rounded">
                 <p className="text-sm font-medium text-yellow-800 mb-2">
                   Verify: What is {captcha.a} + {captcha.b}?
                 </p>
