@@ -393,6 +393,12 @@ export default function AccountantDashboard() {
       setBankReceiptDate(
         tx.transaction_date || new Date().toISOString().split("T")[0],
       );
+      // Pre-select PSP source if transaction destination is PSP
+      if (tx.transaction_type === "withdrawal" && tx.destination_type === "psp" && tx.psp_id) {
+        setApprovalSourceAccount(`psp_${tx.psp_id}`);
+      } else {
+        setApprovalSourceAccount("");
+      }
       return;
     }
     setCaptchaAction({ type: "approve", transactionId, isSettlement });
@@ -2707,7 +2713,7 @@ export default function AccountantDashboard() {
                       (a) => a.currency === txCurrency
                     );
                     const filteredPsps = psps.filter(
-                      (p) => p.status === "active" && p.currency === txCurrency
+                      (p) => p.status === "active"
                     );
                     return (
                   <Select
