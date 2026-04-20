@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import * as XLSX from "xlsx";
 import {
   Card,
   CardContent,
@@ -1199,55 +1200,45 @@ export default function Transactions() {
   };
 
   const downloadExcel = () => {
-    // Create a simple Excel-compatible HTML table
     const headers = [
-      "Date",
-      "Client",
-      "Type",
-      "Payment Currency",
-      "Amount",
-      "Exchange Rate",
-      "USD Amount",
-      "Status",
-      "Destination",
-      "Reference",
-      "CRM Reference",
-      "Description",
+      "Date", "Client", "Type", "Payment Currency",
+      "Amount", "Exchange Rate", "USD Amount",
+      "Status", "Destination", "Reference", "CRM Reference", "Description",
     ];
-    const rows = filteredTransactions.map((tx) => [
-      formatDate(tx.transaction_date || tx.created_at),
-      tx.client_name || getClientName(tx.client_id),
-      tx.transaction_type,
-      tx.base_currency || tx.currency || "USD",
-      tx.base_amount || tx.amount,
-      tx.exchange_rate ||
-        (tx.base_currency && tx.base_currency !== "USD" ? "" : "1"),
-      tx.amount,
-      tx.status,
-      getDestinationDisplay(tx),
-      tx.reference || "",
-      tx.crm_reference || "",
-      tx.description || "",
-    ]);
+    const rows = filteredTransactions.map((tx) => ({
+      "Date": formatDate(tx.transaction_date || tx.created_at),
+      "Client": tx.client_name || getClientName(tx.client_id),
+      "Type": tx.transaction_type,
+      "Payment Currency": tx.base_currency || tx.currency || "USD",
+      "Amount": tx.base_amount || tx.amount,
+      "Exchange Rate": tx.exchange_rate || (tx.base_currency && tx.base_currency !== "USD" ? "" : 1),
+      "USD Amount": tx.amount,
+      "Status": tx.status,
+      "Destination": getDestinationDisplay(tx),
+      "Reference": tx.reference || "",
+      "CRM Reference": tx.crm_reference || "",
+      "Description": tx.description || "",
+    }));
 
-    const htmlContent = `
-      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
-      <head><meta charset="UTF-8"></head>
-      <body>
-        <table border="1">
-          <thead><tr>${headers.map((h) => `<th style="background:#1F2833;color:#fff;font-weight:bold;">${h}</th>`).join("")}</tr></thead>
-          <tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join("")}</tr>`).join("")}</tbody>
-        </table>
-      </body>
-      </html>
-    `;
+    const ws = XLSX.utils.json_to_sheet(rows, { header: headers });
 
-    const blob = new Blob([htmlContent], { type: "application/vnd.ms-excel" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `transactions_${new Date().toISOString().split("T")[0]}.xls`;
-    link.click();
-    URL.revokeObjectURL(link.href);
+    // Style header row
+    const headerStyle = { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "1FA21B" } }, alignment: { horizontal: "center" } };
+    headers.forEach((_, i) => {
+      const cellRef = XLSX.utils.encode_cell({ r: 0, c: i });
+      if (ws[cellRef]) ws[cellRef].s = headerStyle;
+    });
+
+    // Column widths
+    ws["!cols"] = [
+      { wch: 14 }, { wch: 22 }, { wch: 12 }, { wch: 16 },
+      { wch: 12 }, { wch: 14 }, { wch: 12 },
+      { wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 22 },
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Transactions");
+    XLSX.writeFile(wb, `transactions_${new Date().toISOString().split("T")[0]}.xlsx`);
     toast.success("Excel report downloaded");
   };
 
