@@ -1152,177 +1152,206 @@ export default function Transactions() {
     return tx.destination_type || "-";
   };
 
-  const downloadCSV = () => {
-    const headers = [
-      "Date",
-      "Client",
-      "Type",
-      "Payment Currency",
-      "Amount",
-      "Exchange Rate",
-      "USD Amount",
-      "Status",
-      "Destination",
-      "Reference",
-      "CRM Reference",
-      "Description",
-    ];
-    const rows = filteredTransactions.map((tx) => [
-      formatDate(tx.transaction_date || tx.created_at),
-      tx.client_name || getClientName(tx.client_id),
-      tx.transaction_type,
-      tx.base_currency || tx.currency || "USD",
-      tx.base_amount || tx.amount,
-      tx.exchange_rate ||
-        (tx.base_currency && tx.base_currency !== "USD" ? "" : "1"),
-      tx.amount,
-      tx.status,
-      getDestinationDisplay(tx),
-      tx.reference || "",
-      tx.crm_reference || "",
-      tx.description || "",
-    ]);
+  // Fetch ALL records matching current filters from the export endpoint (no page cap)
+  const fetchAllForExport = async () => {
+    const params = new URLSearchParams();
+    if (typeFilter && typeFilter !== "all") params.append("transaction_type", typeFilter);
+    if (statusFilter && statusFilter !== "all") params.append("status", statusFilter);
+    if (destinationFilter && destinationFilter !== "all") params.append("destination_type", destinationFilter);
+    if (searchTerm) params.append("search", searchTerm);
+    if (emailFilter) params.append("client_email", emailFilter);
+    if (dateFrom) params.append("date_from", dateFrom);
+    if (dateTo) params.append("date_to", dateTo);
+    if (tagFilter && tagFilter !== "all") params.append("client_tag", tagFilter);
 
-    const csvContent = [
-      headers.join(","),
-      ...rows.map((row) =>
-        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","),
-      ),
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `transactions_${new Date().toISOString().split("T")[0]}.csv`;
-    link.click();
-    URL.revokeObjectURL(link.href);
-    toast.success("CSV report downloaded");
-  };
-
-  const downloadExcel = () => {
-    const headers = [
-      "Date", "Client", "Type", "Payment Currency",
-      "Amount", "Exchange Rate", "USD Amount",
-      "Status", "Destination", "Reference", "CRM Reference", "Description",
-    ];
-    const rows = filteredTransactions.map((tx) => ({
-      "Date": formatDate(tx.transaction_date || tx.created_at),
-      "Client": tx.client_name || getClientName(tx.client_id),
-      "Type": tx.transaction_type,
-      "Payment Currency": tx.base_currency || tx.currency || "USD",
-      "Amount": tx.base_amount || tx.amount,
-      "Exchange Rate": tx.exchange_rate || (tx.base_currency && tx.base_currency !== "USD" ? "" : 1),
-      "USD Amount": tx.amount,
-      "Status": tx.status,
-      "Destination": getDestinationDisplay(tx),
-      "Reference": tx.reference || "",
-      "CRM Reference": tx.crm_reference || "",
-      "Description": tx.description || "",
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(rows, { header: headers });
-
-    // Style header row
-    const headerStyle = { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "1FA21B" } }, alignment: { horizontal: "center" } };
-    headers.forEach((_, i) => {
-      const cellRef = XLSX.utils.encode_cell({ r: 0, c: i });
-      if (ws[cellRef]) ws[cellRef].s = headerStyle;
+    const res = await fetch(`${API_URL}/api/transactions/export?${params.toString()}`, {
+      headers: getAuthHeaders(),
+      credentials: "include",
     });
-
-    // Column widths
-    ws["!cols"] = [
-      { wch: 14 }, { wch: 22 }, { wch: 12 }, { wch: 16 },
-      { wch: 12 }, { wch: 14 }, { wch: 12 },
-      { wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 22 },
-    ];
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Transactions");
-    XLSX.writeFile(wb, `transactions_${new Date().toISOString().split("T")[0]}.xlsx`);
-    toast.success("Excel report downloaded");
+    if (!res.ok) throw new Error("Export fetch failed");
+    const data = await res.json();
+    return data.items || [];
   };
 
-  const downloadPDF = () => {
-    // Generate a printable HTML page
-    const headers = [
-      "Date",
-      "Client",
-      "Type",
-      "Payment Currency",
-      "Amount",
-      "USD Amount",
-      "Status",
-      "Destination",
-    ];
-    const rows = filteredTransactions.map((tx) => [
-      formatDate(tx.transaction_date || tx.created_at),
-      tx.client_name || getClientName(tx.client_id),
-      tx.transaction_type,
-      tx.base_currency || tx.currency || "USD",
-      tx.base_amount || tx.amount,
-      tx.amount,
-      tx.status,
-      getDestinationDisplay(tx),
-    ]);
+  const downloadCSV = async () => {
+    const toastId = toast.loading("Preparing export…");
+    try {
+      const allData = await fetchAllForExport();
+      const headers = [
+        "Date", "Client", "Email", "Type", "Payment Currency",
+        "Amount", "Exchange Rate", "USD Amount",
+        "Status", "Destination", "Reference", "CRM Reference", "Description",
+      ];
+      const rows = allData.map((tx) => [
+        formatDate(tx.transaction_date || tx.created_at),
+        tx.client_name || getClientName(tx.client_id),
+        tx.client_email || "",
+        tx.transaction_type,
+        tx.base_currency || tx.currency || "USD",
+        tx.base_amount || tx.amount,
+        tx.exchange_rate || (tx.base_currency && tx.base_currency !== "USD" ? "" : "1"),
+        tx.amount,
+        tx.status,
+        getDestinationDisplay(tx),
+        tx.reference || "",
+        tx.crm_reference || "",
+        tx.description || "",
+      ]);
 
-    // Calculate summary
-    const totalDeposits = filteredTransactions
-      .filter((t) => t.transaction_type === "deposit")
-      .reduce((sum, t) => sum + (t.amount_usd || t.amount), 0);
-    const totalWithdrawals = filteredTransactions
-      .filter((t) => t.transaction_type === "withdrawal")
-      .reduce((sum, t) => sum + (t.amount_usd || t.amount), 0);
+      const csvContent = [
+        headers.join(","),
+        ...rows.map((row) =>
+          row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","),
+        ),
+      ].join("\n");
 
-    const printWindow = window.open("", "_blank");
-    printWindow.document.write(`
-      <html>
-      <head>
-        <title>Transactions Report - Carlton Fx</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 20px; }
-          h1 { color: #141414; border-bottom: 2px solid #1FA21B; padding-bottom: 10px; }
-          .summary { display: flex; gap: 30px; margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; }
-          .summary-item { }
-          .summary-item label { font-size: 12px; color: #666; display: block; }
-          .summary-item span { font-size: 18px; font-weight: bold; }
-          .deposits { color: #22c55e; }
-          .withdrawals { color: #ef4444; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th { background: #141414; color: white; padding: 10px; text-align: left; font-size: 12px; }
-          td { padding: 8px 10px; border-bottom: 1px solid #eee; font-size: 12px; }
-          tr:hover { background: #f5f5f5; }
-          .footer { margin-top: 30px; font-size: 11px; color: #999; text-align: center; }
-          @media print { .no-print { display: none; } }
-        </style>
-      </head>
-      <body>
-        <h1>Transactions Report</h1>
-        <p>Generated: ${new Date().toLocaleString()} | Total Records: ${filteredTransactions.length}</p>
-        <div class="summary">
-          <div class="summary-item">
-            <label>Total Deposits (USD)</label>
-            <span class="deposits">$${totalDeposits.toLocaleString()}</span>
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `transactions_${new Date().toISOString().split("T")[0]}.csv`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      toast.dismiss(toastId);
+      toast.success(`CSV downloaded — ${allData.length} records`);
+    } catch {
+      toast.dismiss(toastId);
+      toast.error("Export failed");
+    }
+  };
+
+  const downloadExcel = async () => {
+    const toastId = toast.loading("Preparing export…");
+    try {
+      const allData = await fetchAllForExport();
+      const headers = [
+        "Date", "Client", "Email", "Type", "Payment Currency",
+        "Amount", "Exchange Rate", "USD Amount",
+        "Status", "Destination", "Reference", "CRM Reference", "Description",
+      ];
+      const rows = allData.map((tx) => ({
+        "Date": formatDate(tx.transaction_date || tx.created_at),
+        "Client": tx.client_name || getClientName(tx.client_id),
+        "Email": tx.client_email || "",
+        "Type": tx.transaction_type,
+        "Payment Currency": tx.base_currency || tx.currency || "USD",
+        "Amount": tx.base_amount || tx.amount,
+        "Exchange Rate": tx.exchange_rate || (tx.base_currency && tx.base_currency !== "USD" ? "" : 1),
+        "USD Amount": tx.amount,
+        "Status": tx.status,
+        "Destination": getDestinationDisplay(tx),
+        "Reference": tx.reference || "",
+        "CRM Reference": tx.crm_reference || "",
+        "Description": tx.description || "",
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(rows, { header: headers });
+
+      // Style header row
+      const headerStyle = { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "1FA21B" } }, alignment: { horizontal: "center" } };
+      headers.forEach((_, i) => {
+        const cellRef = XLSX.utils.encode_cell({ r: 0, c: i });
+        if (ws[cellRef]) ws[cellRef].s = headerStyle;
+      });
+
+      // Column widths
+      ws["!cols"] = [
+        { wch: 14 }, { wch: 22 }, { wch: 26 }, { wch: 12 }, { wch: 16 },
+        { wch: 12 }, { wch: 14 }, { wch: 12 },
+        { wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 22 },
+      ];
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Transactions");
+      XLSX.writeFile(wb, `transactions_${new Date().toISOString().split("T")[0]}.xlsx`);
+      toast.dismiss(toastId);
+      toast.success(`Excel downloaded — ${allData.length} records`);
+    } catch {
+      toast.dismiss(toastId);
+      toast.error("Export failed");
+    }
+  };
+
+  const downloadPDF = async () => {
+    const toastId = toast.loading("Preparing export…");
+    try {
+      const allData = await fetchAllForExport();
+      const headers = [
+        "Date", "Client", "Email", "Type", "Payment Currency",
+        "Amount", "USD Amount", "Status", "Destination",
+      ];
+      const rows = allData.map((tx) => [
+        formatDate(tx.transaction_date || tx.created_at),
+        tx.client_name || getClientName(tx.client_id),
+        tx.client_email || "",
+        tx.transaction_type,
+        tx.base_currency || tx.currency || "USD",
+        tx.base_amount || tx.amount,
+        tx.amount,
+        tx.status,
+        getDestinationDisplay(tx),
+      ]);
+
+      const totalDeposits = allData
+        .filter((t) => t.transaction_type === "deposit")
+        .reduce((sum, t) => sum + (t.amount_usd || t.amount), 0);
+      const totalWithdrawals = allData
+        .filter((t) => t.transaction_type === "withdrawal")
+        .reduce((sum, t) => sum + (t.amount_usd || t.amount), 0);
+
+      const printWindow = window.open("", "_blank");
+      printWindow.document.write(`
+        <html>
+        <head>
+          <title>Transactions Report - Carlton Fx</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            h1 { color: #141414; border-bottom: 2px solid #1FA21B; padding-bottom: 10px; }
+            .summary { display: flex; gap: 30px; margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; }
+            .summary-item label { font-size: 12px; color: #666; display: block; }
+            .summary-item span { font-size: 18px; font-weight: bold; }
+            .deposits { color: #22c55e; }
+            .withdrawals { color: #ef4444; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th { background: #141414; color: white; padding: 10px; text-align: left; font-size: 11px; }
+            td { padding: 8px 10px; border-bottom: 1px solid #eee; font-size: 11px; }
+            tr:hover { background: #f5f5f5; }
+            .footer { margin-top: 30px; font-size: 11px; color: #999; text-align: center; }
+            @media print { .no-print { display: none; } }
+          </style>
+        </head>
+        <body>
+          <h1>Transactions Report</h1>
+          <p>Generated: ${new Date().toLocaleString()} | Total Records: ${allData.length}</p>
+          <div class="summary">
+            <div class="summary-item">
+              <label>Total Deposits (USD)</label>
+              <span class="deposits">$${totalDeposits.toLocaleString()}</span>
+            </div>
+            <div class="summary-item">
+              <label>Total Withdrawals (USD)</label>
+              <span class="withdrawals">$${totalWithdrawals.toLocaleString()}</span>
+            </div>
+            <div class="summary-item">
+              <label>Net Flow (USD)</label>
+              <span style="color: ${totalDeposits - totalWithdrawals >= 0 ? "#22c55e" : "#ef4444"}">$${(totalDeposits - totalWithdrawals).toLocaleString()}</span>
+            </div>
           </div>
-          <div class="summary-item">
-            <label>Total Withdrawals (USD)</label>
-            <span class="withdrawals">$${totalWithdrawals.toLocaleString()}</span>
-          </div>
-          <div class="summary-item">
-            <label>Net Flow (USD)</label>
-            <span style="color: ${totalDeposits - totalWithdrawals >= 0 ? "#22c55e" : "#ef4444"}">$${(totalDeposits - totalWithdrawals).toLocaleString()}</span>
-          </div>
-        </div>
-        <table>
-          <thead><tr>${headers.map((h) => `<th>${h}</th>`).join("")}</tr></thead>
-          <tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join("")}</tr>`).join("")}</tbody>
-        </table>
-        <div class="footer">Carlton Fx - Back Office System</div>
-        <button class="no-print" onclick="window.print()" style="margin-top:20px;padding:10px 20px;background:#141414;color:white;border:none;cursor:pointer;border-radius:4px;">Print / Save as PDF</button>
-      </body>
-      </html>
-    `);
-    printWindow.document.close();
-    toast.success("PDF report opened in new window");
+          <table>
+            <thead><tr>${headers.map((h) => `<th>${h}</th>`).join("")}</tr></thead>
+            <tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join("")}</tr>`).join("")}</tbody>
+          </table>
+          <div class="footer">Carlton Fx - Back Office System</div>
+          <button class="no-print" onclick="window.print()" style="margin-top:20px;padding:10px 20px;background:#141414;color:white;border:none;cursor:pointer;border-radius:4px;">Print / Save as PDF</button>
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+      toast.dismiss(toastId);
+      toast.success(`PDF opened — ${allData.length} records`);
+    } catch {
+      toast.dismiss(toastId);
+      toast.error("Export failed");
+    }
   };
 
   return (
