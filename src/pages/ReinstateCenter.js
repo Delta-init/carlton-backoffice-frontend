@@ -383,6 +383,7 @@ const tabConfig = [
     icon: ArrowLeftRight,
     endpoint: "transactions",
     idField: "transaction_id",
+    searchPlaceholder: "Search by ID, reference, client, CRM ref...",
     displayFields: (item) => {
       const currency = item.base_currency || item.currency || "";
       const amount = item.base_amount != null ? item.base_amount : item.amount;
@@ -607,7 +608,7 @@ function ReinstateTab({ tabCfg }) {
           type="text"
           value={searchInput}
           onChange={(e) => handleSearchChange(e.target.value)}
-          placeholder="Search by ID, reference, name..."
+          placeholder={tabCfg.searchPlaceholder || "Search by ID, reference, name..."}
           className="w-full pl-9 pr-9 py-2 bg-slate-50 border border-slate-200 rounded text-slate-800 text-sm placeholder-slate-400 focus:outline-none focus:border-[#1FA21B]"
         />
         {searchInput && (
