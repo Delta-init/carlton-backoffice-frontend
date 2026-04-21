@@ -10,6 +10,12 @@ import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { Input } from "../components/ui/input";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -118,7 +124,7 @@ export default function BorrowerDetail() {
   const [vendor, setVendor] = useState(null);
   const [vendorLoading, setVendorLoading] = useState(true);
 
-  // Summary stats (fetched once with all loans)
+  // Summary stats (fetched once with all loans, no filters)
   const [summaryStats, setSummaryStats] = useState(null);
 
   // Paginated loans state
@@ -126,6 +132,9 @@ export default function BorrowerDetail() {
   const [loansLoading, setLoansLoading] = useState(true);
   const [totalLoans, setTotalLoans] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+
+  // Loan detail modal
+  const [selectedLoan, setSelectedLoan] = useState(null);
 
   // Filters / pagination controls
   const [searchQuery, setSearchQuery] = useState("");
@@ -161,46 +170,56 @@ export default function BorrowerDetail() {
     loadVendor();
   }, [vendorId]);
 
-  // Load summary stats once (fetch up to 500, no filter)
+  // Load summary stats (fetch all pages up to 200 per page)
   useEffect(() => {
     const loadSummary = async () => {
       try {
+        // First page to get total count
         const res = await fetch(
-          `${API_URL}/api/loans?vendor_id=${vendorId}&page_size=500`,
+          `${API_URL}/api/loans?vendor_id=${vendorId}&page_size=200&page=1`,
           { headers: getAuthHeaders(), credentials: "include" }
         );
-        if (res.ok) {
-          const data = await res.json();
-          const allLoans = Array.isArray(data) ? data : data.items || [];
-          setSummaryStats({
-            total: data.total ?? allLoans.length,
-            totalDisbursed: allLoans.reduce(
-              (s, l) => s + (l.amount_usd || l.amount || 0),
-              0
-            ),
-            outstanding: allLoans.reduce(
-              (s, l) =>
-                s + (l.outstanding_balance_usd || l.outstanding_balance || 0),
-              0
-            ),
-            totalRepaid: allLoans.reduce(
-              (s, l) => s + (l.total_repaid || 0),
-              0
-            ),
-            active: allLoans.filter((l) => l.status === "active").length,
-            overdue: allLoans.filter(
-              (l) =>
-                l.is_overdue ||
-                (l.status === "active" &&
-                  l.due_date &&
-                  new Date(l.due_date) < new Date())
-            ).length,
-            fullyPaid: allLoans.filter((l) => l.status === "fully_paid")
-              .length,
-            pending: allLoans.filter((l) => l.status === "pending_approval")
-              .length,
-          });
+        if (!res.ok) return;
+        const data = await res.json();
+        let allLoans = Array.isArray(data) ? data : data.items || [];
+        const totalCount = data.total ?? allLoans.length;
+        const totalPages = data.total_pages ?? 1;
+
+        // Fetch remaining pages if needed
+        if (totalPages > 1) {
+          const extraFetches = [];
+          for (let p = 2; p <= totalPages; p++) {
+            extraFetches.push(
+              fetch(`${API_URL}/api/loans?vendor_id=${vendorId}&page_size=200&page=${p}`, {
+                headers: getAuthHeaders(), credentials: "include"
+              }).then(r => r.ok ? r.json() : null)
+            );
+          }
+          const extras = await Promise.all(extraFetches);
+          extras.forEach(d => { if (d) allLoans = allLoans.concat(Array.isArray(d) ? d : d.items || []); });
         }
+
+        // Build per-currency breakdown
+        const byCurrency = {};
+        allLoans.forEach(l => {
+          const cur = l.currency || "USD";
+          if (!byCurrency[cur]) byCurrency[cur] = { disbursed: 0, outstanding: 0, repaid: 0 };
+          byCurrency[cur].disbursed += l.amount || 0;
+          byCurrency[cur].outstanding += Math.max(0, (l.amount || 0) + (l.total_interest || 0) - (l.total_repaid || 0));
+          byCurrency[cur].repaid += l.total_repaid || 0;
+        });
+
+        setSummaryStats({
+          total: totalCount,
+          totalDisbursed: allLoans.reduce((s, l) => s + (l.amount_usd || l.amount || 0), 0),
+          outstanding: allLoans.reduce((s, l) => s + (l.outstanding_balance_usd || l.outstanding_balance || 0), 0),
+          totalRepaid: allLoans.reduce((s, l) => s + (l.total_repaid_usd || l.total_repaid || 0), 0),
+          byCurrency,
+          active: allLoans.filter((l) => l.status === "active").length,
+          overdue: allLoans.filter((l) => l.is_overdue || (l.status === "active" && l.due_date && new Date(l.due_date) < new Date())).length,
+          fullyPaid: allLoans.filter((l) => l.status === "fully_paid").length,
+          pending: allLoans.filter((l) => l.status === "pending_approval").length,
+        });
       } catch {
         // non-critical
       }
@@ -293,9 +312,7 @@ export default function BorrowerDetail() {
     pending: 0,
   };
 
-  const isPageLoading = vendorLoading;
-
-  if (isPageLoading) {
+  if (vendorLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div
@@ -389,28 +406,25 @@ export default function BorrowerDetail() {
           },
           {
             label: "Total Disbursed",
-            value: `$${stats.totalDisbursed.toLocaleString(undefined, {
-              maximumFractionDigits: 0,
-            })}`,
+            value: `$${stats.totalDisbursed.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
             icon: <Banknote className="w-5 h-5 text-blue-500" />,
             mono: true,
+            currencies: stats.byCurrency ? Object.entries(stats.byCurrency).map(([cur, v]) => ({ cur, amount: v.disbursed })) : [],
           },
           {
             label: "Outstanding",
-            value: `$${stats.outstanding.toLocaleString(undefined, {
-              maximumFractionDigits: 0,
-            })}`,
+            value: `$${stats.outstanding.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
             icon: <PiggyBank className="w-5 h-5 text-[#1FA21B]" />,
             mono: true,
             highlight: true,
+            currencies: stats.byCurrency ? Object.entries(stats.byCurrency).map(([cur, v]) => ({ cur, amount: v.outstanding })) : [],
           },
           {
             label: "Total Repaid",
-            value: `$${stats.totalRepaid.toLocaleString(undefined, {
-              maximumFractionDigits: 0,
-            })}`,
+            value: `$${stats.totalRepaid.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
             icon: <CheckCircle2 className="w-5 h-5 text-green-500" />,
             mono: true,
+            currencies: stats.byCurrency ? Object.entries(stats.byCurrency).map(([cur, v]) => ({ cur, amount: v.repaid })) : [],
           },
           {
             label: "Active",
@@ -453,6 +467,15 @@ export default function BorrowerDetail() {
               >
                 {item.value}
               </div>
+              {item.currencies && item.currencies.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {item.currencies.map(({ cur, amount }) => (
+                    <span key={cur} className="text-[10px] bg-slate-100 text-slate-500 rounded px-1.5 py-0.5 font-mono">
+                      {cur} {amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    </span>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}
@@ -644,7 +667,18 @@ export default function BorrowerDetail() {
                         })()}
                       </TableCell>
                       <TableCell className="text-green-600 text-sm font-mono text-right">
-                        ${(loan.total_repaid || 0).toLocaleString()}
+                        {(() => {
+                          const repaid = loan.total_repaid || 0;
+                          const repaidUsd = loan.total_repaid_usd || repaid;
+                          return (
+                            <div>
+                              <div>{loan.currency} {repaid.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+                              {loan.currency !== "USD" && (
+                                <div className="text-[10px] text-slate-400 font-normal">${repaidUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })} USD</div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell className="text-slate-500 text-sm text-right">
                         {loan.interest_rate}%
@@ -661,7 +695,7 @@ export default function BorrowerDetail() {
                           size="icon"
                           variant="ghost"
                           className="w-7 h-7 hover:text-[#1FA21B]"
-                          onClick={() => navigate(`/loans/${loan.loan_id}`)}
+                          onClick={() => setSelectedLoan(loan)}
                         >
                           <Eye className="w-3.5 h-3.5" />
                         </Button>
@@ -719,8 +753,7 @@ export default function BorrowerDetail() {
                       (p >= page - 1 && p <= page + 1)
                   )
                   .reduce((acc, p, idx, arr) => {
-                    if (idx > 0 && p - arr[idx - 1] > 1)
-                      acc.push("...");
+                    if (idx > 0 && p - arr[idx - 1] > 1) acc.push("...");
                     acc.push(p);
                     return acc;
                   }, [])
@@ -738,9 +771,7 @@ export default function BorrowerDetail() {
                         variant={page === item ? "default" : "outline"}
                         size="icon"
                         className={`w-7 h-7 text-xs border-slate-200 ${
-                          page === item
-                            ? "text-white"
-                            : "text-slate-500"
+                          page === item ? "text-white" : "text-slate-500"
                         }`}
                         style={
                           page === item
@@ -777,6 +808,49 @@ export default function BorrowerDetail() {
           )}
         </CardContent>
       </Card>
+
+      {/* Loan Detail Modal */}
+      <Dialog open={!!selectedLoan} onOpenChange={() => setSelectedLoan(null)}>
+        <DialogContent className="bg-white border-slate-200 max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-slate-800 text-lg font-bold flex items-center gap-2">
+              <Receipt className="w-5 h-5 text-[#1FA21B]" />
+              Loan Details
+              <span className="text-xs font-mono text-slate-400 ml-1">#{selectedLoan?.loan_id?.slice(0, 8)}</span>
+            </DialogTitle>
+          </DialogHeader>
+          {selectedLoan && (() => {
+            const outstanding = Math.max(0, (selectedLoan.amount || 0) + (selectedLoan.total_interest || 0) - (selectedLoan.total_repaid || 0));
+            const rows = [
+              { label: "Borrower", value: selectedLoan.borrower_name },
+              { label: "Loan Type", value: selectedLoan.loan_type?.replace(/_/g, " ") },
+              { label: "Status", value: getStatusBadge(selectedLoan), isNode: true },
+              { label: "Source Treasury", value: selectedLoan.source_treasury_name || "—" },
+              { label: "Amount", value: `${selectedLoan.currency} ${(selectedLoan.amount || 0).toLocaleString()}` },
+              { label: "Interest Rate", value: `${selectedLoan.interest_rate || 0}%` },
+              { label: "Total Interest", value: `${selectedLoan.currency} ${(selectedLoan.total_interest || 0).toLocaleString()}` },
+              { label: "Outstanding", value: `${selectedLoan.currency} ${outstanding.toLocaleString(undefined, { maximumFractionDigits: 2 })}` },
+              { label: "Total Repaid", value: `${selectedLoan.currency} ${(selectedLoan.total_repaid || 0).toLocaleString()}` },
+              { label: "Loan Date", value: formatDate(selectedLoan.loan_date) },
+              { label: "Due Date", value: formatDate(selectedLoan.due_date) },
+              { label: "Repayment Count", value: selectedLoan.repayment_count || 0 },
+              { label: "Description", value: selectedLoan.description || "—" },
+            ];
+            return (
+              <div className="space-y-1 mt-2">
+                {rows.map(({ label, value, isNode }) => (
+                  <div key={label} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
+                    <span className="text-xs text-slate-400 uppercase tracking-wider">{label}</span>
+                    {isNode ? value : (
+                      <span className="text-sm font-medium text-slate-800 text-right capitalize">{value}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
