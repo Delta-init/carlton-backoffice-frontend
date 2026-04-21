@@ -199,9 +199,12 @@ export default function BorrowerDetail() {
           extras.forEach(d => { if (d) allLoans = allLoans.concat(Array.isArray(d) ? d : d.items || []); });
         }
 
-        // Build per-currency breakdown
+        // Only active/partially_paid loans for financial stats
+        const activeLoans = allLoans.filter(l => l.status === "active" || l.status === "partially_paid");
+
+        // Build per-currency breakdown (active/partially_paid only)
         const byCurrency = {};
-        allLoans.forEach(l => {
+        activeLoans.forEach(l => {
           const cur = l.currency || "USD";
           if (!byCurrency[cur]) byCurrency[cur] = { disbursed: 0, outstanding: 0, repaid: 0 };
           byCurrency[cur].disbursed += l.amount || 0;
@@ -211,9 +214,9 @@ export default function BorrowerDetail() {
 
         setSummaryStats({
           total: totalCount,
-          totalDisbursed: allLoans.reduce((s, l) => s + (l.amount_usd || l.amount || 0), 0),
-          outstanding: allLoans.reduce((s, l) => s + (l.outstanding_balance_usd || l.outstanding_balance || 0), 0),
-          totalRepaid: allLoans.reduce((s, l) => s + (l.total_repaid_usd || l.total_repaid || 0), 0),
+          totalDisbursed: activeLoans.reduce((s, l) => s + (l.amount_usd || l.amount || 0), 0),
+          outstanding: activeLoans.reduce((s, l) => s + (l.outstanding_balance_usd || l.outstanding_balance || 0), 0),
+          totalRepaid: activeLoans.reduce((s, l) => s + (l.total_repaid_usd || l.total_repaid || 0), 0),
           byCurrency,
           active: allLoans.filter((l) => l.status === "active").length,
           overdue: allLoans.filter((l) => l.is_overdue || (l.status === "active" && l.due_date && new Date(l.due_date) < new Date())).length,
