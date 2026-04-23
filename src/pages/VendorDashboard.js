@@ -1005,7 +1005,7 @@ export default function ExchangerDashboard() {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-[#1FA21B] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -1033,7 +1033,7 @@ export default function ExchangerDashboard() {
       {/* Summary Cards - Row 1 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Settlement Balance - Highlighted */}
-        <Card className="bg-white border-slate-200 border-l-4 border-l-[#66FCF1] lg:col-span-2">
+        <Card className="bg-white border-slate-200 border-l-4 border-l-[#1FA21B] lg:col-span-2">
           <CardContent className="p-6">
             <p className="text-xs text-blue-600 uppercase tracking-wider mb-3">
               Settlement Balance (Money In - Money Out - Commission)
@@ -2208,7 +2208,7 @@ export default function ExchangerDashboard() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge className="bg-blue-100 text-blue-600 border-[#66FCF1]/20">
+                  <Badge className="bg-blue-100 text-blue-600 border-[#1FA21B]/20">
                     {settlements.length} total
                   </Badge>
                   <Button
@@ -2756,7 +2756,7 @@ export default function ExchangerDashboard() {
                         <Input
                           value={rejectionReason}
                           onChange={(e) => setRejectionReason(e.target.value)}
-                          className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                          className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B]"
                           placeholder="Enter reason for rejection"
                           data-testid="rejection-reason"
                         />
@@ -2776,7 +2776,7 @@ export default function ExchangerDashboard() {
                             : ""}{" "}
                           *
                         </Label>
-                        <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center hover:border-[#66FCF1]/50 transition-colors">
+                        <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center hover:border-[#1FA21B]/50 transition-colors">
                           <input
                             type="file"
                             accept="image/*"
@@ -2863,7 +2863,7 @@ export default function ExchangerDashboard() {
                           type="number"
                           value={captchaAnswer}
                           onChange={(e) => setCaptchaAnswer(e.target.value)}
-                          className="w-24 bg-white border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono text-center"
+                          className="w-24 bg-white border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono text-center"
                           placeholder="?"
                           data-testid="captcha-answer"
                         />
@@ -3501,7 +3501,7 @@ export default function ExchangerDashboard() {
                   <Textarea
                     value={ieRejectionReason}
                     onChange={(e) => setIeRejectionReason(e.target.value)}
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B]"
                     rows={2}
                     placeholder="Enter reason..."
                     data-testid="ie-rejection-reason"
@@ -3518,7 +3518,7 @@ export default function ExchangerDashboard() {
                   type="number"
                   value={ieCaptchaAnswer}
                   onChange={(e) => setIeCaptchaAnswer(e.target.value)}
-                  className="bg-white border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono text-center text-lg"
+                  className="bg-white border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono text-center text-lg"
                   placeholder="?"
                   data-testid="ie-captcha-answer"
                 />
@@ -3655,7 +3655,7 @@ export default function ExchangerDashboard() {
                   <Textarea
                     value={loanTxRejectionReason}
                     onChange={(e) => setLoanTxRejectionReason(e.target.value)}
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B]"
                     rows={2}
                     placeholder="Enter reason..."
                     data-testid="loan-tx-rejection-reason"
@@ -3673,7 +3673,7 @@ export default function ExchangerDashboard() {
                   type="number"
                   value={loanTxCaptchaAnswer}
                   onChange={(e) => setLoanTxCaptchaAnswer(e.target.value)}
-                  className="bg-white border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono text-center text-lg"
+                  className="bg-white border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono text-center text-lg"
                   placeholder="?"
                   data-testid="loan-tx-captcha-answer"
                 />

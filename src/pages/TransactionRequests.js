@@ -393,7 +393,7 @@ function EditableRequestCard({
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <span className="text-xs text-slate-400">
-            {formatDate(req.created_at)}
+            {formatDate(req.transaction_date || req.created_at)}
           </span>
           {expanded ? (
             <ChevronUp className="w-4 h-4 text-slate-400" />
@@ -405,7 +405,7 @@ function EditableRequestCard({
 
       {/* Expanded form */}
       {expanded && (
-        <CardContent className="pt-0 pb-4 px-4  border">
+        <CardContent className="pt-0 pb-4 px-4 border-t border-slate-100">
           {isPending ? (
             <div className="space-y-4 mt-4">
               {/* Row 1: Type & Client */}
@@ -1416,9 +1416,8 @@ export default function TransactionRequests() {
       </div>
 
       {/* Summary */}
-      {/* Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="bg-yellow-50/50border-yellow-200">
+        <Card className="bg-yellow-50/50 border-yellow-200">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs text-yellow-600 uppercase">Pending</p>
@@ -2102,7 +2101,7 @@ export default function TransactionRequests() {
             </div> */}
             <div className="space-y-2">
               <Label className="text-slate-500 text-xs uppercase tracking-wider">
-                Proof of Payment (Screenshot)
+                Proof of Payment (Image or PDF)
               </Label>
               <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center hover:border-[#1FA21B]/50 transition-colors">
                 <input

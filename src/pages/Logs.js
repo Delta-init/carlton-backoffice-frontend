@@ -277,12 +277,12 @@ export default function Logs() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1
-            className="text-4xl font-bold uppercase tracking-tight text-slate-800"
+            className="text-4xl font-bold uppercase tracking-tight text-white"
             style={{ fontFamily: "Barlow Condensed" }}
           >
             Logs Management
           </h1>
-          <p className="text-slate-500">
+          <p className="text-[#94A3B8]">
             System activity, authentication, and audit logs
           </p>
         </div>
@@ -290,7 +290,7 @@ export default function Logs() {
           <Button
             variant="outline"
             onClick={exportLogs}
-            className="border-slate-200 text-slate-600 hover:bg-slate-100"
+            className="border-[#1F2833] text-[#94A3B8] hover:bg-[#1F2833]"
           >
             <Download className="w-4 h-4 mr-2" /> Export CSV
           </Button>
@@ -300,7 +300,7 @@ export default function Logs() {
               fetchLogs(activeTab === "all" ? "" : activeTab);
               fetchStats();
             }}
-            className="border-slate-200 text-slate-600 hover:bg-slate-100"
+            className="border-[#1F2833] text-[#94A3B8] hover:bg-[#1F2833]"
           >
             <RefreshCw className="w-4 h-4" />
           </Button>
@@ -310,92 +310,92 @@ export default function Logs() {
       {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          <Card className="bg-white border-slate-200">
+          <Card className="bg-[#1F2833] border-[#1F2833]">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
                   <BarChart3 className="w-5 h-5 text-blue-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-slate-800">
+                  <p className="text-2xl font-bold text-white">
                     {stats.total_logs?.toLocaleString()}
                   </p>
-                  <p className="text-xs text-slate-500">Total Logs</p>
+                  <p className="text-xs text-[#94A3B8]">Total Logs</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-white border-slate-200">
+          <Card className="bg-[#1F2833] border-[#1F2833]">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
                   <Clock className="w-5 h-5 text-green-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-slate-800">
+                  <p className="text-2xl font-bold text-white">
                     {stats.today_logs?.toLocaleString()}
                   </p>
-                  <p className="text-xs text-slate-500">Today</p>
+                  <p className="text-xs text-[#94A3B8]">Today</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-white border-slate-200">
+          <Card className="bg-[#1F2833] border-[#1F2833]">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
                   <Shield className="w-5 h-5 text-purple-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-slate-800">
+                  <p className="text-2xl font-bold text-white">
                     {stats.by_type?.auth || 0}
                   </p>
-                  <p className="text-xs text-slate-500">Auth Logs</p>
+                  <p className="text-xs text-[#94A3B8]">Auth Logs</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-white border-slate-200">
+          <Card className="bg-[#1F2833] border-[#1F2833]">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
                   <FileText className="w-5 h-5 text-amber-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-slate-800">
+                  <p className="text-2xl font-bold text-white">
                     {stats.by_type?.audit || 0}
                   </p>
-                  <p className="text-xs text-slate-500">Audit Logs</p>
+                  <p className="text-xs text-[#94A3B8]">Audit Logs</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-white border-slate-200">
+          <Card className="bg-[#1F2833] border-[#1F2833]">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
                   <XCircle className="w-5 h-5 text-red-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-slate-800">
+                  <p className="text-2xl font-bold text-white">
                     {stats.failed_logins_7d || 0}
                   </p>
-                  <p className="text-xs text-slate-500">Failed Logins (7d)</p>
+                  <p className="text-xs text-[#94A3B8]">Failed Logins (7d)</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-white border-slate-200">
+          <Card className="bg-[#1F2833] border-[#1F2833]">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-cyan-500/20 flex items-center justify-center">
                   <Activity className="w-5 h-5 text-cyan-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-slate-800">
+                  <p className="text-2xl font-bold text-white">
                     {stats.by_type?.activity || 0}
                   </p>
-                  <p className="text-xs text-slate-500">Activity Logs</p>
+                  <p className="text-xs text-[#94A3B8]">Activity Logs</p>
                 </div>
               </div>
             </CardContent>
@@ -404,11 +404,11 @@ export default function Logs() {
       )}
 
       {/* Filters */}
-      <Card className="bg-white border-slate-200">
+      <Card className="bg-[#1F2833] border-[#1F2833]">
         <CardContent className="p-4">
           <div className="flex flex-wrap items-end gap-4">
             <div className="flex-1 min-w-[200px]">
-              <Label className="text-slate-500 text-xs uppercase">Search</Label>
+              <Label className="text-[#94A3B8] text-xs uppercase">Search</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <Input
@@ -418,22 +418,22 @@ export default function Logs() {
                     setFilters({ ...filters, search: e.target.value })
                   }
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                  className="pl-10 bg-slate-50 border-slate-200"
+                  className="pl-10 bg-[#0F172A] border-[#1F2833] text-white placeholder:text-[#94A3B8]"
                 />
               </div>
             </div>
             <div className="w-[150px]">
-              <Label className="text-slate-500 text-xs uppercase">Module</Label>
+              <Label className="text-[#94A3B8] text-xs uppercase">Module</Label>
               <Select
                 value={filters.module || "all"}
                 onValueChange={(v) =>
                   setFilters({ ...filters, module: v === "all" ? "" : v })
                 }
               >
-                <SelectTrigger className="bg-slate-50 border-slate-200">
+                <SelectTrigger className="bg-[#0F172A] border-[#1F2833] text-white">
                   <SelectValue placeholder="All modules" />
                 </SelectTrigger>
-                <SelectContent className="bg-white border-slate-200">
+                <SelectContent className="bg-[#1F2833] border-[#1F2833]">
                   <SelectItem value="all">All modules</SelectItem>
                   <SelectItem value="authentication">Authentication</SelectItem>
                   <SelectItem value="transactions">Transactions</SelectItem>
@@ -449,25 +449,25 @@ export default function Logs() {
               </Select>
             </div>
             <div className="w-[140px]">
-              <Label className="text-slate-500 text-xs uppercase">From</Label>
+              <Label className="text-[#94A3B8] text-xs uppercase">From</Label>
               <Input
                 type="date"
                 value={filters.date_from}
                 onChange={(e) =>
                   setFilters({ ...filters, date_from: e.target.value })
                 }
-                className="bg-slate-50 border-slate-200"
+                className="bg-[#0F172A] border-[#1F2833] text-white"
               />
             </div>
             <div className="w-[140px]">
-              <Label className="text-slate-500 text-xs uppercase">To</Label>
+              <Label className="text-[#94A3B8] text-xs uppercase">To</Label>
               <Input
                 type="date"
                 value={filters.date_to}
                 onChange={(e) =>
                   setFilters({ ...filters, date_to: e.target.value })
                 }
-                className="bg-slate-50 border-slate-200"
+                className="bg-[#0F172A] border-[#1F2833] text-white"
               />
             </div>
             <Button
@@ -488,7 +488,7 @@ export default function Logs() {
                   search: "",
                 })
               }
-              className="border-slate-200"
+              className="border-[#1F2833] text-[#94A3B8] hover:bg-[#1F2833]"
             >
               Clear
             </Button>
@@ -502,37 +502,37 @@ export default function Logs() {
         onValueChange={setActiveTab}
         className="space-y-4"
       >
-        <TabsList className="bg-slate-100 border border-slate-200">
+        <TabsList className="bg-[#0F172A] border border-[#1F2833]">
           <TabsTrigger
             value="all"
-            className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+            className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10]"
           >
             <BarChart3 className="w-4 h-4 mr-2" /> All Logs
           </TabsTrigger>
           <TabsTrigger
             value="activity"
-            className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+            className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10]"
           >
             <Activity className="w-4 h-4 mr-2" /> Activity
           </TabsTrigger>
           <TabsTrigger
             value="auth"
-            className="data-[state=active]:bg-purple-600 data-[state=active]:text-white"
+            className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10]"
           >
             <Shield className="w-4 h-4 mr-2" /> Auth
           </TabsTrigger>
           <TabsTrigger
             value="audit"
-            className="data-[state=active]:bg-amber-600 data-[state=active]:text-white"
+            className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10]"
           >
             <FileText className="w-4 h-4 mr-2" /> Audit
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeTab} className="space-y-4">
-          <Card className="bg-white border-slate-200">
+          <Card className="bg-[#1F2833] border-[#1F2833]">
             <CardHeader className="pb-2 flex flex-row items-center justify-between">
-              <CardTitle className="text-slate-800 flex items-center gap-2">
+              <CardTitle className="text-white flex items-center gap-2">
                 {activeTab === "all" && (
                   <>
                     <BarChart3 className="w-5 h-5 text-blue-500" /> All System
@@ -555,15 +555,15 @@ export default function Logs() {
                     <FileText className="w-5 h-5 text-amber-500" /> Audit Trail
                   </>
                 )}
-                <Badge variant="outline" className="ml-2 text-slate-500">
+                <Badge variant="outline" className="ml-2 text-[#94A3B8] border-[#1F2833]">
                   {total} records
                 </Badge>
               </CardTitle>
               <Select onValueChange={(v) => clearOldLogs(parseInt(v))}>
-                <SelectTrigger className="w-[180px] bg-slate-50 border-slate-200">
+                <SelectTrigger className="w-[180px] bg-[#0F172A] border-[#1F2833] text-white">
                   <SelectValue placeholder="Clear old logs..." />
                 </SelectTrigger>
-                <SelectContent className="bg-white border-slate-200">
+                <SelectContent className="bg-[#1F2833] border-[#1F2833]">
                   <SelectItem value="30">Clear older than 30 days</SelectItem>
                   <SelectItem value="60">Clear older than 60 days</SelectItem>
                   <SelectItem value="90">Clear older than 90 days</SelectItem>
@@ -575,29 +575,29 @@ export default function Logs() {
               <ScrollArea className="h-[600px]">
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-slate-200">
-                      <TableHead className="text-slate-500 text-xs w-[180px]">
+                    <TableRow className="border-[#1F2833]">
+                      <TableHead className="text-[#94A3B8] text-xs w-[180px]">
                         Timestamp
                       </TableHead>
-                      <TableHead className="text-slate-500 text-xs w-[80px]">
+                      <TableHead className="text-[#94A3B8] text-xs w-[80px]">
                         Type
                       </TableHead>
-                      <TableHead className="text-slate-500 text-xs w-[100px]">
+                      <TableHead className="text-[#94A3B8] text-xs w-[100px]">
                         Action
                       </TableHead>
-                      <TableHead className="text-slate-500 text-xs w-[120px]">
+                      <TableHead className="text-[#94A3B8] text-xs w-[120px]">
                         Module
                       </TableHead>
-                      <TableHead className="text-slate-500 text-xs">
+                      <TableHead className="text-[#94A3B8] text-xs">
                         User
                       </TableHead>
-                      <TableHead className="text-slate-500 text-xs">
+                      <TableHead className="text-[#94A3B8] text-xs">
                         Description
                       </TableHead>
-                      <TableHead className="text-slate-500 text-xs w-[120px]">
+                      <TableHead className="text-[#94A3B8] text-xs w-[120px]">
                         IP Address
                       </TableHead>
-                      <TableHead className="text-slate-500 text-xs w-[80px]">
+                      <TableHead className="text-[#94A3B8] text-xs w-[80px]">
                         Status
                       </TableHead>
                     </TableRow>
@@ -622,15 +622,15 @@ export default function Logs() {
                       logs.map((log, i) => (
                         <TableRow
                           key={log.log_id || i}
-                          className="border-slate-200 hover:bg-slate-50"
+                          className="border-[#1F2833] hover:bg-[#1F2833]/50"
                         >
-                          <TableCell className="text-slate-600 text-xs font-mono">
+                          <TableCell className="text-[#94A3B8] text-xs font-mono">
                             {formatTimestamp(log.timestamp)}
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
                               {getLogTypeIcon(log.log_type)}
-                              <span className="text-xs text-slate-600 capitalize">
+                              <span className="text-xs text-[#94A3B8] capitalize">
                                 {log.log_type}
                               </span>
                             </div>
@@ -638,29 +638,29 @@ export default function Logs() {
                           <TableCell>
                             <div className="flex items-center gap-1">
                               {getActionIcon(log.action)}
-                              <span className="text-xs text-slate-600 capitalize">
+                              <span className="text-xs text-[#94A3B8] capitalize">
                                 {log.action?.replace(/_/g, " ")}
                               </span>
                             </div>
                           </TableCell>
-                          <TableCell className="text-slate-600 text-xs capitalize">
+                          <TableCell className="text-[#94A3B8] text-xs capitalize">
                             {log.module?.replace(/_/g, " ")}
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <User className="w-3 h-3 text-slate-400" />
                               <div>
-                                <p className="text-xs text-slate-800 font-medium">
+                                <p className="text-xs text-white font-medium">
                                   {log.user_name || "-"}
                                 </p>
-                                <p className="text-xs text-slate-400">
+                                <p className="text-xs text-[#94A3B8]">
                                   {log.user_email}
                                 </p>
                               </div>
                             </div>
                           </TableCell>
                           <TableCell
-                            className="text-slate-600 text-xs max-w-[300px] truncate"
+                            className="text-[#94A3B8] text-xs max-w-[300px] truncate"
                             title={log.description}
                           >
                             {log.description || "-"}
@@ -668,7 +668,7 @@ export default function Logs() {
                           <TableCell>
                             <div className="flex items-center gap-1">
                               <Globe className="w-3 h-3 text-slate-400" />
-                              <span className="text-xs text-slate-500 font-mono">
+                              <span className="text-xs text-[#94A3B8] font-mono">
                                 {log.ip_address || "-"}
                               </span>
                             </div>
@@ -690,7 +690,7 @@ export default function Logs() {
         totalPages={totalPages}
         totalItems={total}
         pageSize={pageSize}
-        onPageChange={setCurrentPage}
+        onPageChange={(p) => { setCurrentPage(p); fetchLogs(activeTab === "all" ? "" : activeTab, p); }}
         onPageSizeChange={(s) => {
           setPageSize(s);
           setCurrentPage(1);
@@ -699,9 +699,9 @@ export default function Logs() {
       {/* Most Active Users & Common Actions */}
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card className="bg-white border-slate-200">
+          <Card className="bg-[#1F2833] border-[#1F2833]">
             <CardHeader className="pb-2">
-              <CardTitle className="text-slate-800 flex items-center gap-2 text-lg">
+              <CardTitle className="text-white flex items-center gap-2 text-lg">
                 <User className="w-5 h-5 text-blue-500" />
                 Most Active Users (7 days)
               </CardTitle>
@@ -711,13 +711,13 @@ export default function Logs() {
                 {stats.active_users?.map((user, i) => (
                   <div
                     key={i}
-                    className="flex items-center justify-between p-2 bg-slate-50 rounded"
+                    className="flex items-center justify-between p-2 bg-[#0F172A] rounded"
                   >
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
                         <User className="w-4 h-4 text-blue-500" />
                       </div>
-                      <span className="text-slate-800 font-medium">
+                      <span className="text-white font-medium">
                         {user.user || "Unknown"}
                       </span>
                     </div>
@@ -730,7 +730,7 @@ export default function Logs() {
                   </div>
                 ))}
                 {(!stats.active_users || stats.active_users.length === 0) && (
-                  <p className="text-slate-500 text-sm text-center py-4">
+                  <p className="text-[#94A3B8] text-sm text-center py-4">
                     No user activity data
                   </p>
                 )}
@@ -738,9 +738,9 @@ export default function Logs() {
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-slate-200">
+          <Card className="bg-[#1F2833] border-[#1F2833]">
             <CardHeader className="pb-2">
-              <CardTitle className="text-slate-800 flex items-center gap-2 text-lg">
+              <CardTitle className="text-white flex items-center gap-2 text-lg">
                 <Activity className="w-5 h-5 text-purple-500" />
                 Most Common Actions (7 days)
               </CardTitle>
@@ -750,11 +750,11 @@ export default function Logs() {
                 {stats.common_actions?.map((action, i) => (
                   <div
                     key={i}
-                    className="flex items-center justify-between p-2 bg-slate-50 rounded"
+                    className="flex items-center justify-between p-2 bg-[#0F172A] rounded"
                   >
                     <div className="flex items-center gap-2">
                       {getActionIcon(action.action)}
-                      <span className="text-slate-800 font-medium capitalize">
+                      <span className="text-white font-medium capitalize">
                         {action.action?.replace(/_/g, " ")}
                       </span>
                     </div>
@@ -768,7 +768,7 @@ export default function Logs() {
                 ))}
                 {(!stats.common_actions ||
                   stats.common_actions.length === 0) && (
-                  <p className="text-slate-500 text-sm text-center py-4">
+                  <p className="text-[#94A3B8] text-sm text-center py-4">
                     No action data
                   </p>
                 )}

@@ -350,7 +350,7 @@ function PreviewSummary({ preview }) {
           {affected_records.map((rec, i) => (
             <div
               key={i}
-              className={`flex items-start gap-2 p-2.5 rounded border text-xs ${rec.type === "warning" ? "bg-yellow-50/50border-yellow-200 text-yellow-700" : "bg-slate-50 border-slate-200 text-slate-600"}`}
+              className={`flex items-start gap-2 p-2.5 rounded border text-xs ${rec.type === "warning" ? "bg-yellow-50/50 border-yellow-200 text-yellow-700" : "bg-slate-50 border-slate-200 text-slate-600"}`}
             >
               {rec.type === "warning" && (
                 <AlertTriangle className="w-3.5 h-3.5 text-yellow-500 shrink-0 mt-0.5" />
@@ -779,7 +779,10 @@ export default function ReinstateCenter() {
       <div className="flex items-center gap-3 shrink-0">
         <RotateCcw className="w-6 h-6 text-orange-500" />
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">
+          <h1
+            className="text-3xl font-bold uppercase tracking-tight text-white"
+            style={{ fontFamily: "Barlow Condensed" }}
+          >
             Reinstate Center
           </h1>
           <p className="text-slate-500 text-sm">

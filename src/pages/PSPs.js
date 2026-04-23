@@ -778,7 +778,7 @@ export default function PSPs() {
           <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
               <Button
-                className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan"
+                className="bg-[#1FA21B] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan"
                 data-testid="add-psp-btn"
               >
                 <Plus className="w-4 h-4 mr-2" />
@@ -797,7 +797,7 @@ export default function PSPs() {
                   <Input
                     value={formData.psp_name}
                     onChange={(e) => setFormData({ ...formData, psp_name: e.target.value })}
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B]"
                     placeholder="e.g., Stripe, PayPal"
                     data-testid="psp-name"
                     required
@@ -812,7 +812,7 @@ export default function PSPs() {
                       step="0.01"
                       value={formData.commission_rate}
                       onChange={(e) => setFormData({ ...formData, commission_rate: e.target.value })}
-                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
+                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
                       placeholder="2.5"
                       data-testid="psp-commission"
                       required
@@ -826,7 +826,7 @@ export default function PSPs() {
                       min="0"
                       value={formData.reserve_fund_rate}
                       onChange={(e) => setFormData({ ...formData, reserve_fund_rate: e.target.value })}
-                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
+                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
                       placeholder="0"
                       data-testid="psp-reserve-fund"
                     />
@@ -843,7 +843,7 @@ export default function PSPs() {
                       min="0"
                       value={formData.gateway_fee}
                       onChange={(e) => setFormData({ ...formData, gateway_fee: e.target.value })}
-                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
+                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
                       placeholder="0.00"
                       data-testid="psp-gateway-fee"
                     />
@@ -856,7 +856,7 @@ export default function PSPs() {
                       min="0"
                       value={formData.refund_fee}
                       onChange={(e) => setFormData({ ...formData, refund_fee: e.target.value })}
-                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
+                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
                       placeholder="0.00"
                       data-testid="psp-refund-fee"
                     />
@@ -869,7 +869,7 @@ export default function PSPs() {
                       min="0"
                       value={formData.monthly_minimum_fee}
                       onChange={(e) => setFormData({ ...formData, monthly_minimum_fee: e.target.value })}
-                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
+                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
                       placeholder="0.00"
                       data-testid="psp-monthly-min-fee"
                     />
@@ -884,7 +884,7 @@ export default function PSPs() {
                       min="0"
                       value={formData.holding_days}
                       onChange={(e) => setFormData({ ...formData, holding_days: e.target.value })}
-                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
+                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
                       placeholder="0"
                       data-testid="psp-holding-days"
                     />
@@ -896,7 +896,7 @@ export default function PSPs() {
                       min="1"
                       value={formData.settlement_days}
                       onChange={(e) => setFormData({ ...formData, settlement_days: e.target.value })}
-                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
+                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
                       placeholder="T+1"
                       data-testid="psp-settlement-days"
                       required
@@ -930,7 +930,7 @@ export default function PSPs() {
                     step="0.01"
                     value={formData.min_settlement_amount}
                     onChange={(e) => setFormData({ ...formData, min_settlement_amount: e.target.value })}
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
+                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
                     placeholder="0"
                     data-testid="psp-min-amount"
                   />
@@ -959,7 +959,7 @@ export default function PSPs() {
                   <Textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B]"
                     rows={2}
                     data-testid="psp-description"
                   />
@@ -976,7 +976,7 @@ export default function PSPs() {
                   </Button>
                   <Button
                     type="submit"
-                    className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider"
+                    className="bg-[#1FA21B] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider"
                     data-testid="save-psp-btn"
                   >
                     {selectedPsp ? 'Update' : 'Create'}
@@ -1058,7 +1058,7 @@ export default function PSPs() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {loading ? (
           <div className="col-span-full flex justify-center py-12">
-            <div className="w-8 h-8 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-[#1FA21B] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : psps.length === 0 ? (
           <div className="col-span-full text-center py-12">
@@ -1262,16 +1262,16 @@ export default function PSPs() {
               {/* Tabs */}
               <Tabs defaultValue="pending" className="w-full flex-1 flex flex-col">
                 <TabsList className="bg-slate-50 border border-slate-200">
-                  <TabsTrigger value="pending" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
+                  <TabsTrigger value="pending" className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10]">
                     Deposits ({pendingTransactions.length})
                   </TabsTrigger>
-                  <TabsTrigger value="withdrawals" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
+                  <TabsTrigger value="withdrawals" className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10]">
                     Withdrawals ({pspWithdrawals.length})
                   </TabsTrigger>
-                  <TabsTrigger value="reserve-fund" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]" data-testid="reserve-fund-tab">
+                  <TabsTrigger value="reserve-fund" className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10]" data-testid="reserve-fund-tab">
                     Reserve Fund
                   </TabsTrigger>
-                  <TabsTrigger value="history" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
+                  <TabsTrigger value="history" className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10]">
                     Settlement History
                   </TabsTrigger>
                 </TabsList>
@@ -1300,7 +1300,7 @@ export default function PSPs() {
                                 type="checkbox"
                                 checked={selectedSettleTxIds.length === pendingTransactions.length && pendingTransactions.length > 0}
                                 onChange={toggleAllSettleTx}
-                                className="rounded border-slate-300 accent-[#66FCF1]"
+                                className="rounded border-slate-300 accent-[#1FA21B]"
                                 data-testid="select-all-settle-checkbox"
                               />
                             </TableHead>
@@ -1333,13 +1333,13 @@ export default function PSPs() {
                             const baseExtra = hasDiffCurrency ? ((tx.psp_extra_charges || 0) / rate) : null;
                             const baseNet = hasDiffCurrency ? (baseGross - baseComm - baseReserve - baseExtra) : null;
                             return (
-                              <TableRow key={tx.transaction_id} className={`border-slate-200 hover:bg-slate-100 ${overdue ? 'bg-red-500/5' : ''} ${selectedSettleTxIds.includes(tx.transaction_id) ? 'bg-[#66FCF1]/5' : ''}`}>
+                              <TableRow key={tx.transaction_id} className={`border-slate-200 hover:bg-slate-100 ${overdue ? 'bg-red-500/5' : ''} ${selectedSettleTxIds.includes(tx.transaction_id) ? 'bg-[#1FA21B]/5' : ''}`}>
                                 <TableCell>
                                   <input
                                     type="checkbox"
                                     checked={selectedSettleTxIds.includes(tx.transaction_id)}
                                     onChange={() => toggleSettleTx(tx.transaction_id)}
-                                    className="rounded border-slate-300 accent-[#66FCF1]"
+                                    className="rounded border-slate-300 accent-[#1FA21B]"
                                     data-testid={`select-settle-${tx.transaction_id}`}
                                   />
                                 </TableCell>
@@ -1493,9 +1493,9 @@ export default function PSPs() {
 
                   {/* Batch Settlement Action Bar */}
                   {selectedSettleTxIds.length > 0 && (
-                    <div className="mt-3 p-3 bg-[#0B0C10] border border-[#66FCF1]/30 rounded-sm flex items-center justify-between" data-testid="batch-settle-bar">
+                    <div className="mt-3 p-3 bg-[#0B0C10] border border-[#1FA21B]/30 rounded-sm flex items-center justify-between" data-testid="batch-settle-bar">
                       <div className="flex items-center gap-4">
-                        <span className="text-[#66FCF1] text-sm font-medium">{batchSummary.count} selected</span>
+                        <span className="text-[#1FA21B] text-sm font-medium">{batchSummary.count} selected</span>
                         <div className="flex gap-3 text-xs">
                           <span className="text-slate-400">Gross: <span className="text-white font-mono">${batchSummary.gross.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>{batchSummary.payCurrency && <span className="text-blue-400 ml-1">({batchSummary.baseGross?.toLocaleString(undefined, {maximumFractionDigits: 2})} {batchSummary.payCurrency})</span>}</span>
                           <span className="text-slate-400">Deductions: <span className="text-yellow-400 font-mono">-${batchSummary.deductions.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>{batchSummary.payCurrency && <span className="text-yellow-400/70 ml-1">(-{batchSummary.baseDeductions?.toLocaleString(undefined, {maximumFractionDigits: 2})} {batchSummary.payCurrency})</span>}</span>
@@ -1514,7 +1514,7 @@ export default function PSPs() {
                         <Button
                           size="sm"
                           onClick={() => { setBatchSettleDate(new Date().toISOString().split('T')[0]); setBatchSettleDialogOpen(true); }}
-                          className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#66FCF1]/80 h-7 text-xs font-bold"
+                          className="bg-[#1FA21B] text-[#0B0C10] hover:bg-[#1FA21B]/80 h-7 text-xs font-bold"
                           data-testid="settle-selected-btn"
                         >
                           Settle Selected ({batchSummary.count})
@@ -1629,7 +1629,7 @@ export default function PSPs() {
                 <TabsContent value="reserve-fund" className="mt-4 flex-1 flex flex-col">
                   {reserveFundLoading ? (
                     <div className="flex justify-center py-8">
-                      <div className="w-6 h-6 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
+                      <div className="w-6 h-6 border-2 border-[#1FA21B] border-t-transparent rounded-full animate-spin" />
                     </div>
                   ) : reserveFundLedger ? (
                     <>
@@ -1823,7 +1823,7 @@ export default function PSPs() {
                                   {isCompound && (
                                     <button
                                       onClick={() => toggleSettlementDetail(settlement)}
-                                      className="text-slate-400 hover:text-[#66FCF1] transition-colors"
+                                      className="text-slate-400 hover:text-[#1FA21B] transition-colors"
                                       data-testid={`expand-settlement-${settlement.settlement_id}`}
                                     >
                                       <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
@@ -1841,7 +1841,7 @@ export default function PSPs() {
                                     {isNetSettle ? (
                                       <Badge className="bg-green-100 text-green-700 border-green-300 text-[9px] mt-0.5">Net Settlement</Badge>
                                     ) : isCompound && (
-                                      <Badge className="bg-[#66FCF1]/10 text-[#0B0C10] border-[#66FCF1]/30 text-[9px] mt-0.5">Compound</Badge>
+                                      <Badge className="bg-[#1FA21B]/10 text-[#0B0C10] border-[#1FA21B]/30 text-[9px] mt-0.5">Compound</Badge>
                                     )}
                                   </div>
                                 </div>
@@ -1887,7 +1887,7 @@ export default function PSPs() {
                             {isExpanded && (
                               <TableRow className="bg-slate-50/80">
                                 <TableCell colSpan={9} className="p-0">
-                                  <div className="px-6 py-3 border-l-2 border-[#66FCF1] ml-4">
+                                  <div className="px-6 py-3 border-l-2 border-[#1FA21B] ml-4">
                                     <p className="text-xs text-slate-500 font-bold mb-2 uppercase tracking-wider">
                                       Included Transactions ({expandedTxs.length})
                                       {isNetSettle && expandedTxs.length > 0 && (
@@ -2173,7 +2173,7 @@ export default function PSPs() {
                 <Button type="button" variant="outline" onClick={() => setChargesDialogOpen(false)} className="border-slate-200 text-slate-500">
                   Cancel
                 </Button>
-                <Button type="submit" className="bg-[#66FCF1] hover:bg-[#66FCF1]/90 text-[#0B0C10] font-bold uppercase">
+                <Button type="submit" className="bg-[#1FA21B] hover:bg-[#1FA21B]/90 text-[#0B0C10] font-bold uppercase">
                   Save Charges
                 </Button>
               </div>
@@ -2328,13 +2328,13 @@ export default function PSPs() {
         <DialogContent className="sm:max-w-lg bg-white border border-slate-200">
           <DialogHeader>
             <DialogTitle className="text-slate-800 flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-[#66FCF1]" />
+              <DollarSign className="w-5 h-5 text-[#1FA21B]" />
               Compound Settlement
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <p className="text-sm text-slate-500">
-              You are creating <strong className="text-slate-800">1 compound settlement</strong> from <strong className="text-[#66FCF1]">{batchSummary.count} transactions</strong>. 
+              You are creating <strong className="text-slate-800">1 compound settlement</strong> from <strong className="text-[#1FA21B]">{batchSummary.count} transactions</strong>. 
               The net amount will be credited to your treasury as a single lump sum entry.
             </p>
 
@@ -2433,7 +2433,7 @@ export default function PSPs() {
                 size="sm"
                 onClick={handleBatchSettle}
                 disabled={batchSettling}
-                className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#66FCF1]/80 font-bold"
+                className="bg-[#1FA21B] text-[#0B0C10] hover:bg-[#1FA21B]/80 font-bold"
                 data-testid="confirm-batch-settle-btn"
               >
                 {batchSettling ? 'Processing...' : `Settle $${batchSummary.net.toLocaleString(undefined, {maximumFractionDigits: 2})}`}
@@ -2506,7 +2506,7 @@ export default function PSPs() {
           </DialogHeader>
           <div className="space-y-4 py-2">
             <p className="text-sm text-slate-500">
-              This will settle <strong className="text-slate-800">all pending deposits and approved withdrawals</strong> for <strong className="text-[#66FCF1]">{viewPsp?.psp_name}</strong> as a single net amount to your treasury.
+              This will settle <strong className="text-slate-800">all pending deposits and approved withdrawals</strong> for <strong className="text-[#1FA21B]">{viewPsp?.psp_name}</strong> as a single net amount to your treasury.
             </p>
 
             {(() => {

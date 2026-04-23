@@ -247,7 +247,7 @@ export default function TradingAccounts() {
               New Account
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-white border-slate-200 text-white max-w-lg">
+          <DialogContent className="bg-[#1F2833] border-[#1F2833] text-white max-w-lg">
             <DialogHeader>
               <DialogTitle
                 className="text-2xl font-bold uppercase tracking-tight"
@@ -269,17 +269,17 @@ export default function TradingAccounts() {
                     }
                   >
                     <SelectTrigger
-                      className="bg-slate-50 border-slate-200 text-white"
+                      className="bg-[#0F172A] border-[#1F2833] text-white"
                       data-testid="select-client"
                     >
                       <SelectValue placeholder="Select a client" />
                     </SelectTrigger>
-                    <SelectContent className="bg-white border-slate-200">
+                    <SelectContent className="bg-[#0F172A] border-[#1F2833]">
                       {clients.map((client) => (
                         <SelectItem
                           key={client.client_id}
                           value={client.client_id}
-                          className="text-white hover:bg-white/5"
+                          className="text-white hover:bg-[#1F2833]"
                         >
                           {client.first_name} {client.last_name}
                         </SelectItem>
@@ -301,17 +301,17 @@ export default function TradingAccounts() {
                       }
                     >
                       <SelectTrigger
-                        className="bg-slate-50 border-slate-200 text-white"
+                        className="bg-[#0F172A] border-[#1F2833] text-white"
                         data-testid="select-account-type"
                       >
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-white border-slate-200">
+                      <SelectContent className="bg-[#0F172A] border-[#1F2833]">
                         {accountTypes.map((type) => (
                           <SelectItem
                             key={type.value}
                             value={type.value}
-                            className="text-white hover:bg-white/5"
+                            className="text-white hover:bg-[#1F2833]"
                           >
                             {type.label}
                           </SelectItem>
@@ -330,27 +330,27 @@ export default function TradingAccounts() {
                       }
                     >
                       <SelectTrigger
-                        className="bg-slate-50 border-slate-200 text-white"
+                        className="bg-[#0F172A] border-[#1F2833] text-white"
                         data-testid="select-currency"
                       >
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-white border-slate-200">
+                      <SelectContent className="bg-[#0F172A] border-[#1F2833]">
                         <SelectItem
                           value="USD"
-                          className="text-white hover:bg-white/5"
+                          className="text-white hover:bg-[#1F2833]"
                         >
                           USD
                         </SelectItem>
                         <SelectItem
                           value="EUR"
-                          className="text-white hover:bg-white/5"
+                          className="text-white hover:bg-[#1F2833]"
                         >
                           EUR
                         </SelectItem>
                         <SelectItem
                           value="GBP"
-                          className="text-white hover:bg-white/5"
+                          className="text-white hover:bg-[#1F2833]"
                         >
                           GBP
                         </SelectItem>
@@ -371,17 +371,17 @@ export default function TradingAccounts() {
                     }
                   >
                     <SelectTrigger
-                      className="bg-slate-50 border-slate-200 text-white"
+                      className="bg-[#0F172A] border-[#1F2833] text-white"
                       data-testid="select-leverage"
                     >
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-white border-slate-200">
+                    <SelectContent className="bg-[#0F172A] border-[#1F2833]">
                       {leverageOptions.map((opt) => (
                         <SelectItem
                           key={opt.value}
                           value={String(opt.value)}
-                          className="text-white hover:bg-white/5"
+                          className="text-white hover:bg-[#1F2833]"
                         >
                           {opt.label}
                         </SelectItem>
@@ -401,17 +401,17 @@ export default function TradingAccounts() {
                       }
                     >
                       <SelectTrigger
-                        className="bg-slate-50 border-slate-200 text-white"
+                        className="bg-[#0F172A] border-[#1F2833] text-white"
                         data-testid="select-status"
                       >
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-white border-slate-200">
+                      <SelectContent className="bg-[#0F172A] border-[#1F2833]">
                         {statusOptions.map((opt) => (
                           <SelectItem
                             key={opt.value}
                             value={opt.value}
-                            className="text-white hover:bg-white/5"
+                            className="text-white hover:bg-[#1F2833]"
                           >
                             {opt.label}
                           </SelectItem>
@@ -429,7 +429,7 @@ export default function TradingAccounts() {
                     setIsDialogOpen(false);
                     resetForm();
                   }}
-                  className="border-slate-200 text-[#C5C6C7] hover:bg-white/5"
+                  className="border-[#1F2833] text-[#94A3B8] hover:bg-[#0F172A]/50"
                 >
                   Cancel
                 </Button>
@@ -454,27 +454,27 @@ export default function TradingAccounts() {
             placeholder="Search accounts..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 bg-white border-slate-200 text-white placeholder:text-white/30 focus:border-[#1FA21B]"
+            className="pl-10 bg-[#0F172A] border-[#1F2833] text-white placeholder:text-white/30 focus:border-[#1FA21B]"
             data-testid="search-accounts"
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger
-            className="w-full sm:w-48 bg-white border-slate-200 text-white"
+            className="w-full sm:w-48 bg-[#0F172A] border-[#1F2833] text-white"
             data-testid="filter-account-status"
           >
             <Filter className="w-4 h-4 mr-2 text-[#C5C6C7]" />
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
-          <SelectContent className="bg-white border-slate-200">
-            <SelectItem value="all" className="text-white hover:bg-white/5">
+          <SelectContent className="bg-[#0F172A] border-[#1F2833]">
+            <SelectItem value="all" className="text-white hover:bg-[#1F2833]">
               All Status
             </SelectItem>
             {statusOptions.map((option) => (
               <SelectItem
                 key={option.value}
                 value={option.value}
-                className="text-white hover:bg-white/5"
+                className="text-white hover:bg-[#1F2833]"
               >
                 {option.label}
               </SelectItem>
@@ -484,12 +484,12 @@ export default function TradingAccounts() {
       </div>
 
       {/* Table */}
-      <Card className="bg-white border-slate-200">
+      <Card className="bg-[#0F172A] border-[#1F2833]">
         <CardContent className="p-0">
           <ScrollArea className="h-[600px]">
             <Table>
               <TableHeader>
-                <TableRow className="border-slate-200 hover:bg-transparent">
+                <TableRow className="border-[#1F2833] hover:bg-transparent">
                   <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">
                     Account
                   </TableHead>
@@ -533,7 +533,7 @@ export default function TradingAccounts() {
                   filteredAccounts.map((account) => (
                     <TableRow
                       key={account.account_id}
-                      className="border-slate-200 hover:bg-white/5"
+                      className="border-[#1F2833] hover:bg-[#0F172A]"
                     >
                       <TableCell>
                         <div className="flex items-center gap-3">
@@ -574,7 +574,7 @@ export default function TradingAccounts() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="text-[#C5C6C7] hover:text-white hover:bg-white/5"
+                              className="text-[#94A3B8] hover:text-white hover:bg-[#0F172A]"
                               data-testid={`account-actions-${account.account_id}`}
                             >
                               <MoreVertical className="w-4 h-4" />
@@ -582,17 +582,17 @@ export default function TradingAccounts() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent
                             align="end"
-                            className="bg-white border-slate-200"
+                            className="bg-[#0F172A] border-[#1F2833]"
                           >
                             <DropdownMenuItem
                               onClick={() => setViewAccount(account)}
-                              className="text-white hover:bg-white/5 cursor-pointer"
+                              className="text-white hover:bg-[#0F172A] cursor-pointer"
                             >
                               <Eye className="w-4 h-4 mr-2" /> View
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => handleEdit(account)}
-                              className="text-white hover:bg-white/5 cursor-pointer"
+                              className="text-white hover:bg-[#0F172A] cursor-pointer"
                             >
                               <Edit className="w-4 h-4 mr-2" /> Edit
                             </DropdownMenuItem>
@@ -610,7 +610,7 @@ export default function TradingAccounts() {
 
       {/* View Account Dialog */}
       <Dialog open={!!viewAccount} onOpenChange={() => setViewAccount(null)}>
-        <DialogContent className="bg-white border-slate-200 text-white max-w-lg">
+        <DialogContent className="bg-[#1F2833] border-[#1F2833] text-white max-w-lg">
           <DialogHeader>
             <DialogTitle
               className="text-2xl font-bold uppercase tracking-tight"
@@ -634,7 +634,7 @@ export default function TradingAccounts() {
                   </p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-200">
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-[#1F2833]">
                 <div>
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
                     Account Type

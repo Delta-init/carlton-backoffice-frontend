@@ -678,7 +678,7 @@ export default function Clients() {
                   setSearchTerm(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="pl-10 bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-800/30 focus:border-[#66FCF1]"
+                className="pl-10 bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-800/30 focus:border-[#1FA21B]"
                 data-testid="search-clients"
               />
             </div>

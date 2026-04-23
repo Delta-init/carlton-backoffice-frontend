@@ -2086,7 +2086,7 @@ export default function Transactions() {
 
                     {/* Cash collecting person details */}
                     {formData.transaction_mode === "cash" && (
-                      <div className="grid grid-cols-2 gap-4 p-3 bg-amber-50/5border border-amber-200 rounded-xl">
+                      <div className="grid grid-cols-2 gap-4 p-3 bg-amber-50/5 border border-amber-200 rounded-xl">
                         <div className="space-y-1">
                           <Label className="text-amber-700 text-xs uppercase">
                             Collecting Person Name

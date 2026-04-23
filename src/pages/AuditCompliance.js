@@ -247,10 +247,13 @@ export default function AuditCompliance() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#C5C6C7]">
+          <h1
+            className="text-4xl font-bold uppercase tracking-tight text-white"
+            style={{ fontFamily: "Barlow Condensed" }}
+          >
             Audit & Compliance
           </h1>
-          <p className="text-sm text-[#8B8D91]">
+          <p className="text-sm text-[#94A3B8]">
             Monitor transaction integrity, FX rates, and financial anomalies
           </p>
         </div>
@@ -270,7 +273,7 @@ export default function AuditCompliance() {
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="bg-white border border-[#2A3A4A]">
+        <TabsList className="bg-[#0F172A] border border-[#1F2833]">
           <TabsTrigger
             value="dashboard"
             className="data-[state=active]:bg-[#1FA21B]/10 data-[state=active]:text-[#1FA21B]"
@@ -305,7 +308,7 @@ export default function AuditCompliance() {
         {/* DASHBOARD TAB */}
         <TabsContent value="dashboard" className="space-y-6 mt-4">
           {!scan?.scan_id ? (
-            <Card className="bg-white border-[#2A3A4A]">
+            <Card className="bg-[#1F2833] border-[#1F2833]">
               <CardContent className="py-12 text-center">
                 <ShieldCheck className="w-12 h-12 text-[#8B8D91] mx-auto mb-3" />
                 <p className="text-[#8B8D91]">
@@ -317,7 +320,7 @@ export default function AuditCompliance() {
             <>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Health Score */}
-                <Card className="bg-white border-[#2A3A4A]">
+                <Card className="bg-[#1F2833] border-[#1F2833]">
                   <CardContent className="pt-6 pb-4">
                     <HealthScoreRing score={scan.health_score} />
                     <p className="text-center text-xs text-[#8B8D91] mt-2">
@@ -327,7 +330,7 @@ export default function AuditCompliance() {
                 </Card>
 
                 {/* Stats Cards */}
-                <Card className="bg-white border-[#2A3A4A]">
+                <Card className="bg-[#1F2833] border-[#1F2833]">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm text-[#8B8D91]">
                       Issue Breakdown
@@ -374,7 +377,7 @@ export default function AuditCompliance() {
                 </Card>
 
                 {/* Summary */}
-                <Card className="bg-white border-[#2A3A4A]">
+                <Card className="bg-[#1F2833] border-[#1F2833]">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm text-[#8B8D91]">
                       Scan Summary
@@ -412,7 +415,7 @@ export default function AuditCompliance() {
               </div>
 
               {/* Category Breakdown */}
-              <Card className="bg-white border-[#2A3A4A]">
+              <Card className="bg-[#1F2833] border-[#1F2833]">
                 <CardHeader>
                   <CardTitle className="text-sm text-[#8B8D91]">
                     Findings by Category
@@ -437,7 +440,7 @@ export default function AuditCompliance() {
                       return (
                         <div
                           key={key}
-                          className={`p-3 rounded-xl border cursor-pointer transition-all hover:border-[#1FA21B]/50 ${hasIssues ? "border-amber-500/30 bg-amber-500/5" : "border-green-500/30 bg-green-500/5"}`}
+                          className={`p-3 rounded-xl border cursor-pointer transition-all hover:border-[#1FA21B]/50 ${hasIssues ? "border-amber-500/30 bg-amber-500/10" : "border-green-500/30 bg-green-500/10"}`}
                           onClick={() => {
                             setFilterCat(key);
                             setFilterSev("all");
@@ -511,7 +514,7 @@ export default function AuditCompliance() {
             <select
               value={filterCat}
               onChange={(e) => setFilterCat(e.target.value)}
-              className="bg-white border border-[#2A3A4A] text-[#C5C6C7] text-xs rounded px-2 py-1"
+              className="bg-[#0F172A] border border-[#1F2833] text-white text-xs rounded px-2 py-1"
               data-testid="filter-category-select"
             >
               <option value="all">All Categories</option>
@@ -549,7 +552,7 @@ export default function AuditCompliance() {
 
         {/* HISTORY TAB */}
         <TabsContent value="history" className="mt-4">
-          <Card className="bg-white border-[#2A3A4A]">
+          <Card className="bg-[#1F2833] border-[#1F2833]">
             <CardContent className="pt-4">
               {history.length === 0 ? (
                 <p className="text-center py-8 text-[#8B8D91] text-sm">
@@ -618,7 +621,7 @@ export default function AuditCompliance() {
         {/* SETTINGS TAB */}
         <TabsContent value="settings" className="mt-4">
           {settings && (
-            <Card className="bg-white border-[#2A3A4A]">
+            <Card className="bg-[#1F2833] border-[#1F2833]">
               <CardHeader>
                 <CardTitle className="text-sm text-[#C5C6C7] flex items-center gap-2">
                   <Settings2 className="w-4 h-4" /> Audit Configuration
@@ -639,7 +642,7 @@ export default function AuditCompliance() {
                           large_transaction_threshold: Number(e.target.value),
                         })
                       }
-                      className="bg-slate-50 border-[#2A3A4A] text-[#C5C6C7]"
+                      className="bg-[#0F172A] border-[#1F2833] text-white"
                       data-testid="threshold-input"
                     />
                     <p className="text-[10px] text-[#8B8D91]">
@@ -659,7 +662,7 @@ export default function AuditCompliance() {
                           fx_deviation_threshold: Number(e.target.value),
                         })
                       }
-                      className="bg-slate-50 border-[#2A3A4A] text-[#C5C6C7]"
+                      className="bg-[#0F172A] border-[#1F2833] text-white"
                       data-testid="fx-deviation-input"
                     />
                     <p className="text-[10px] text-[#8B8D91]">
@@ -698,7 +701,7 @@ export default function AuditCompliance() {
                             auto_scan_time: e.target.value,
                           })
                         }
-                        className="bg-slate-50 border-[#2A3A4A] text-[#C5C6C7] w-40"
+                        className="bg-[#0F172A] border-[#1F2833] text-white w-40"
                         data-testid="scan-time-input"
                       />
                     </div>
@@ -725,7 +728,7 @@ export default function AuditCompliance() {
                       })
                     }
                     placeholder="admin@company.com, cfo@company.com"
-                    className="bg-slate-50 border-[#2A3A4A] text-[#C5C6C7]"
+                    className="bg-[#0F172A] border-[#1F2833] text-white"
                     data-testid="alert-emails-input"
                   />
                 </div>

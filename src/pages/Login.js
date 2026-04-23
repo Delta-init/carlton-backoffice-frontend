@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
@@ -8,6 +8,27 @@ import { toast } from 'sonner';
 import { TrendingUp, Mail, Lock, ArrowLeft, KeyRound } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
+
+// ── 3-D tilt hook ──────────────────────────────────────────────
+function useTilt(strength = 10) {
+  const [style, setStyle] = useState({});
+
+  const onMove = useCallback((e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width  - 0.5;
+    const y = (e.clientY - rect.top)  / rect.height - 0.5;
+    setStyle({
+      transform: `perspective(900px) rotateY(${x * strength}deg) rotateX(${-y * strength}deg) scale3d(1.01,1.01,1.01)`,
+      transition: 'transform 0.08s ease-out',
+    });
+  }, [strength]);
+
+  const onLeave = useCallback(() => {
+    setStyle({ transform: 'perspective(900px) rotateY(0deg) rotateX(0deg) scale3d(1,1,1)', transition: 'transform 0.4s ease-out' });
+  }, []);
+
+  return { tiltStyle: style, onMove, onLeave };
+}
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -25,6 +46,8 @@ export default function Login() {
   const [resetCode, setResetCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+
+  const { tiltStyle, onMove, onLeave } = useTilt(8);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -134,7 +157,12 @@ export default function Login() {
 
       {/* Right Panel - Login Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-card">
-        <div className="w-full max-w-md">
+        <div
+          className="w-full max-w-md"
+          onMouseMove={onMove}
+          onMouseLeave={onLeave}
+          style={{ ...tiltStyle, transformStyle: 'preserve-3d' }}
+        >
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
             <TrendingUp className="w-10 h-10 text-primary" />

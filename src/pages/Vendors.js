@@ -577,7 +577,7 @@ export default function Exchangers() {
             <p className="text-xl font-mono text-amber-600">{viewExchanger.withdrawal_commission_cash || 0}%</p>
           </div>
         </div>
-              <div className="p-4 bg-slate-50 rounded-sm border-l-4 border-l-[#66FCF1]">
+              <div className="p-4 bg-slate-50 rounded-sm border-l-4 border-l-[#1FA21B]">
                 <p className="text-xs text-blue-600 uppercase tracking-wider mb-3">Settlement Balance (Money In - Money Out - Commission)</p>
                 {viewExchanger.settlement_by_currency && viewExchanger.settlement_by_currency.length > 0 ? (
                   <div className="space-y-3">
@@ -679,16 +679,16 @@ export default function Exchangers() {
               {/* Tabs */}
               <Tabs defaultValue="transactions" className="w-full">
                 <TabsList className="bg-slate-50 border border-slate-200">
-                  <TabsTrigger value="transactions" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
+                  <TabsTrigger value="transactions" className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10]">
                     Transactions ({pendingTransactions.length})
                   </TabsTrigger>
-                  <TabsTrigger value="history" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
+                  <TabsTrigger value="history" className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10]">
                     Settlement History
                   </TabsTrigger>
-                  <TabsTrigger value="ie" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
+                  <TabsTrigger value="ie" className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10]">
                     Income/Expenses ({vendorIeEntries.length})
                   </TabsTrigger>
-                  <TabsTrigger value="loans" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
+                  <TabsTrigger value="loans" className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10]">
                     Loan Transactions ({vendorLoanTxs.length})
                   </TabsTrigger>
                 </TabsList>
@@ -1012,7 +1012,7 @@ export default function Exchangers() {
           <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
               <Button
-                className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan"
+                className="bg-[#1FA21B] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan"
                 data-testid="add-vendor-btn"
               >
                 <Plus className="w-4 h-4 mr-2" />
@@ -1031,7 +1031,7 @@ export default function Exchangers() {
                   <Input
                     value={formData.vendor_name}
                     onChange={(e) => setFormData({ ...formData, vendor_name: e.target.value })}
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B]"
                     placeholder="e.g., MoneyExchange Pro"
                     data-testid="vendor-name"
                     required
@@ -1046,7 +1046,7 @@ export default function Exchangers() {
                         type="email"
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                        className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B]"
                         placeholder="vendor@example.com"
                         data-testid="vendor-email"
                         required
@@ -1058,7 +1058,7 @@ export default function Exchangers() {
                         type="password"
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                        className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B]"
                         placeholder="Min 6 characters"
                         data-testid="vendor-password"
                         required
@@ -1109,7 +1109,7 @@ export default function Exchangers() {
                   <Textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B]"
                     rows={2}
                     data-testid="vendor-description"
                   />
@@ -1127,7 +1127,7 @@ export default function Exchangers() {
                   <Button
                     type="submit"
                     disabled={submitting}
-                    className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider disabled:opacity-50"
+                    className="bg-[#1FA21B] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider disabled:opacity-50"
                     data-testid="save-vendor-btn"
                   >
                     {submitting ? (
@@ -1213,7 +1213,7 @@ export default function Exchangers() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {loading ? (
           <div className="col-span-full flex justify-center py-12">
-            <div className="w-8 h-8 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-[#1FA21B] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : vendors.length === 0 ? (
           <div className="col-span-full text-center py-12">
@@ -1477,7 +1477,7 @@ export default function Exchangers() {
                         step="0.01"
                         value={customAmount}
                         onChange={(e) => setCustomAmount(e.target.value)}
-                        className="bg-white border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono text-lg"
+                        className="bg-white border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono text-lg"
                         placeholder={`0.00 ${customCurrency}`}
                         data-testid="custom-amount"
                       />
@@ -1560,7 +1560,7 @@ export default function Exchangers() {
                     step="0.01"
                     value={settlementCharges}
                     onChange={(e) => setSettlementCharges(e.target.value)}
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
+                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
                     placeholder="0.00"
                     data-testid="settlement-charges"
                   />
@@ -1573,7 +1573,7 @@ export default function Exchangers() {
                   <Input
                     value={settlementChargesDescription}
                     onChange={(e) => setSettlementChargesDescription(e.target.value)}
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B]"
                     placeholder="e.g., Bank transfer fee, Processing fee"
                     data-testid="settlement-charges-desc"
                   />
@@ -1622,7 +1622,7 @@ export default function Exchangers() {
                               step="0.01"
                               value={settlementAmountInDestCurrency}
                               onChange={(e) => setSettlementAmountInDestCurrency(e.target.value)}
-                              className="bg-white border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
+                              className="bg-white border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
                               placeholder={`Enter final amount in ${destCurrency}`}
                               data-testid="settlement-dest-amount"
                             />
@@ -1672,7 +1672,7 @@ export default function Exchangers() {
                 <Input
                   value={settlementNotes}
                   onChange={(e) => setSettlementNotes(e.target.value)}
-                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B]"
                   placeholder="Settlement reference or notes"
                   data-testid="settlement-notes"
                 />

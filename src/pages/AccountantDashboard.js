@@ -103,7 +103,7 @@ const MathCaptcha = ({ onVerified, onCancel, actionType }) => {
         </span>
       </div>
 
-      <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+      <div className="p-4 bg-[#0F172A] rounded-xl border border-[#1F2833]">
         <p className="text-[#C5C6C7] text-sm mb-3">
           Please solve this math problem to{" "}
           {actionType === "approve" ? "approve" : "reject"} the transaction:
@@ -126,7 +126,7 @@ const MathCaptcha = ({ onVerified, onCancel, actionType }) => {
             type="number"
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}
-            className="bg-slate-50 border-slate-200 text-white focus:border-[#1FA21B] font-mono text-xl text-center"
+            className="bg-[#0F172A] border-[#1F2833] text-white focus:border-[#1FA21B] font-mono text-xl text-center"
             placeholder="Enter the sum"
             autoFocus
             data-testid="captcha-answer"
@@ -139,7 +139,7 @@ const MathCaptcha = ({ onVerified, onCancel, actionType }) => {
             type="button"
             variant="outline"
             onClick={onCancel}
-            className="flex-1 border-slate-200 text-[#C5C6C7] hover:bg-white/5"
+            className="flex-1 border-[#1F2833] text-[#C5C6C7] hover:bg-white/5"
           >
             Cancel
           </Button>
@@ -824,6 +824,16 @@ export default function AccountantDashboard() {
     });
   };
 
+  const formatDateForTXDate = (dateStr) => {
+    if (!dateStr) return "-";
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
   const formatCurrency = (amount, currency = "USD") => {
     if (amount == null) return "-";
     return `${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
@@ -859,13 +869,13 @@ export default function AccountantDashboard() {
         ].map(({ label, count, icon: Icon, color, tab }) => (
           <Card
             key={tab}
-            className={`bg-white border-slate-200 cursor-pointer transition-colors ${activeTab === tab ? `border-${color}-400` : `hover:border-${color}-400/50`}`}
+            className={`bg-[#1F2833] border-[#1F2833] cursor-pointer transition-colors ${activeTab === tab ? `border-${color}-400` : `hover:border-${color}-400/50`}`}
             onClick={() => setActiveTab(tab)}
           >
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-1">{label}</p>
+                  <p className="text-[10px] text-[#94A3B8] uppercase tracking-wider mb-1">{label}</p>
                   <p className={`text-2xl font-bold font-mono text-${color}-400`}>{count}</p>
                 </div>
                 <Icon className={`w-5 h-5 text-${color}-400 opacity-50`} />
@@ -877,71 +887,71 @@ export default function AccountantDashboard() {
 
       {/* Filters (for Transactions tab only) */}
       {activeTab === "transactions" && (
-      <Card className="bg-white border-slate-200">
+      <Card className="bg-[#1F2833] border-[#1F2833]">
         <CardContent className="p-4">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2 shrink-0">
-              <Filter className="w-4 h-4 text-[#66FCF1]" />
-              <span className="text-slate-600 text-sm uppercase tracking-wider">
+              <Filter className="w-4 h-4 text-[#1FA21B]" />
+              <span className="text-[#94A3B8] text-sm uppercase tracking-wider">
                 Filters
               </span>
             </div>
 
             {/* Search by name / reference */}
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94A3B8]" />
               <Input
                 value={clientFilter}
                 onChange={(e) => setClientFilter(e.target.value)}
                 placeholder="Search client / reference..."
-                className="pl-8 w-[200px] bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-[#66FCF1] h-9"
+                className="pl-8 w-[200px] bg-[#0F172A] border-[#1F2833] text-white placeholder:text-[#94A3B8] focus:border-[#1FA21B] h-9"
               />
             </div>
 
             {/* Email filter */}
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94A3B8]" />
               <Input
                 value={emailFilter}
                 onChange={(e) => setEmailFilter(e.target.value)}
                 placeholder="Filter by email..."
-                className="pl-8 w-[190px] bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-[#66FCF1] h-9"
+                className="pl-8 w-[190px] bg-[#0F172A] border-[#1F2833] text-white placeholder:text-[#94A3B8] focus:border-[#1FA21B] h-9"
               />
             </div>
 
             {/* Status filter */}
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[140px] bg-slate-50 border-slate-200 text-slate-800 h-9">
+              <SelectTrigger className="w-[140px] bg-[#0F172A] border-[#1F2833] text-white h-9">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
-              <SelectContent className="bg-white border-slate-200">
+              <SelectContent className="bg-[#1F2833] border-[#1F2833]">
                 <SelectItem
                   value="pending"
-                  className="text-slate-800 hover:bg-slate-100"
+                  className="text-white hover:bg-[#0F172A]"
                 >
                   Pending
                 </SelectItem>
                 <SelectItem
                   value="approved"
-                  className="text-slate-800 hover:bg-slate-100"
+                  className="text-white hover:bg-[#0F172A]"
                 >
                   Approved
                 </SelectItem>
                 <SelectItem
                   value="completed"
-                  className="text-slate-800 hover:bg-slate-100"
+                  className="text-white hover:bg-[#0F172A]"
                 >
                   Completed
                 </SelectItem>
                 <SelectItem
                   value="rejected"
-                  className="text-slate-800 hover:bg-slate-100"
+                  className="text-white hover:bg-[#0F172A]"
                 >
                   Rejected
                 </SelectItem>
                 <SelectItem
                   value="cancelled"
-                  className="text-slate-800 hover:bg-slate-100"
+                  className="text-white hover:bg-[#0F172A]"
                 >
                   Cancelled
                 </SelectItem>
@@ -950,43 +960,43 @@ export default function AccountantDashboard() {
 
             {/* Type filter */}
             <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-[140px] bg-slate-50 border-slate-200 text-slate-800 h-9">
+              <SelectTrigger className="w-[140px] bg-[#0F172A] border-[#1F2833] text-white h-9">
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
-              <SelectContent className="bg-white border-slate-200">
+              <SelectContent className="bg-[#1F2833] border-[#1F2833]">
                 <SelectItem
                   value="all"
-                  className="text-slate-800 hover:bg-slate-100"
+                  className="text-white hover:bg-[#0F172A]"
                 >
                   All Types
                 </SelectItem>
                 <SelectItem
                   value="deposit"
-                  className="text-slate-800 hover:bg-slate-100"
+                  className="text-white hover:bg-[#0F172A]"
                 >
                   Deposit
                 </SelectItem>
                 <SelectItem
                   value="withdrawal"
-                  className="text-slate-800 hover:bg-slate-100"
+                  className="text-white hover:bg-[#0F172A]"
                 >
                   Withdrawal
                 </SelectItem>
                 <SelectItem
                   value="transfer"
-                  className="text-slate-800 hover:bg-slate-100"
+                  className="text-white hover:bg-[#0F172A]"
                 >
                   Transfer
                 </SelectItem>
                 <SelectItem
                   value="commission"
-                  className="text-slate-800 hover:bg-slate-100"
+                  className="text-white hover:bg-[#0F172A]"
                 >
                   Commission
                 </SelectItem>
                 <SelectItem
                   value="rebate"
-                  className="text-slate-800 hover:bg-slate-100"
+                  className="text-white hover:bg-[#0F172A]"
                 >
                   Rebate
                 </SelectItem>
@@ -995,43 +1005,43 @@ export default function AccountantDashboard() {
 
             {/* Destination filter */}
             <Select value={destFilter} onValueChange={setDestFilter}>
-              <SelectTrigger className="w-[155px] bg-slate-50 border-slate-200 text-slate-800 h-9">
+              <SelectTrigger className="w-[155px] bg-[#0F172A] border-[#1F2833] text-white h-9">
                 <SelectValue placeholder="Destination" />
               </SelectTrigger>
-              <SelectContent className="bg-white border-slate-200">
+              <SelectContent className="bg-[#1F2833] border-[#1F2833]">
                 <SelectItem
                   value="all"
-                  className="text-slate-800 hover:bg-slate-100"
+                  className="text-white hover:bg-[#0F172A]"
                 >
                   All Destinations
                 </SelectItem>
                 <SelectItem
                   value="treasury"
-                  className="text-slate-800 hover:bg-slate-100"
+                  className="text-white hover:bg-[#0F172A]"
                 >
                   Treasury
                 </SelectItem>
                 <SelectItem
                   value="bank"
-                  className="text-slate-800 hover:bg-slate-100"
+                  className="text-white hover:bg-[#0F172A]"
                 >
                   Client Bank
                 </SelectItem>
                 <SelectItem
                   value="usdt"
-                  className="text-slate-800 hover:bg-slate-100"
+                  className="text-white hover:bg-[#0F172A]"
                 >
                   USDT
                 </SelectItem>
                 <SelectItem
                   value="psp"
-                  className="text-slate-800 hover:bg-slate-100"
+                  className="text-white hover:bg-[#0F172A]"
                 >
                   PSP
                 </SelectItem>
                 <SelectItem
                   value="vendor"
-                  className="text-slate-800 hover:bg-slate-100"
+                  className="text-white hover:bg-[#0F172A]"
                 >
                   Exchanger
                 </SelectItem>
@@ -1040,21 +1050,21 @@ export default function AccountantDashboard() {
 
             {/* Date range */}
             <div className="flex items-center gap-1.5">
-              <span className="text-xs text-slate-500">From:</span>
+              <span className="text-xs text-[#94A3B8]">From:</span>
               <Input
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
-                className="w-[135px] bg-slate-50 border-slate-200 text-slate-800 h-9"
+                className="w-[135px] bg-[#0F172A] border-[#1F2833] text-white h-9"
               />
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="text-xs text-slate-500">To:</span>
+              <span className="text-xs text-[#94A3B8]">To:</span>
               <Input
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
-                className="w-[135px] bg-slate-50 border-slate-200 text-slate-800 h-9"
+                className="w-[135px] bg-[#0F172A] border-[#1F2833] text-white h-9"
               />
             </div>
 
@@ -1090,7 +1100,7 @@ export default function AccountantDashboard() {
 
       {/* Tabs for Transactions, Settlements, and More */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-slate-50 border border-slate-200 mb-4 flex-wrap h-auto gap-1 p-1">
+        <TabsList className="bg-[#0F172A] border border-[#1F2833] mb-4 flex-wrap h-auto gap-1 p-1">
           <TabsTrigger
             value="transactions"
             className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10] text-xs"
@@ -1137,7 +1147,7 @@ export default function AccountantDashboard() {
                 <div className="w-8 h-8 border-2 border-[#1FA21B] border-t-transparent rounded-full animate-spin" />
               </div>
             ) : pendingTransactions.length === 0 ? (
-              <Card className="bg-white border-slate-200">
+              <Card className="bg-[#1F2833] border-[#1F2833]">
                 <CardContent className="p-12 text-center">
                   <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
                   <p className="text-white text-lg">All caught up!</p>
@@ -1157,7 +1167,7 @@ export default function AccountantDashboard() {
                 return (
                   <Card
                     key={tx.transaction_id}
-                    className="bg-white border-slate-200"
+                    className={`border-[#1F2833] ${!hasProperDest ? "bg-red-500/5 border-red-500/30" : "bg-[#1F2833]"}`}
                   >
                     <CardContent className="p-4">
                       <div className="grid grid-cols-[140px_80px_120px_90px_120px_150px_100px_100px_auto] items-center gap-3">
@@ -1458,7 +1468,7 @@ export default function AccountantDashboard() {
                 <div className="w-8 h-8 border-2 border-[#1FA21B] border-t-transparent rounded-full animate-spin" />
               </div>
             ) : pendingSettlements.length === 0 ? (
-              <Card className="bg-white border-slate-200">
+              <Card className="bg-[#1F2833] border-[#1F2833]">
                 <CardContent className="p-12 text-center">
                   <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
                   <p className="text-white text-lg">All caught up!</p>
@@ -1471,7 +1481,7 @@ export default function AccountantDashboard() {
               pendingSettlements.map((settlement) => (
                 <Card
                   key={settlement.settlement_id}
-                  className="bg-white border-slate-200"
+                  className="bg-[#1F2833] border-[#1F2833]"
                 >
                   <CardContent className="p-6">
                     <div className="flex flex-col lg:flex-row lg:items-center gap-4">
@@ -1607,7 +1617,7 @@ export default function AccountantDashboard() {
                 <div className="w-8 h-8 border-2 border-[#1FA21B] border-t-transparent rounded-full animate-spin" />
               </div>
             ) : pendingIE.length === 0 ? (
-              <Card className="bg-white border-slate-200">
+              <Card className="bg-[#1F2833] border-[#1F2833]">
                 <CardContent className="p-12 text-center">
                   <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
                   <p className="text-white text-lg">All caught up!</p>
@@ -1616,7 +1626,7 @@ export default function AccountantDashboard() {
               </Card>
             ) : (
               pendingIE.map((ie) => (
-                <Card key={ie.entry_id} className="bg-white border-slate-200">
+                <Card key={ie.entry_id} className="bg-[#1F2833] border-[#1F2833]">
                   <CardContent className="p-4">
                     <div className="flex flex-wrap items-center gap-4">
                       <div className="flex-1 min-w-[120px]">
@@ -1667,7 +1677,7 @@ export default function AccountantDashboard() {
                 <div className="w-8 h-8 border-2 border-[#1FA21B] border-t-transparent rounded-full animate-spin" />
               </div>
             ) : pendingLoans.length === 0 ? (
-              <Card className="bg-white border-slate-200">
+              <Card className="bg-[#1F2833] border-[#1F2833]">
                 <CardContent className="p-12 text-center">
                   <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
                   <p className="text-white text-lg">All caught up!</p>
@@ -1676,7 +1686,7 @@ export default function AccountantDashboard() {
               </Card>
             ) : (
               pendingLoans.map((loan) => (
-                <Card key={loan.loan_id} className="bg-white border-slate-200">
+                <Card key={loan.loan_id} className="bg-[#1F2833] border-[#1F2833]">
                   <CardContent className="p-4">
                     <div className="flex flex-wrap items-center gap-4">
                       <div className="flex-1 min-w-[120px]">
@@ -1721,7 +1731,7 @@ export default function AccountantDashboard() {
                 <div className="w-8 h-8 border-2 border-[#1FA21B] border-t-transparent rounded-full animate-spin" />
               </div>
             ) : pendingRepayments.length === 0 ? (
-              <Card className="bg-white border-slate-200">
+              <Card className="bg-[#1F2833] border-[#1F2833]">
                 <CardContent className="p-12 text-center">
                   <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
                   <p className="text-white text-lg">All caught up!</p>
@@ -1730,7 +1740,7 @@ export default function AccountantDashboard() {
               </Card>
             ) : (
               pendingRepayments.map((rep) => (
-                <Card key={rep.repayment_id} className="bg-white border-slate-200">
+                <Card key={rep.repayment_id} className="bg-[#1F2833] border-[#1F2833]">
                   <CardContent className="p-4">
                     <div className="flex flex-wrap items-center gap-4">
                       <div className="flex-1 min-w-[120px]">
@@ -1774,7 +1784,7 @@ export default function AccountantDashboard() {
                 <div className="w-8 h-8 border-2 border-[#1FA21B] border-t-transparent rounded-full animate-spin" />
               </div>
             ) : pendingPSPSettlements.length === 0 ? (
-              <Card className="bg-white border-slate-200">
+              <Card className="bg-[#1F2833] border-[#1F2833]">
                 <CardContent className="p-12 text-center">
                   <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
                   <p className="text-white text-lg">All caught up!</p>
@@ -1783,7 +1793,7 @@ export default function AccountantDashboard() {
               </Card>
             ) : (
               pendingPSPSettlements.map((stl) => (
-                <Card key={stl.settlement_id} className="bg-white border-slate-200">
+                <Card key={stl.settlement_id} className="bg-[#1F2833] border-[#1F2833]">
                   <CardContent className="p-4">
                     <div className="flex flex-wrap items-center gap-4">
                       <div className="flex-1 min-w-[120px]">
@@ -1829,10 +1839,10 @@ export default function AccountantDashboard() {
         open={!!viewTransaction}
         onOpenChange={() => setViewTransaction(null)}
       >
-        <DialogContent className="bg-white border-slate-200 text-white max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-[#1F2833] border-[#1F2833] text-white max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle
-              className="text-2xl font-bold uppercase tracking-tight"
+              className="text-2xl font-bold uppercase tracking-tight text-white"
               style={{ fontFamily: "Barlow Condensed" }}
             >
               Transaction Details
@@ -1858,7 +1868,7 @@ export default function AccountantDashboard() {
                   Pending
                 </Badge>
               </div>
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-200">
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-[#1F2833]">
                 <div>
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
                     Client
@@ -1908,7 +1918,7 @@ export default function AccountantDashboard() {
                 </div>
               </div>
               {viewTransaction.destination_account_name && (
-                <div className="pt-4 border-t border-slate-200">
+                <div className="pt-4 border-t border-[#1F2833]">
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
                     Destination
                   </p>
@@ -1924,7 +1934,7 @@ export default function AccountantDashboard() {
               {/* Client Bank Details */}
               {viewTransaction.client_bank_name && (
                 <div
-                  className="pt-4 border-t border-slate-200"
+                  className="pt-4 border-t border-[#1F2833]"
                   data-testid="approval-bank-details"
                 >
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">
@@ -1969,7 +1979,7 @@ export default function AccountantDashboard() {
               {/* USDT Details */}
               {viewTransaction.client_usdt_address && (
                 <div
-                  className="pt-4 border-t border-slate-200"
+                  className="pt-4 border-t border-[#1F2833]"
                   data-testid="approval-usdt-details"
                 >
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">
@@ -1994,7 +2004,7 @@ export default function AccountantDashboard() {
                 </div>
               )}
               {viewTransaction.description && (
-                <div className="pt-4 border-t border-slate-200">
+                <div className="pt-4 border-t border-[#1F2833]">
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
                     Description
                   </p>
@@ -2007,7 +2017,7 @@ export default function AccountantDashboard() {
                   : viewTransaction.proof_image ? [viewTransaction.proof_image] : [];
                 if (!imgs.length) return null;
                 return (
-                  <div className="pt-4 border-t border-slate-200">
+                  <div className="pt-4 border-t border-[#1F2833]">
                     <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">Proof of Payment ({imgs.length})</p>
                     <div className="grid grid-cols-2 gap-2">
                       {imgs.map((url, i) => {
@@ -2022,7 +2032,7 @@ export default function AccountantDashboard() {
                             </a>
                           );
                         }
-                        return <img key={i} src={src} alt={`Proof ${i+1}`} className="w-full rounded border border-slate-200 cursor-pointer hover:opacity-80" onClick={() => window.open(src, "_blank")} />;
+                        return <img key={i} src={src} alt={`Proof ${i+1}`} className="w-full rounded border border-[#1F2833] cursor-pointer hover:opacity-80" onClick={() => window.open(src, "_blank")} />;
                       })}
                     </div>
                   </div>
@@ -2057,16 +2067,16 @@ export default function AccountantDashboard() {
 
       {/* Generic Approval Dialog with Date (for IE, Loan, Repayment, PSP Settlement, Vendor Settlement) */}
       <Dialog open={!!showGenericApprovalDialog} onOpenChange={() => { setShowGenericApprovalDialog(null); setGenericApprovalDate(''); }}>
-        <DialogContent className="bg-white border-slate-200 text-white max-w-md" data-testid="generic-approval-dialog">
+        <DialogContent className="bg-[#1F2833] border-[#1F2833] text-white max-w-md" data-testid="generic-approval-dialog">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
+            <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2 text-white" style={{ fontFamily: 'Barlow Condensed' }}>
               <CheckCircle className="w-6 h-6 text-green-400" />
               Approve {showGenericApprovalDialog?.type === 'ie' ? 'Income/Expense' : showGenericApprovalDialog?.type === 'loan' ? 'Loan Disbursement' : showGenericApprovalDialog?.type === 'repayment' ? 'Loan Repayment' : showGenericApprovalDialog?.type === 'psp_settlement' ? 'PSP Settlement' : 'Vendor Settlement'}
             </DialogTitle>
           </DialogHeader>
           {showGenericApprovalDialog && (
             <div className="space-y-4">
-              <div className="p-4 bg-slate-50 rounded-sm">
+              <div className="p-4 bg-[#0F172A] rounded-lg border border-[#1F2833]">
                 {showGenericApprovalDialog.type === 'ie' && showGenericApprovalDialog.item && (
                   <>
                     <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">{showGenericApprovalDialog.item.entry_type}</p>
@@ -2106,17 +2116,17 @@ export default function AccountantDashboard() {
                 )}
               </div>
               <div className="space-y-2">
-                <Label className="text-slate-600 text-xs uppercase tracking-wider">Date (Actual transaction/settlement date)</Label>
+                <Label className="text-[#94A3B8] text-xs uppercase tracking-wider">Date (Actual transaction/settlement date)</Label>
                 <Input
                   type="date"
                   value={genericApprovalDate}
                   onChange={e => setGenericApprovalDate(e.target.value)}
-                  className="bg-slate-50 border-slate-200 text-slate-800"
+                  className="bg-[#0F172A] border-[#1F2833] text-white"
                   data-testid="generic-approval-date"
                 />
               </div>
               <div className="flex gap-3 pt-2">
-                <Button variant="outline" onClick={() => { setShowGenericApprovalDialog(null); setGenericApprovalDate(''); }} className="flex-1 border-slate-200 text-[#C5C6C7] hover:bg-white/5">Cancel</Button>
+                <Button variant="outline" onClick={() => { setShowGenericApprovalDialog(null); setGenericApprovalDate(''); }} className="flex-1 border-[#1F2833] text-[#C5C6C7] hover:bg-white/5">Cancel</Button>
                 <Button onClick={handleGenericApprovalConfirm} className="flex-1 bg-green-500 text-white hover:bg-green-600" data-testid="confirm-generic-approval">
                   <CheckCircle className="w-4 h-4 mr-2" />Continue to Approve
                 </Button>
@@ -2136,10 +2146,10 @@ export default function AccountantDashboard() {
           }
         }}
       >
-        <DialogContent className="bg-white border-slate-200 text-white max-w-md">
+        <DialogContent className="bg-[#1F2833] border-[#1F2833] text-white max-w-md">
           <DialogHeader>
             <DialogTitle
-              className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2"
+              className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2 text-white"
               style={{ fontFamily: "Barlow Condensed" }}
             >
               <Calculator className="w-6 h-6 text-[#1FA21B]" />
@@ -2165,10 +2175,10 @@ export default function AccountantDashboard() {
           setRejectReason("");
         }}
       >
-        <DialogContent className="bg-white border-slate-200 text-white max-w-md">
+        <DialogContent className="bg-[#1F2833] border-[#1F2833] text-white max-w-md">
           <DialogHeader>
             <DialogTitle
-              className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2"
+              className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2 text-white"
               style={{ fontFamily: "Barlow Condensed" }}
             >
               <AlertCircle className="w-6 h-6 text-red-400" />
@@ -2183,7 +2193,7 @@ export default function AccountantDashboard() {
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               placeholder="Enter rejection reason..."
-              className="bg-slate-50 border-slate-200 text-white focus:border-[#1FA21B]"
+              className="bg-[#0F172A] border-[#1F2833] text-white focus:border-[#1FA21B]"
               rows={3}
               data-testid="reject-reason"
             />
@@ -2194,7 +2204,7 @@ export default function AccountantDashboard() {
                   setShowRejectDialog(null);
                   setRejectReason("");
                 }}
-                className="flex-1 border-slate-200 text-[#C5C6C7] hover:bg-white/5"
+                className="flex-1 border-[#1F2833] text-[#C5C6C7] hover:bg-white/5"
               >
                 Cancel
               </Button>
@@ -2215,10 +2225,10 @@ export default function AccountantDashboard() {
         open={!!viewSettlement}
         onOpenChange={() => setViewSettlement(null)}
       >
-        <DialogContent className="bg-white border-slate-200 text-white max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-[#1F2833] border-[#1F2833] text-white max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle
-              className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2"
+              className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2 text-white"
               style={{ fontFamily: "Barlow Condensed" }}
             >
               <Wallet className="w-6 h-6 text-[#1FA21B]" />
@@ -2238,7 +2248,7 @@ export default function AccountantDashboard() {
                   Pending
                 </Badge>
               </div>
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-200">
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-[#1F2833]">
                 <div>
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
                     Settlement Type
@@ -2326,7 +2336,7 @@ export default function AccountantDashboard() {
                   </p>
                 </div>
               </div>
-              <div className="pt-4 border-t border-slate-200">
+              <div className="pt-4 border-t border-[#1F2833]">
                 <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
                   Destination Account
                 </p>
@@ -2334,7 +2344,7 @@ export default function AccountantDashboard() {
                   {viewSettlement.settlement_destination_name}
                 </p>
               </div>
-              <div className="pt-4 border-t border-slate-200">
+              <div className="pt-4 border-t border-[#1F2833]">
                 <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
                   Created By
                 </p>
@@ -2378,10 +2388,10 @@ export default function AccountantDashboard() {
           setRejectReason("");
         }}
       >
-        <DialogContent className="bg-white border-slate-200 text-white max-w-md">
+        <DialogContent className="bg-[#1F2833] border-[#1F2833] text-white max-w-md">
           <DialogHeader>
             <DialogTitle
-              className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2"
+              className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2 text-white"
               style={{ fontFamily: "Barlow Condensed" }}
             >
               <AlertCircle className="w-6 h-6 text-red-400" />
@@ -2396,7 +2406,7 @@ export default function AccountantDashboard() {
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               placeholder="Enter rejection reason..."
-              className="bg-slate-50 border-slate-200 text-white focus:border-[#1FA21B]"
+              className="bg-[#0F172A] border-[#1F2833] text-white focus:border-[#1FA21B]"
               rows={3}
               data-testid="settlement-reject-reason"
             />
@@ -2407,7 +2417,7 @@ export default function AccountantDashboard() {
                   setShowSettlementRejectDialog(null);
                   setRejectReason("");
                 }}
-                className="flex-1 border-slate-200 text-[#C5C6C7] hover:bg-white/5"
+                className="flex-1 border-[#1F2833] text-[#C5C6C7] hover:bg-white/5"
               >
                 Cancel
               </Button>
@@ -2431,10 +2441,10 @@ export default function AccountantDashboard() {
           setProofPreview(null);
         }}
       >
-        <DialogContent className="bg-white border-slate-200 text-white max-w-md">
+        <DialogContent className="bg-[#1F2833] border-[#1F2833] text-white max-w-md">
           <DialogHeader>
             <DialogTitle
-              className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2"
+              className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2 text-white"
               style={{ fontFamily: "Barlow Condensed" }}
             >
               <Upload className="w-6 h-6 text-[#1FA21B]" />
@@ -2443,7 +2453,7 @@ export default function AccountantDashboard() {
           </DialogHeader>
           {uploadingProof && (
             <div className="space-y-4">
-              <div className="p-4 bg-slate-50 rounded-xl">
+              <div className="p-4 bg-[#0F172A] rounded-xl border border-[#1F2833]">
                 <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
                   Transaction
                 </p>
@@ -2459,7 +2469,7 @@ export default function AccountantDashboard() {
                 </p>
                 {uploadingProof.destination_type === "bank" &&
                   uploadingProof.client_bank_name && (
-                    <div className="mt-2 p-2 bg-white rounded-xl">
+                    <div className="mt-2 p-2 bg-[#0F172A] rounded-xl border border-[#1F2833]">
                       <div className="flex items-center gap-2">
                         <Building2 className="w-4 h-4 text-blue-400" />
                         <span className="text-white text-sm">
@@ -2473,7 +2483,7 @@ export default function AccountantDashboard() {
                   )}
                 {uploadingProof.destination_type === "usdt" &&
                   uploadingProof.client_usdt_address && (
-                    <div className="mt-2 p-2 bg-white rounded-xl">
+                    <div className="mt-2 p-2 bg-[#0F172A] rounded-xl border border-[#1F2833]">
                       <div className="flex items-center gap-2">
                         <Wallet className="w-4 h-4 text-green-400" />
                         <Badge className="bg-green-500/20 text-green-400 text-xs">
@@ -2500,7 +2510,7 @@ export default function AccountantDashboard() {
                       onClick={() => window.open(proofPreview, '_blank')}
                       src={proofPreview}
                       alt="Proof preview"
-                      className="w-full h-48 object-contain bg-slate-50 rounded-xl"
+                      className="w-full h-48 object-contain bg-[#0F172A] rounded-xl"
                     />
                   )}
                   <Button
@@ -2540,7 +2550,7 @@ export default function AccountantDashboard() {
                   setUploadingProof(null);
                   setProofPreview(null);
                 }}
-                className="w-full border-slate-200 text-[#C5C6C7] hover:bg-white/5"
+                className="w-full border-[#1F2833] text-[#C5C6C7] hover:bg-white/5"
               >
                 Cancel
               </Button>
@@ -2560,10 +2570,10 @@ export default function AccountantDashboard() {
           setBankReceiptDate("");
         }}
       >
-        <DialogContent className="bg-white border-slate-200 text-white max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-[#1F2833] border-[#1F2833] text-white max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle
-              className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2"
+              className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2 text-white"
               style={{ fontFamily: "Barlow Condensed" }}
             >
               <CheckCircle className="w-6 h-6 text-green-400" />
@@ -2576,7 +2586,7 @@ export default function AccountantDashboard() {
           {showApprovalDialog && (
             <div className="space-y-4">
               {/* Transaction Details */}
-              <div className="p-4 bg-slate-50 rounded-xl">
+              <div className="p-4 bg-[#0F172A] rounded-xl border border-[#1F2833]">
                 <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
                   Transaction
                 </p>
@@ -2630,7 +2640,7 @@ export default function AccountantDashboard() {
 
               {/* Destination Details - Only for Withdrawals */}
               {showApprovalDialog.transaction_type === "withdrawal" && (
-                <div className="p-4 bg-slate-50 rounded-xl">
+                <div className="p-4 bg-[#0F172A] rounded-xl border border-[#1F2833]">
                   <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">
                     Sending To
                   </p>
@@ -2679,7 +2689,7 @@ export default function AccountantDashboard() {
               {/* Deposit Destination Info */}
               {showApprovalDialog.transaction_type === "deposit" &&
                 showApprovalDialog.destination_account_name && (
-                  <div className="p-4 bg-slate-50 rounded-xl">
+                  <div className="p-4 bg-[#0F172A] rounded-xl border border-[#1F2833]">
                     <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">
                       Depositing To
                     </p>
@@ -2721,14 +2731,14 @@ export default function AccountantDashboard() {
                     onValueChange={setApprovalSourceAccount}
                   >
                     <SelectTrigger
-                      className="bg-slate-50 border-slate-200 text-white"
+                      className="bg-[#0F172A] border-[#1F2833] text-white"
                       data-testid="approval-source-account"
                     >
                      <SelectValue placeholder="Select treasury, USDT or PSP account" />
                     </SelectTrigger>
-                  <SelectContent className="bg-white border-slate-200 max-h-[250px]">
+                  <SelectContent className="bg-[#1F2833] border-[#1F2833] max-h-[250px]">
                       {filteredTreasury.length > 0 && (
-                        <div className="px-2 py-1 text-[10px] text-slate-400 uppercase tracking-wider font-bold border-b border-slate-100">
+                        <div className="px-2 py-1 text-[10px] text-[#94A3B8] uppercase tracking-wider font-bold border-b border-[#1F2833]">
                           Treasury / USDT
                         </div>
                       )}
@@ -2755,7 +2765,7 @@ export default function AccountantDashboard() {
                         </SelectItem>
                       ))}
                       {filteredPsps.length > 0 && (
-                        <div className="px-2 py-1 text-[10px] text-slate-400 uppercase tracking-wider font-bold border-b border-slate-100 mt-1">
+                        <div className="px-2 py-1 text-[10px] text-[#94A3B8] uppercase tracking-wider font-bold border-b border-[#1F2833] mt-1">
                           PSP
                         </div>
                       )}
@@ -2786,17 +2796,17 @@ export default function AccountantDashboard() {
 
               {/* Bank Receipt Date - Optional */}
               <div className="space-y-2">
-                <Label className="text-slate-600 text-xs uppercase tracking-wider">
+                <Label className="text-[#94A3B8] text-xs uppercase tracking-wider">
                   Bank Receipt Date (Actual payment date)
                 </Label>
                 <Input
                   type="date"
                   value={bankReceiptDate}
                   onChange={(e) => setBankReceiptDate(e.target.value)}
-                  className="bg-slate-50 border-slate-200 text-slate-800"
+                  className="bg-[#0F172A] border-[#1F2833] text-white"
                   data-testid="bank-receipt-date"
                 />
-                <p className="text-slate-400 text-xs">
+                <p className="text-[#94A3B8] text-xs">
                   Date the payment was actually received in the bank. Used for
                   reconciliation matching.
                 </p>
@@ -2858,7 +2868,7 @@ export default function AccountantDashboard() {
                     setApprovalProofPreviews([]);
                     setBankReceiptDate("");
                   }}
-                  className="flex-1 border-slate-200 text-[#C5C6C7] hover:bg-white/5"
+                  className="flex-1 border-[#1F2833] text-[#C5C6C7] hover:bg-white/5"
                 >
                   Cancel
                 </Button>
@@ -2883,10 +2893,10 @@ export default function AccountantDashboard() {
 
       {/* Generic View Item Dialog (IE / Loan / Repayment / PSP Settlement) */}
       <Dialog open={!!viewItem} onOpenChange={() => setViewItem(null)}>
-        <DialogContent className="bg-white border-slate-200 text-white max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-[#1F2833] border-[#1F2833] text-white max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle
-              className="text-2xl font-bold uppercase tracking-tight"
+              className="text-2xl font-bold uppercase tracking-tight text-white"
               style={{ fontFamily: "Barlow Condensed" }}
             >
               {viewItem?._viewType === "ie"
@@ -2957,10 +2967,10 @@ export default function AccountantDashboard() {
           setRejectReason("");
         }}
       >
-        <DialogContent className="bg-white border-slate-200 text-white max-w-md">
+        <DialogContent className="bg-[#1F2833] border-[#1F2833] text-white max-w-md">
           <DialogHeader>
             <DialogTitle
-              className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2"
+              className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2 text-white"
               style={{ fontFamily: "Barlow Condensed" }}
             >
               <AlertCircle className="w-6 h-6 text-red-400" />Reject Item
@@ -2972,7 +2982,7 @@ export default function AccountantDashboard() {
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               placeholder="Enter rejection reason..."
-              className="bg-slate-50 border-slate-200 text-white focus:border-[#1FA21B]"
+              className="bg-[#0F172A] border-[#1F2833] text-white focus:border-[#1FA21B]"
               rows={3}
               data-testid="generic-reject-reason"
             />
@@ -2983,7 +2993,7 @@ export default function AccountantDashboard() {
                   setShowGenericRejectDialog(null);
                   setRejectReason("");
                 }}
-                className="flex-1 border-slate-200 text-[#C5C6C7] hover:bg-white/5"
+                className="flex-1 border-[#1F2833] text-[#C5C6C7] hover:bg-white/5"
               >
                 Cancel
               </Button>

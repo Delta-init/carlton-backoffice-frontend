@@ -767,7 +767,7 @@ export default function Settings() {
                         {(formData.role === "vendor" ||
                           formData.role_id === "exchanger") &&
                           !selectedUser && (
-                            <div className="space-y-3 p-3 bg-amber-50/5border border-amber-200 rounded-xl">
+                            <div className="space-y-3 p-3 bg-amber-50/5 border border-amber-200 rounded-xl">
                               <p className="text-xs text-amber-700 font-semibold uppercase tracking-wider">
                                 Exchanger Commission Rates
                               </p>

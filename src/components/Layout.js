@@ -229,7 +229,7 @@ export default function Layout() {
                 : "text-slate-600 hover:text-slate-900 hover:bg-slate-100 border-l-2 border-transparent"
           }`
         }
-        data-testid={`nav-${label.toLowerCase().replace(" ", "-")}`}
+        data-testid={`nav-${label.toLowerCase().replace(/ /g, "-")}`}
       >
         <Icon className="w-5 h-5" />
         <span className="flex-1">{label}</span>
@@ -237,7 +237,7 @@ export default function Layout() {
           <Badge
             variant="destructive"
             className="ml-auto h-5 min-w-[20px] flex items-center justify-center text-xs font-bold px-1.5 rounded-full"
-            data-testid={`badge-${label.toLowerCase().replace(" ", "-")}`}
+            data-testid={`badge-${label.toLowerCase().replace(/ /g, "-")}`}
           >
             {badgeCount > 99 ? "99+" : badgeCount}
           </Badge>
@@ -401,10 +401,10 @@ export default function Layout() {
           <div className="flex items-center justify-between h-full px-4 md:px-6">
             <button
               onClick={() => setSidebarOpen(true)}
-              className={`lg:hidden ${isDark ? "text-[#C5C6C7] hover:text-white" : "text-slate-500 hover:text-slate-700"}`}
+              className={`lg:hidden p-1.5 rounded-[6px] transition-colors ${isDark ? "text-[#C5C6C7] hover:text-white hover:bg-white/10" : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"}`}
               data-testid="mobile-menu-btn"
             >
-              <Menu className="w-6 h-6" />
+              <Menu className="w-5 h-5" />
             </button>
 
             <div className="flex-1" />

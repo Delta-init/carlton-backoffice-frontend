@@ -603,7 +603,7 @@ export default function LPAccounts() {
           {canManage && (
             <Button
               onClick={() => setIsAddLPOpen(true)}
-              className="bg-primary text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-xl glow-cyan"
+              className="bg-[#1FA21B] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-xl glow-cyan"
               data-testid="add-lp-btn"
             >
               <Plus className="w-4 h-4 mr-2" />
@@ -653,7 +653,7 @@ export default function LPAccounts() {
         <TabsContent value="dashboard">
           {loading ? (
             <div className="flex justify-center py-12">
-              <div className="w-8 h-8 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
+              <div className="w-8 h-8 border-2 border-[#1FA21B] border-t-transparent rounded-full animate-spin" />
             </div>
           ) : dashboard ? (
             <div className="space-y-6">
@@ -1767,7 +1767,7 @@ export default function LPAccounts() {
               </Button>
               <Button
                 onClick={handleCreateLP}
-                className="bg-primary text-[#0B0C10] hover:bg-[#45A29E]"
+                className="bg-[#1FA21B] text-[#0B0C10] hover:bg-[#45A29E]"
               >
                 Create LP
               </Button>
@@ -1918,7 +1918,7 @@ export default function LPAccounts() {
               </Button>
               <Button
                 onClick={handleUpdateLP}
-                className="bg-primary text-[#0B0C10] hover:bg-[#45A29E]"
+                className="bg-[#1FA21B] text-[#0B0C10] hover:bg-[#45A29E]"
               >
                 Save Changes
               </Button>
