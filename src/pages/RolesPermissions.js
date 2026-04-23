@@ -42,12 +42,14 @@ import {
   FilePlus,
   FileCheck,
   Download,
+  List,
 } from "lucide-react";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const ACTION_ICONS = {
   view: Eye,
+  listing: List,
   create: FilePlus,
   edit: FileEdit,
   approve: FileCheck,
@@ -56,6 +58,7 @@ const ACTION_ICONS = {
 
 const ACTION_COLORS = {
   view: "bg-blue-100 text-blue-600 border-blue-200",
+  listing: "bg-cyan-100 text-cyan-600 border-cyan-200",
   create: "bg-green-100 text-green-600 border-green-200",
   edit: "bg-yellow-100 text-yellow-600 border-yellow-200",
   approve: "bg-purple-100 text-purple-600 border-purple-200",
