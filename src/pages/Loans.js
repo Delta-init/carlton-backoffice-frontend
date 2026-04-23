@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -100,6 +100,7 @@ const installmentFrequencies = [
 export default function Loans() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [loans, setLoans] = useState([]);
   const [treasuryAccounts, setTreasuryAccounts] = useState([]);
   const [vendors, setExchangers] = useState([]);
@@ -309,6 +310,12 @@ export default function Loans() {
       toast.error("Failed to load loan details");
     }
   };
+
+  useEffect(() => {
+    if (location.state?.tab) {
+      setMainTab(location.state.tab);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     fetchLoans();

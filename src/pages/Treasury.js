@@ -112,6 +112,7 @@ export default function Treasury() {
     startDate: "",
     endDate: "",
     transactionType: "",
+    period: "all",
   });
 
   // Transfer state

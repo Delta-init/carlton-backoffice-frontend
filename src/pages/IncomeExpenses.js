@@ -294,7 +294,7 @@ export default function IncomeExpenses() {
 
   const fetchClients = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/clients?page_size=200`, {
+      const response = await fetch(`${API_URL}/api/clients?page_size=500`, {
         headers: getAuthHeaders(),
         credentials: "include",
       });
