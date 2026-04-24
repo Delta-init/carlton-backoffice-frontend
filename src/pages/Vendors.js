@@ -76,6 +76,9 @@ import {
   RefreshCw,
   ArrowLeft,
   ImageIcon,
+  Archive,
+  ArchiveRestore,
+  Coins,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -128,7 +131,10 @@ export default function Exchangers() {
     withdrawal_commission_cash: '',
     description: '',
     status: 'active',
+    dealing_currency: '',
   });
+
+  const CURRENCIES = ['USD', 'EUR', 'GBP', 'AED', 'INR', 'SAR', 'QAR', 'KWD', 'BHD', 'OMR', 'CHF', 'CAD', 'AUD', 'SGD', 'HKD', 'JPY', 'CNY'];
 
   const isAdmin = user?.role === 'admin';
   const isAccountantOrAdmin = user?.role === 'admin' || user?.role === 'accountant';
@@ -351,6 +357,7 @@ export default function Exchangers() {
         deposit_commission_cash: parseFloat(formData.deposit_commission_cash) || 0,
         withdrawal_commission_cash: parseFloat(formData.withdrawal_commission_cash) || 0,
         description: formData.description || null,
+        dealing_currency: formData.dealing_currency || null,
       };
 
       if (!selectedExchanger) {
@@ -413,8 +420,46 @@ export default function Exchangers() {
       withdrawal_commission_cash: vendor.withdrawal_commission_cash?.toString() || '',
       description: vendor.description || '',
       status: vendor.status,
+      dealing_currency: vendor.dealing_currency || '',
     });
     setIsDialogOpen(true);
+  };
+
+  const handleArchive = async (vendor) => {
+    if (!window.confirm(`Archive "${vendor.vendor_name}"? They will no longer appear in reports or daily emails, and cannot receive new transactions.`)) return;
+    try {
+      const response = await fetch(`${API_URL}/api/vendors/${vendor.vendor_id}/archive`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+      if (response.ok) {
+        toast.success(`${vendor.vendor_name} has been archived`);
+        fetchExchangers(currentPage, searchTerm);
+      } else {
+        toast.error(await getApiError(response));
+      }
+    } catch (error) {
+      toast.error(error?.message || 'Failed to archive exchanger');
+    }
+  };
+
+  const handleUnarchive = async (vendor) => {
+    try {
+      const response = await fetch(`${API_URL}/api/vendors/${vendor.vendor_id}/unarchive`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+      if (response.ok) {
+        toast.success(`${vendor.vendor_name} has been restored to active`);
+        fetchExchangers(currentPage, searchTerm);
+      } else {
+        toast.error(await getApiError(response));
+      }
+    } catch (error) {
+      toast.error(error?.message || 'Failed to unarchive exchanger');
+    }
   };
 
   const handleSettleExchanger = async () => {
@@ -510,6 +555,7 @@ export default function Exchangers() {
       withdrawal_commission_cash: '',
       description: '',
       status: 'active',
+      dealing_currency: '',
     });
   };
 
@@ -517,6 +563,7 @@ export default function Exchangers() {
     const styles = {
       active: 'status-approved',
       inactive: 'status-rejected',
+      archived: 'bg-slate-100 text-slate-500 border border-slate-200',
       pending: 'status-pending',
       approved: 'status-approved',
       completed: 'status-approved',
@@ -554,8 +601,21 @@ export default function Exchangers() {
           {detailLoading && <RefreshCw className="w-4 h-4 animate-spin text-blue-500" />}
         </div>
 
+        {/* Archived banner */}
+        {viewExchanger.status === 'archived' && (
+          <div className="flex items-center gap-3 p-3 bg-slate-100 border border-slate-200 rounded-sm text-slate-500 text-sm">
+            <Archive className="w-4 h-4 shrink-0" />
+            <span>This exchanger is <strong>archived</strong> — excluded from reports and daily emails. New transactions are blocked.</span>
+            {isAccountantOrAdmin && (
+              <Button size="sm" variant="outline" className="ml-auto text-blue-600 border-blue-200 hover:bg-blue-50" onClick={() => handleUnarchive(viewExchanger)}>
+                <ArchiveRestore className="w-3.5 h-3.5 mr-1" /> Restore
+              </Button>
+            )}
+          </div>
+        )}
+
         {/* Exchanger Info */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-sm">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 p-4 bg-slate-50 rounded-sm">
           <div>
             <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Money In (Bank)</p>
             <p className="text-xl font-mono text-slate-800">{viewExchanger.deposit_commission || 0}%</p>
@@ -571,6 +631,16 @@ export default function Exchangers() {
           <div>
             <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Money Out (Cash)</p>
             <p className="text-xl font-mono text-amber-600">{viewExchanger.withdrawal_commission_cash || 0}%</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Dealing Currency</p>
+            {viewExchanger.dealing_currency ? (
+              <Badge className="bg-indigo-100 text-indigo-700 border border-indigo-200 text-sm font-mono flex items-center gap-1 w-fit mt-1">
+                <Coins className="w-3.5 h-3.5" />{viewExchanger.dealing_currency}
+              </Badge>
+            ) : (
+              <p className="text-sm text-slate-400">All currencies</p>
+            )}
           </div>
         </div>
               <div className="p-4 bg-slate-50 rounded-sm border-l-4 border-l-[#1FA21B]">
@@ -1082,6 +1152,28 @@ export default function Exchangers() {
                   </div>
                 </div>
                 
+                {/* Dealing Currency */}
+                <div className="space-y-2">
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider flex items-center gap-1">
+                    <Coins className="w-3.5 h-3.5 text-indigo-500" /> Dealing Currency
+                  </Label>
+                  <Select
+                    value={formData.dealing_currency || '__none__'}
+                    onValueChange={(v) => setFormData({ ...formData, dealing_currency: v === '__none__' ? '' : v })}
+                  >
+                    <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="vendor-dealing-currency">
+                      <SelectValue placeholder="No restriction (all currencies)" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border-slate-200">
+                      <SelectItem value="__none__" className="text-slate-500 hover:bg-slate-100">No restriction (all currencies)</SelectItem>
+                      {CURRENCIES.map(c => (
+                        <SelectItem key={c} value={c} className="text-slate-800 hover:bg-slate-100">{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-slate-400">If set, only transactions in this currency will be allowed for this exchanger.</p>
+                </div>
+
                 {selectedExchanger && (
                   <div className="space-y-2">
                     <Label className="text-slate-500 text-xs uppercase tracking-wider">Status</Label>
@@ -1099,7 +1191,7 @@ export default function Exchangers() {
                     </Select>
                   </div>
                 )}
-                
+
                 <div className="space-y-2">
                   <Label className="text-slate-500 text-xs uppercase tracking-wider">Description</Label>
                   <Textarea
@@ -1175,6 +1267,11 @@ export default function Exchangers() {
               <div>
                 <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Active Exchangers</p>
                 <p className="text-3xl font-bold font-mono text-slate-800">{vendors.filter(v => v.status === 'active').length}</p>
+                {vendors.filter(v => v.status === 'archived').length > 0 && (
+                  <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
+                    <Archive className="w-3 h-3" />{vendors.filter(v => v.status === 'archived').length} archived
+                  </p>
+                )}
               </div>
               <div className="p-3 bg-green-500/10 rounded-sm">
                 <CheckCircle2 className="w-6 h-6 text-green-500" />
@@ -1219,9 +1316,9 @@ export default function Exchangers() {
           </div>
         ) : (
           vendors.map((vendor) => (
-            <Card 
-              key={vendor.vendor_id} 
-              className="bg-white border-slate-200 card-hover cursor-pointer"
+            <Card
+              key={vendor.vendor_id}
+              className={`bg-white border-slate-200 card-hover cursor-pointer ${vendor.status === 'archived' ? 'opacity-60 grayscale-[30%]' : ''}`}
               onClick={() => openExchangerView(vendor)}
             >
               <CardHeader className="pb-2">
@@ -1249,6 +1346,15 @@ export default function Exchangers() {
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(vendor); }} className="text-slate-800 hover:bg-slate-100 cursor-pointer">
                           <Edit className="w-4 h-4 mr-2" /> Edit
                         </DropdownMenuItem>
+                        {vendor.status !== 'archived' ? (
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleArchive(vendor); }} className="text-amber-600 hover:bg-amber-50 cursor-pointer">
+                            <Archive className="w-4 h-4 mr-2" /> Archive
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleUnarchive(vendor); }} className="text-blue-600 hover:bg-blue-50 cursor-pointer">
+                            <ArchiveRestore className="w-4 h-4 mr-2" /> Restore
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDelete(vendor.vendor_id); }} className="text-red-600 hover:bg-red-50 cursor-pointer">
                           <Trash2 className="w-4 h-4 mr-2" /> Delete
                         </DropdownMenuItem>
@@ -1313,8 +1419,21 @@ export default function Exchangers() {
                   </div>
                   <div className="flex items-center justify-between pt-2 border-t border-slate-200">
                     <span className="text-slate-500 text-sm">Status</span>
-                    {getStatusBadge(vendor.status)}
+                    <div className="flex items-center gap-2">
+                      {vendor.dealing_currency && (
+                        <Badge className="bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs flex items-center gap-1">
+                          <Coins className="w-3 h-3" />{vendor.dealing_currency}
+                        </Badge>
+                      )}
+                      {getStatusBadge(vendor.status)}
+                    </div>
                   </div>
+                  {vendor.status === 'archived' && (
+                    <div className="flex items-center gap-1.5 pt-1 text-xs text-slate-400">
+                      <Archive className="w-3 h-3" />
+                      <span>Archived — excluded from reports &amp; emails</span>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
