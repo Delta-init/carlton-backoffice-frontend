@@ -483,7 +483,7 @@ export default function Exchangers() {
     const baseCurrency = isCustom ? customCurrency : (baseCurrencyData?.currency || 'USD');
     const isSameCurrency = destCurrency === baseCurrency;
 
-    if (!isCustom && !isSameCurrency && !settlementAmountInDestCurrency && !isDirect) {
+    if (!isSameCurrency && !settlementAmountInDestCurrency && !isDirect) {
       toast.error(`Please enter the settlement amount in ${destCurrency}`);
       return;
     }
@@ -1690,7 +1690,36 @@ export default function Exchangers() {
                 );
               })()}
 
-              {/* Custom mode preview */}
+              {/* Custom mode: cross-currency input — shown as soon as destination is selected, independent of amount */}
+              {settlementMode === 'custom' && !isDirectTransfer && settlementDestination && (() => {
+                const destAccountCustom = treasuryAccounts.find(a => a.account_id === settlementDestination);
+                const destCurrencyCustom = destAccountCustom?.currency || customCurrency;
+                if (destCurrencyCustom === customCurrency) return null;
+                return (
+                  <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 space-y-2">
+                    <p className="text-xs text-yellow-500 font-medium">Destination: {destCurrencyCustom} (different from {customCurrency})</p>
+                    <div className="space-y-1">
+                      <Label className="text-slate-500 text-xs">Final Settlement Amount in {destCurrencyCustom} *</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={settlementAmountInDestCurrency}
+                        onChange={(e) => setSettlementAmountInDestCurrency(e.target.value)}
+                        className="bg-white border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
+                        placeholder={`Enter final amount in ${destCurrencyCustom}`}
+                      />
+                    </div>
+                    {settlementAmountInDestCurrency && parseFloat(settlementAmountInDestCurrency) > 0 && (
+                      <div className="flex justify-between pt-1">
+                        <span className="text-blue-600 font-semibold text-sm">Amount to Transfer</span>
+                        <span className="text-green-500 font-mono text-lg">{parseFloat(settlementAmountInDestCurrency).toLocaleString()} {destCurrencyCustom}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Custom mode preview — amount/charges/net summary */}
               {settlementMode === 'custom' && customAmount && parseFloat(customAmount) > 0 && (
                 <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 space-y-2">
                   <p className="text-xs text-blue-600 uppercase tracking-wider flex items-center gap-1">
