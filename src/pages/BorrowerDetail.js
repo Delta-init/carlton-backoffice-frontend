@@ -31,6 +31,7 @@ import {
   TableRow,
 } from "../components/ui/table";
 import { toast } from "sonner";
+import { getApiError } from "../lib/utils";
 import {
   ArrowLeft,
   Building2,
@@ -161,8 +162,8 @@ export default function BorrowerDetail() {
           credentials: "include",
         });
         if (res.ok) setVendor(await res.json());
-      } catch {
-        toast.error("Failed to load borrower info");
+      } catch (err) {
+        toast.error(err?.message || "Something went wrong. Please try again.");
       } finally {
         setVendorLoading(false);
       }
@@ -254,8 +255,8 @@ export default function BorrowerDetail() {
         setTotalLoans(data.total ?? items.length);
         setTotalPages(data.total_pages ?? 1);
       }
-    } catch {
-      toast.error("Failed to load loans");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setLoansLoading(false);
     }
@@ -297,10 +298,10 @@ export default function BorrowerDetail() {
         window.URL.revokeObjectURL(url);
         toast.success(`Exported to ${type.toUpperCase()}`);
       } else {
-        toast.error("Export failed");
+        toast.error(await getApiError(res));
       }
-    } catch {
-      toast.error("Export failed");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     }
   };
 

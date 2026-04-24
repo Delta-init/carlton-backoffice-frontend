@@ -19,6 +19,7 @@ import {
 } from '../components/ui/tabs';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { toast } from 'sonner';
+import { getApiError } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
 import {
   Upload, CheckCircle2, Clock, History, Loader2, FileText, Download, Eye,
@@ -148,7 +149,7 @@ function FilePreviewModal({ open, onClose, statement, getAuthHeaders }) {
           `${API_URL}/api/reconciliation/statements/${statement.statement_id}/file`,
           { headers: getAuthHeaders() }
         );
-        if (!res.ok) throw new Error('Failed');
+        if (!res.ok) { toast.error(await getApiError(res)); setLoading(false); return; }
         const b = await res.blob();
         setBlob(b);
         const url = URL.createObjectURL(b);
@@ -158,8 +159,8 @@ function FilePreviewModal({ open, onClose, statement, getAuthHeaders }) {
           const text = await b.text();
           setTextContent(text);
         }
-      } catch {
-        toast.error('Failed to load file preview');
+      } catch (err) {
+        toast.error(err?.message || "Something went wrong. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -462,16 +463,10 @@ export default function Reconciliation() {
         fetchTransactions(selectedAccountId, selectedAccountType);
         fetchHistory();
       } else {
-        let errMsg = `Upload failed (${res.status})`;
-        try {
-          const err = await res.json();
-          if (typeof err.detail === 'string') errMsg = err.detail;
-          else if (Array.isArray(err.detail)) errMsg = err.detail.map(e => e.msg).join(', ');
-        } catch {}
-        toast.error(errMsg);
+        toast.error(await getApiError(res));
       }
-    } catch (e) {
-      toast.error(`Upload error: ${e.message}`);
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setUploading(false);
     }
@@ -491,10 +486,10 @@ export default function Reconciliation() {
         fetchStatements(selectedAccountId, selectedAccountType);
         fetchHistory();
       } else {
-        toast.error('Failed to update date');
+        toast.error(await getApiError(res));
       }
-    } catch {
-      toast.error('Failed to update date');
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     }
   };
 
@@ -653,11 +648,10 @@ export default function Reconciliation() {
         fetchStatements(selectedAccountId, selectedAccountType);
         fetchHistory();
       } else {
-        const err = await res.json().catch(() => ({}));
-        toast.error(err.detail || 'Failed');
+        toast.error(await getApiError(res));
       }
-    } catch {
-      toast.error('Failed');
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setDoneSubmitting(false);
     }

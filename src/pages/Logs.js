@@ -34,6 +34,7 @@ import {
 } from "../components/ui/table";
 import { ScrollArea } from "../components/ui/scroll-area";
 import { toast } from "sonner";
+import { getApiError } from "../lib/utils";
 import {
   Activity,
   Shield,
@@ -113,9 +114,8 @@ export default function Logs() {
         setTotal(data.total || 0);
         setTotalPages(data.total_pages || 1);
       }
-    } catch (error) {
-      console.error("Error fetching logs:", error);
-      toast.error("Failed to load logs");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -167,8 +167,8 @@ export default function Logs() {
         fetchLogs(activeTab === "all" ? "" : activeTab);
         fetchStats();
       }
-    } catch (error) {
-      toast.error("Failed to clear logs");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     }
   };
 

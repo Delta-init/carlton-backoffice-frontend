@@ -49,6 +49,7 @@ import {
   PaginationPrevious,
 } from '../components/ui/pagination';
 import { toast } from 'sonner';
+import { getApiError } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
 import {
   Store,
@@ -161,9 +162,8 @@ export default function Exchangers() {
           setTotalItems(Array.isArray(data) ? data.length : 0);
         }
       }
-    } catch (error) {
-      console.error('Error fetching vendors:', error);
-      toast.error('Failed to load vendors');
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -259,9 +259,8 @@ export default function Exchangers() {
         fetchExchangerTransactions(vendor.vendor_id),
         fetchExchangerSettlements(vendor.vendor_id)
       ]);
-    } catch (error) {
-      console.error('Error loading exchanger data:', error);
-      toast.error('Error loading exchanger data');
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setDetailLoading(false);
     }
@@ -275,10 +274,10 @@ export default function Exchangers() {
       if (response.ok) {
         setStatementData(await response.json());
       } else {
-        toast.error('Failed to load settlement statement');
+        toast.error(await getApiError(response));
       }
-    } catch (error) {
-      toast.error('Error loading statement');
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setStatementLoading(false);
     }
@@ -374,11 +373,10 @@ export default function Exchangers() {
         resetForm();
         fetchExchangers(currentPage, searchTerm);
       } else {
-        const error = await response.json();
-        toast.error(error.detail || 'Operation failed');
+        toast.error(await getApiError(response));
       }
-    } catch (error) {
-      toast.error('Operation failed');
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -396,11 +394,10 @@ export default function Exchangers() {
         toast.success('Exchanger deleted');
         fetchExchangers(currentPage, searchTerm);
       } else {
-        const error = await response.json();
-        toast.error(error.detail || 'Delete failed');
+        toast.error(await getApiError(response));
       }
-    } catch (error) {
-      toast.error('Delete failed');
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     }
   };
 
@@ -479,11 +476,10 @@ export default function Exchangers() {
         fetchExchangerSettlements(viewExchanger.vendor_id);
         fetchExchangers(currentPage, searchTerm);
       } else {
-        const error = await response.json();
-        toast.error(error.detail || 'Settlement failed');
+        toast.error(await getApiError(response));
       }
-    } catch (error) {
-      toast.error('Settlement failed');
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     }
   };
 

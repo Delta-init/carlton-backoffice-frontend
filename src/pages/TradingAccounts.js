@@ -34,6 +34,7 @@ import {
 } from "../components/ui/dropdown-menu";
 import { ScrollArea } from "../components/ui/scroll-area";
 import { toast } from "sonner";
+import { getApiError } from "../lib/utils";
 import {
   Wallet,
   Plus,
@@ -103,9 +104,8 @@ export default function TradingAccounts() {
         const data = await response.json();
         setAccounts(data);
       }
-    } catch (error) {
-      console.error("Error fetching accounts:", error);
-      toast.error("Failed to load accounts");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -156,11 +156,10 @@ export default function TradingAccounts() {
         resetForm();
         fetchAccounts();
       } else {
-        const error = await response.json();
-        toast.error(error.detail || "Operation failed");
+        toast.error(await getApiError(response));
       }
-    } catch (error) {
-      toast.error("Operation failed");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     }
   };
 

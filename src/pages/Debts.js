@@ -46,6 +46,7 @@ import {
 import { Textarea } from "../components/ui/textarea";
 import { ScrollArea } from "../components/ui/scroll-area";
 import { toast } from "sonner";
+import { getApiError } from "../lib/utils";
 import {
   Plus,
   ArrowDownLeft,
@@ -135,9 +136,8 @@ export default function Debts() {
         setExchangers(vendorData.items || (Array.isArray(vendorData) ? vendorData : []));
       }
       if (treasuryRes.ok) { const d = await treasuryRes.json(); setTreasuryAccounts(d.items || d); }
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      toast.error('Failed to load data');
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -153,8 +153,8 @@ export default function Debts() {
         setDebtDetails(await response.json());
         setIsViewDialogOpen(true);
       }
-    } catch (error) {
-      toast.error("Failed to load debt details");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     }
   };
 
@@ -182,11 +182,10 @@ export default function Debts() {
         resetDebtForm();
         fetchData();
       } else {
-        const error = await response.json();
-        toast.error(error.detail || "Failed to create debt");
+        toast.error(await getApiError(response));
       }
-    } catch (error) {
-      toast.error("Failed to create debt");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     }
   };
 
@@ -215,11 +214,10 @@ export default function Debts() {
         setSelectedDebt(null);
         fetchData();
       } else {
-        const error = await response.json();
-        toast.error(error.detail || "Failed to record payment");
+        toast.error(await getApiError(response));
       }
-    } catch (error) {
-      toast.error("Failed to record payment");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     }
   };
 

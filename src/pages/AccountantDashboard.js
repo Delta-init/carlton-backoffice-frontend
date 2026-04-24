@@ -33,6 +33,7 @@ import {
 } from "../components/ui/select";
 import { toast } from "sonner";
 import { useAuth } from "../context/AuthContext";
+import { getApiError } from "../lib/utils";
 import {
   ClipboardCheck,
   CheckCircle,
@@ -284,9 +285,9 @@ export default function AccountantDashboard() {
         setTotalPages(data.total_pages || 1);
         setCurrentPage(page);
       }
-    } catch (error) {
-      console.error("Error fetching pending transactions:", error);
-      toast.error("Failed to load pending transactions");
+    } catch (err) {
+      console.error("Error fetching pending transactions:", err);
+      toast.error(err?.message || "Something went wrong. Please try again.");
     }
   };
 
@@ -519,8 +520,7 @@ export default function AccountantDashboard() {
         );
 
         if (!uploadResponse.ok) {
-          const error = await uploadResponse.json();
-          toast.error(error.detail || "Failed to upload proof");
+          toast.error(await getApiError(uploadResponse));
           return;
         }
       }
@@ -542,11 +542,10 @@ export default function AccountantDashboard() {
         toast.success("Transaction approved");
         fetchPendingTransactions();
       } else {
-        const error = await response.json();
-        toast.error(error.detail || "Approval failed");
+        toast.error(await getApiError(response));
       }
-    } catch (error) {
-      toast.error("Approval failed");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setProcessingId(null);
     }
@@ -581,11 +580,10 @@ export default function AccountantDashboard() {
         setRejectReason("");
         fetchPendingTransactions();
       } else {
-        const error = await response.json();
-        toast.error(error.detail || "Rejection failed");
+        toast.error(await getApiError(response));
       }
-    } catch (error) {
-      toast.error("Rejection failed");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setProcessingId(null);
     }
@@ -610,11 +608,10 @@ export default function AccountantDashboard() {
         toast.success("Settlement approved");
         fetchPendingSettlements();
       } else {
-        const error = await response.json();
-        toast.error(error.detail || "Settlement approval failed");
+        toast.error(await getApiError(response));
       }
-    } catch (error) {
-      toast.error("Settlement approval failed");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setProcessingId(null);
     }
@@ -637,11 +634,10 @@ export default function AccountantDashboard() {
         setRejectReason("");
         fetchPendingSettlements();
       } else {
-        const error = await response.json();
-        toast.error(error.detail || "Settlement rejection failed");
+        toast.error(await getApiError(response));
       }
-    } catch (error) {
-      toast.error("Settlement rejection failed");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setProcessingId(null);
     }
@@ -709,11 +705,10 @@ export default function AccountantDashboard() {
         toast.success("Approved successfully");
         fetchPendingApprovals();
       } else {
-        const error = await response.json();
-        toast.error(error.detail || "Approval failed");
+        toast.error(await getApiError(response));
       }
-    } catch {
-      toast.error("Approval failed");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setProcessingId(null);
     }
@@ -741,11 +736,10 @@ export default function AccountantDashboard() {
         setRejectReason("");
         fetchPendingApprovals();
       } else {
-        const error = await response.json();
-        toast.error(error.detail || "Rejection failed");
+        toast.error(await getApiError(response));
       }
-    } catch {
-      toast.error("Rejection failed");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setProcessingId(null);
     }
@@ -786,11 +780,10 @@ export default function AccountantDashboard() {
         setProofPreview(null);
         fetchPendingTransactions();
       } else {
-        const error = await response.json();
-        toast.error(error.detail || "Upload failed");
+        toast.error(await getApiError(response));
       }
-    } catch (error) {
-      toast.error("Upload failed");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setProcessingId(null);
     }

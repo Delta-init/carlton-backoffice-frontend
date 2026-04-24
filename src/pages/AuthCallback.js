@@ -33,8 +33,7 @@ export default function AuthCallback() {
         window.history.replaceState(null, "", window.location.pathname);
         navigate("/dashboard", { replace: true });
       } catch (error) {
-        console.error("Auth callback error:", error);
-        toast.error("Authentication failed");
+        toast.error(error?.message || "Something went wrong. Please try again.");
         navigate("/login");
       }
     };

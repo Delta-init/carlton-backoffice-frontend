@@ -50,6 +50,7 @@ import {
 import { toast } from "sonner";
 import PaginationControls from "../components/PaginationControls";
 import { useAuth } from "../context/AuthContext";
+import { getApiError } from "../lib/utils";
 import {
   TrendingUp,
   TrendingDown,
@@ -238,8 +239,8 @@ export default function IncomeExpenses() {
             setTotalItems(Array.isArray(data) ? data.length : 0);
           }
         }
-      } catch {
-        toast.error("Failed to load entries");
+      } catch (err) {
+        toast.error(err?.message || "Something went wrong. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -425,11 +426,10 @@ export default function IncomeExpenses() {
         fetchSummary();
         fetchTreasuryAccounts();
       } else {
-        const error = await response.json();
-        toast.error(error.detail || "Failed to save entry");
+        toast.error(await getApiError(response));
       }
-    } catch {
-      toast.error("Failed to save entry");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -453,11 +453,10 @@ export default function IncomeExpenses() {
         fetchSummary();
         fetchTreasuryAccounts();
       } else {
-        const err = await response.json();
-        toast.error(err.detail || "Delete failed");
+        toast.error(await getApiError(response));
       }
-    } catch {
-      toast.error("Delete failed");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     }
   };
 
@@ -492,11 +491,10 @@ export default function IncomeExpenses() {
         resetVendorSupplierForm();
         fetchVendorSuppliers();
       } else {
-        const err = await response.json();
-        toast.error(err.detail || "Failed to save vendor");
+        toast.error(await getApiError(response));
       }
-    } catch {
-      toast.error("Failed to save vendor");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     }
   };
 
@@ -511,11 +509,10 @@ export default function IncomeExpenses() {
         toast.success("Vendor deleted");
         fetchVendorSuppliers();
       } else {
-        const err = await response.json();
-        toast.error(err.detail || "Delete failed");
+        toast.error(await getApiError(response));
       }
-    } catch {
-      toast.error("Delete failed");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     }
   };
 
@@ -550,11 +547,10 @@ export default function IncomeExpenses() {
         resetCategoryForm();
         fetchIeCategories();
       } else {
-        const err = await response.json();
-        toast.error(err.detail || "Failed to save category");
+        toast.error(await getApiError(response));
       }
-    } catch {
-      toast.error("Failed to save category");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     }
   };
 
@@ -569,11 +565,10 @@ export default function IncomeExpenses() {
         toast.success("Category deleted");
         fetchIeCategories();
       } else {
-        const err = await response.json();
-        toast.error(err.detail || "Delete failed");
+        toast.error(await getApiError(response));
       }
-    } catch {
-      toast.error("Delete failed");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     }
   };
 
@@ -617,11 +612,10 @@ export default function IncomeExpenses() {
         fetchSummary();
         fetchTreasuryAccounts();
       } else {
-        const err = await response.json();
-        toast.error(err.detail || "Import failed");
+        toast.error(await getApiError(response));
       }
-    } catch {
-      toast.error("Import failed");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setImporting(false);
     }
@@ -646,8 +640,8 @@ export default function IncomeExpenses() {
         a.click();
         window.URL.revokeObjectURL(url);
       }
-    } catch {
-      toast.error("Failed to download template");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     }
   };
 
@@ -679,11 +673,10 @@ export default function IncomeExpenses() {
         setInvoiceFile(null);
         fetchEntries(currentPage);
       } else {
-        const err = await response.json();
-        toast.error(err.detail || "Upload failed");
+        toast.error(await getApiError(response));
       }
-    } catch {
-      toast.error("Upload failed");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setUploadingInvoice(false);
     }

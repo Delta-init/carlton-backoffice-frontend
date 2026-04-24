@@ -46,6 +46,7 @@ import {
   TabsTrigger,
 } from "../components/ui/tabs";
 import { toast } from "sonner";
+import { getApiError } from "../lib/utils";
 import {
   Users,
   Plus,
@@ -138,9 +139,8 @@ export default function Clients() {
         setTotalPages(data.total_pages || 1);
         setTotalClients(data.total || 0);
       }
-    } catch (error) {
-      console.error("Error fetching clients:", error);
-      toast.error("Failed to load clients");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -169,11 +169,10 @@ export default function Clients() {
           toast.warning(`${data.errors.length} row errors`);
         fetchClients();
       } else {
-        const err = await res.json();
-        toast.error(err.detail || "Upload failed");
+        toast.error(await getApiError(res));
       }
-    } catch {
-      toast.error("Upload failed");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setUploading(false);
       e.target.value = "";
@@ -189,9 +188,8 @@ export default function Clients() {
         const data = await response.json();
         setViewClient(data);
       }
-    } catch (error) {
-      console.error("Error fetching client details:", error);
-      toast.error("Failed to load client details");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     }
   };
 
@@ -313,9 +311,9 @@ export default function Clients() {
         toast.dismiss();
         toast.success("Transactions exported to CSV");
       }
-    } catch (error) {
+    } catch (err) {
       toast.dismiss();
-      toast.error("Failed to export transactions");
+      toast.error(err?.message || "Something went wrong. Please try again.");
     }
   };
 
@@ -341,11 +339,10 @@ export default function Clients() {
         resetForm();
         fetchClients();
       } else {
-        const error = await response.json();
-        toast.error(error.detail || "Operation failed");
+        toast.error(await getApiError(response));
       }
-    } catch (error) {
-      toast.error("Operation failed");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -363,8 +360,8 @@ export default function Clients() {
         toast.success("Client deleted");
         fetchClients();
       }
-    } catch (error) {
-      toast.error("Delete failed");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     }
   };
 

@@ -17,6 +17,7 @@ import {
 } from "../components/ui/dialog";
 import PaginationControls from "../components/PaginationControls";
 import { toast } from "sonner";
+import { getApiError } from "../lib/utils";
 import { useAuth } from "../context/AuthContext";
 import {
   ArrowLeftRight,
@@ -522,13 +523,13 @@ function ReinstateTab({ tabCfg }) {
           `${API_URL}/api/reinstate/${tabCfg.endpoint}?${params.toString()}`,
           { headers: getAuthHeaders() },
         );
-        if (!res.ok) throw new Error("Failed to fetch");
+        if (!res.ok) { toast.error(await getApiError(res)); setLoading(false); return; }
         const data = await res.json();
         setItems(data.items || data.data || []);
         setTotalItems(data.total || 0);
         setTotalPages(data.total_pages || 1);
-      } catch {
-        toast.error(`Failed to load ${tabCfg.label}`);
+      } catch (err) {
+        toast.error(err?.message || "Something went wrong. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -562,11 +563,11 @@ function ReinstateTab({ tabCfg }) {
         `${API_URL}/api/reinstate/${tabCfg.endpoint}/${id}/preview`,
         { headers: getAuthHeaders() },
       );
-      if (!res.ok) throw new Error("Failed to load preview");
+      if (!res.ok) { toast.error(await getApiError(res)); setPreviewLoading(null); return; }
       const preview = await res.json();
       setConfirmData({ item, preview });
-    } catch {
-      toast.error("Failed to load reinstatement summary");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setPreviewLoading(null);
     }
@@ -583,12 +584,11 @@ function ReinstateTab({ tabCfg }) {
         `${API_URL}/api/reinstate/${tabCfg.endpoint}/${id}`,
         { method: "POST", headers: getAuthHeaders() },
       );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "Reinstate failed");
+      if (!res.ok) { toast.error(await getApiError(res)); setProcessing(null); return; }
       toast.success("Reinstated successfully");
       fetchItems(page, pageSize, search);
-    } catch (e) {
-      toast.error(e.message);
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setProcessing(null);
     }

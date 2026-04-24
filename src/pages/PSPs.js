@@ -41,6 +41,7 @@ import {
   TabsTrigger,
 } from '../components/ui/tabs';
 import { toast } from 'sonner';
+import { getApiError } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
 import PaginationControls from '../components/PaginationControls';
 import {
@@ -177,9 +178,8 @@ export default function PSPs() {
         setPspTotal(data.total || 0);
         setPspPage(pg);
       }
-    } catch (error) {
-      console.error('Error fetching PSPs:', error);
-      toast.error('Failed to load PSPs');
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -255,10 +255,9 @@ export default function PSPs() {
         fetchPspWithdrawals(viewPsp.psp_id);
         fetchPsps();
       } else {
-        const err = await response.json();
-        toast.error(err.detail || 'Failed');
+        toast.error(await getApiError(response));
       }
-    } catch { toast.error('Failed to update extra commission'); }
+    } catch (err) { toast.error(err?.message || "Something went wrong. Please try again."); }
   };
 
   const fetchSettlements = async (pspId, pg = 1, ps = stlPageSize) => {
@@ -313,11 +312,10 @@ export default function PSPs() {
         fetchReserveFundLedger(viewPsp.psp_id);
         fetchGlobalReserveSummary();
       } else {
-        const err = await response.json();
-        toast.error(err.detail || 'Failed to release');
+        toast.error(await getApiError(response));
       }
-    } catch (error) {
-      toast.error('Error releasing reserve fund');
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     }
   };
 
@@ -335,10 +333,10 @@ export default function PSPs() {
         fetchReserveFundLedger(viewPsp.psp_id);
         fetchGlobalReserveSummary();
       } else {
-        toast.error('Failed to bulk release');
+        toast.error(await getApiError(response));
       }
-    } catch (error) {
-      toast.error('Error in bulk release');
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     }
   };
 
@@ -407,11 +405,10 @@ export default function PSPs() {
         resetForm();
         fetchPsps();
       } else {
-        const error = await response.json();
-        toast.error(error.detail || 'Operation failed');
+        toast.error(await getApiError(response));
       }
-    } catch (error) {
-      toast.error('Operation failed');
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     }
   };
 
@@ -444,11 +441,10 @@ export default function PSPs() {
         setChargesForm({ reserve_fund_amount: '0', extra_charges: '0', charges_description: '' });
         if (viewPsp) fetchPendingTransactions(viewPsp.psp_id);
       } else {
-        const error = await response.json();
-        toast.error(error.detail || 'Failed to record charges');
+        toast.error(await getApiError(response));
       }
-    } catch (error) {
-      toast.error('Failed to record charges');
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     }
   };
 
@@ -479,11 +475,10 @@ export default function PSPs() {
         toast.success('PSP deleted');
         fetchPsps();
       } else {
-        const error = await response.json();
-        toast.error(error.detail || 'Delete failed');
+        toast.error(await getApiError(response));
       }
-    } catch (error) {
-      toast.error('Delete failed');
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     }
   };
 
@@ -537,11 +532,10 @@ export default function PSPs() {
         }
         fetchPsps();
       } else {
-        const error = await response.json();
-        toast.error(error.detail || 'Recording payment failed');
+        toast.error(await getApiError(response));
       }
-    } catch (error) {
-      toast.error('Recording payment failed');
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     }
   };
   
@@ -582,11 +576,10 @@ export default function PSPs() {
         }
         fetchPsps();
       } else {
-        const error = await response.json();
-        toast.error(error.detail || 'Settlement failed');
+        toast.error(await getApiError(response));
       }
-    } catch (error) {
-      toast.error('Settlement failed');
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     }
   };
 
@@ -652,11 +645,10 @@ export default function PSPs() {
         fetchSettlements(viewPsp.psp_id);
         fetchPsps();
       } else {
-        const error = await response.json();
-        toast.error(error.detail || 'Batch settlement failed');
+        toast.error(await getApiError(response));
       }
-    } catch (error) {
-      toast.error('Batch settlement failed');
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setBatchSettling(false);
     }
@@ -689,11 +681,10 @@ export default function PSPs() {
         fetchSettlements(viewPsp.psp_id);
         fetchPsps();
       } else {
-        const error = await response.json();
-        toast.error(error.detail || 'Net settlement failed');
+        toast.error(await getApiError(response));
       }
-    } catch (error) {
-      toast.error('Net settlement failed');
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setNetSettling(false);
     }

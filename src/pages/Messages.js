@@ -27,6 +27,7 @@ import {
 import { ScrollArea } from "../components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "../components/ui/avatar";
 import { toast } from "sonner";
+import { getApiError } from "../lib/utils";
 import { useAuth } from "../context/AuthContext";
 import {
   MessageSquare,
@@ -252,11 +253,10 @@ const fetchUsers = useCallback(async () => {
         fetchMessages(selectedConversation.user_id);
         fetchConversations();
       } else {
-        const err = await response.json();
-        toast.error(err.detail || "Failed to send message");
+        toast.error(await getApiError(response));
       }
-    } catch (error) {
-      toast.error("Failed to send message");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setSending(false);
     }

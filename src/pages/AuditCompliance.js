@@ -32,6 +32,7 @@ import {
   Send,
 } from "lucide-react";
 import { toast } from "sonner";
+import { getApiError } from "../lib/utils";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -182,8 +183,8 @@ export default function AuditCompliance() {
       const histData = await histRes.json();
       if (scanData.scan_id) setScan(scanData);
       setHistory(Array.isArray(histData) ? histData : []);
-    } catch {
-      toast.error("Failed to load audit data");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     }
     setLoading(false);
   }, []);
@@ -211,12 +212,13 @@ export default function AuditCompliance() {
         method: "POST",
         headers: getHeaders(),
       });
+      if (!res.ok) { toast.error(await getApiError(res)); setScanning(false); return; }
       const data = await res.json();
       setScan(data);
       toast.success(`Audit complete. Health score: ${data.health_score}/100`);
       fetchLatest();
-    } catch {
-      toast.error("Scan failed");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     }
     setScanning(false);
   };
@@ -229,8 +231,8 @@ export default function AuditCompliance() {
         body: JSON.stringify(settings),
       });
       toast.success("Audit settings saved");
-    } catch {
-      toast.error("Failed to save settings");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     }
   };
 
