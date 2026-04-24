@@ -343,21 +343,28 @@ export default function Reconciliation() {
           fetch(`${API_URL}/api/psp/${accountId}/pending-transactions?page_size=200`, { headers: getAuthHeaders() }),
           fetch(`${API_URL}/api/psp/${accountId}/withdrawal-transactions?page_size=200`, { headers: getAuthHeaders() }),
         ]);
-        // settled: normalize fields to common shape
+        // settled: normalize fields to common shape — prefer payment (base) currency over USD
         const settledRaw = settledRes.ok ? (await settledRes.json()) : [];
         const settled = (Array.isArray(settledRaw) ? settledRaw : []).map(t => ({
           transaction_id: t.transaction_id,
           reference: t.reference,
           client_name: t.client_name,
-          amount: t.gross_amount,
-          currency: t.currency || 'USD',
+          // Use base (payment) currency when available, fall back to USD gross_amount
+          amount: t.base_amount ?? t.gross_amount,
+          currency: t.base_currency || t.currency || 'USD',
           transaction_type: t.transaction_type || 'deposit',
           status: 'settled',
           created_at: t.settled_at,
         }));
         const dep = depRes.ok ? (await depRes.json()) : {};
         const wth = wthRes.ok ? (await wthRes.json()) : {};
-        const unsettled = [...(dep.items || []), ...(wth.items || [])];
+        // Normalize unsettled PSP transactions to payment (base) currency too
+        const unsettledRaw = [...(dep.items || []), ...(wth.items || [])];
+        const unsettled = unsettledRaw.map(t => ({
+          ...t,
+          amount: t.base_amount ?? t.amount,
+          currency: t.base_currency || t.currency || 'USD',
+        }));
         // Deduplicate by transaction_id (settled takes precedence)
         const settledIds = new Set(settled.map(t => t.transaction_id));
         const dedupedUnsettled = unsettled.filter(t => !settledIds.has(t.transaction_id));
@@ -370,7 +377,13 @@ export default function Reconciliation() {
         );
         if (res.ok) {
           const data = await res.json();
-          list = Array.isArray(data) ? data : data.items || [];
+          const raw = Array.isArray(data) ? data : data.items || [];
+          // Normalize to payment (base) currency — same as PSP
+          list = raw.map(t => ({
+            ...t,
+            amount: t.base_amount ?? t.amount,
+            currency: t.base_currency || t.currency || 'USD',
+          }));
         }
       }
 
@@ -525,14 +538,19 @@ export default function Reconciliation() {
               fetch(`${API_URL}/api/psp/${acc.id}/pending-transactions?page_size=200`, { headers }),
               fetch(`${API_URL}/api/psp/${acc.id}/withdrawal-transactions?page_size=200`, { headers }),
             ]);
-            const settled = sr.ok ? ((await sr.json()).transactions || []) : [];
+            const normalise = t => ({ ...t, amount: t.base_amount ?? t.gross_amount ?? t.amount, currency: t.base_currency || t.currency || 'USD' });
+            const settled = (sr.ok ? ((await sr.json()).transactions || await sr.json() || []) : []).map(normalise);
             const dep     = dr.ok ? ((await dr.json()).items || []) : [];
             const wth     = wr.ok ? ((await wr.json()).items || []) : [];
             const settledIds = new Set(settled.map(t => t.transaction_id));
-            txList = [...settled, ...[...dep, ...wth].filter(t => !settledIds.has(t.transaction_id))];
+            txList = [...settled, ...[...dep, ...wth].filter(t => !settledIds.has(t.transaction_id)).map(normalise)];
           } else {
             const r = await fetch(`${API_URL}/api/vendors/${acc.id}/transactions`, { headers });
-            if (r.ok) { const d = await r.json(); txList = Array.isArray(d) ? d : d.items || []; }
+            if (r.ok) {
+              const d = await r.json();
+              const raw = Array.isArray(d) ? d : d.items || [];
+              txList = raw.map(t => ({ ...t, amount: t.base_amount ?? t.amount, currency: t.base_currency || t.currency || 'USD' }));
+            }
           }
           return { acc, txList };
         } catch { return { acc, txList: [] }; }
@@ -891,7 +909,10 @@ export default function Reconciliation() {
                                   </div>
                                   <span className={`text-sm font-semibold ml-3 shrink-0 ${(Number(tx.amount) || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                     {(Number(tx.amount) || 0) >= 0 ? '+' : '-'}
-                                    {formatAmount(tx.amount, tx.currency || selectedAccount?.currency)}
+                                    {formatAmount(
+                                      tx.base_amount ?? tx.amount,
+                                      tx.base_currency || tx.currency || selectedAccount?.currency
+                                    )}
                                   </span>
                                 </div>
                               ))}
