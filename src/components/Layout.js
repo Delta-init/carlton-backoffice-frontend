@@ -47,7 +47,7 @@ import {
 export default function Layout() {
   const { user, logout, impersonating, adminName, stopImpersonation } =
     useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const { isDark, toggleTheme } = useTheme();
   const { canView, loading: permissionsLoading } = usePermissions();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -56,8 +56,6 @@ export default function Layout() {
     messages: 0,
     txRequests: 0
   });
-
-  const isDark = theme === "dark";
   const API_URL = process.env.REACT_APP_BACKEND_URL;
 
   // Fetch notification counts

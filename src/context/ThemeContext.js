@@ -1,35 +1,42 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+
+const THEMES = ['light', 'dark'];
 
 const ThemeContext = createContext();
 
+function applyTheme(theme) {
+  const root = document.documentElement;
+  root.setAttribute('data-theme', theme);
+  localStorage.setItem('miles-theme', theme);
+  if (theme === 'dark') {
+    root.classList.add('dark');
+  } else {
+    root.classList.remove('dark');
+  }
+}
+
 export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState(() => {
-    // Check localStorage first, then system preference
+  const [theme, setThemeState] = useState(() => {
     const saved = localStorage.getItem('miles-theme');
     if (saved) return saved;
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   });
 
   useEffect(() => {
-    // Apply theme to document
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('miles-theme', theme);
-     document.documentElement.classList.add('dark');
-    // Update body class for Tailwind
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-       document.documentElement.classList.add('dark');
-      // document.documentElement.classList.remove('dark');
-    }
+    applyTheme(theme);
   }, [theme]);
 
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'light' ? 'dark' : 'light');
-  };
+  const setTheme = useCallback((t) => {
+    const next = THEMES.includes(t) ? t : 'light';
+    setThemeState(next);
+  }, []);
+
+  const toggleTheme = useCallback(() => {
+    setThemeState(prev => prev === 'dark' ? 'light' : 'dark');
+  }, []);
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme, toggleTheme, THEMES, isDark: theme === 'dark' }}>
       {children}
     </ThemeContext.Provider>
   );
