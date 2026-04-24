@@ -648,7 +648,7 @@ export default function Exchangers() {
                 {viewExchanger.settlement_by_currency && viewExchanger.settlement_by_currency.length > 0 ? (
                   <div className="space-y-3">
                     {viewExchanger.settlement_by_currency.map((item, idx) => (
-                      <div key={idx} className="space-y-1">
+                      <div key={idx} className="space-y-2">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <Badge className={`${
@@ -661,69 +661,22 @@ export default function Exchangers() {
                             }`}>
                               {item.currency}
                             </Badge>
-                            <span className="text-xs text-slate-500">({item.transaction_count} entries)</span>
                           </div>
-                          <div className="text-right">
-                            <span className={`text-lg font-bold font-mono ${item.amount >= 0 ? 'text-blue-600' : 'text-red-400'}`}>
-                              {item.amount?.toLocaleString()}
-                            </span>
-                            {item.currency !== 'USD' && (
-                              <span className="text-xs text-slate-500 block">≈ ${item.usd_equivalent?.toLocaleString()} USD</span>
-                            )}
-                          </div>
+                          <span className={`text-2xl font-bold font-mono ${item.amount >= 0 ? 'text-blue-600' : 'text-red-400'}`}>
+                            {item.amount >= 0 ? '+' : ''}{item.amount?.toLocaleString()}
+                          </span>
                         </div>
-                        {/* Money In breakdown */}
-                        <div className="pl-2 text-xs space-y-0.5">
-                          <div className="flex justify-between text-green-400">
-                            <span>Money In:</span>
-                            <span>+{item.total_in?.toLocaleString()}</span>
-                          </div>
-                          <div className="flex justify-between text-slate-400 pl-3">
-                            <span>Deposits ({item.deposit_count})</span>
-                            <span>+{item.deposit_amount?.toLocaleString()}</span>
-                          </div>
-                          {(item.ie_in > 0) && <div className="flex justify-between text-slate-400 pl-3"><span>I&E In</span><span>+{item.ie_in?.toLocaleString()}</span></div>}
-                          {(item.loan_in > 0) && <div className="flex justify-between text-slate-400 pl-3"><span>Loan In</span><span>+{item.loan_in?.toLocaleString()}</span></div>}
-                          {/* Money Out breakdown */}
-                          <div className="flex justify-between text-red-400">
-                            <span>Money Out:</span>
-                            <span>-{item.total_out?.toLocaleString()}</span>
-                          </div>
-                          <div className="flex justify-between text-slate-400 pl-3">
-                            <span>Withdrawals ({item.withdrawal_count})</span>
-                            <span>-{item.withdrawal_amount?.toLocaleString()}</span>
-                          </div>
-                          {(item.ie_out > 0) && <div className="flex justify-between text-slate-400 pl-3"><span>I&E Out</span><span>-{item.ie_out?.toLocaleString()}</span></div>}
-                          {(item.loan_out > 0) && <div className="flex justify-between text-slate-400 pl-3"><span>Loan Out</span><span>-{item.loan_out?.toLocaleString()}</span></div>}
-                          {/* Commission */}
-                          <div className="flex justify-between text-yellow-400">
-                            <span>Commission:</span>
-                            <span>-{item.commission_earned_base?.toLocaleString()}</span>
-                          </div>
-                          {/* Custom Settled */}
-                          {(item.custom_settled > 0) && (
-                            <div className="flex justify-between text-blue-500">
-                              <span>Custom Settled:</span>
-                              <span>-{item.custom_settled?.toLocaleString()}</span>
-                            </div>
-                          )}
+                        <div className="flex justify-between text-xs text-slate-500 pl-2">
+                          <span className="text-green-400">+{item.deposit_amount?.toLocaleString()} deposits ({item.deposit_count})</span>
+                          <span className="text-red-400">-{item.withdrawal_amount?.toLocaleString()} withdrawals ({item.withdrawal_count})</span>
                         </div>
+                        {(item.commission_earned_base > 0 || item.commission_earned_usd > 0) && (
+                          <div className="text-xs text-yellow-400 pl-2">
+                            Commission earned: ${item.commission_earned_usd?.toLocaleString()}
+                          </div>
+                        )}
                       </div>
                     ))}
-                    <div className="border-t border-slate-200 pt-2 mt-2">
-                      <div className="flex justify-between mb-1">
-                        <span className="text-slate-500 text-sm">Total Commission:</span>
-                        <span className="text-sm font-bold font-mono text-yellow-400">
-                          ${viewExchanger.settlement_by_currency.reduce((sum, item) => sum + (item.commission_earned_usd || 0), 0).toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500 text-sm">Net Settlement (USD):</span>
-                        <span className={`text-lg font-bold font-mono ${viewExchanger.settlement_by_currency.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0) >= 0 ? 'text-slate-800' : 'text-red-400'}`}>
-                          ${viewExchanger.settlement_by_currency.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0).toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
                   </div>
                 ) : (
                   <p className="text-slate-500">No pending settlement</p>
@@ -738,7 +691,7 @@ export default function Exchangers() {
                   data-testid="settle-vendor-btn"
                 >
                   <Wallet className="w-4 h-4 mr-2" />
-                  Settle Exchanger Balance (${viewExchanger?.settlement_by_currency?.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0).toLocaleString() || '0'})
+                  Settle Exchanger Balance
                 </Button>
               )}
 
@@ -1400,18 +1353,11 @@ export default function Exchangers() {
                             }`}>
                               {item.currency}
                             </Badge>
-                            <span className="text-blue-600 font-mono">
-                              {item.amount?.toLocaleString()}
-                              {item.currency !== 'USD' && (
-                                <span className="text-slate-500 text-xs ml-1">(${item.usd_equivalent?.toLocaleString()})</span>
-                              )}
+                            <span className={`font-mono ${item.amount >= 0 ? 'text-blue-600' : 'text-red-400'}`}>
+                              {item.amount >= 0 ? '+' : ''}{item.amount?.toLocaleString()}
                             </span>
                           </div>
                         ))}
-                        <div className="flex justify-between items-center pt-1 border-t border-slate-200">
-                          <span className="text-slate-500 text-xs">Total USD</span>
-                          <span className="text-blue-600 font-mono font-bold">${(vendor.pending_amount || 0).toLocaleString()}</span>
-                        </div>
                       </div>
                     ) : (
                       <p className="text-slate-500 text-sm mt-1">No pending settlement</p>
@@ -1555,19 +1501,8 @@ export default function Exchangers() {
                           <div className="flex justify-between text-yellow-400"><span>Commission</span><span>-{item.commission_earned_base?.toLocaleString()}</span></div>
                         {(item.custom_settled > 0) && <div className="flex justify-between text-blue-400"><span>Custom Settled</span><span>-{item.custom_settled?.toLocaleString()}</span></div>}
                         </div>
-                        {item.currency !== 'USD' && (
-                          <div className="flex justify-between text-xs">
-                            <span className="text-slate-500">USD Equivalent</span>
-                            <span className="text-slate-500">${item.usd_equivalent?.toLocaleString()}</span>
-                          </div>
-                        )}
                       </div>
                     ))}
-
-                    <div className="flex justify-between border-t border-slate-200 pt-2">
-                      <span className="text-blue-600 font-semibold">Total Net (USD)</span>
-                      <span className="text-blue-600 font-mono font-bold">${viewExchanger?.settlement_by_currency?.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0).toLocaleString() || '0'}</span>
-                    </div>
                   </>
                 ) : (
                   /* Custom Amount Mode */

@@ -1052,11 +1052,6 @@ export default function ExchangerDashboard() {
                           {item.amount >= 0 ? "+" : ""}
                           {item.amount?.toLocaleString()}
                         </span>
-                        {item.currency !== "USD" && (
-                          <span className="text-xs text-slate-500 block">
-                            ≈ ${item.usd_equivalent?.toLocaleString()} USD
-                          </span>
-                        )}
                       </div>
                     </div>
                     <div className="flex justify-between text-xs text-slate-500 pl-2">
@@ -1086,22 +1081,6 @@ export default function ExchangerDashboard() {
                     )}
                   </div>
                 ))}
-                <div className="border-t border-slate-200 pt-3 mt-3 flex justify-between items-center">
-                  <span className="text-slate-500 text-sm">
-                    Total USD Equivalent:
-                  </span>
-                  <span
-                    className={`text-2xl font-bold font-mono ${vendorInfo.settlement_by_currency.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0) >= 0 ? "text-slate-800" : "text-red-400"}`}
-                  >
-                    $
-                    {vendorInfo.settlement_by_currency
-                      .reduce(
-                        (sum, item) => sum + (item.usd_equivalent || 0),
-                        0,
-                      )
-                      .toLocaleString()}
-                  </span>
-                </div>
               </div>
             ) : (
               <p className="text-3xl font-bold font-mono text-slate-500">
