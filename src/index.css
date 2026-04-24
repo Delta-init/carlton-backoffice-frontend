@@ -406,3 +406,15 @@
 [data-theme="dark"] h1,h2,h3,h4,p {
     color: white !important;
 }
+
+
+/* hide input wheel */
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  display: none;
+}
