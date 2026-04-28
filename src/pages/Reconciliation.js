@@ -771,7 +771,10 @@ export default function Reconciliation() {
   const effectiveTotalTxPages = selectedAccountType === 'treasury'
     ? txTotalPages
     : Math.ceil(sortedAllTxs.length / TX_PAGE_SIZE) || 1;
-  const pagedTxs = sortedAllTxs.slice(txPage * TX_PAGE_SIZE, (txPage + 1) * TX_PAGE_SIZE);
+  // Treasury: API already returns exactly this page's items — no local slice needed
+  const pagedTxs = selectedAccountType === 'treasury'
+    ? sortedAllTxs
+    : sortedAllTxs.slice(txPage * TX_PAGE_SIZE, (txPage + 1) * TX_PAGE_SIZE);
   // Group paged transactions by date for display headers
   const pagedGrouped = pagedTxs.reduce((acc, tx) => {
     const date = (tx.created_at || tx.date || '').split('T')[0] || 'Unknown';
