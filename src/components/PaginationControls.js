@@ -39,7 +39,7 @@ export default function PaginationControls({ currentPage, totalPages, totalItems
             variant={i === currentPage ? 'default' : 'outline'}
             size="sm"
             onClick={() => onPageChange(i)}
-            className={`h-8 w-8 text-xs ${i === currentPage ? 'bg-[#1F2833] text-white hover:bg-[#1F2833]' : 'border-slate-200'}`}
+            className={`h-8 w-8 text-xs ${i === currentPage ? 'bg-indigo-600 !text-white border-indigo-600 hover:bg-indigo-700' : 'border-slate-200 text-slate-700'}`}
             data-testid={`page-${i}`}
           >
             {i}

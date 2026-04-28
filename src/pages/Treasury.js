@@ -1,14 +1,9 @@
-import { useEffect, useState, useCallback } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
-import { Badge } from "../components/ui/badge";
+import { useEffect, useState, useCallback } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Badge } from '../components/ui/badge';
 import {
   Table,
   TableBody,
@@ -16,38 +11,38 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "../components/ui/table";
+} from '../components/ui/table';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "../components/ui/dialog";
+} from '../components/ui/dialog';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../components/ui/select";
+} from '../components/ui/select';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "../components/ui/dropdown-menu";
-import { Textarea } from "../components/ui/textarea";
-import { ScrollArea } from "../components/ui/scroll-area";
+} from '../components/ui/dropdown-menu';
+import { Textarea } from '../components/ui/textarea';
+import { ScrollArea } from '../components/ui/scroll-area';
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "../components/ui/tabs";
-import { toast } from "sonner";
-import { getApiError } from "../lib/utils";
-import { useAuth } from "../context/AuthContext";
+} from '../components/ui/tabs';
+import { toast } from 'sonner';
+import { getApiError } from '../lib/utils';
+import { useAuth } from '../context/AuthContext';
 import {
   Landmark,
   Plus,
@@ -65,27 +60,27 @@ import {
   Calendar,
   ArrowLeftRight,
   Calculator,
-    ChevronLeft,
-    ChevronRight,
-    ChevronsLeft,
-    ChevronsRight,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   ImageIcon,
-} from "lucide-react";
+} from 'lucide-react';
 
-import PaginationControls from "../components/PaginationControls";
+import PaginationControls from '../components/PaginationControls';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const accountTypes = [
-  { value: "bank", label: "Bank Account" },
-  { value: "crypto_wallet", label: "Crypto Wallet" },
-  { value: "payment_gateway", label: "Payment Gateway" },
-  { value: "usdt", label: "USDT Wallet" },
+  { value: 'bank', label: 'Bank Account' },
+  { value: 'crypto_wallet', label: 'Crypto Wallet' },
+  { value: 'payment_gateway', label: 'Payment Gateway' },
+  { value: 'usdt', label: 'USDT Wallet' },
 ];
 
 const statusOptions = [
-  { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
 ];
 
 export default function Treasury() {
@@ -105,61 +100,60 @@ export default function Treasury() {
   const [historyAccount, setHistoryAccount] = useState(null);
   const [historyData, setHistoryData] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
-   const [historyPage, setHistoryPage] = useState(1);
+  const [historyPage, setHistoryPage] = useState(1);
   const [historyPageSize] = useState(100);
   const [historyTotalPages, setHistoryTotalPages] = useState(1);
   const [historyTotal, setHistoryTotal] = useState(0);
   const [historyFilters, setHistoryFilters] = useState({
-    startDate: "",
-    endDate: "",
-    transactionType: "",
-    period: "all",
+    startDate: '',
+    endDate: '',
+    transactionType: '',
+    period: 'all',
   });
-
+  
   // Transfer state
   const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
-  const [balanceFixAccount, setBalanceFixAccount] = useState(null);
-  const [balanceFixForm, setBalanceFixForm] = useState({ actual_balance: '', effective_date: '', reason: '' });
-  const [balanceFixSaving, setBalanceFixSaving] = useState(false);
+   const [balanceFixAccount, setBalanceFixAccount] = useState(null);
+    const [balanceFixForm, setBalanceFixForm] = useState({ actual_balance: '', effective_date: '', reason: '' });
+    const [balanceFixSaving, setBalanceFixSaving] = useState(false);
   const [transferData, setTransferData] = useState({
-    source_account_id: "",
-    destination_account_id: "",
-    amount: "",
-    exchange_rate: "1",
-    notes: "",
-     transfer_date: new Date().toISOString().split('T')[0],
+    source_account_id: '',
+    destination_account_id: '',
+    amount: '',
+    exchange_rate: '1',
+    notes: '',
+    transfer_date: new Date().toISOString().split('T')[0],
   });
   const [transferProcessing, setTransferProcessing] = useState(false);
   const [showCaptcha, setShowCaptcha] = useState(false);
   const [captchaNumbers, setCaptchaNumbers] = useState({ n1: 0, n2: 0 });
-  const [captchaAnswer, setCaptchaAnswer] = useState("");
-
+  const [captchaAnswer, setCaptchaAnswer] = useState('');
+  
   const [formData, setFormData] = useState({
-    account_name: "",
-    account_type: "bank",
-    bank_name: "",
-    account_number: "",
-    routing_number: "",
-    swift_code: "",
-    currency: "USD",
-    description: "",
-    status: "active",
-    opening_balance: "",
+    account_name: '',
+    account_type: 'bank',
+    bank_name: '',
+    account_number: '',
+    routing_number: '',
+    swift_code: '',
+    currency: 'USD',
+    description: '',
+    status: 'active',
+    opening_balance: '',
     // USDT specific fields
-    usdt_address: "",
-    usdt_network: "",
-    usdt_notes: "",
+    usdt_address: '',
+    usdt_network: '',
+    usdt_notes: '',
   });
 
-  const isAdmin = user?.role === "admin";
-  const isAccountantOrAdmin =
-    user?.role === "admin" || user?.role === "accountant";
+  const isAdmin = user?.role === 'admin';
+  const isAccountantOrAdmin = user?.role === 'admin' || user?.role === 'accountant';
 
   const getAuthHeaders = () => {
-    const token = localStorage.getItem("auth_token");
+    const token = localStorage.getItem('auth_token');
     return {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     };
   };
 
@@ -168,25 +162,26 @@ export default function Treasury() {
     const n1 = Math.floor(Math.random() * 10) + 1;
     const n2 = Math.floor(Math.random() * 10) + 1;
     setCaptchaNumbers({ n1, n2 });
-    setCaptchaAnswer("");
+    setCaptchaAnswer('');
   }, []);
 
-
-   const fetchAccounts = async () => {
-      try {
-        const response = await fetch(`${API_URL}/api/treasury?page=${currentPage}&page_size=${pageSize}`, { headers: getAuthHeaders(), credentials: 'include' });
-        if (response.ok) {
-          const data = await response.json();
-          setAccounts(data.items || data);
-          setTotalPages(data.total_pages || 1);
-          setTotalItems(data.total || 0);
-        }
-      } catch (err) {
-        toast.error(err?.message || "Something went wrong. Please try again.");
-      } finally {
-        setLoading(false);
+  const fetchAccounts = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/treasury?page=${currentPage}&page_size=${pageSize}`, { headers: getAuthHeaders(), credentials: 'include' });
+      if (response.ok) {
+        const data = await response.json();
+        setAccounts(data.items || data);
+        setTotalPages(data.total_pages || 1);
+        setTotalItems(data.total || 0);
       }
-    };
+    } catch (error) {
+      console.error('Error fetching treasury accounts:', error);
+      toast.error('Failed to load treasury accounts');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchAccountHistory = async (accountId, page = historyPage) => {
     setHistoryLoading(true);
     try {
@@ -208,8 +203,9 @@ export default function Treasury() {
         setHistoryTotalPages(data.total_pages || 1);
         setHistoryTotal(data.total || 0);
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      console.error('Error fetching history:', error);
+      toast.error('Failed to load transaction history');
     } finally {
       setHistoryLoading(false);
     }
@@ -330,7 +326,7 @@ export default function Treasury() {
             <tbody>${rows.map(row => `<tr>${row.map((cell, i) => `<td style="${i === 4 ? 'color:#ef4444;' : ''}${i === 5 ? 'color:#22c55e;' : ''}">${cell}</td>`).join('')}</tr>`).join('')}</tbody>
           </table>
           <div class="footer">
-            <p>Miles Capitals - Treasury Statement | Generated: ${new Date().toLocaleString()} | ${historyData.length} transactions</p>
+            <p>Carlton - Treasury Statement | Generated: ${new Date().toLocaleString()} | ${historyData.length} transactions</p>
           </div>
           <button class="no-print" onclick="window.print()" style="margin-top:15px;padding:8px 20px;background:#1F2833;color:white;border:none;cursor:pointer;border-radius:4px;">Print / Save as PDF</button>
         </body>
@@ -349,7 +345,7 @@ export default function Treasury() {
       amount: '',
       exchange_rate: '1',
       notes: '',
-         transfer_date: new Date().toISOString().split('T')[0],
+      transfer_date: new Date().toISOString().split('T')[0],
     });
     setIsTransferDialogOpen(true);
   };
@@ -399,7 +395,7 @@ export default function Treasury() {
           amount: parseFloat(transferData.amount),
           exchange_rate: parseFloat(transferData.exchange_rate) || 1,
           notes: transferData.notes || null,
-             transfer_date: transferData.transfer_date || null,
+          transfer_date: transferData.transfer_date || null,
         }),
       });
 
@@ -412,8 +408,8 @@ export default function Treasury() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || 'Something went wrong. Please try again.');
     } finally {
       setTransferProcessing(false);
       setCaptchaAnswer('');
@@ -468,8 +464,8 @@ export default function Treasury() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || 'Something went wrong. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -489,8 +485,8 @@ export default function Treasury() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || 'Something went wrong. Please try again.');
     }
   };
 
@@ -521,8 +517,8 @@ export default function Treasury() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || 'Something went wrong. Please try again.');
     } finally {
       setBalanceFixSaving(false);
     }
@@ -579,7 +575,7 @@ export default function Treasury() {
       payment_gateway: 'Gateway',
     };
     return (
-      <Badge variant="outline" className="border-[#66FCF1]/30 text-blue-600 text-xs uppercase">
+      <Badge variant="outline" className="border-[#66FCF1]/30 text-primary text-xs uppercase">
         {labels[type] || type}
       </Badge>
     );
@@ -609,25 +605,21 @@ export default function Treasury() {
     return acc;
   }, {});
 
-
   return (
     <div className="space-y-6 animate-fade-in" data-testid="treasury-page">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1
-            className="text-4xl font-bold uppercase tracking-tight text-slate-800"
-            style={{ fontFamily: "Barlow Condensed" }}
-          >
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
             Treasury
           </h1>
-          <p className="text-slate-500">Manage bank accounts and treasury</p>
+          <p className="text-muted-foreground">Manage bank accounts and treasury</p>
         </div>
         <div className="flex gap-2">
           {isAccountantOrAdmin && accounts.length >= 2 && (
             <Button
               onClick={initiateTransfer}
               variant="outline"
-              className="border-[#66FCF1]/50 text-blue-600 hover:bg-blue-100 font-bold uppercase tracking-wider rounded-xl"
+              className="border-[#66FCF1]/50 text-primary hover:bg-primary/15 font-bold uppercase tracking-wider rounded-sm"
               data-testid="transfer-btn"
             >
               <ArrowLeftRight className="w-4 h-4 mr-2" />
@@ -635,455 +627,284 @@ export default function Treasury() {
             </Button>
           )}
           {isAccountantOrAdmin && (
-            <Dialog
-              open={isDialogOpen}
-              onOpenChange={(open) => {
-                setIsDialogOpen(open);
-                if (!open) resetForm();
-              }}
-            >
+            <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
               <DialogTrigger asChild>
                 <Button
-                  className="bg-primary text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-xl glow-cyan"
-                  data-testid="add-treasury-btn"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Account
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-lg">
-                <DialogHeader>
-                  <DialogTitle
-                    className="text-2xl font-bold uppercase tracking-tight"
-                    style={{ fontFamily: "Barlow Condensed" }}
-                  >
-                    {selectedAccount ? "Edit Account" : "Add Treasury Account"}
-                  </DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan"
+                data-testid="add-treasury-btn"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Account
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-card border text-foreground max-w-lg">
+              <DialogHeader>
+                <DialogTitle className="text-lg font-bold text-foreground">
+                  {selectedAccount ? 'Edit Account' : 'Add Treasury Account'}
+                </DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">Account Name *</Label>
+                  <Input
+                    value={formData.account_name}
+                    onChange={(e) => setFormData({ ...formData, account_name: e.target.value })}
+                    className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
+                    placeholder="e.g., Main Operating Account"
+                    data-testid="treasury-name"
+                    required
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-slate-500 text-xs uppercase tracking-wider">
-                      Account Name *
-                    </Label>
+                    <Label className="text-muted-foreground text-xs uppercase tracking-wider">Type</Label>
+                    <Select
+                      value={formData.account_type}
+                      onValueChange={(value) => setFormData({ ...formData, account_type: value })}
+                    >
+                      <SelectTrigger className="bg-muted/50 border text-foreground" data-testid="treasury-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card border">
+                        {accountTypes.map((type) => (
+                          <SelectItem key={type.value} value={type.value} className="text-foreground hover:bg-muted">
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">Currency</Label>
+                  <Select
+                    value={formData.currency}
+                    onValueChange={(value) => setFormData({ ...formData, currency: value })}
+                  >
+                    <SelectTrigger className="bg-muted/50 border text-foreground" data-testid="treasury-currency">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border">
+                      <SelectItem value="USD" className="text-foreground hover:bg-muted">USD</SelectItem>
+                      <SelectItem value="EUR" className="text-foreground hover:bg-muted">EUR</SelectItem>
+                      <SelectItem value="GBP" className="text-foreground hover:bg-muted">GBP</SelectItem>
+                      <SelectItem value="AED" className="text-foreground hover:bg-muted">AED</SelectItem>
+                      <SelectItem value="SAR" className="text-foreground hover:bg-muted">SAR</SelectItem>
+                      <SelectItem value="INR" className="text-foreground hover:bg-muted">INR</SelectItem>
+                      <SelectItem value="JPY" className="text-foreground hover:bg-muted">JPY</SelectItem>
+                      {formData.account_type === 'usdt' && (
+                        <SelectItem value="USDT" className="text-foreground hover:bg-muted">USDT</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              {/* Bank-specific fields */}
+              {formData.account_type !== 'usdt' && (
+                <>
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground text-xs uppercase tracking-wider">Bank Name</Label>
                     <Input
-                      value={formData.account_name}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          account_name: e.target.value,
-                        })
-                      }
-                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
-                      placeholder="e.g., Main Operating Account"
-                      data-testid="treasury-name"
+                      value={formData.bank_name}
+                      onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
+                      className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
+                      placeholder="e.g., Chase Bank"
+                      data-testid="treasury-bank"
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-muted-foreground text-xs uppercase tracking-wider">Account Number</Label>
+                      <Input
+                        value={formData.account_number}
+                        onChange={(e) => setFormData({ ...formData, account_number: e.target.value })}
+                        className="bg-muted/50 border text-foreground focus:border-[#66FCF1] font-mono"
+                        placeholder="****1234"
+                        data-testid="treasury-account-number"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-muted-foreground text-xs uppercase tracking-wider">Routing Number</Label>
+                      <Input
+                        value={formData.routing_number}
+                        onChange={(e) => setFormData({ ...formData, routing_number: e.target.value })}
+                        className="bg-muted/50 border text-foreground focus:border-[#66FCF1] font-mono"
+                        placeholder="Optional"
+                        data-testid="treasury-routing"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground text-xs uppercase tracking-wider">SWIFT Code</Label>
+                    <Input
+                      value={formData.swift_code}
+                      onChange={(e) => setFormData({ ...formData, swift_code: e.target.value })}
+                      className="bg-muted/50 border text-foreground focus:border-[#66FCF1] font-mono"
+                      placeholder="Optional"
+                      data-testid="treasury-swift"
+                    />
+                  </div>
+                </>
+              )}
+              
+              {/* USDT-specific fields */}
+              {formData.account_type === 'usdt' && (
+                <>
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground text-xs uppercase tracking-wider">USDT Wallet Address *</Label>
+                    <Input
+                      value={formData.usdt_address}
+                      onChange={(e) => setFormData({ ...formData, usdt_address: e.target.value })}
+                      className="bg-muted/50 border text-foreground focus:border-[#66FCF1] font-mono"
+                      placeholder="Enter USDT wallet address"
+                      data-testid="treasury-usdt-address"
                       required
                     />
                   </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-slate-500 text-xs uppercase tracking-wider">
-                        Type
-                      </Label>
-                      <Select
-                        value={formData.account_type}
-                        onValueChange={(value) =>
-                          setFormData({ ...formData, account_type: value })
-                        }
-                      >
-                        <SelectTrigger
-                          className="bg-slate-50 border-slate-200 text-slate-800"
-                          data-testid="treasury-type"
-                        >
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white border-slate-200">
-                          {accountTypes.map((type) => (
-                            <SelectItem
-                              key={type.value}
-                              value={type.value}
-                              className="text-slate-800 hover:bg-slate-100"
-                            >
-                              {type.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-slate-500 text-xs uppercase tracking-wider">
-                        Currency
-                      </Label>
-                      <Select
-                        value={formData.currency}
-                        onValueChange={(value) =>
-                          setFormData({ ...formData, currency: value })
-                        }
-                      >
-                        <SelectTrigger
-                          className="bg-slate-50 border-slate-200 text-slate-800"
-                          data-testid="treasury-currency"
-                        >
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white border-slate-200">
-                          <SelectItem
-                            value="USD"
-                            className="text-slate-800 hover:bg-slate-100"
-                          >
-                            USD
-                          </SelectItem>
-                          <SelectItem
-                            value="EUR"
-                            className="text-slate-800 hover:bg-slate-100"
-                          >
-                            EUR
-                          </SelectItem>
-                          <SelectItem
-                            value="GBP"
-                            className="text-slate-800 hover:bg-slate-100"
-                          >
-                            GBP
-                          </SelectItem>
-                          <SelectItem
-                            value="AED"
-                            className="text-slate-800 hover:bg-slate-100"
-                          >
-                            AED
-                          </SelectItem>
-                          <SelectItem
-                            value="SAR"
-                            className="text-slate-800 hover:bg-slate-100"
-                          >
-                            SAR
-                          </SelectItem>
-                          <SelectItem
-                            value="INR"
-                            className="text-slate-800 hover:bg-slate-100"
-                          >
-                            INR
-                          </SelectItem>
-                          <SelectItem
-                            value="JPY"
-                            className="text-slate-800 hover:bg-slate-100"
-                          >
-                            JPY
-                          </SelectItem>
-                          {formData.account_type === "usdt" && (
-                            <SelectItem
-                              value="USDT"
-                              className="text-slate-800 hover:bg-slate-100"
-                            >
-                              USDT
-                            </SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {/* Bank-specific fields */}
-                  {formData.account_type !== "usdt" && (
-                    <>
-                      <div className="space-y-2">
-                        <Label className="text-slate-500 text-xs uppercase tracking-wider">
-                          Bank Name
-                        </Label>
-                        <Input
-                          value={formData.bank_name}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              bank_name: e.target.value,
-                            })
-                          }
-                          className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
-                          placeholder="e.g., Chase Bank"
-                          data-testid="treasury-bank"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label className="text-slate-500 text-xs uppercase tracking-wider">
-                            Account Number
-                          </Label>
-                          <Input
-                            value={formData.account_number}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                account_number: e.target.value,
-                              })
-                            }
-                            className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
-                            placeholder="****1234"
-                            data-testid="treasury-account-number"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-slate-500 text-xs uppercase tracking-wider">
-                            Routing Number
-                          </Label>
-                          <Input
-                            value={formData.routing_number}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                routing_number: e.target.value,
-                              })
-                            }
-                            className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
-                            placeholder="Optional"
-                            data-testid="treasury-routing"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-slate-500 text-xs uppercase tracking-wider">
-                          SWIFT Code
-                        </Label>
-                        <Input
-                          value={formData.swift_code}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              swift_code: e.target.value,
-                            })
-                          }
-                          className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
-                          placeholder="Optional"
-                          data-testid="treasury-swift"
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {/* USDT-specific fields */}
-                  {formData.account_type === "usdt" && (
-                    <>
-                      <div className="space-y-2">
-                        <Label className="text-slate-500 text-xs uppercase tracking-wider">
-                          USDT Wallet Address *
-                        </Label>
-                        <Input
-                          value={formData.usdt_address}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              usdt_address: e.target.value,
-                            })
-                          }
-                          className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
-                          placeholder="Enter USDT wallet address"
-                          data-testid="treasury-usdt-address"
-                          required
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-slate-500 text-xs uppercase tracking-wider">
-                          Network *
-                        </Label>
-                        <Select
-                          value={formData.usdt_network}
-                          onValueChange={(value) =>
-                            setFormData({ ...formData, usdt_network: value })
-                          }
-                        >
-                          <SelectTrigger
-                            className="bg-slate-50 border-slate-200 text-slate-800"
-                            data-testid="treasury-usdt-network"
-                          >
-                            <SelectValue placeholder="Select network" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white border-slate-200">
-                            <SelectItem
-                              value="TRC20"
-                              className="text-slate-800 hover:bg-slate-100"
-                            >
-                              TRC20 (Tron)
-                            </SelectItem>
-                            <SelectItem
-                              value="ERC20"
-                              className="text-slate-800 hover:bg-slate-100"
-                            >
-                              ERC20 (Ethereum)
-                            </SelectItem>
-                            <SelectItem
-                              value="BEP20"
-                              className="text-slate-800 hover:bg-slate-100"
-                            >
-                              BEP20 (BSC)
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-slate-500 text-xs uppercase tracking-wider">
-                          Private Notes/Labels
-                        </Label>
-                        <Textarea
-                          value={formData.usdt_notes}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              usdt_notes: e.target.value,
-                            })
-                          }
-                          className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
-                          placeholder="Internal notes for this wallet..."
-                          rows={2}
-                          data-testid="treasury-usdt-notes"
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {selectedAccount && (
-                    <div className="space-y-2">
-                      <Label className="text-slate-500 text-xs uppercase tracking-wider">
-                        Status
-                      </Label>
-                      <Select
-                        value={formData.status}
-                        onValueChange={(value) =>
-                          setFormData({ ...formData, status: value })
-                        }
-                      >
-                        <SelectTrigger
-                          className="bg-slate-50 border-slate-200 text-slate-800"
-                          data-testid="treasury-status"
-                        >
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white border-slate-200">
-                          {statusOptions.map((opt) => (
-                            <SelectItem
-                              key={opt.value}
-                              value={opt.value}
-                              className="text-slate-800 hover:bg-slate-100"
-                            >
-                              {opt.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
+                  
                   <div className="space-y-2">
-                    <Label className="text-slate-500 text-xs uppercase tracking-wider">
-                      Description
-                    </Label>
+                    <Label className="text-muted-foreground text-xs uppercase tracking-wider">Network *</Label>
+                    <Select
+                      value={formData.usdt_network}
+                      onValueChange={(value) => setFormData({ ...formData, usdt_network: value })}
+                    >
+                      <SelectTrigger className="bg-muted/50 border text-foreground" data-testid="treasury-usdt-network">
+                        <SelectValue placeholder="Select network" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card border">
+                        <SelectItem value="TRC20" className="text-foreground hover:bg-muted">TRC20 (Tron)</SelectItem>
+                        <SelectItem value="ERC20" className="text-foreground hover:bg-muted">ERC20 (Ethereum)</SelectItem>
+                        <SelectItem value="BEP20" className="text-foreground hover:bg-muted">BEP20 (BSC)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground text-xs uppercase tracking-wider">Private Notes/Labels</Label>
                     <Textarea
-                      value={formData.description}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          description: e.target.value,
-                        })
-                      }
-                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                      value={formData.usdt_notes}
+                      onChange={(e) => setFormData({ ...formData, usdt_notes: e.target.value })}
+                      className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
+                      placeholder="Internal notes for this wallet..."
                       rows={2}
-                      data-testid="treasury-description"
+                      data-testid="treasury-usdt-notes"
                     />
                   </div>
-
-                  {!selectedAccount && (
-                    <div className="space-y-2">
-                      <Label className="text-slate-500 text-xs uppercase tracking-wider">
-                        Opening Balance
-                      </Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={formData.opening_balance}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            opening_balance: e.target.value,
-                          })
-                        }
-                        className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
-                        placeholder="0.00"
-                        data-testid="treasury-opening-balance"
-                      />
-                    </div>
-                  )}
-
-                  <div className="flex justify-end gap-3 pt-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setIsDialogOpen(false);
-                        resetForm();
-                      }}
-                      className="border-slate-200 text-slate-500 hover:bg-slate-100"
+                </>
+              )}
+                
+                {selectedAccount && (
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground text-xs uppercase tracking-wider">Status</Label>
+                    <Select
+                      value={formData.status}
+                      onValueChange={(value) => setFormData({ ...formData, status: value })}
                     >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={submitting}
-                      className="bg-primary text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider disabled:opacity-50"
-                      data-testid="save-treasury-btn"
-                    >
-                      {submitting ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-[#0B0C10] border-t-transparent rounded-full animate-spin mr-2" />
-                          Saving...
-                        </>
-                      ) : selectedAccount ? (
-                        "Update"
-                      ) : (
-                        "Create"
-                      )}
-                    </Button>
+                      <SelectTrigger className="bg-muted/50 border text-foreground" data-testid="treasury-status">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card border">
+                        {statusOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value} className="text-foreground hover:bg-muted">
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                </form>
-              </DialogContent>
-            </Dialog>
-          )}
+                )}
+                
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">Description</Label>
+                  <Textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
+                    rows={2}
+                    data-testid="treasury-description"
+                  />
+                </div>
+
+                {!selectedAccount && (
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground text-xs uppercase tracking-wider">Opening Balance</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.opening_balance}
+                      onChange={(e) => setFormData({ ...formData, opening_balance: e.target.value })}
+                      className="bg-muted/50 border text-foreground focus:border-[#66FCF1] font-mono"
+                      placeholder="0.00"
+                      data-testid="treasury-opening-balance"
+                    />
+                  </div>
+                )}
+                
+                <div className="flex justify-end gap-3 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => { setIsDialogOpen(false); resetForm(); }}
+                    className="border text-muted-foreground hover:bg-muted"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={submitting}
+                    className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider disabled:opacity-50"
+                    data-testid="save-treasury-btn"
+                  >
+                    {submitting ? (
+                      <><div className="w-4 h-4 border-2 border-[#0B0C10] border-t-transparent rounded-full animate-spin mr-2" />Saving...</>
+                    ) : (
+                      selectedAccount ? 'Update' : 'Create'
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
         </div>
       </div>
 
-       {/* Summary Bar */}
+      {/* Summary Bar */}
       <div className="flex flex-wrap items-stretch gap-3">
-        <Card className="bg-white border-slate-200 flex-1 min-w-[160px]">
+        <Card className="bg-card border flex-1 min-w-[160px]">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-sm shrink-0">
-              <DollarSign className="w-4 h-4 text-blue-600" />
+            <div className="p-2 bg-primary/15 rounded-sm shrink-0">
+              <DollarSign className="w-4 h-4 text-primary" />
             </div>
             <div>
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Total (USD)</p>
-              <p className="text-xl font-bold font-mono text-slate-800" data-testid="total-balance-usd">${totalBalanceUSD.toLocaleString()}</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total (USD)</p>
+              <p className="text-xl font-bold font-mono text-foreground" data-testid="total-balance-usd">${totalBalanceUSD.toLocaleString()}</p>
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-white border-slate-200 min-w-[100px]">
+        <Card className="bg-card border min-w-[100px]">
           <CardContent className="p-4 flex items-center gap-3">
             <div className="p-2 bg-green-100 rounded-sm shrink-0">
               <Building2 className="w-4 h-4 text-green-600" />
             </div>
             <div>
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Accounts</p>
-              <p className="text-xl font-bold font-mono text-slate-800" data-testid="active-accounts">{activeAccounts}<span className="text-sm text-slate-400 font-normal">/{accounts.length}</span></p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Accounts</p>
+              <p className="text-xl font-bold font-mono text-foreground" data-testid="active-accounts">{activeAccounts}<span className="text-sm text-muted-foreground font-normal">/{accounts.length}</span></p>
             </div>
           </CardContent>
         </Card>
         {Object.entries(balanceByCurrency).map(([cur, data]) => (
-          <Card key={cur} className="bg-white border-slate-200 min-w-[130px]">
+          <Card key={cur} className="bg-card border min-w-[130px]">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-1">
-                <p className="text-[10px] text-slate-400 uppercase tracking-wider">{cur}</p>
-                <span className="text-[10px] text-slate-400">{data.count} acct{data.count > 1 ? 's' : ''}</span>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{cur}</p>
+                <span className="text-[10px] text-muted-foreground">{data.count} acct{data.count > 1 ? 's' : ''}</span>
               </div>
-              <p className="text-lg font-bold font-mono text-slate-800" data-testid={`balance-${cur}`}>{data.balance.toLocaleString()}</p>
+              <p className="text-lg font-bold font-mono text-foreground" data-testid={`balance-${cur}`}>{data.balance.toLocaleString()}</p>
             </CardContent>
           </Card>
         ))}
@@ -1097,67 +918,39 @@ export default function Treasury() {
           </div>
         ) : accounts.length === 0 ? (
           <div className="col-span-full text-center py-12">
-            <Landmark className="w-12 h-12 text-slate-500 mx-auto mb-4" />
-            <p className="text-slate-500">No treasury accounts found</p>
-            {isAccountantOrAdmin && (
-              <p className="text-sm text-slate-500/60 mt-2">
-                Click "Add Account" to create one
-              </p>
-            )}
+            <Landmark className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">No treasury accounts found</p>
+            {isAccountantOrAdmin && <p className="text-sm text-muted-foreground/60 mt-2">Click "Add Account" to create one</p>}
           </div>
         ) : (
           accounts.map((account) => (
-            <Card
-              key={account.account_id}
-              className="bg-white border-slate-200 card-hover"
-            >
+            <Card key={account.account_id} className="bg-card border card-hover">
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 rounded-xl">
-                      <Building2 className="w-5 h-5 text-blue-600" />
+                    <div className="p-2 bg-primary/15 rounded-sm">
+                      <Building2 className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                      <CardTitle className="text-lg text-slate-800">
-                        {account.account_name}
-                      </CardTitle>
-                      <p className="text-xs text-slate-500">
-                        {account.bank_name || "N/A"}
-                      </p>
+                      <CardTitle className="text-lg text-foreground">{account.account_name}</CardTitle>
+                      <p className="text-xs text-muted-foreground">{account.bank_name || 'N/A'}</p>
                     </div>
                   </div>
                   {isAccountantOrAdmin && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-slate-500 hover:text-slate-800 hover:bg-slate-100"
-                          data-testid={`treasury-actions-${account.account_id}`}
-                        >
+                        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-muted" data-testid={`treasury-actions-${account.account_id}`}>
                           <MoreVertical className="w-4 h-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        align="end"
-                        className="bg-white border-slate-200"
-                      >
-                        <DropdownMenuItem
-                          onClick={() => setViewAccount(account)}
-                          className="text-slate-800 hover:bg-slate-100 cursor-pointer"
-                        >
+                      <DropdownMenuContent align="end" className="bg-card border">
+                        <DropdownMenuItem onClick={() => setViewAccount(account)} className="text-foreground hover:bg-muted cursor-pointer">
                           <Eye className="w-4 h-4 mr-2" /> View
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => {setHistoryAccount(account); setHistoryPage(1);}}
-                          className="text-slate-800 hover:bg-slate-100 cursor-pointer"
-                        >
+                        <DropdownMenuItem onClick={() => { setHistoryPage(1); setHistoryAccount(account); }} className="text-foreground hover:bg-muted cursor-pointer">
                           <History className="w-4 h-4 mr-2" /> History
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleEdit(account)}
-                          className="text-slate-800 hover:bg-slate-100 cursor-pointer"
-                        >
+                        <DropdownMenuItem onClick={() => handleEdit(account)} className="text-foreground hover:bg-muted cursor-pointer">
                           <Edit className="w-4 h-4 mr-2" /> Edit
                         </DropdownMenuItem>
                         {user?.role === 'admin' && (
@@ -1165,10 +958,7 @@ export default function Treasury() {
                             <Calculator className="w-4 h-4 mr-2" /> Fix Balance
                           </DropdownMenuItem>
                         )}
-                        <DropdownMenuItem
-                          onClick={() => handleDelete(account.account_id)}
-                          className="text-red-600 hover:bg-red-50 cursor-pointer"
-                        >
+                        <DropdownMenuItem onClick={() => handleDelete(account.account_id)} className="text-red-600 hover:bg-red-50 cursor-pointer">
                           <Trash2 className="w-4 h-4 mr-2" /> Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -1179,54 +969,37 @@ export default function Treasury() {
               <CardContent>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-500 text-sm">
-                      Balance ({account.currency})
-                    </span>
-                    <span className="text-xl font-mono font-bold text-slate-800">
-                      {account.currency === "USD" ? "$" : ""}
-                      {(account.balance || 0).toLocaleString()}{" "}
-                      {account.currency !== "USD" ? account.currency : ""}
+                    <span className="text-muted-foreground text-sm">Balance ({account.currency})</span>
+                    <span className="text-xl font-mono font-bold text-foreground">
+                      {account.currency === 'USD' ? '$' : ''}{(account.balance || 0).toLocaleString()} {account.currency !== 'USD' ? account.currency : ''}
                     </span>
                   </div>
-                  {account.currency !== "USD" && (
+                  {account.currency !== 'USD' && (
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-500 text-sm">
-                        USD Equivalent
-                      </span>
+                      <span className="text-muted-foreground text-sm">USD Equivalent</span>
                       <span className="text-lg font-mono text-primary">
-                        {account.balance_usd != null ? (
-                          `$${account.balance_usd.toLocaleString()}`
-                        ) : (
-                          <span className="text-xs text-slate-400">
-                            Rate not set
-                          </span>
-                        )}
+                        {account.balance_usd != null ? `$${account.balance_usd.toLocaleString()}` : <span className="text-xs text-muted-foreground">Rate not set</span>}
                       </span>
                     </div>
                   )}
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-500 text-sm">Type</span>
+                    <span className="text-muted-foreground text-sm">Type</span>
                     {getTypeBadge(account.account_type)}
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-500 text-sm">Status</span>
+                    <span className="text-muted-foreground text-sm">Status</span>
                     {getStatusBadge(account.status)}
                   </div>
                   {account.account_number && (
-                    <div className="pt-2 border-t border-slate-200">
-                      <p className="text-xs text-slate-500">
-                        Account:{" "}
-                        <span className="font-mono text-slate-800">
-                          {account.account_number}
-                        </span>
-                      </p>
+                    <div className="pt-2 border-t border">
+                      <p className="text-xs text-muted-foreground">Account: <span className="font-mono text-foreground">{account.account_number}</span></p>
                     </div>
                   )}
                   <Button
-                    onClick={() => { setHistoryPage(1);setHistoryAccount(account)}}
+                    onClick={() => { setHistoryPage(1); setHistoryAccount(account); }}
                     variant="outline"
                     size="sm"
-                    className="w-full mt-2 border-[#66FCF1]/30 text-blue-600 hover:bg-blue-100"
+                    className="w-full mt-2 border-[#66FCF1]/30 text-primary hover:bg-primary/15"
                     data-testid={`view-history-${account.account_id}`}
                   >
                     <History className="w-3 h-3 mr-2" />
@@ -1239,110 +1012,67 @@ export default function Treasury() {
         )}
       </div>
 
-      <PaginationControls
-        currentPage={currentPage}
-        totalPages={totalPages}
-        totalItems={totalItems}
-        pageSize={pageSize}
-        onPageChange={setCurrentPage}
-        onPageSizeChange={(s) => {
-          setPageSize(s);
-          setCurrentPage(1);
-        }}
-      />
+      <PaginationControls currentPage={currentPage} totalPages={totalPages} totalItems={totalItems} pageSize={pageSize} onPageChange={setCurrentPage} onPageSizeChange={s => { setPageSize(s); setCurrentPage(1); }} />
 
       {/* View Account Dialog */}
       <Dialog open={!!viewAccount} onOpenChange={() => setViewAccount(null)}>
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-lg">
+        <DialogContent className="bg-card border text-foreground max-w-lg">
           <DialogHeader>
-            <DialogTitle
-              className="text-2xl font-bold uppercase tracking-tight"
-              style={{ fontFamily: "Barlow Condensed" }}
-            >
+            <DialogTitle className="text-lg font-bold text-foreground">
               Account Details
             </DialogTitle>
           </DialogHeader>
           {viewAccount && (
             <div className="space-y-4">
               <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-100 rounded-xl">
-                  <Building2 className="w-8 h-8 text-blue-600" />
+                <div className="p-3 bg-primary/15 rounded-sm">
+                  <Building2 className="w-8 h-8 text-primary" />
                 </div>
                 <div>
-                  <h3 className="text-xl text-slate-800 font-medium">
-                    {viewAccount.account_name}
-                  </h3>
-                  <p className="text-slate-500">
-                    {viewAccount.bank_name || "N/A"}
-                  </p>
+                  <h3 className="text-xl text-foreground font-medium">{viewAccount.account_name}</h3>
+                  <p className="text-muted-foreground">{viewAccount.bank_name || 'N/A'}</p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-200">
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border">
                 <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
-                    Balance
-                  </p>
-                  <p className="text-2xl font-mono font-bold text-slate-800">
-                    ${(viewAccount.balance || 0).toLocaleString()}
-                  </p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Balance</p>
+                  <p className="text-2xl font-mono font-bold text-foreground">${(viewAccount.balance || 0).toLocaleString()}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
-                    Currency
-                  </p>
-                  <p className="text-slate-800 font-mono">
-                    {viewAccount.currency}
-                  </p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Currency</p>
+                  <p className="text-foreground font-mono">{viewAccount.currency}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
-                    Type
-                  </p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Type</p>
                   {getTypeBadge(viewAccount.account_type)}
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
-                    Status
-                  </p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Status</p>
                   {getStatusBadge(viewAccount.status)}
                 </div>
                 {viewAccount.account_number && (
                   <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
-                      Account Number
-                    </p>
-                    <p className="text-slate-800 font-mono">
-                      {viewAccount.account_number}
-                    </p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Account Number</p>
+                    <p className="text-foreground font-mono">{viewAccount.account_number}</p>
                   </div>
                 )}
                 {viewAccount.routing_number && (
                   <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
-                      Routing Number
-                    </p>
-                    <p className="text-slate-800 font-mono">
-                      {viewAccount.routing_number}
-                    </p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Routing Number</p>
+                    <p className="text-foreground font-mono">{viewAccount.routing_number}</p>
                   </div>
                 )}
                 {viewAccount.swift_code && (
                   <div className="col-span-2">
-                    <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
-                      SWIFT Code
-                    </p>
-                    <p className="text-slate-800 font-mono">
-                      {viewAccount.swift_code}
-                    </p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">SWIFT Code</p>
+                    <p className="text-foreground font-mono">{viewAccount.swift_code}</p>
                   </div>
                 )}
               </div>
               {viewAccount.description && (
-                <div className="pt-4 border-t border-slate-200">
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
-                    Description
-                  </p>
-                  <p className="text-slate-800">{viewAccount.description}</p>
+                <div className="pt-4 border-t border">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Description</p>
+                  <p className="text-foreground">{viewAccount.description}</p>
                 </div>
               )}
             </div>
@@ -1351,61 +1081,41 @@ export default function Treasury() {
       </Dialog>
 
       {/* Transaction History Dialog */}
-      <Dialog
-        open={!!historyAccount}
-        onOpenChange={() => {
-          setHistoryAccount(null);
-          setHistoryData([]);
-          setHistoryFilters({
-            startDate: "",
-            endDate: "",
-            transactionType: "",
-          });
-        }}
-      >
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-4xl max-h-[90vh] overflow-hidden">
+      <Dialog open={!!historyAccount} onOpenChange={() => { 
+        setHistoryAccount(null); 
+        setHistoryData([]);
+        setHistoryFilters({ startDate: '', endDate: '', transactionType: '' });
+      }}>
+        <DialogContent className="bg-card border text-foreground max-w-4xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
-            <DialogTitle
-              className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2"
-              style={{ fontFamily: "Barlow Condensed" }}
-            >
-              <History className="w-6 h-6 text-blue-600" />
+            <DialogTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+              <History className="w-6 h-6 text-primary" />
               Transaction History
             </DialogTitle>
           </DialogHeader>
           {historyAccount && (
             <div className="space-y-4">
               {/* Account Info */}
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-sm">
                 <div className="flex items-center gap-3">
-                  <Building2 className="w-5 h-5 text-blue-600" />
+                  <Building2 className="w-5 h-5 text-primary" />
                   <div>
-                    <p className="text-slate-800 font-medium">
-                      {historyAccount.account_name}
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      {historyAccount.bank_name || "N/A"}
-                    </p>
+                    <p className="text-foreground font-medium">{historyAccount.account_name}</p>
+                    <p className="text-xs text-muted-foreground">{historyAccount.bank_name || 'N/A'}</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs text-slate-500 uppercase tracking-wider">
-                    Balance
-                  </p>
-                  <p className="text-xl font-mono font-bold text-slate-800">
-                    {historyAccount.currency === "USD" ? "$" : ""}
-                    {(historyAccount.balance || 0).toLocaleString()}{" "}
-                    {historyAccount.currency !== "USD"
-                      ? historyAccount.currency
-                      : ""}
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Balance</p>
+                  <p className="text-xl font-mono font-bold text-foreground">
+                    {historyAccount.currency === 'USD' ? '$' : ''}{(historyAccount.balance || 0).toLocaleString()} {historyAccount.currency !== 'USD' ? historyAccount.currency : ''}
                   </p>
                 </div>
               </div>
 
               {/* Filters */}
-             <div className="flex flex-wrap items-end gap-3 p-4 bg-slate-50 rounded-sm">
+              <div className="flex flex-wrap items-end gap-3 p-4 bg-muted/50 rounded-sm">
                 <div className="min-w-[150px] space-y-1">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Period</Label>
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">Period</Label>
                   <Select
                     value={historyFilters.period || 'all'}
                     onValueChange={(value) => {
@@ -1442,60 +1152,60 @@ export default function Treasury() {
                       setHistoryFilters({ ...historyFilters, period: value, startDate: start, endDate: end });
                     }}
                   >
-                    <SelectTrigger className="bg-white border-slate-200 text-slate-800" data-testid="history-period-filter">
+                    <SelectTrigger className="bg-card border text-foreground" data-testid="history-period-filter">
                       <SelectValue placeholder="All Time" />
                     </SelectTrigger>
-                    <SelectContent className="bg-white border-slate-200">
-                      <SelectItem value="all" className="text-slate-800 hover:bg-slate-100">All Time</SelectItem>
-                      <SelectItem value="today" className="text-slate-800 hover:bg-slate-100">Today</SelectItem>
-                      <SelectItem value="yesterday" className="text-slate-800 hover:bg-slate-100">Yesterday</SelectItem>
-                      <SelectItem value="this_week" className="text-slate-800 hover:bg-slate-100">This Week</SelectItem>
-                      <SelectItem value="last_week" className="text-slate-800 hover:bg-slate-100">Last Week</SelectItem>
-                      <SelectItem value="this_month" className="text-slate-800 hover:bg-slate-100">This Month</SelectItem>
-                      <SelectItem value="last_month" className="text-slate-800 hover:bg-slate-100">Last Month</SelectItem>
-                      <SelectItem value="last_3_months" className="text-slate-800 hover:bg-slate-100">Last 3 Months</SelectItem>
-                      <SelectItem value="this_year" className="text-slate-800 hover:bg-slate-100">This Year</SelectItem>
-                      <SelectItem value="custom" className="text-slate-800 hover:bg-slate-100">Custom Range</SelectItem>
+                    <SelectContent className="bg-card border">
+                      <SelectItem value="all" className="text-foreground hover:bg-muted">All Time</SelectItem>
+                      <SelectItem value="today" className="text-foreground hover:bg-muted">Today</SelectItem>
+                      <SelectItem value="yesterday" className="text-foreground hover:bg-muted">Yesterday</SelectItem>
+                      <SelectItem value="this_week" className="text-foreground hover:bg-muted">This Week</SelectItem>
+                      <SelectItem value="last_week" className="text-foreground hover:bg-muted">Last Week</SelectItem>
+                      <SelectItem value="this_month" className="text-foreground hover:bg-muted">This Month</SelectItem>
+                      <SelectItem value="last_month" className="text-foreground hover:bg-muted">Last Month</SelectItem>
+                      <SelectItem value="last_3_months" className="text-foreground hover:bg-muted">Last 3 Months</SelectItem>
+                      <SelectItem value="this_year" className="text-foreground hover:bg-muted">This Year</SelectItem>
+                      <SelectItem value="custom" className="text-foreground hover:bg-muted">Custom Range</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 {/* Always show date inputs */}
                     <div className="min-w-[140px] space-y-1">
-                      <Label className="text-slate-500 text-xs uppercase tracking-wider">From</Label>
+                      <Label className="text-muted-foreground text-xs uppercase tracking-wider">From</Label>
                       <Input
                         type="date"
                         value={historyFilters.startDate}
                         onChange={(e) => { setHistoryPage(1); setHistoryFilters({ ...historyFilters, startDate: e.target.value, period: 'custom' }); }}
-                        className="bg-white border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                        className="bg-card border text-foreground focus:border-[#66FCF1]"
                         data-testid="history-start-date"
                       />
                     </div>
                     <div className="min-w-[140px] space-y-1">
-                      <Label className="text-slate-500 text-xs uppercase tracking-wider">To</Label>
+                      <Label className="text-muted-foreground text-xs uppercase tracking-wider">To</Label>
                       <Input
                         type="date"
                         value={historyFilters.endDate}
                         onChange={(e) => { setHistoryPage(1); setHistoryFilters({ ...historyFilters, endDate: e.target.value, period: 'custom' }); }}
-                        className="bg-white border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                        className="bg-card border text-foreground focus:border-[#66FCF1]"
                         data-testid="history-end-date"
                       />
                     </div>
                 <div className="min-w-[140px] space-y-1">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Type</Label>
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">Type</Label>
                   <Select
                     value={historyFilters.transactionType}
                     onValueChange={(value) => { setHistoryPage(1); setHistoryFilters({ ...historyFilters, transactionType: value === 'all' ? '' : value }); }}
                   >
-                    <SelectTrigger className="bg-white border-slate-200 text-slate-800" data-testid="history-type-filter">
+                    <SelectTrigger className="bg-card border text-foreground" data-testid="history-type-filter">
                       <SelectValue placeholder="All Types" />
                     </SelectTrigger>
-                    <SelectContent className="bg-white border-slate-200">
-                      <SelectItem value="all" className="text-slate-800 hover:bg-slate-100">All Types</SelectItem>
-                      <SelectItem value="deposit" className="text-slate-800 hover:bg-slate-100">Deposit</SelectItem>
-                      <SelectItem value="withdrawal" className="text-slate-800 hover:bg-slate-100">Withdrawal</SelectItem>
-                      <SelectItem value="settlement_in" className="text-slate-800 hover:bg-slate-100">Settlement In</SelectItem>
-                      <SelectItem value="transfer_in" className="text-slate-800 hover:bg-slate-100">Transfer In</SelectItem>
-                      <SelectItem value="transfer_out" className="text-slate-800 hover:bg-slate-100">Transfer Out</SelectItem>
+                    <SelectContent className="bg-card border">
+                      <SelectItem value="all" className="text-foreground hover:bg-muted">All Types</SelectItem>
+                      <SelectItem value="deposit" className="text-foreground hover:bg-muted">Deposit</SelectItem>
+                      <SelectItem value="withdrawal" className="text-foreground hover:bg-muted">Withdrawal</SelectItem>
+                      <SelectItem value="settlement_in" className="text-foreground hover:bg-muted">Settlement In</SelectItem>
+                      <SelectItem value="transfer_in" className="text-foreground hover:bg-muted">Transfer In</SelectItem>
+                      <SelectItem value="transfer_out" className="text-foreground hover:bg-muted">Transfer Out</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1510,14 +1220,14 @@ export default function Treasury() {
                       Export Statement
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-white border-slate-200">
-                    <DropdownMenuItem onClick={() => downloadStatement('csv')} className="cursor-pointer hover:bg-slate-100">
+                  <DropdownMenuContent align="end" className="bg-card border">
+                    <DropdownMenuItem onClick={() => downloadStatement('csv')} className="cursor-pointer hover:bg-muted">
                       <Download className="w-4 h-4 mr-2" /> Download CSV
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => downloadStatement('excel')} className="cursor-pointer hover:bg-slate-100">
+                    <DropdownMenuItem onClick={() => downloadStatement('excel')} className="cursor-pointer hover:bg-muted">
                       <Download className="w-4 h-4 mr-2" /> Download Excel
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => downloadStatement('pdf')} className="cursor-pointer hover:bg-slate-100">
+                    <DropdownMenuItem onClick={() => downloadStatement('pdf')} className="cursor-pointer hover:bg-muted">
                       <Download className="w-4 h-4 mr-2" /> Print / PDF
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -1527,9 +1237,9 @@ export default function Treasury() {
               {/* Statement Summary */}
               {historyData.length > 0 && (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div className="p-3 bg-slate-50 rounded-sm border border-slate-200">
-                    <p className="text-xs text-slate-500 uppercase tracking-wider">Opening Balance</p>
-                    <p className="text-lg font-mono font-bold text-slate-800" data-testid="opening-balance">
+                  <div className="p-3 bg-muted/50 rounded-sm border border">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Opening Balance</p>
+                    <p className="text-lg font-mono font-bold text-foreground" data-testid="opening-balance">
                       {(() => {
                         const last = historyData[historyData.length - 1];
                         return ((last?.running_balance || 0) - (last?.amount || 0)).toLocaleString();
@@ -1548,9 +1258,9 @@ export default function Treasury() {
                       -{historyData.filter(tx => tx.amount < 0).reduce((s, tx) => s + Math.abs(tx.amount), 0).toLocaleString()} {historyAccount.currency}
                     </p>
                   </div>
-                  <div className="p-3 bg-blue-50 rounded-sm border border-blue-200">
-                    <p className="text-xs text-blue-600 uppercase tracking-wider">Closing Balance</p>
-                    <p className="text-lg font-mono font-bold text-blue-700" data-testid="closing-balance">
+                  <div className="p-3 bg-primary/10 rounded-sm border border-primary/30">
+                    <p className="text-xs text-primary uppercase tracking-wider">Closing Balance</p>
+                    <p className="text-lg font-mono font-bold text-primary" data-testid="closing-balance">
                       {(historyData[0]?.running_balance || historyAccount.balance || 0).toLocaleString()} {historyAccount.currency}
                     </p>
                   </div>
@@ -1565,53 +1275,53 @@ export default function Treasury() {
                   </div>
                 ) : historyData.length === 0 ? (
                   <div className="text-center py-12">
-                    <History className="w-12 h-12 text-slate-500 mx-auto mb-4" />
-                    <p className="text-slate-500">No transaction history found</p>
-                    <p className="text-sm text-slate-500/60 mt-2">Transactions will appear here once approved</p>
+                    <History className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No transaction history found</p>
+                    <p className="text-sm text-muted-foreground/60 mt-2">Transactions will appear here once approved</p>
                   </div>
                 ) : (
                   <Table>
                     <TableHeader>
-                      <TableRow className="border-slate-200 hover:bg-transparent">
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Date</TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Type</TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reference</TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Description</TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Debit</TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Credit</TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Balance</TableHead>
+                      <TableRow className="border hover:bg-transparent">
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Date</TableHead>
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Type</TableHead>
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Reference</TableHead>
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Description</TableHead>
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">Debit</TableHead>
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">Credit</TableHead>
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">Balance</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {historyData.map((tx, idx) => {
                         const isIncoming = tx.amount > 0;
                         return (
-                          <TableRow key={tx.treasury_transaction_id || idx} className="border-slate-200 hover:bg-slate-100">
-                            <TableCell className="text-slate-800 text-sm whitespace-nowrap">{formatDate(tx.created_at)}</TableCell>
+                          <TableRow key={tx.treasury_transaction_id || idx} className="border hover:bg-muted">
+                            <TableCell className="text-foreground text-sm whitespace-nowrap">{formatDate(tx.created_at)}</TableCell>
                             <TableCell>
                               <div className={`flex items-center gap-1 ${isIncoming ? 'text-green-600' : 'text-red-500'}`}>
                                 {isIncoming ? <ArrowDownRight className="w-3 h-3" /> : <ArrowUpRight className="w-3 h-3" />}
                                 <span className="capitalize text-xs">{(tx.transaction_type || 'N/A').replace(/_/g, ' ')}</span>
                               </div>
                             </TableCell>
-                            <TableCell className="text-slate-800 text-xs max-w-[160px] font-mono">
+                            <TableCell className="text-foreground text-xs max-w-[160px] font-mono">
                               <div className="flex items-center gap-1">
                                 <span className="truncate">{tx.reference || '-'}</span>
                                 {(tx.proof_images?.length || tx.proof_image) && (
-                                  <button onClick={() => { const imgs = tx.proof_images?.length ? tx.proof_images : [tx.proof_image]; setProofGallery({ images: imgs, label: tx.reference }); }} className="text-blue-500 hover:text-blue-700 flex-shrink-0" title="View proof images">
+                                  <button onClick={() => { const imgs = tx.proof_images?.length ? tx.proof_images : [tx.proof_image]; setProofGallery({ images: imgs, label: tx.reference }); }} className="text-primary/80 hover:text-primary flex-shrink-0" title="View proof images">
                                     <ImageIcon className="w-3 h-3" />
                                   </button>
                                 )}
                               </div>
                             </TableCell>
-                            <TableCell className="text-slate-500 text-xs max-w-[140px] truncate">{tx.client_name || tx.notes || '-'}</TableCell>
+                            <TableCell className="text-muted-foreground text-xs max-w-[140px] truncate">{tx.client_name || tx.notes || '-'}</TableCell>
                             <TableCell className="font-mono text-right text-red-500 text-sm">
                               {!isIncoming ? Math.abs(tx.amount || 0).toLocaleString() : ''}
                             </TableCell>
                             <TableCell className="font-mono text-right text-green-600 text-sm">
                               {isIncoming ? tx.amount.toLocaleString() : ''}
                             </TableCell>
-                            <TableCell className="font-mono text-right text-slate-800 font-medium text-sm" data-testid={`running-balance-${idx}`}>
+                            <TableCell className="font-mono text-right text-foreground font-medium text-sm" data-testid={`running-balance-${idx}`}>
                               {(tx.running_balance ?? 0).toLocaleString()}
                             </TableCell>
                           </TableRow>
@@ -1624,8 +1334,8 @@ export default function Treasury() {
 
               {/* Pagination */}
               {historyTotalPages > 1 && (
-                <div className="flex items-center justify-between pt-3 border-t border-slate-200">
-                  <p className="text-xs text-slate-500">
+                <div className="flex items-center justify-between pt-3 border-t border">
+                  <p className="text-xs text-muted-foreground">
                     Showing {((historyPage - 1) * historyPageSize) + 1}-{Math.min(historyPage * historyPageSize, historyTotal)} of {historyTotal} transactions
                   </p>
                   <div className="flex items-center gap-1">
@@ -1634,7 +1344,7 @@ export default function Treasury() {
                       size="sm"
                       onClick={() => { setHistoryPage(1); }}
                       disabled={historyPage <= 1}
-                      className="h-8 px-2 border-slate-200 text-slate-600"
+                      className="h-8 px-2 border text-card-foreground"
                       data-testid="history-first-page"
                     >
                       <ChevronsLeft className="w-4 h-4" />
@@ -1644,12 +1354,12 @@ export default function Treasury() {
                       size="sm"
                       onClick={() => { setHistoryPage(p => Math.max(1, p - 1)); }}
                       disabled={historyPage <= 1}
-                      className="h-8 px-2 border-slate-200 text-slate-600"
+                      className="h-8 px-2 border text-card-foreground"
                       data-testid="history-prev-page"
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </Button>
-                    <span className="text-sm text-slate-600 px-3 font-mono">
+                    <span className="text-sm text-card-foreground px-3 font-mono">
                       {historyPage} / {historyTotalPages}
                     </span>
                     <Button
@@ -1657,7 +1367,7 @@ export default function Treasury() {
                       size="sm"
                       onClick={() => { setHistoryPage(p => Math.min(historyTotalPages, p + 1)); }}
                       disabled={historyPage >= historyTotalPages}
-                      className="h-8 px-2 border-slate-200 text-slate-600"
+                      className="h-8 px-2 border text-card-foreground"
                       data-testid="history-next-page"
                     >
                       <ChevronRight className="w-4 h-4" />
@@ -1667,7 +1377,7 @@ export default function Treasury() {
                       size="sm"
                       onClick={() => { setHistoryPage(historyTotalPages); }}
                       disabled={historyPage >= historyTotalPages}
-                      className="h-8 px-2 border-slate-200 text-slate-600"
+                      className="h-8 px-2 border text-card-foreground"
                       data-testid="history-last-page"
                     >
                       <ChevronsRight className="w-4 h-4" />
@@ -1681,113 +1391,64 @@ export default function Treasury() {
       </Dialog>
 
       {/* Inter-Treasury Transfer Dialog */}
-      <Dialog
-        open={isTransferDialogOpen}
-        onOpenChange={(open) => {
-          setIsTransferDialogOpen(open);
-          if (!open) {
-            setShowCaptcha(false);
-            setCaptchaAnswer("");
-          }
-        }}
-      >
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-lg">
+      <Dialog open={isTransferDialogOpen} onOpenChange={(open) => { 
+        setIsTransferDialogOpen(open); 
+        if (!open) {
+          setShowCaptcha(false);
+          setCaptchaAnswer('');
+        }
+      }}>
+        <DialogContent className="bg-card border text-foreground max-w-lg">
           <DialogHeader>
-            <DialogTitle
-              className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2"
-              style={{ fontFamily: "Barlow Condensed" }}
-            >
-              <ArrowLeftRight className="w-6 h-6 text-blue-600" />
+            <DialogTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+              <ArrowLeftRight className="w-6 h-6 text-primary" />
               Inter-Treasury Transfer
             </DialogTitle>
           </DialogHeader>
-
+          
           {!showCaptcha ? (
             <div className="space-y-4" data-testid="transfer-form">
               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">
-                  From Account *
-                </Label>
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">From Account *</Label>
                 <Select
                   value={transferData.source_account_id}
-                  onValueChange={(value) =>
-                    setTransferData({
-                      ...transferData,
-                      source_account_id: value,
-                    })
-                  }
+                  onValueChange={(value) => setTransferData({ ...transferData, source_account_id: value })}
                 >
-                  <SelectTrigger
-                    className="bg-slate-50 border-slate-200 text-slate-800"
-                    data-testid="transfer-from-account"
-                  >
+                  <SelectTrigger className="bg-muted/50 border text-foreground" data-testid="transfer-from-account">
                     <SelectValue placeholder="Select source account" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border-slate-200">
+                  <SelectContent className="bg-card border">
                     {accounts
-                      .filter(
-                        (acc) =>
-                          acc.status === "active" &&
-                          acc.account_id !==
-                            transferData.destination_account_id,
-                      )
+                      .filter(acc => acc.status === 'active' && acc.account_id !== transferData.destination_account_id)
                       .map((acc) => (
-                        <SelectItem
-                          key={acc.account_id}
-                          value={acc.account_id}
-                          className="text-slate-800 hover:bg-slate-100"
-                        >
-                          {acc.account_name} ({acc.balance?.toLocaleString()}{" "}
-                          {acc.currency})
+                        <SelectItem key={acc.account_id} value={acc.account_id} className="text-foreground hover:bg-muted">
+                          {acc.account_name} ({acc.balance?.toLocaleString()} {acc.currency})
                         </SelectItem>
                       ))}
                   </SelectContent>
                 </Select>
                 {sourceAccount && (
-                  <p className="text-xs text-slate-500">
-                    Available:{" "}
-                    <span className="text-blue-600 font-mono">
-                      {sourceAccount.balance?.toLocaleString()}{" "}
-                      {sourceAccount.currency}
-                    </span>
+                  <p className="text-xs text-muted-foreground">
+                    Available: <span className="text-primary font-mono">{sourceAccount.balance?.toLocaleString()} {sourceAccount.currency}</span>
                   </p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">
-                  To Account *
-                </Label>
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">To Account *</Label>
                 <Select
                   value={transferData.destination_account_id}
-                  onValueChange={(value) =>
-                    setTransferData({
-                      ...transferData,
-                      destination_account_id: value,
-                    })
-                  }
+                  onValueChange={(value) => setTransferData({ ...transferData, destination_account_id: value })}
                 >
-                  <SelectTrigger
-                    className="bg-slate-50 border-slate-200 text-slate-800"
-                    data-testid="transfer-to-account"
-                  >
+                  <SelectTrigger className="bg-muted/50 border text-foreground" data-testid="transfer-to-account">
                     <SelectValue placeholder="Select destination account" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border-slate-200">
+                  <SelectContent className="bg-card border">
                     {accounts
-                      .filter(
-                        (acc) =>
-                          acc.status === "active" &&
-                          acc.account_id !== transferData.source_account_id,
-                      )
+                      .filter(acc => acc.status === 'active' && acc.account_id !== transferData.source_account_id)
                       .map((acc) => (
-                        <SelectItem
-                          key={acc.account_id}
-                          value={acc.account_id}
-                          className="text-slate-800 hover:bg-slate-100"
-                        >
-                          {acc.account_name} ({acc.balance?.toLocaleString()}{" "}
-                          {acc.currency})
+                        <SelectItem key={acc.account_id} value={acc.account_id} className="text-foreground hover:bg-muted">
+                          {acc.account_name} ({acc.balance?.toLocaleString()} {acc.currency})
                         </SelectItem>
                       ))}
                   </SelectContent>
@@ -1795,120 +1456,94 @@ export default function Treasury() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">
-                  Amount *
-                </Label>
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Amount *</Label>
                 <div className="relative">
                   <Input
                     type="number"
                     step="0.01"
                     min="0"
                     value={transferData.amount}
-                    onChange={(e) =>
-                      setTransferData({
-                        ...transferData,
-                        amount: e.target.value,
-                      })
-                    }
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono pr-16"
+                    onChange={(e) => setTransferData({ ...transferData, amount: e.target.value })}
+                    className="bg-muted/50 border text-foreground focus:border-[#66FCF1] font-mono pr-16"
                     placeholder="0.00"
                     data-testid="transfer-amount"
                   />
                   {sourceAccount && (
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
                       {sourceAccount.currency}
                     </span>
                   )}
                 </div>
               </div>
 
-              {sourceAccount &&
-                destAccount &&
-                sourceAccount.currency !== destAccount.currency && (
-                  <div className="space-y-2">
-                    <Label className="text-slate-500 text-xs uppercase tracking-wider">
-                      Exchange Rate ({sourceAccount.currency} to{" "}
-                      {destAccount.currency})
-                    </Label>
-                    <Input
-                      type="number"
-                      step="0.0001"
-                      min="0"
-                      value={transferData.exchange_rate}
-                      onChange={(e) =>
-                        setTransferData({
-                          ...transferData,
-                          exchange_rate: e.target.value,
-                        })
-                      }
-                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
-                      placeholder="1.00"
-                      data-testid="transfer-exchange-rate"
-                    />
-                  </div>
-                )}
+              {sourceAccount && destAccount && sourceAccount.currency !== destAccount.currency && (
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
+                    Exchange Rate ({sourceAccount.currency} to {destAccount.currency})
+                  </Label>
+                  <Input
+                    type="number"
+                    step="0.0001"
+                    min="0"
+                    value={transferData.exchange_rate}
+                    onChange={(e) => setTransferData({ ...transferData, exchange_rate: e.target.value })}
+                    className="bg-muted/50 border text-foreground focus:border-[#66FCF1] font-mono"
+                    placeholder="1.00"
+                    data-testid="transfer-exchange-rate"
+                  />
+                </div>
+              )}
 
               {transferData.amount && sourceAccount && destAccount && (
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">
-                    Transfer Preview
-                  </p>
+                <div className="p-4 bg-muted/50 rounded-sm border border space-y-2">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Transfer Preview</p>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-500 text-sm">Deduct:</span>
-                    <span className="text-red-400 font-mono">
-                      -{parseFloat(transferData.amount).toLocaleString()}{" "}
-                      {sourceAccount.currency}
-                    </span>
+                    <span className="text-muted-foreground text-sm">Deduct:</span>
+                    <span className="text-red-400 font-mono">-{parseFloat(transferData.amount).toLocaleString()} {sourceAccount.currency}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-500 text-sm">Credit:</span>
-                    <span className="text-green-400 font-mono">
-                      +{calculatedDestAmount} {destAccount.currency}
-                    </span>
+                    <span className="text-muted-foreground text-sm">Credit:</span>
+                    <span className="text-green-400 font-mono">+{calculatedDestAmount} {destAccount.currency}</span>
                   </div>
                 </div>
               )}
 
               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">
-                  Notes (Optional)
-                </Label>
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Notes (Optional)</Label>
                 <Textarea
                   value={transferData.notes}
-                  onChange={(e) =>
-                    setTransferData({ ...transferData, notes: e.target.value })
-                  }
-                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                  onChange={(e) => setTransferData({ ...transferData, notes: e.target.value })}
+                  className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
                   rows={2}
                   placeholder="Add internal notes..."
                   data-testid="transfer-notes"
                 />
               </div>
-               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">Transfer Date *</Label>
+
+              <div className="space-y-2">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Transfer Date *</Label>
                 <Input
                   type="date"
                   value={transferData.transfer_date}
                   onChange={(e) => setTransferData({ ...transferData, transfer_date: e.target.value })}
-                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                  className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
                   data-testid="transfer-date"
                 />
-                <p className="text-[10px] text-slate-400">Date of the transfer. This date will appear in treasury records.</p>
+                <p className="text-[10px] text-muted-foreground">Date of the transfer. This date will appear in treasury records.</p>
               </div>
-
 
               <div className="flex justify-end gap-3 pt-4">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setIsTransferDialogOpen(false)}
-                  className="border-slate-200 text-slate-500 hover:bg-slate-100"
+                  className="border text-muted-foreground hover:bg-muted"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleTransferSubmit}
-                  className="bg-primary text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider"
+                  className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider"
                   data-testid="transfer-continue-btn"
                 >
                   Continue
@@ -1917,33 +1552,25 @@ export default function Treasury() {
             </div>
           ) : (
             <div className="space-y-6" data-testid="transfer-captcha">
-              <div className="p-4 bg-slate-50 rounded-xl border border-[#66FCF1]/30">
+              <div className="p-4 bg-muted/50 rounded-sm border border-[#66FCF1]/30">
                 <div className="flex items-center gap-3 mb-4">
-                  <Calculator className="w-6 h-6 text-blue-600" />
+                  <Calculator className="w-6 h-6 text-primary" />
                   <div>
-                    <p className="text-slate-800 font-medium">
-                      Security Verification
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      Solve this math problem to confirm
-                    </p>
+                    <p className="text-foreground font-medium">Security Verification</p>
+                    <p className="text-xs text-muted-foreground">Solve this math problem to confirm</p>
                   </div>
                 </div>
-
+                
                 <div className="flex items-center gap-4 justify-center py-4">
-                  <span className="text-3xl font-mono text-slate-800">
-                    {captchaNumbers.n1}
-                  </span>
-                  <span className="text-3xl font-mono text-blue-600">+</span>
-                  <span className="text-3xl font-mono text-slate-800">
-                    {captchaNumbers.n2}
-                  </span>
-                  <span className="text-3xl font-mono text-slate-500">=</span>
+                  <span className="text-3xl font-mono text-foreground">{captchaNumbers.n1}</span>
+                  <span className="text-3xl font-mono text-primary">+</span>
+                  <span className="text-3xl font-mono text-foreground">{captchaNumbers.n2}</span>
+                  <span className="text-3xl font-mono text-muted-foreground">=</span>
                   <Input
                     type="number"
                     value={captchaAnswer}
                     onChange={(e) => setCaptchaAnswer(e.target.value)}
-                    className="w-20 bg-white border-[#66FCF1]/50 text-slate-800 focus:border-[#66FCF1] font-mono text-2xl text-center"
+                    className="w-20 bg-card border-[#66FCF1]/50 text-foreground focus:border-[#66FCF1] font-mono text-2xl text-center"
                     placeholder="?"
                     autoFocus
                     data-testid="transfer-captcha-answer"
@@ -1951,35 +1578,24 @@ export default function Treasury() {
                 </div>
               </div>
 
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                <p className="text-xs text-slate-500 uppercase tracking-wider mb-3">
-                  Transfer Summary
-                </p>
+              <div className="p-4 bg-muted/50 rounded-sm border border">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">Transfer Summary</p>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-slate-500">From:</span>
-                    <span className="text-slate-800">
-                      {sourceAccount?.account_name}
-                    </span>
+                    <span className="text-muted-foreground">From:</span>
+                    <span className="text-foreground">{sourceAccount?.account_name}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">To:</span>
-                    <span className="text-slate-800">
-                      {destAccount?.account_name}
-                    </span>
+                    <span className="text-muted-foreground">To:</span>
+                    <span className="text-foreground">{destAccount?.account_name}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Amount:</span>
-                    <span className="text-red-400 font-mono">
-                      -{parseFloat(transferData.amount || 0).toLocaleString()}{" "}
-                      {sourceAccount?.currency}
-                    </span>
+                    <span className="text-muted-foreground">Amount:</span>
+                    <span className="text-red-400 font-mono">-{parseFloat(transferData.amount || 0).toLocaleString()} {sourceAccount?.currency}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Credit:</span>
-                    <span className="text-green-400 font-mono">
-                      +{calculatedDestAmount} {destAccount?.currency}
-                    </span>
+                    <span className="text-muted-foreground">Credit:</span>
+                    <span className="text-green-400 font-mono">+{calculatedDestAmount} {destAccount?.currency}</span>
                   </div>
                 </div>
               </div>
@@ -1988,21 +1604,18 @@ export default function Treasury() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => {
-                    setShowCaptcha(false);
-                    setCaptchaAnswer("");
-                  }}
-                  className="border-slate-200 text-slate-500 hover:bg-slate-100"
+                  onClick={() => { setShowCaptcha(false); setCaptchaAnswer(''); }}
+                  className="border text-muted-foreground hover:bg-muted"
                 >
                   Back
                 </Button>
                 <Button
                   onClick={verifyCaptchaAndTransfer}
                   disabled={!captchaAnswer || transferProcessing}
-                  className="bg-primary text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider disabled:opacity-50"
+                  className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider disabled:opacity-50"
                   data-testid="transfer-confirm-btn"
                 >
-                  {transferProcessing ? "Processing..." : "Confirm Transfer"}
+                  {transferProcessing ? 'Processing...' : 'Confirm Transfer'}
                 </Button>
               </div>
             </div>
@@ -2021,9 +1634,9 @@ export default function Treasury() {
           </DialogHeader>
           {balanceFixAccount && (
             <div className="space-y-4">
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1">
-                <p className="text-xs text-slate-500 uppercase tracking-wider">Current System Balance</p>
-                <p className="text-xl font-bold text-slate-800">
+              <div className="bg-muted/50 border border rounded-lg p-3 space-y-1">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Current System Balance</p>
+                <p className="text-xl font-bold text-foreground">
                   {balanceFixAccount.currency} {Number(balanceFixAccount.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
               </div>
@@ -2038,7 +1651,7 @@ export default function Treasury() {
                   data-testid="balance-fix-amount"
                 />
                 {balanceFixForm.actual_balance !== '' && (
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-muted-foreground">
                     The system will insert an adjustment at the start of this date, then recalculate all transactions forward to fix the current balance. Any previous balance fix on the same date will be replaced.
                   </p>
                 )}
@@ -2081,17 +1694,17 @@ export default function Treasury() {
 
       {/* Proof Images Gallery Modal */}
       <Dialog open={!!proofGallery} onOpenChange={() => setProofGallery(null)}>
-        <DialogContent className="bg-white border-slate-200 max-w-lg">
+        <DialogContent className="bg-card border max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-slate-800 text-sm font-bold uppercase">
-              <ImageIcon className="w-4 h-4 inline mr-2 text-blue-500" />
+            <DialogTitle className="text-foreground text-sm font-bold uppercase">
+              <ImageIcon className="w-4 h-4 inline mr-2 text-primary/80" />
               Proof Images — {proofGallery?.label} ({proofGallery?.images?.length})
             </DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-3 mt-2">
             {proofGallery?.images?.map((url, i) => {
               const src = url?.startsWith('http') ? url : `data:image/png;base64,${url}`;
-              return <img key={i} src={src} alt={`Proof ${i+1}`} className="w-full rounded border border-slate-200 cursor-pointer hover:opacity-80" onClick={() => window.open(src, '_blank')} />;
+              return <img key={i} src={src} alt={`Proof ${i+1}`} className="w-full rounded border border cursor-pointer hover:opacity-80" onClick={() => window.open(src, '_blank')} />;
             })}
           </div>
         </DialogContent>

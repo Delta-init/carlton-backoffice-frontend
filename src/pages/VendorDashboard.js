@@ -32,7 +32,7 @@ import {
   TabsTrigger,
 } from "../components/ui/tabs";
 import { toast } from "sonner";
-import { getApiError } from "../lib/utils";
+import { getApiError } from '../lib/utils';
 import { useAutoRefresh } from "../hooks/useAutoRefresh";
 import { useAuth } from "../context/AuthContext";
 import PaginationControls from "../components/PaginationControls";
@@ -169,8 +169,9 @@ export default function ExchangerDashboard() {
         setExchangerInfo(data);
         setTransactions(data.pending_transactions || []);
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      console.error("Error fetching vendor info:", error);
+      toast.error(error?.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -281,8 +282,8 @@ export default function ExchangerDashboard() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || "Something went wrong. Please try again.");
     } finally {
       setStatementLoading(false);
     }
@@ -469,8 +470,9 @@ export default function ExchangerDashboard() {
       } else if (response) {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      console.error("Action error:", error);
+      toast.error(error?.message || "Something went wrong. Please try again.");
     }
   };
 
@@ -499,6 +501,15 @@ export default function ExchangerDashboard() {
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+    });
+  };
+  const formatDateV2 = (dateStr) => {
+    if (!dateStr) return "-";
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
@@ -760,10 +771,10 @@ export default function ExchangerDashboard() {
         window.URL.revokeObjectURL(url);
         toast.success("Excel exported successfully");
       } else {
-        toast.error(await getApiError(response));
+        toast.error("Export failed");
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error("Export failed");
     } finally {
       setExportingExcel(false);
     }
@@ -797,10 +808,10 @@ export default function ExchangerDashboard() {
         window.URL.revokeObjectURL(url);
         toast.success("PDF exported successfully");
       } else {
-        toast.error(await getApiError(response));
+        toast.error("Export failed");
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error("Export failed");
     } finally {
       setExportingPdf(false);
     }
@@ -986,8 +997,8 @@ export default function ExchangerDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-[#1FA21B] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-muted/50 flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -997,16 +1008,15 @@ export default function ExchangerDashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1
-            className="text-4xl font-bold uppercase tracking-tight text-slate-800"
-            style={{ fontFamily: "Barlow Condensed" }}
+            className="text-3xl font-bold tracking-tight text-foreground"
           >
             Exchanger Portal
           </h1>
-          <p className="text-slate-500">Welcome, {vendorInfo?.vendor_name}</p>
+          <p className="text-muted-foreground">Welcome, {vendorInfo?.vendor_name}</p>
         </div>
-        <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl border border-slate-200">
-          <Store className="w-5 h-5 text-blue-600" />
-          <span className="text-slate-800 font-medium">
+        <div className="flex items-center gap-2 px-4 py-2 bg-card rounded-sm border border">
+          <Store className="w-5 h-5 text-primary" />
+          <span className="text-foreground font-medium">
             {vendorInfo?.vendor_name}
           </span>
         </div>
@@ -1015,9 +1025,9 @@ export default function ExchangerDashboard() {
       {/* Summary Cards - Row 1 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Settlement Balance - Highlighted */}
-        <Card className="bg-white border-slate-200 border-l-4 border-l-[#1FA21B] lg:col-span-2">
+        <Card className="bg-card border border-l-4 border-l-[#66FCF1] lg:col-span-2">
           <CardContent className="p-6">
-            <p className="text-xs text-blue-600 uppercase tracking-wider mb-3">
+            <p className="text-xs text-primary uppercase tracking-wider mb-3">
               Settlement Balance (Money In - Money Out - Commission)
             </p>
             {vendorInfo?.settlement_by_currency &&
@@ -1032,14 +1042,14 @@ export default function ExchangerDashboard() {
                             item.currency === "USD"
                               ? "bg-green-500/20 text-green-400"
                               : item.currency === "EUR"
-                                ? "bg-blue-500/20 text-blue-400"
+                                ? "bg-primary/80/20 text-primary/60"
                                 : item.currency === "AED"
                                   ? "bg-purple-500/20 text-purple-400"
                                   : item.currency === "GBP"
                                     ? "bg-yellow-500/20 text-yellow-400"
                                     : item.currency === "INR"
                                       ? "bg-orange-500/20 text-orange-400"
-                                      : "bg-gray-500/20 text-gray-400"
+                                      : "bg-gray-500/20 text-muted-foreground"
                           }`}
                         >
                           {item.currency}
@@ -1047,14 +1057,14 @@ export default function ExchangerDashboard() {
                       </div>
                       <div className="text-right">
                         <span
-                          className={`text-2xl font-bold font-mono ${item.amount >= 0 ? "text-blue-600" : "text-red-400"}`}
+                          className={`text-2xl font-bold font-mono ${item.amount >= 0 ? "text-primary" : "text-red-400"}`}
                         >
                           {item.amount >= 0 ? "+" : ""}
                           {item.amount?.toLocaleString()}
                         </span>
                       </div>
                     </div>
-                    <div className="flex justify-between text-xs text-slate-500 pl-2">
+                    <div className="flex justify-between text-xs text-muted-foreground pl-2">
                       <span className="text-green-400">
                         +{item.deposit_amount?.toLocaleString()} deposits (
                         {item.deposit_count})
@@ -1071,7 +1081,7 @@ export default function ExchangerDashboard() {
                         {item.commission_earned_usd?.toLocaleString()}
                         {item.currency !== "USD" &&
                           item.commission_earned_base > 0 && (
-                            <span className="text-slate-500">
+                            <span className="text-muted-foreground">
                               {" "}
                               ({item.commission_earned_base?.toLocaleString()}{" "}
                               {item.currency})
@@ -1083,25 +1093,25 @@ export default function ExchangerDashboard() {
                 ))}
               </div>
             ) : (
-              <p className="text-3xl font-bold font-mono text-slate-500">
+              <p className="text-3xl font-bold font-mono text-muted-foreground">
                 No pending settlement
               </p>
             )}
           </CardContent>
         </Card>
 
-        <Card className="bg-white border-slate-200">
+        <Card className="bg-card border">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                   Pending Actions
                 </p>
-                <p className="text-3xl font-bold font-mono text-slate-800">
+                <p className="text-3xl font-bold font-mono text-foreground">
                   {pendingCount}
                 </p>
               </div>
-              <div className="p-3 bg-yellow-500/10 rounded-xl">
+              <div className="p-3 bg-yellow-500/10 rounded-sm">
                 <Clock className="w-6 h-6 text-yellow-500" />
               </div>
             </div>
@@ -1109,12 +1119,12 @@ export default function ExchangerDashboard() {
         </Card>
 
         <Card
-          className={`bg-white border-slate-200 ${approvedWithdrawals.length > 0 ? "border-l-2 border-l-orange-500" : ""}`}
+          className={`bg-card border ${approvedWithdrawals.length > 0 ? "border-l-2 border-l-orange-500" : ""}`}
         >
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                   Awaiting Proof
                 </p>
                 <p className="text-3xl font-bold font-mono text-orange-400">
@@ -1124,7 +1134,7 @@ export default function ExchangerDashboard() {
                   Withdrawals to complete
                 </p>
               </div>
-              <div className="p-3 bg-orange-500/10 rounded-xl">
+              <div className="p-3 bg-orange-500/10 rounded-sm">
                 <Upload className="w-6 h-6 text-orange-500" />
               </div>
             </div>
@@ -1134,50 +1144,50 @@ export default function ExchangerDashboard() {
 
       {/* Summary Cards - Row 2 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-white border-slate-200">
+        <Card className="bg-card border">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                   Pending Deposits
                 </p>
                 <p className="text-3xl font-bold font-mono text-green-400">
                   {pendingDeposits.length}
                 </p>
               </div>
-              <div className="p-3 bg-green-500/10 rounded-xl">
+              <div className="p-3 bg-green-500/10 rounded-sm">
                 <ArrowDownRight className="w-6 h-6 text-green-500" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-white border-slate-200">
+        <Card className="bg-card border">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                   Pending Withdrawals
                 </p>
                 <p className="text-3xl font-bold font-mono text-red-400">
                   {pendingWithdrawals.length}
                 </p>
               </div>
-              <div className="p-3 bg-red-500/10 rounded-xl">
+              <div className="p-3 bg-red-500/10 rounded-sm">
                 <ArrowUpRight className="w-6 h-6 text-red-500" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-white border-slate-200">
+        <Card className="bg-card border">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                   Total Volume
                 </p>
-                <p className="text-2xl font-bold font-mono text-slate-800">
+                <p className="text-2xl font-bold font-mono text-foreground">
                   ${vendorInfo?.total_volume?.toLocaleString() || "0"}
                 </p>
               </div>
@@ -1185,7 +1195,7 @@ export default function ExchangerDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white border-slate-200 border-l-2 border-l-yellow-500">
+        <Card className="bg-card border border-l-2 border-l-yellow-500">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -1201,18 +1211,18 @@ export default function ExchangerDashboard() {
                     )
                     .toLocaleString() || "0"}
                 </p>
-                <p className="text-xs text-slate-500 mt-1">
-                  <span className="text-blue-400">Bank:</span>{" "}
+                <p className="text-xs text-muted-foreground mt-1">
+                  <span className="text-primary/60">Bank:</span>{" "}
                   {vendorInfo?.deposit_commission || 0}% In /{" "}
                   {vendorInfo?.withdrawal_commission || 0}% Out
                 </p>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   <span className="text-amber-400">Cash:</span>{" "}
                   {vendorInfo?.deposit_commission_cash || 0}% In /{" "}
                   {vendorInfo?.withdrawal_commission_cash || 0}% Out
                 </p>
               </div>
-              <div className="p-3 bg-yellow-500/10 rounded-xl">
+              <div className="p-3 bg-yellow-500/10 rounded-sm">
                 <DollarSign className="w-6 h-6 text-yellow-500" />
               </div>
             </div>
@@ -1222,10 +1232,10 @@ export default function ExchangerDashboard() {
 
       {/* Tabbed Content: Transactions, Other Transactions, Settlements */}
       <Tabs value={activeExchangerTab} onValueChange={setActiveExchangerTab}>
-        <TabsList className="bg-white border border-slate-200">
+        <TabsList className="bg-card border border">
           <TabsTrigger
             value="transactions"
-            className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-600"
+            className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary"
           >
             Transactions{" "}
             {pendingCount > 0 && (
@@ -1236,7 +1246,7 @@ export default function ExchangerDashboard() {
           </TabsTrigger>
           <TabsTrigger
             value="other-transactions"
-            className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-600"
+            className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary"
           >
             Other Transactions{" "}
             {pendingIeCount + pendingLoanTxCount > 0 && (
@@ -1247,7 +1257,7 @@ export default function ExchangerDashboard() {
           </TabsTrigger>
           <TabsTrigger
             value="settlements"
-            className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-600"
+            className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary"
           >
             Settlement History
           </TabsTrigger>
@@ -1258,29 +1268,29 @@ export default function ExchangerDashboard() {
           {/* Filters Bar */}
           <div className="flex flex-wrap items-end gap-3 mb-4">
             <div className="flex-1 min-w-[160px]">
-              <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">
+              <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider mb-1 block">
                 Search
               </label>
               <div className="relative">
-                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input
                   type="text"
                   placeholder="Ref, client, currency..."
                   value={txSearchQuery}
                   onChange={(e) => setTxSearchQuery(e.target.value)}
-                  className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded-xl bg-white text-slate-800"
+                  className="w-full pl-8 pr-3 py-1.5 text-sm border border rounded-md bg-card text-foreground"
                   data-testid="tx-search-input"
                 />
               </div>
             </div>
             <div className="min-w-[110px]">
-              <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">
+              <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider mb-1 block">
                 Status
               </label>
               <select
                 value={txStatusFilter}
                 onChange={(e) => setTxStatusFilter(e.target.value)}
-                className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-xl bg-white text-slate-800"
+                className="w-full px-2 py-1.5 text-sm border border rounded-md bg-card text-foreground"
                 data-testid="tx-status-filter"
               >
                 <option value="all">All Status</option>
@@ -1291,13 +1301,13 @@ export default function ExchangerDashboard() {
               </select>
             </div>
             <div className="min-w-[110px]">
-              <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">
+              <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider mb-1 block">
                 Type
               </label>
               <select
                 value={txTypeFilter}
                 onChange={(e) => setTxTypeFilter(e.target.value)}
-                className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-xl bg-white text-slate-800"
+                className="w-full px-2 py-1.5 text-sm border border rounded-md bg-card text-foreground"
                 data-testid="tx-type-filter"
               >
                 <option value="all">All Types</option>
@@ -1306,26 +1316,26 @@ export default function ExchangerDashboard() {
               </select>
             </div>
             <div className="min-w-[120px]">
-              <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">
+              <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider mb-1 block">
                 From
               </label>
               <input
                 type="date"
                 value={txDateFrom}
                 onChange={(e) => setTxDateFrom(e.target.value)}
-                className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-xl bg-white text-slate-800"
+                className="w-full px-2 py-1.5 text-sm border border rounded-md bg-card text-foreground"
                 data-testid="tx-date-from"
               />
             </div>
             <div className="min-w-[120px]">
-              <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">
+              <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider mb-1 block">
                 To
               </label>
               <input
                 type="date"
                 value={txDateTo}
                 onChange={(e) => setTxDateTo(e.target.value)}
-                className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-xl bg-white text-slate-800"
+                className="w-full px-2 py-1.5 text-sm border border rounded-md bg-card text-foreground"
                 data-testid="tx-date-to"
               />
             </div>
@@ -1338,7 +1348,7 @@ export default function ExchangerDashboard() {
                 variant="ghost"
                 size="sm"
                 onClick={clearFilters}
-                className="text-slate-500 hover:text-red-500 text-xs"
+                className="text-muted-foreground hover:text-red-500 text-xs"
                 data-testid="tx-clear-filters"
               >
                 <XCircle className="w-3.5 h-3.5 mr-1" /> Clear
@@ -1347,16 +1357,16 @@ export default function ExchangerDashboard() {
           </div>
 
           {/* Transactions Table */}
-          <Card className="bg-white border-slate-200">
+          <Card className="bg-card border">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle
-                  className="text-xl text-slate-800 uppercase tracking-tight"
-                  style={{ fontFamily: "Barlow Condensed" }}
+                  className="text-base font-semibold text-foreground"
+                  
                 >
                   Assigned Transactions
                 </CardTitle>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   {filteredTransactions.length} transaction
                   {filteredTransactions.length !== 1 ? "s" : ""}
                 </p>
@@ -1390,35 +1400,35 @@ export default function ExchangerDashboard() {
               <ScrollArea className="h-[500px]">
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-slate-200 hover:bg-transparent">
-                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                    <TableRow className="border hover:bg-transparent">
+                      <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                         Reference
                       </TableHead>
-                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                      <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                         Type
                       </TableHead>
-                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                      <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                         Client
                       </TableHead>
-                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                      <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                         Amount
                       </TableHead>
-                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                      <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                         Currency
                       </TableHead>
-                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                      <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                         Commission
                       </TableHead>
-                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                      <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                         Mode
                       </TableHead>
-                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                      <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                         Status
                       </TableHead>
-                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                      <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                         Date
                       </TableHead>
-                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">
+                      <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">
                         Actions
                       </TableHead>
                     </TableRow>
@@ -1428,7 +1438,7 @@ export default function ExchangerDashboard() {
                       <TableRow>
                         <TableCell
                           colSpan={10}
-                          className="text-center py-8 text-slate-500"
+                          className="text-center py-8 text-muted-foreground"
                         >
                           No transactions found
                         </TableCell>
@@ -1443,15 +1453,15 @@ export default function ExchangerDashboard() {
                         return (
                           <TableRow
                             key={tx.transaction_id}
-                            className="border-slate-200 hover:bg-slate-100"
+                            className="border hover:bg-muted"
                           >
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                <span className="font-mono text-slate-800">
+                                <span className="font-mono text-foreground">
                                   {tx.reference}
                                 </span>
                                 {tx.proof_image && (
-                                  <ImageIcon className="w-4 h-4 text-blue-600" />
+                                  <ImageIcon className="w-4 h-4 text-primary" />
                                 )}
                               </div>
                             </TableCell>
@@ -1469,7 +1479,7 @@ export default function ExchangerDashboard() {
                                 </span>
                               </span>
                             </TableCell>
-                            <TableCell className="text-slate-800">
+                            <TableCell className="text-foreground">
                               {tx.client_name}
                             </TableCell>
                             <TableCell
@@ -1484,14 +1494,14 @@ export default function ExchangerDashboard() {
                                   displayCurrency === "USD"
                                     ? "bg-green-500/20 text-green-400"
                                     : displayCurrency === "EUR"
-                                      ? "bg-blue-500/20 text-blue-400"
+                                      ? "bg-primary/80/20 text-primary/60"
                                       : displayCurrency === "AED"
                                         ? "bg-purple-500/20 text-purple-400"
                                         : displayCurrency === "GBP"
                                           ? "bg-yellow-500/20 text-yellow-400"
                                           : displayCurrency === "INR"
                                             ? "bg-orange-500/20 text-orange-400"
-                                            : "bg-gray-500/20 text-gray-400"
+                                            : "bg-gray-500/20 text-muted-foreground"
                                 }`}
                               >
                                 {displayCurrency}
@@ -1508,7 +1518,7 @@ export default function ExchangerDashboard() {
                                   </span>
                                 </div>
                               ) : (
-                                <span className="text-slate-500 text-xs">
+                                <span className="text-muted-foreground text-xs">
                                   -
                                 </span>
                               )}
@@ -1518,7 +1528,7 @@ export default function ExchangerDashboard() {
                                 className={
                                   tx.transaction_mode === "cash"
                                     ? "bg-amber-100 text-amber-700 text-[10px]"
-                                    : "bg-blue-100 text-blue-700 text-[10px]"
+                                    : "bg-primary/15 text-primary text-[10px]"
                                 }
                               >
                                 {tx.transaction_mode === "cash"
@@ -1527,12 +1537,12 @@ export default function ExchangerDashboard() {
                               </Badge>
                               {tx.transaction_mode === "cash" &&
                                 tx.collecting_person_name && (
-                                  <div className="text-[10px] text-slate-600 mt-0.5 space-y-0.5">
+                                  <div className="text-[10px] text-card-foreground mt-0.5 space-y-0.5">
                                     <p className="font-medium">
                                       {tx.collecting_person_name}
                                     </p>
                                     {tx.collecting_person_number && (
-                                      <p className="text-slate-500">
+                                      <p className="text-muted-foreground">
                                         {tx.collecting_person_number}
                                       </p>
                                     )}
@@ -1540,8 +1550,10 @@ export default function ExchangerDashboard() {
                                 )}
                             </TableCell>
                             <TableCell>{getStatusBadge(tx.status)}</TableCell>
-                            <TableCell className="text-slate-500 text-sm">
-                              {formatDate(tx.transaction_date || tx.created_at)}
+                            <TableCell className="text-muted-foreground text-sm">
+                              {formatDateV2(
+                                tx.transaction_date || tx.created_at,
+                              )}
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-2">
@@ -1549,7 +1561,7 @@ export default function ExchangerDashboard() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => setViewTransaction(tx)}
-                                  className="text-slate-500 hover:text-slate-800 hover:bg-slate-100"
+                                  className="text-muted-foreground hover:text-foreground hover:bg-muted"
                                   data-testid={`view-tx-${tx.transaction_id}`}
                                 >
                                   <Eye className="w-4 h-4" />
@@ -1625,29 +1637,29 @@ export default function ExchangerDashboard() {
           {/* Filters */}
           <div className="flex flex-wrap items-end gap-3 mb-4">
             <div className="flex-1 min-w-[160px]">
-              <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">
+              <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider mb-1 block">
                 Search
               </label>
               <div className="relative">
-                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input
                   type="text"
                   placeholder="Ref, category, currency..."
                   value={otSearchQuery}
                   onChange={(e) => setOtSearchQuery(e.target.value)}
-                  className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded-xl bg-white text-slate-800"
+                  className="w-full pl-8 pr-3 py-1.5 text-sm border border rounded-md bg-card text-foreground"
                   data-testid="ot-search-input"
                 />
               </div>
             </div>
             <div className="min-w-[110px]">
-              <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">
+              <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider mb-1 block">
                 Status
               </label>
               <select
                 value={otStatusFilter}
                 onChange={(e) => setOtStatusFilter(e.target.value)}
-                className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-xl bg-white text-slate-800"
+                className="w-full px-2 py-1.5 text-sm border border rounded-md bg-card text-foreground"
                 data-testid="ot-status-filter"
               >
                 <option value="all">All</option>
@@ -1657,13 +1669,13 @@ export default function ExchangerDashboard() {
               </select>
             </div>
             <div className="min-w-[100px]">
-              <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">
+              <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider mb-1 block">
                 Source
               </label>
               <select
                 value={otSourceFilter}
                 onChange={(e) => setOtSourceFilter(e.target.value)}
-                className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-xl bg-white text-slate-800"
+                className="w-full px-2 py-1.5 text-sm border border rounded-md bg-card text-foreground"
                 data-testid="ot-source-filter"
               >
                 <option value="all">All</option>
@@ -1672,26 +1684,26 @@ export default function ExchangerDashboard() {
               </select>
             </div>
             <div className="min-w-[120px]">
-              <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">
+              <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider mb-1 block">
                 From
               </label>
               <input
                 type="date"
                 value={otDateFrom}
                 onChange={(e) => setOtDateFrom(e.target.value)}
-                className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-xl bg-white text-slate-800"
+                className="w-full px-2 py-1.5 text-sm border border rounded-md bg-card text-foreground"
                 data-testid="ot-date-from"
               />
             </div>
             <div className="min-w-[120px]">
-              <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">
+              <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider mb-1 block">
                 To
               </label>
               <input
                 type="date"
                 value={otDateTo}
                 onChange={(e) => setOtDateTo(e.target.value)}
-                className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-xl bg-white text-slate-800"
+                className="w-full px-2 py-1.5 text-sm border border rounded-md bg-card text-foreground"
                 data-testid="ot-date-to"
               />
             </div>
@@ -1710,33 +1722,32 @@ export default function ExchangerDashboard() {
                   setOtDateFrom("");
                   setOtDateTo("");
                 }}
-                className="text-slate-500 hover:text-red-500 text-xs"
+                className="text-muted-foreground hover:text-red-500 text-xs"
               >
                 <XCircle className="w-3.5 h-3.5 mr-1" /> Clear
               </Button>
             )}
           </div>
           <Card
-            className="bg-white border-slate-200"
+            className="bg-card border"
             data-testid="vendor-other-transactions"
           >
             <CardHeader className="py-3">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle
-                    className="text-xl text-slate-800 uppercase tracking-tight flex items-center gap-2"
-                    style={{ fontFamily: "Barlow Condensed" }}
+                    className="text-base font-semibold text-foreground flex items-center gap-2"
                   >
                     <Wallet className="w-5 h-5 text-purple-600" />
                     Other Transactions
                   </CardTitle>
-                  <p className="text-xs text-slate-400 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     {filteredOtherTransactions.length} entries
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge
-                    className={`${pendingIeCount + pendingLoanTxCount > 0 ? "bg-purple-100 text-purple-600" : "bg-slate-100 text-slate-500"}`}
+                    className={`${pendingIeCount + pendingLoanTxCount > 0 ? "bg-purple-100 text-purple-600" : "bg-muted text-muted-foreground"}`}
                   >
                     {pendingIeCount + pendingLoanTxCount} pending
                   </Badge>
@@ -1765,7 +1776,7 @@ export default function ExchangerDashboard() {
             </CardHeader>
             <CardContent className="p-0">
               {filteredOtherTransactions.length === 0 ? (
-                <div className="text-center py-10 text-slate-500">
+                <div className="text-center py-10 text-muted-foreground">
                   <Receipt className="w-10 h-10 mx-auto mb-3 opacity-30" />
                   <p className="text-sm">No other transactions found</p>
                 </div>
@@ -1773,41 +1784,41 @@ export default function ExchangerDashboard() {
                 <ScrollArea className="h-[500px]">
                   <Table>
                     <TableHeader>
-                      <TableRow className="border-slate-200 hover:bg-transparent">
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                      <TableRow className="border hover:bg-transparent">
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                           Reference
                         </TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                           Source
                         </TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                           Type
                         </TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                           Category / Borrower
                         </TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-green-500">
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-green-500">
                           IN Amount
                         </TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-red-500">
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-red-500">
                           OUT Amount
                         </TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                           Currency
                         </TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-yellow-600">
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-yellow-600">
                           Commission
                         </TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                           Bank Details
                         </TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                           Status
                         </TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                           Date
                         </TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">
                           Actions
                         </TableHead>
                       </TableRow>
@@ -1823,9 +1834,9 @@ export default function ExchangerDashboard() {
                           return (
                             <TableRow
                               key={tx.transaction_id}
-                              className={`border-slate-200 hover:bg-slate-100 ${isPending ? "bg-purple-500/10" : ""}`}
+                              className={`border hover:bg-muted ${isPending ? "bg-purple-500/10" : ""}`}
                             >
-                              <TableCell className="font-mono text-slate-800 text-sm">
+                              <TableCell className="font-mono text-foreground text-sm">
                                 {tx.transaction_id?.slice(-12).toUpperCase()}
                               </TableCell>
                               <TableCell>
@@ -1845,7 +1856,7 @@ export default function ExchangerDashboard() {
                                   <span>{isDisbursement ? "OUT" : "IN"}</span>
                                 </span>
                               </TableCell>
-                              <TableCell className="text-slate-800 text-sm">
+                              <TableCell className="text-foreground text-sm">
                                 {tx.borrower_name || "-"}
                               </TableCell>
                               <TableCell className="font-mono font-medium text-green-500">
@@ -1874,7 +1885,7 @@ export default function ExchangerDashboard() {
                                   "-"
                                 )}
                               </TableCell>
-                              <TableCell className="text-slate-600 text-xs max-w-[150px] truncate">
+                              <TableCell className="text-card-foreground text-xs max-w-[150px] truncate">
                                 {tx.bank_details || "-"}
                               </TableCell>
                               <TableCell>
@@ -1884,7 +1895,7 @@ export default function ExchangerDashboard() {
                                       ? "bg-yellow-100 text-yellow-700"
                                       : tx.status === "completed"
                                         ? "bg-green-100 text-green-700"
-                                        : "bg-slate-100 text-slate-600"
+                                        : "bg-muted text-card-foreground"
                                   }
                                 >
                                   {tx.status === "pending_vendor"
@@ -1892,12 +1903,11 @@ export default function ExchangerDashboard() {
                                     : tx.status?.toUpperCase()}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="text-slate-500 text-xs">
+                              <TableCell className="text-muted-foreground text-xs">
                                 {formatDate(
                                   tx.transaction_date || tx.created_at,
                                 )}
                               </TableCell>
-
                               <TableCell className="text-right">
                                 {isPending && (
                                   <div className="flex gap-1 justify-end">
@@ -1939,10 +1949,10 @@ export default function ExchangerDashboard() {
                           return (
                             <TableRow
                               key={entry.entry_id}
-                              className={`border-slate-200 hover:bg-slate-100 ${isPending ? "bg-amber-500/10" : ""}`}
+                              className={`border hover:bg-muted ${isPending ? "bg-amber-500/10" : ""}`}
                             >
                               <TableCell>
-                                <span className="font-mono text-slate-800">
+                                <span className="font-mono text-foreground">
                                   {entry.entry_id?.slice(-10)?.toUpperCase()}
                                 </span>
                               </TableCell>
@@ -1963,7 +1973,7 @@ export default function ExchangerDashboard() {
                                   <span>{isIncome ? "IN" : "OUT"}</span>
                                 </span>
                               </TableCell>
-                              <TableCell className="text-slate-800 text-sm capitalize">
+                              <TableCell className="text-foreground text-sm capitalize">
                                 {entry.category?.replace("_", " ") || "-"}
                               </TableCell>
                               <TableCell className="font-mono font-medium text-green-500">
@@ -1993,7 +2003,7 @@ export default function ExchangerDashboard() {
                                   "-"
                                 )}
                               </TableCell>
-                              <TableCell className="text-slate-400 text-xs">
+                              <TableCell className="text-muted-foreground text-xs">
                                 -
                               </TableCell>
                               <TableCell>
@@ -2007,12 +2017,12 @@ export default function ExchangerDashboard() {
                                     APPROVED
                                   </Badge>
                                 ) : (
-                                  <Badge className="bg-slate-100 text-slate-600 text-xs">
+                                  <Badge className="bg-muted text-card-foreground text-xs">
                                     {entry.status}
                                   </Badge>
                                 )}
                               </TableCell>
-                              <TableCell className="text-slate-500 text-xs">
+                              <TableCell className="text-muted-foreground text-xs">
                                 {formatDate(entry.date || entry.created_at)}
                               </TableCell>
                               <TableCell className="text-right">
@@ -2075,29 +2085,29 @@ export default function ExchangerDashboard() {
           {/* Filters */}
           <div className="flex flex-wrap items-end gap-3 mb-4">
             <div className="flex-1 min-w-[160px]">
-              <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">
+              <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider mb-1 block">
                 Search
               </label>
               <div className="relative">
-                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input
                   type="text"
                   placeholder="ID, type, currency..."
                   value={stSearchQuery}
                   onChange={(e) => setStSearchQuery(e.target.value)}
-                  className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded-xl bg-white text-slate-800"
+                  className="w-full pl-8 pr-3 py-1.5 text-sm border border rounded-md bg-card text-foreground"
                   data-testid="st-search-input"
                 />
               </div>
             </div>
             <div className="min-w-[110px]">
-              <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">
+              <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider mb-1 block">
                 Status
               </label>
               <select
                 value={stStatusFilter}
                 onChange={(e) => setStStatusFilter(e.target.value)}
-                className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-xl bg-white text-slate-800"
+                className="w-full px-2 py-1.5 text-sm border border rounded-md bg-card text-foreground"
                 data-testid="st-status-filter"
               >
                 <option value="all">All</option>
@@ -2107,26 +2117,26 @@ export default function ExchangerDashboard() {
               </select>
             </div>
             <div className="min-w-[120px]">
-              <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">
+              <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider mb-1 block">
                 From
               </label>
               <input
                 type="date"
                 value={stDateFrom}
                 onChange={(e) => setStDateFrom(e.target.value)}
-                className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-xl bg-white text-slate-800"
+                className="w-full px-2 py-1.5 text-sm border border rounded-md bg-card text-foreground"
                 data-testid="st-date-from"
               />
             </div>
             <div className="min-w-[120px]">
-              <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">
+              <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider mb-1 block">
                 To
               </label>
               <input
                 type="date"
                 value={stDateTo}
                 onChange={(e) => setStDateTo(e.target.value)}
-                className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-xl bg-white text-slate-800"
+                className="w-full px-2 py-1.5 text-sm border border rounded-md bg-card text-foreground"
                 data-testid="st-date-to"
               />
             </div>
@@ -2143,7 +2153,7 @@ export default function ExchangerDashboard() {
                   setStDateFrom("");
                   setStDateTo("");
                 }}
-                className="text-slate-500 hover:text-red-500 text-xs"
+                className="text-muted-foreground hover:text-red-500 text-xs"
               >
                 <XCircle className="w-3.5 h-3.5 mr-1" /> Clear
               </Button>
@@ -2151,25 +2161,24 @@ export default function ExchangerDashboard() {
           </div>
           {/* Settlement History */}
           <Card
-            className="bg-white border-slate-200"
+            className="bg-card border"
             data-testid="vendor-settlement-history"
           >
             <CardHeader className="py-3">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle
-                    className="text-xl text-slate-800 uppercase tracking-tight flex items-center gap-2"
-                    style={{ fontFamily: "Barlow Condensed" }}
+                    className="text-base font-semibold text-foreground flex items-center gap-2"
                   >
-                    <Receipt className="w-5 h-5 text-blue-600" />
+                    <Receipt className="w-5 h-5 text-primary" />
                     Settlement History
                   </CardTitle>
-                  <p className="text-xs text-slate-400 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     {filteredSettlements.length} settlements
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge className="bg-blue-100 text-blue-600 border-[#1FA21B]/20">
+                  <Badge className="bg-primary/15 text-primary border-[#66FCF1]/20">
                     {settlements.length} total
                   </Badge>
                   <Button
@@ -2197,7 +2206,7 @@ export default function ExchangerDashboard() {
             </CardHeader>
             <CardContent className="p-0">
               {filteredSettlements.length === 0 ? (
-                <div className="text-center py-10 text-slate-500">
+                <div className="text-center py-10 text-muted-foreground">
                   <Receipt className="w-10 h-10 mx-auto mb-3 opacity-30" />
                   <p className="text-sm">No settlements found</p>
                 </div>
@@ -2205,29 +2214,29 @@ export default function ExchangerDashboard() {
                 <ScrollArea className="h-[400px]">
                   <Table>
                     <TableHeader>
-                      <TableRow className="border-slate-200 hover:bg-transparent">
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                      <TableRow className="border hover:bg-transparent">
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                           ID
                         </TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                           Type
                         </TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                           Gross
                         </TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                           Deductions
                         </TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                           Net Settled
                         </TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                           Status
                         </TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                           Date
                         </TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">
                           Statement
                         </TableHead>
                       </TableRow>
@@ -2236,23 +2245,23 @@ export default function ExchangerDashboard() {
                       {filteredSettlements.map((s) => (
                         <TableRow
                           key={s.settlement_id}
-                          className="border-slate-200 hover:bg-slate-100"
+                          className="border hover:bg-muted"
                         >
-                          <TableCell className="font-mono text-slate-800 text-xs">
+                          <TableCell className="font-mono text-foreground text-xs">
                             {s.settlement_id}
                           </TableCell>
                           <TableCell>
                             <Badge
                               className={
                                 s.settlement_type === "bank"
-                                  ? "bg-blue-500/20 text-blue-400"
+                                  ? "bg-primary/80/20 text-primary/60"
                                   : "bg-purple-500/20 text-purple-400"
                               }
                             >
                               {s.settlement_type}
                             </Badge>
                           </TableCell>
-                          <TableCell className="font-mono text-slate-800">
+                          <TableCell className="font-mono text-foreground">
                             {s.source_currency && s.source_currency !== "USD"
                               ? `${s.source_currency} ${s.gross_amount?.toLocaleString()}`
                               : `$${s.gross_amount?.toLocaleString()}`}
@@ -2298,7 +2307,7 @@ export default function ExchangerDashboard() {
                               {s.status}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-slate-500 text-xs">
+                          <TableCell className="text-muted-foreground text-xs">
                             {formatDate(s.settled_at || s.created_at)}
                           </TableCell>
                           <TableCell className="text-right">
@@ -2306,7 +2315,7 @@ export default function ExchangerDashboard() {
                               variant="ghost"
                               size="sm"
                               onClick={() => openStatement(s.settlement_id)}
-                              className="text-blue-600 hover:bg-blue-100 h-7 px-2"
+                              className="text-primary hover:bg-primary/15 h-7 px-2"
                               data-testid={`vendor-statement-${s.settlement_id}`}
                             >
                               <FileText className="w-3.5 h-3.5 mr-1" />
@@ -2344,11 +2353,10 @@ export default function ExchangerDashboard() {
         open={!!viewTransaction}
         onOpenChange={() => setViewTransaction(null)}
       >
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-card border text-foreground max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle
-              className="text-2xl font-bold uppercase tracking-tight"
-              style={{ fontFamily: "Barlow Condensed" }}
+              className="text-lg font-bold text-foreground"
             >
               Transaction Details
             </DialogTitle>
@@ -2366,26 +2374,26 @@ export default function ExchangerDashboard() {
                   <>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                           Reference
                         </p>
-                        <p className="text-slate-800 font-mono text-lg">
+                        <p className="text-foreground font-mono text-lg">
                           {viewTransaction.reference}
                         </p>
                       </div>
                       {getStatusBadge(viewTransaction.status)}
                     </div>
-                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-200">
+                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border">
                       <div>
-                        <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                           Client
                         </p>
-                        <p className="text-slate-800">
+                        <p className="text-foreground">
                           {viewTransaction.client_name}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                           Type
                         </p>
                         <span
@@ -2402,7 +2410,7 @@ export default function ExchangerDashboard() {
                         </span>
                       </div>
                       <div>
-                        <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                           Amount
                         </p>
                         <p
@@ -2415,7 +2423,7 @@ export default function ExchangerDashboard() {
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                           Currency
                         </p>
                         <Badge
@@ -2423,14 +2431,14 @@ export default function ExchangerDashboard() {
                             displayCurrency === "USD"
                               ? "bg-green-500/20 text-green-400"
                               : displayCurrency === "EUR"
-                                ? "bg-blue-500/20 text-blue-400"
+                                ? "bg-primary/80/20 text-primary/60"
                                 : displayCurrency === "AED"
                                   ? "bg-purple-500/20 text-purple-400"
                                   : displayCurrency === "GBP"
                                     ? "bg-yellow-500/20 text-yellow-400"
                                     : displayCurrency === "INR"
                                       ? "bg-orange-500/20 text-orange-400"
-                                      : "bg-gray-500/20 text-gray-400"
+                                      : "bg-gray-500/20 text-muted-foreground"
                           }`}
                         >
                           {displayCurrency}
@@ -2440,29 +2448,29 @@ export default function ExchangerDashboard() {
                         viewTransaction.base_currency !==
                           viewTransaction.currency && (
                           <div className="col-span-2">
-                            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                               USD Equivalent
                             </p>
-                            <p className="text-slate-800 font-mono">
+                            <p className="text-foreground font-mono">
                               ${viewTransaction.amount?.toLocaleString()} USD
                             </p>
                           </div>
                         )}
                       <div>
-                        <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                           Created
                         </p>
-                        <p className="text-slate-800 text-sm">
+                        <p className="text-foreground text-sm">
                           {formatDate(viewTransaction.created_at)}
                         </p>
                       </div>
                     </div>
                     {viewTransaction.description && (
-                      <div className="pt-4 border-t border-slate-200">
-                        <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                      <div className="pt-4 border-t border">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                           Description
                         </p>
-                        <p className="text-slate-800">
+                        <p className="text-foreground">
                           {viewTransaction.description}
                         </p>
                       </div>
@@ -2470,51 +2478,51 @@ export default function ExchangerDashboard() {
                     {/* Client Bank Details for Withdrawals */}
                     {viewTransaction.transaction_type === "withdrawal" &&
                       viewTransaction.client_bank_name && (
-                        <div className="pt-4 border-t border-slate-200">
+                        <div className="pt-4 border-t border">
                           <div className="flex items-center gap-2 mb-3">
-                            <Building2 className="w-4 h-4 text-blue-600" />
-                            <p className="text-xs text-blue-600 uppercase tracking-wider font-bold">
+                            <Building2 className="w-4 h-4 text-primary" />
+                            <p className="text-xs text-primary uppercase tracking-wider font-bold">
                               Client Bank Details (Send To)
                             </p>
                           </div>
-                          <div className="bg-slate-50 p-4 rounded-xl space-y-2">
+                          <div className="bg-muted/50 p-4 rounded-sm space-y-2">
                             <div className="flex justify-between">
-                              <span className="text-slate-500 text-sm">
+                              <span className="text-muted-foreground text-sm">
                                 Bank Name:
                               </span>
-                              <span className="text-slate-800 font-medium">
+                              <span className="text-foreground font-medium">
                                 {viewTransaction.client_bank_name}
                               </span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-slate-500 text-sm">
+                              <span className="text-muted-foreground text-sm">
                                 Account Name:
                               </span>
-                              <span className="text-slate-800 font-medium">
+                              <span className="text-foreground font-medium">
                                 {viewTransaction.client_bank_account_name}
                               </span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-slate-500 text-sm">
+                              <span className="text-muted-foreground text-sm">
                                 Account Number:
                               </span>
-                              <span className="text-slate-800 font-mono">
+                              <span className="text-foreground font-mono">
                                 {viewTransaction.client_bank_account_number}
                               </span>
                             </div>
                             {viewTransaction.client_bank_swift_iban && (
                               <div className="flex justify-between">
-                                <span className="text-slate-500 text-sm">
+                                <span className="text-muted-foreground text-sm">
                                   SWIFT/BIC:
                                 </span>
-                                <span className="text-slate-800 font-mono">
+                                <span className="text-foreground font-mono">
                                   {viewTransaction.client_bank_swift_iban}
                                 </span>
                               </div>
                             )}
                             {viewTransaction.client_bank_currency && (
                               <div className="flex justify-between">
-                                <span className="text-slate-500 text-sm">
+                                <span className="text-muted-foreground text-sm">
                                   Currency:
                                 </span>
                                 <Badge
@@ -2524,7 +2532,7 @@ export default function ExchangerDashboard() {
                                       ? "bg-green-500/20 text-green-400"
                                       : viewTransaction.client_bank_currency ===
                                           "EUR"
-                                        ? "bg-blue-500/20 text-blue-400"
+                                        ? "bg-primary/80/20 text-primary/60"
                                         : viewTransaction.client_bank_currency ===
                                             "AED"
                                           ? "bg-purple-500/20 text-purple-400"
@@ -2534,7 +2542,7 @@ export default function ExchangerDashboard() {
                                             : viewTransaction.client_bank_currency ===
                                                 "INR"
                                               ? "bg-orange-500/20 text-orange-400"
-                                              : "bg-gray-500/20 text-gray-400"
+                                              : "bg-gray-500/20 text-muted-foreground"
                                   }`}
                                 >
                                   {viewTransaction.client_bank_currency}
@@ -2552,8 +2560,8 @@ export default function ExchangerDashboard() {
                           : [];
                       if (!imgs.length) return null;
                       return (
-                        <div className="pt-4 border-t border-slate-200">
-                          <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">
+                        <div className="pt-4 border-t border">
+                          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
                             Proof of Payment ({imgs.length})
                           </p>
                           <div className="grid grid-cols-2 gap-2">
@@ -2566,7 +2574,7 @@ export default function ExchangerDashboard() {
                                   key={i}
                                   src={src}
                                   alt={`Proof ${i + 1}`}
-                                  className="w-full rounded border border-slate-200 cursor-pointer hover:opacity-80"
+                                  className="w-full rounded border border cursor-pointer hover:opacity-80"
                                   onClick={() => window.open(src, "_blank")}
                                 />
                               );
@@ -2583,8 +2591,8 @@ export default function ExchangerDashboard() {
                           : [];
                       if (!imgs.length) return null;
                       return (
-                        <div className="pt-4 border-t border-slate-200">
-                          <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">
+                        <div className="pt-4 border-t border">
+                          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
                             Exchanger Proof ({imgs.length})
                           </p>
                           <div className="grid grid-cols-2 gap-2">
@@ -2597,7 +2605,7 @@ export default function ExchangerDashboard() {
                                   key={i}
                                   src={src}
                                   alt={`Proof ${i + 1}`}
-                                  className="w-full rounded border border-slate-200 cursor-pointer hover:opacity-80"
+                                  className="w-full rounded border border cursor-pointer hover:opacity-80"
                                   onClick={() => window.open(src, "_blank")}
                                 />
                               );
@@ -2622,11 +2630,10 @@ export default function ExchangerDashboard() {
           setSelectedTransaction(null);
         }}
       >
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
+        <DialogContent className="bg-card border text-foreground max-w-md">
           <DialogHeader>
             <DialogTitle
-              className="text-2xl font-bold uppercase tracking-tight"
-              style={{ fontFamily: "Barlow Condensed" }}
+              className="text-lg font-bold text-foreground"
             >
               {actionType === "approve" && "Approve Transaction"}
               {actionType === "reject" && "Reject Transaction"}
@@ -2644,21 +2651,21 @@ export default function ExchangerDashboard() {
                   selectedTransaction.base_amount || selectedTransaction.amount;
                 return (
                   <>
-                    <div className="p-4 bg-slate-50 rounded-xl space-y-2">
+                    <div className="p-4 bg-muted/50 rounded-sm space-y-2">
                       <div className="flex justify-between">
-                        <span className="text-slate-500">Reference</span>
-                        <span className="text-slate-800 font-mono">
+                        <span className="text-muted-foreground">Reference</span>
+                        <span className="text-foreground font-mono">
                           {selectedTransaction.reference}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-500">Client</span>
-                        <span className="text-slate-800">
+                        <span className="text-muted-foreground">Client</span>
+                        <span className="text-foreground">
                           {selectedTransaction.client_name}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-500">Type</span>
+                        <span className="text-muted-foreground">Type</span>
                         <span
                           className={
                             selectedTransaction.transaction_type === "deposit"
@@ -2670,26 +2677,26 @@ export default function ExchangerDashboard() {
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-500">Amount</span>
-                        <span className="text-slate-800 font-mono">
+                        <span className="text-muted-foreground">Amount</span>
+                        <span className="text-foreground font-mono">
                           {displayAmount?.toLocaleString()} {displayCurrency}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-500">Currency</span>
+                        <span className="text-muted-foreground">Currency</span>
                         <Badge
                           className={`${
                             displayCurrency === "USD"
                               ? "bg-green-500/20 text-green-400"
                               : displayCurrency === "EUR"
-                                ? "bg-blue-500/20 text-blue-400"
+                                ? "bg-primary/80/20 text-primary/60"
                                 : displayCurrency === "AED"
                                   ? "bg-purple-500/20 text-purple-400"
                                   : displayCurrency === "GBP"
                                     ? "bg-yellow-500/20 text-yellow-400"
                                     : displayCurrency === "INR"
                                       ? "bg-orange-500/20 text-orange-400"
-                                      : "bg-gray-500/20 text-gray-400"
+                                      : "bg-gray-500/20 text-muted-foreground"
                           }`}
                         >
                           {displayCurrency}
@@ -2698,11 +2705,11 @@ export default function ExchangerDashboard() {
                       {selectedTransaction.base_currency &&
                         selectedTransaction.base_currency !==
                           selectedTransaction.currency && (
-                          <div className="flex justify-between border-t border-slate-200 pt-2 mt-2">
-                            <span className="text-slate-500">
+                          <div className="flex justify-between border-t border pt-2 mt-2">
+                            <span className="text-muted-foreground">
                               USD Equivalent
                             </span>
-                            <span className="text-blue-600 font-mono">
+                            <span className="text-primary font-mono">
                               ${selectedTransaction.amount?.toLocaleString()}
                             </span>
                           </div>
@@ -2711,13 +2718,13 @@ export default function ExchangerDashboard() {
 
                     {actionType === "reject" && (
                       <div className="space-y-2">
-                        <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                        <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                           Rejection Reason
                         </Label>
                         <Input
                           value={rejectionReason}
                           onChange={(e) => setRejectionReason(e.target.value)}
-                          className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B]"
+                          className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
                           placeholder="Enter reason for rejection"
                           data-testid="rejection-reason"
                         />
@@ -2730,14 +2737,14 @@ export default function ExchangerDashboard() {
                         selectedTransaction.transaction_type ===
                           "withdrawal")) && (
                       <div className="space-y-2">
-                        <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                        <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                           Upload Proof of Payment{" "}
                           {actionType === "approve"
                             ? "(Required for Withdrawal)"
                             : ""}{" "}
                           *
                         </Label>
-                        <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center hover:border-[#1FA21B]/50 transition-colors">
+                        <div className="border-2 border-dashed border rounded-sm p-4 text-center hover:border-[#66FCF1]/50 transition-colors">
                           <input
                             type="file"
                             accept="image/*"
@@ -2759,10 +2766,10 @@ export default function ExchangerDashboard() {
                                       <img
                                         src={src}
                                         alt={`Proof ${i + 1}`}
-                                        className="w-full h-20 object-cover rounded border border-slate-200 cursor-pointer"
+                                        className="w-full h-20 object-cover rounded border border cursor-pointer"
                                         onClick={(e) => {
                                           e.preventDefault();
-                                          
+
                                           if (src.startsWith("data:")) {
                                             fetch(src)
                                               .then((r) => r.blob())
@@ -2790,18 +2797,18 @@ export default function ExchangerDashboard() {
                                     </div>
                                   ))}
                                 </div>
-                                <p className="text-xs text-blue-600 text-center">
+                                <p className="text-xs text-primary text-center">
                                   {proofPreviews.length} image(s) — click to add
                                   more
                                 </p>
                               </div>
                             ) : (
                               <div className="space-y-2">
-                                <Upload className="w-8 h-8 mx-auto text-slate-500" />
-                                <p className="text-sm text-slate-500">
+                                <Upload className="w-8 h-8 mx-auto text-muted-foreground" />
+                                <p className="text-sm text-muted-foreground">
                                   Click to upload proof screenshot
                                 </p>
-                                <p className="text-xs text-slate-500/60">
+                                <p className="text-xs text-muted-foreground/60">
                                   PNG, JPG up to 5MB · multiple allowed
                                 </p>
                               </div>
@@ -2812,19 +2819,19 @@ export default function ExchangerDashboard() {
                     )}
 
                     {/* Captcha */}
-                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                      <Label className="text-slate-500 text-xs uppercase tracking-wider mb-2 block">
+                    <div className="p-4 bg-muted/50 rounded-sm border border">
+                      <Label className="text-muted-foreground text-xs uppercase tracking-wider mb-2 block">
                         Security Verification
                       </Label>
                       <div className="flex items-center gap-4">
-                        <span className="text-xl font-mono text-blue-600">
+                        <span className="text-xl font-mono text-primary">
                           {captchaQuestion.num1} + {captchaQuestion.num2} = ?
                         </span>
                         <Input
                           type="number"
                           value={captchaAnswer}
                           onChange={(e) => setCaptchaAnswer(e.target.value)}
-                          className="w-24 bg-white border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono text-center"
+                          className="w-24 bg-card border text-foreground focus:border-[#66FCF1] font-mono text-center"
                           placeholder="?"
                           data-testid="captcha-answer"
                         />
@@ -2839,7 +2846,7 @@ export default function ExchangerDashboard() {
                           setActionDialogOpen(false);
                           setSelectedTransaction(null);
                         }}
-                        className="border-slate-200 text-slate-500 hover:bg-slate-100"
+                        className="border text-muted-foreground hover:bg-muted"
                       >
                         Cancel
                       </Button>
@@ -2851,7 +2858,7 @@ export default function ExchangerDashboard() {
                             : actionType === "reject"
                               ? "bg-red-500 hover:bg-red-600"
                               : "bg-orange-500 hover:bg-orange-600"
-                        } text-slate-800`}
+                        } text-foreground`}
                         data-testid="confirm-action-btn"
                       >
                         {actionType === "approve" && (
@@ -2881,7 +2888,7 @@ export default function ExchangerDashboard() {
 
       {/* Settlement Statement Dialog */}
       <Dialog open={statementOpen} onOpenChange={setStatementOpen}>
-        <DialogContent className="max-w-3xl bg-white text-[#1a1a1a] border-0 p-0 max-h-[90vh] overflow-hidden">
+        <DialogContent className="max-w-3xl bg-card text-[#1a1a1a] border-0 p-0 max-h-[90vh] overflow-hidden">
           {statementLoading ? (
             <div className="flex justify-center items-center py-20">
               <div className="w-8 h-8 border-2 border-[#0B3D91] border-t-transparent rounded-full animate-spin" />
@@ -2901,7 +2908,7 @@ export default function ExchangerDashboard() {
               );
               return (
                 <>
-                  <div className="flex items-center justify-between px-6 pt-4 pb-2 border-b border-gray-200">
+                  <div className="flex items-center justify-between px-6 pt-4 pb-2 border-b border">
                     <h2 className="font-bold text-[#0B3D91] text-lg">
                       Settlement Statement
                     </h2>
@@ -2935,7 +2942,7 @@ export default function ExchangerDashboard() {
                               color: "#0B3D91",
                             }}
                           >
-                            MILES CAPITALS
+                        Carlton
                           </div>
                           <div
                             style={{
@@ -3313,7 +3320,7 @@ export default function ExchangerDashboard() {
                           textAlign: "center",
                         }}
                       >
-                        This is a system-generated statement from Miles Capitals
+                        This is a system-generated statement from Carlton
                         Back Office. Generated on{" "}
                         {new Date().toLocaleDateString("en-US", {
                           year: "numeric",
@@ -3328,7 +3335,7 @@ export default function ExchangerDashboard() {
               );
             })()
           ) : (
-            <div className="py-10 text-center text-gray-400">
+            <div className="py-10 text-center text-muted-foreground">
               No data available
             </div>
           )}
@@ -3345,11 +3352,10 @@ export default function ExchangerDashboard() {
           }
         }}
       >
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
+        <DialogContent className="bg-card border text-foreground max-w-md">
           <DialogHeader>
             <DialogTitle
-              className="text-xl font-bold uppercase tracking-tight"
-              style={{ fontFamily: "Barlow Condensed" }}
+              className="text-lg font-bold text-foreground"
             >
               {ieActionDialog.type === "approve" ? "Approve" : "Reject"} Entry
             </DialogTitle>
@@ -3379,16 +3385,16 @@ export default function ExchangerDashboard() {
                     {ieActionDialog.entry.currency}
                   </span>
                 </div>
-                <p className="text-sm text-slate-500 mt-2 capitalize">
+                <p className="text-sm text-muted-foreground mt-2 capitalize">
                   {ieActionDialog.entry.category?.replace("_", " ")}
                 </p>
                 {ieActionDialog.entry.description && (
-                  <p className="text-xs text-slate-400 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     {ieActionDialog.entry.description}
                   </p>
                 )}
                 {ieActionDialog.entry.vendor_bank_account_number && (
-                  <div className="mt-2 text-[10px] text-slate-400 space-y-0.5">
+                  <div className="mt-2 text-[10px] text-muted-foreground space-y-0.5">
                     {ieActionDialog.entry.vendor_bank_account_name && (
                       <p>
                         Name: {ieActionDialog.entry.vendor_bank_account_name}
@@ -3406,7 +3412,7 @@ export default function ExchangerDashboard() {
                   </div>
                 )}
                 {vendorInfo && (
-                  <div className="mt-2 pt-2 border-t border-slate-200 text-xs text-blue-600">
+                  <div className="mt-2 pt-2 border-t border text-xs text-primary">
                     Commission:{" "}
                     {ieActionDialog.entry.entry_type === "income"
                       ? `${vendorInfo.deposit_commission || 0}% (Money In rate)`
@@ -3427,7 +3433,7 @@ export default function ExchangerDashboard() {
               {/* Proof Upload (approve only) */}
               {ieActionDialog.type === "approve" && (
                 <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                     Upload Proof Screenshot *
                   </Label>
                   <input
@@ -3440,14 +3446,14 @@ export default function ExchangerDashboard() {
                         setIeProofPreview(URL.createObjectURL(file));
                       }
                     }}
-                    className="block w-full text-xs text-slate-500 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:bg-blue-100 file:text-blue-600 file:text-xs hover:file:bg-blue-100"
+                    className="block w-full text-xs text-muted-foreground file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:bg-primary/15 file:text-primary file:text-xs hover:file:bg-primary/15"
                     data-testid="ie-proof-upload"
                   />
                   {ieProofPreview && (
                     <img
                       src={ieProofPreview}
                       alt="Proof"
-                      className="w-full max-h-32 object-contain rounded border border-slate-200 mt-1"
+                      className="w-full max-h-32 object-contain rounded border border mt-1"
                     />
                   )}
                 </div>
@@ -3456,13 +3462,13 @@ export default function ExchangerDashboard() {
               {/* Rejection Reason (reject only) */}
               {ieActionDialog.type === "reject" && (
                 <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                     Rejection Reason
                   </Label>
                   <Textarea
                     value={ieRejectionReason}
                     onChange={(e) => setIeRejectionReason(e.target.value)}
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B]"
+                    className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
                     rows={2}
                     placeholder="Enter reason..."
                     data-testid="ie-rejection-reason"
@@ -3471,15 +3477,15 @@ export default function ExchangerDashboard() {
               )}
 
               {/* Math Captcha */}
-              <div className="space-y-2 p-3 bg-slate-50 border border-slate-200 rounded">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">
+              <div className="space-y-2 p-3 bg-muted/50 border border rounded">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                   Verification: What is {ieCaptcha.num1} + {ieCaptcha.num2}?
                 </Label>
                 <Input
                   type="number"
                   value={ieCaptchaAnswer}
                   onChange={(e) => setIeCaptchaAnswer(e.target.value)}
-                  className="bg-white border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono text-center text-lg"
+                  className="bg-card border text-foreground focus:border-[#66FCF1] font-mono text-center text-lg"
                   placeholder="?"
                   data-testid="ie-captcha-answer"
                 />
@@ -3493,7 +3499,7 @@ export default function ExchangerDashboard() {
                     setIeActionDialog({ open: false, entry: null, type: "" });
                     resetIeActionState();
                   }}
-                  className="border-slate-200 text-slate-500 hover:bg-slate-100"
+                  className="border text-muted-foreground hover:bg-muted"
                 >
                   Cancel
                 </Button>
@@ -3501,8 +3507,8 @@ export default function ExchangerDashboard() {
                   onClick={executeIeAction}
                   className={
                     ieActionDialog.type === "approve"
-                      ? "bg-green-500 hover:bg-green-600 text-slate-800 font-bold"
-                      : "bg-red-500 hover:bg-red-600 text-slate-800 font-bold"
+                      ? "bg-green-500 hover:bg-green-600 text-foreground font-bold"
+                      : "bg-red-500 hover:bg-red-600 text-foreground font-bold"
                   }
                   data-testid="ie-confirm-action"
                 >
@@ -3523,7 +3529,7 @@ export default function ExchangerDashboard() {
           if (!open) setLoanTxActionDialog({ open: false, tx: null, type: "" });
         }}
       >
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
+        <DialogContent className="bg-card border text-foreground max-w-md">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
               {loanTxActionDialog.type === "approve" ? (
@@ -3541,10 +3547,10 @@ export default function ExchangerDashboard() {
           </DialogHeader>
           {loanTxActionDialog.tx && (
             <div className="space-y-4">
-              <div className="p-3 bg-slate-50 rounded border border-slate-200">
+              <div className="p-3 bg-muted/50 rounded border border">
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
-                    <span className="text-slate-400">Type:</span>{" "}
+                    <span className="text-muted-foreground">Type:</span>{" "}
                     <span
                       className={
                         loanTxActionDialog.tx.transaction_type ===
@@ -3559,25 +3565,25 @@ export default function ExchangerDashboard() {
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-400">Borrower:</span>{" "}
-                    <span className="text-slate-800">
+                    <span className="text-muted-foreground">Borrower:</span>{" "}
+                    <span className="text-foreground">
                       {loanTxActionDialog.tx.borrower_name}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-400">Amount:</span>{" "}
-                    <span className="font-mono font-bold text-slate-800">
+                    <span className="text-muted-foreground">Amount:</span>{" "}
+                    <span className="font-mono font-bold text-foreground">
                       {loanTxActionDialog.tx.amount?.toLocaleString()}{" "}
                       {loanTxActionDialog.tx.currency}
                     </span>
                   </div>
                 </div>
                 {loanTxActionDialog.tx.bank_details && (
-                  <div className="mt-3 p-2 bg-blue-50 rounded border border-blue-200">
-                    <p className="text-xs text-blue-600 font-bold uppercase mb-1">
+                  <div className="mt-3 p-2 bg-primary/10 rounded border border-primary/30">
+                    <p className="text-xs text-primary font-bold uppercase mb-1">
                       Bank Details:
                     </p>
-                    <p className="text-sm text-slate-700 whitespace-pre-wrap">
+                    <p className="text-sm text-card-foreground whitespace-pre-wrap">
                       {loanTxActionDialog.tx.bank_details}
                     </p>
                   </div>
@@ -3587,21 +3593,21 @@ export default function ExchangerDashboard() {
               {/* Proof Upload (approve only) */}
               {loanTxActionDialog.type === "approve" && (
                 <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                     Upload Proof Screenshot *
                   </Label>
                   <Input
                     type="file"
                     accept="image/*"
                     onChange={handleLoanTxImageChange}
-                    className="bg-slate-50 border-slate-200 text-slate-800 file:bg-blue-500 file:text-white file:border-0 file:rounded file:px-3 file:py-1 file:mr-3 file:cursor-pointer"
+                    className="bg-muted/50 border text-foreground file:bg-primary/80 file:text-white file:border-0 file:rounded file:px-3 file:py-1 file:mr-3 file:cursor-pointer"
                     data-testid="loan-tx-proof-upload"
                   />
                   {loanTxProofPreview && (
                     <img
                       src={loanTxProofPreview}
                       alt="Proof"
-                      className="w-full max-h-32 object-contain rounded border border-slate-200 mt-1"
+                      className="w-full max-h-32 object-contain rounded border border mt-1"
                     />
                   )}
                 </div>
@@ -3610,13 +3616,13 @@ export default function ExchangerDashboard() {
               {/* Rejection Reason */}
               {loanTxActionDialog.type === "reject" && (
                 <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                     Rejection Reason
                   </Label>
                   <Textarea
                     value={loanTxRejectionReason}
                     onChange={(e) => setLoanTxRejectionReason(e.target.value)}
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B]"
+                    className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
                     rows={2}
                     placeholder="Enter reason..."
                     data-testid="loan-tx-rejection-reason"
@@ -3625,8 +3631,8 @@ export default function ExchangerDashboard() {
               )}
 
               {/* Math Captcha */}
-              <div className="space-y-2 p-3 bg-slate-50 border border-slate-200 rounded">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">
+              <div className="space-y-2 p-3 bg-muted/50 border border rounded">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                   Verification: What is {loanTxCaptcha.num1} +{" "}
                   {loanTxCaptcha.num2}?
                 </Label>
@@ -3634,7 +3640,7 @@ export default function ExchangerDashboard() {
                   type="number"
                   value={loanTxCaptchaAnswer}
                   onChange={(e) => setLoanTxCaptchaAnswer(e.target.value)}
-                  className="bg-white border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono text-center text-lg"
+                  className="bg-card border text-foreground focus:border-[#66FCF1] font-mono text-center text-lg"
                   placeholder="?"
                   data-testid="loan-tx-captcha-answer"
                 />
@@ -3647,7 +3653,7 @@ export default function ExchangerDashboard() {
                   onClick={() =>
                     setLoanTxActionDialog({ open: false, tx: null, type: "" })
                   }
-                  className="border-slate-200 text-slate-500 hover:bg-slate-100"
+                  className="border text-muted-foreground hover:bg-muted"
                 >
                   Cancel
                 </Button>
@@ -3659,8 +3665,8 @@ export default function ExchangerDashboard() {
                   }
                   className={
                     loanTxActionDialog.type === "approve"
-                      ? "bg-green-500 hover:bg-green-600 text-slate-800 font-bold"
-                      : "bg-red-500 hover:bg-red-600 text-slate-800 font-bold"
+                      ? "bg-green-500 hover:bg-green-600 text-foreground font-bold"
+                      : "bg-red-500 hover:bg-red-600 text-foreground font-bold"
                   }
                   data-testid="loan-tx-confirm-action"
                 >

@@ -117,15 +117,15 @@ export default function PSPs() {
   const [depPage, setDepPage] = useState(1);
   const [depTotalPages, setDepTotalPages] = useState(1);
   const [depTotal, setDepTotal] = useState(0);
-    const [depPageSize, setDepPageSize] = useState(20);
-    const [wdrPage, setWdrPage] = useState(1);
-    const [wdrTotalPages, setWdrTotalPages] = useState(1);
-    const [wdrTotal, setWdrTotal] = useState(0);
-    const [wdrPageSize, setWdrPageSize] = useState(20);
-    const [stlPage, setStlPage] = useState(1);
-    const [stlTotalPages, setStlTotalPages] = useState(1);
-    const [stlTotal, setStlTotal] = useState(0);
-    const [stlPageSize, setStlPageSize] = useState(20);
+  const [depPageSize, setDepPageSize] = useState(20);
+  const [wdrPage, setWdrPage] = useState(1);
+  const [wdrTotalPages, setWdrTotalPages] = useState(1);
+  const [wdrTotal, setWdrTotal] = useState(0);
+  const [wdrPageSize, setWdrPageSize] = useState(20);
+  const [stlPage, setStlPage] = useState(1);
+  const [stlTotalPages, setStlTotalPages] = useState(1);
+  const [stlTotal, setStlTotal] = useState(0);
+  const [stlPageSize, setStlPageSize] = useState(20);
   const [proofGallery, setProofGallery] = useState(null); // {images: [], label: ''}
   const [formData, setFormData] = useState({
     psp_name: '',
@@ -178,8 +178,9 @@ export default function PSPs() {
         setPspTotal(data.total || 0);
         setPspPage(pg);
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      console.error('Error fetching PSPs:', error);
+      toast.error('Failed to load PSPs');
     } finally {
       setLoading(false);
     }
@@ -196,7 +197,6 @@ export default function PSPs() {
       console.error('Error fetching treasury accounts:', error);
     }
   };
-
 
   const fetchPendingTransactions = async (pspId, pg = 1, ps = depPageSize) => {
     try {
@@ -257,7 +257,7 @@ export default function PSPs() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) { toast.error(err?.message || "Something went wrong. Please try again."); }
+    } catch (err) { toast.error(err?.message || 'Something went wrong. Please try again.'); }
   };
 
   const fetchSettlements = async (pspId, pg = 1, ps = stlPageSize) => {
@@ -314,8 +314,8 @@ export default function PSPs() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || 'Something went wrong. Please try again.');
     }
   };
 
@@ -335,8 +335,8 @@ export default function PSPs() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || 'Something went wrong. Please try again.');
     }
   };
 
@@ -407,8 +407,8 @@ export default function PSPs() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || 'Something went wrong. Please try again.');
     }
   };
 
@@ -443,8 +443,8 @@ export default function PSPs() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || 'Something went wrong. Please try again.');
     }
   };
 
@@ -477,8 +477,8 @@ export default function PSPs() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || 'Something went wrong. Please try again.');
     }
   };
 
@@ -534,8 +534,8 @@ export default function PSPs() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || 'Something went wrong. Please try again.');
     }
   };
   
@@ -578,8 +578,8 @@ export default function PSPs() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || 'Something went wrong. Please try again.');
     }
   };
 
@@ -647,8 +647,8 @@ export default function PSPs() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || 'Something went wrong. Please try again.');
     } finally {
       setBatchSettling(false);
     }
@@ -683,8 +683,8 @@ export default function PSPs() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || 'Something went wrong. Please try again.');
     } finally {
       setNetSettling(false);
     }
@@ -760,35 +760,35 @@ export default function PSPs() {
     <div className="space-y-6 h-[100vh] animate-fade-in" data-testid="psp-page">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-bold uppercase tracking-tight text-slate-800" style={{ fontFamily: 'Barlow Condensed' }}>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
             Payment Service Providers
           </h1>
-          <p className="text-slate-500">Manage PSPs, commissions, and settlements</p>
+          <p className="text-muted-foreground">Manage PSPs, commissions, and settlements</p>
         </div>
         {isAccountantOrAdmin && (
           <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
               <Button
-                className="bg-[#1FA21B] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan"
+                className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan"
                 data-testid="add-psp-btn"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Add PSP
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-lg">
+            <DialogContent className="bg-card border text-foreground max-w-lg">
               <DialogHeader>
-                <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
+                <DialogTitle className="text-lg font-bold text-foreground">
                   {selectedPsp ? 'Edit PSP' : 'Add Payment Service Provider'}
                 </DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">PSP Name *</Label>
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">PSP Name *</Label>
                   <Input
                     value={formData.psp_name}
                     onChange={(e) => setFormData({ ...formData, psp_name: e.target.value })}
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B]"
+                    className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
                     placeholder="e.g., Stripe, PayPal"
                     data-testid="psp-name"
                     required
@@ -797,27 +797,27 @@ export default function PSPs() {
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-slate-500 text-xs uppercase tracking-wider">Commission Rate (%) *</Label>
+                    <Label className="text-muted-foreground text-xs uppercase tracking-wider">Commission Rate (%) *</Label>
                     <Input
                       type="number"
                       step="0.01"
                       value={formData.commission_rate}
                       onChange={(e) => setFormData({ ...formData, commission_rate: e.target.value })}
-                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
+                      className="bg-muted/50 border text-foreground focus:border-[#66FCF1] font-mono"
                       placeholder="2.5"
                       data-testid="psp-commission"
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-slate-500 text-xs uppercase tracking-wider">Reserve Fund % *</Label>
+                    <Label className="text-muted-foreground text-xs uppercase tracking-wider">Reserve Fund % *</Label>
                     <Input
                       type="number"
                       step="0.01"
                       min="0"
                       value={formData.reserve_fund_rate}
                       onChange={(e) => setFormData({ ...formData, reserve_fund_rate: e.target.value })}
-                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
+                      className="bg-muted/50 border text-foreground focus:border-[#66FCF1] font-mono"
                       placeholder="0"
                       data-testid="psp-reserve-fund"
                     />
@@ -827,40 +827,40 @@ export default function PSPs() {
                 {/* New PSP Fee Fields */}
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-slate-500 text-xs uppercase tracking-wider">Gateway Fee (per tx)</Label>
+                    <Label className="text-muted-foreground text-xs uppercase tracking-wider">Gateway Fee (per tx)</Label>
                     <Input
                       type="number"
                       step="0.01"
                       min="0"
                       value={formData.gateway_fee}
                       onChange={(e) => setFormData({ ...formData, gateway_fee: e.target.value })}
-                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
+                      className="bg-muted/50 border text-foreground focus:border-[#66FCF1] font-mono"
                       placeholder="0.00"
                       data-testid="psp-gateway-fee"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-slate-500 text-xs uppercase tracking-wider">Refund Fee</Label>
+                    <Label className="text-muted-foreground text-xs uppercase tracking-wider">Refund Fee</Label>
                     <Input
                       type="number"
                       step="0.01"
                       min="0"
                       value={formData.refund_fee}
                       onChange={(e) => setFormData({ ...formData, refund_fee: e.target.value })}
-                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
+                      className="bg-muted/50 border text-foreground focus:border-[#66FCF1] font-mono"
                       placeholder="0.00"
                       data-testid="psp-refund-fee"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-slate-500 text-xs uppercase tracking-wider">Monthly Min Fee</Label>
+                    <Label className="text-muted-foreground text-xs uppercase tracking-wider">Monthly Min Fee</Label>
                     <Input
                       type="number"
                       step="0.01"
                       min="0"
                       value={formData.monthly_minimum_fee}
                       onChange={(e) => setFormData({ ...formData, monthly_minimum_fee: e.target.value })}
-                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
+                      className="bg-muted/50 border text-foreground focus:border-[#66FCF1] font-mono"
                       placeholder="0.00"
                       data-testid="psp-monthly-min-fee"
                     />
@@ -869,25 +869,25 @@ export default function PSPs() {
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-slate-500 text-xs uppercase tracking-wider">Holding Days</Label>
+                    <Label className="text-muted-foreground text-xs uppercase tracking-wider">Holding Days</Label>
                     <Input
                       type="number"
                       min="0"
                       value={formData.holding_days}
                       onChange={(e) => setFormData({ ...formData, holding_days: e.target.value })}
-                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
+                      className="bg-muted/50 border text-foreground focus:border-[#66FCF1] font-mono"
                       placeholder="0"
                       data-testid="psp-holding-days"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-slate-500 text-xs uppercase tracking-wider">Settlement Days *</Label>
+                    <Label className="text-muted-foreground text-xs uppercase tracking-wider">Settlement Days *</Label>
                     <Input
                       type="number"
                       min="1"
                       value={formData.settlement_days}
                       onChange={(e) => setFormData({ ...formData, settlement_days: e.target.value })}
-                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
+                      className="bg-muted/50 border text-foreground focus:border-[#66FCF1] font-mono"
                       placeholder="T+1"
                       data-testid="psp-settlement-days"
                       required
@@ -896,17 +896,17 @@ export default function PSPs() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Settlement Destination *</Label>
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">Settlement Destination *</Label>
                   <Select
                     value={formData.settlement_destination_id}
                     onValueChange={(value) => setFormData({ ...formData, settlement_destination_id: value })}
                   >
-                    <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="psp-destination">
+                    <SelectTrigger className="bg-muted/50 border text-foreground" data-testid="psp-destination">
                       <SelectValue placeholder="Select treasury account" />
                     </SelectTrigger>
-                    <SelectContent className="bg-white border-slate-200">
+                    <SelectContent className="bg-card border">
                       {treasuryAccounts.map((account) => (
-                        <SelectItem key={account.account_id} value={account.account_id} className="text-slate-800 hover:bg-slate-100">
+                        <SelectItem key={account.account_id} value={account.account_id} className="text-foreground hover:bg-muted">
                           {account.account_name} - {account.bank_name} ({account.currency})
                         </SelectItem>
                       ))}
@@ -915,13 +915,13 @@ export default function PSPs() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Min Settlement Amount</Label>
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">Min Settlement Amount</Label>
                   <Input
                     type="number"
                     step="0.01"
                     value={formData.min_settlement_amount}
                     onChange={(e) => setFormData({ ...formData, min_settlement_amount: e.target.value })}
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
+                    className="bg-muted/50 border text-foreground focus:border-[#66FCF1] font-mono"
                     placeholder="0"
                     data-testid="psp-min-amount"
                   />
@@ -929,28 +929,28 @@ export default function PSPs() {
                 
                 {selectedPsp && (
                   <div className="space-y-2">
-                    <Label className="text-slate-500 text-xs uppercase tracking-wider">Status</Label>
+                    <Label className="text-muted-foreground text-xs uppercase tracking-wider">Status</Label>
                     <Select
                       value={formData.status}
                       onValueChange={(value) => setFormData({ ...formData, status: value })}
                     >
-                      <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="psp-status">
+                      <SelectTrigger className="bg-muted/50 border text-foreground" data-testid="psp-status">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-white border-slate-200">
-                        <SelectItem value="active" className="text-slate-800 hover:bg-slate-100">Active</SelectItem>
-                        <SelectItem value="inactive" className="text-slate-800 hover:bg-slate-100">Inactive</SelectItem>
+                      <SelectContent className="bg-card border">
+                        <SelectItem value="active" className="text-foreground hover:bg-muted">Active</SelectItem>
+                        <SelectItem value="inactive" className="text-foreground hover:bg-muted">Inactive</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 )}
                 
                 <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Description</Label>
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">Description</Label>
                   <Textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B]"
+                    className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
                     rows={2}
                     data-testid="psp-description"
                   />
@@ -961,13 +961,13 @@ export default function PSPs() {
                     type="button"
                     variant="outline"
                     onClick={() => { setIsDialogOpen(false); resetForm(); }}
-                    className="border-slate-200 text-slate-500 hover:bg-slate-100"
+                    className="border text-muted-foreground hover:bg-muted"
                   >
                     Cancel
                   </Button>
                   <Button
                     type="submit"
-                    className="bg-[#1FA21B] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider"
+                    className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider"
                     data-testid="save-psp-btn"
                   >
                     {selectedPsp ? 'Update' : 'Create'}
@@ -981,26 +981,26 @@ export default function PSPs() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-white border-slate-200">
+        <Card className="bg-card border">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Total PSPs</p>
-                <p className="text-3xl font-bold font-mono text-slate-800">{psps.length}</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Total PSPs</p>
+                <p className="text-3xl font-bold font-mono text-foreground">{psps.length}</p>
               </div>
-              <div className="p-3 bg-blue-100 rounded-sm">
-                <CreditCard className="w-6 h-6 text-blue-600" />
+              <div className="p-3 bg-primary/15 rounded-sm">
+                <CreditCard className="w-6 h-6 text-primary" />
               </div>
             </div>
           </CardContent>
         </Card>
         
-        <Card className="bg-white border-slate-200">
+        <Card className="bg-card border">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Pending Settlement</p>
-                <p className="text-3xl font-bold font-mono text-slate-800">${totalPendingAmount.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Pending Settlement</p>
+                <p className="text-3xl font-bold font-mono text-foreground">${totalPendingAmount.toLocaleString()}</p>
               </div>
               <div className="p-3 bg-yellow-500/10 rounded-sm">
                 <Clock className="w-6 h-6 text-yellow-500" />
@@ -1009,11 +1009,11 @@ export default function PSPs() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white border-slate-200 border-l-2 border-l-orange-500/50" data-testid="total-reserve-fund-card">
+        <Card className="bg-card border border-l-2 border-l-orange-500/50" data-testid="total-reserve-fund-card">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Reserve Fund Held</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Reserve Fund Held</p>
                 <p className="text-3xl font-bold font-mono text-orange-400">${(globalReserveSummary?.total_held || 0).toLocaleString()}</p>
                 {globalReserveSummary?.due_for_release > 0 && (
                   <p className="text-xs text-yellow-400 mt-1">${globalReserveSummary.due_for_release.toLocaleString()} due for release</p>
@@ -1026,12 +1026,12 @@ export default function PSPs() {
           </CardContent>
         </Card>
         
-        <Card className={`bg-white border-slate-200 ${totalOverdue > 0 ? 'border-red-500/30' : ''}`}>
+        <Card className={`bg-card border ${totalOverdue > 0 ? 'border-red-500/30' : ''}`}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Overdue Settlements</p>
-                <p className={`text-3xl font-bold font-mono ${totalOverdue > 0 ? 'text-red-400' : 'text-slate-800'}`}>{totalOverdue}</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Overdue Settlements</p>
+                <p className={`text-3xl font-bold font-mono ${totalOverdue > 0 ? 'text-red-400' : 'text-foreground'}`}>{totalOverdue}</p>
               </div>
               <div className={`p-3 rounded-sm ${totalOverdue > 0 ? 'bg-red-500/10' : 'bg-green-500/10'}`}>
                 {totalOverdue > 0 ? (
@@ -1049,44 +1049,44 @@ export default function PSPs() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {loading ? (
           <div className="col-span-full flex justify-center py-12">
-            <div className="w-8 h-8 border-2 border-[#1FA21B] border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : psps.length === 0 ? (
           <div className="col-span-full text-center py-12">
-            <CreditCard className="w-12 h-12 text-slate-500 mx-auto mb-4" />
-            <p className="text-slate-500">No PSPs found</p>
-            {isAccountantOrAdmin && <p className="text-sm text-slate-500/60 mt-2">Click "Add PSP" to create one</p>}
+            <CreditCard className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">No PSPs found</p>
+            {isAccountantOrAdmin && <p className="text-sm text-muted-foreground/60 mt-2">Click "Add PSP" to create one</p>}
           </div>
         ) : (
           psps.map((psp) => (
             <Card 
               key={psp.psp_id} 
-              className={`bg-white border-slate-200 card-hover cursor-pointer ${psp.overdue_count > 0 ? 'border-l-2 border-l-red-500' : ''}`}
+              className={`bg-card border card-hover cursor-pointer ${psp.overdue_count > 0 ? 'border-l-2 border-l-red-500' : ''}`}
               onClick={() => setViewPsp(psp)}
             >
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-sm ${psp.overdue_count > 0 ? 'bg-red-500/10' : 'bg-blue-100'}`}>
-                      <CreditCard className={`w-5 h-5 ${psp.overdue_count > 0 ? 'text-red-500' : 'text-blue-600'}`} />
+                    <div className={`p-2 rounded-sm ${psp.overdue_count > 0 ? 'bg-red-500/10' : 'bg-primary/15'}`}>
+                      <CreditCard className={`w-5 h-5 ${psp.overdue_count > 0 ? 'text-red-500' : 'text-primary'}`} />
                     </div>
                     <div>
-                      <CardTitle className="text-lg text-slate-800">{psp.psp_name}</CardTitle>
-                      <p className="text-xs text-slate-500">{psp.description || 'No description'}</p>
+                      <CardTitle className="text-lg text-foreground">{psp.psp_name}</CardTitle>
+                      <p className="text-xs text-muted-foreground">{psp.description || 'No description'}</p>
                     </div>
                   </div>
                   {isAccountantOrAdmin && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-800 hover:bg-slate-100" data-testid={`psp-actions-${psp.psp_id}`}>
+                        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-muted" data-testid={`psp-actions-${psp.psp_id}`}>
                           <MoreVertical className="w-4 h-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-white border-slate-200">
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setViewPsp(psp); }} className="text-slate-800 hover:bg-slate-100 cursor-pointer">
+                      <DropdownMenuContent align="end" className="bg-card border">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setViewPsp(psp); }} className="text-foreground hover:bg-muted cursor-pointer">
                           <Eye className="w-4 h-4 mr-2" /> View Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(psp); }} className="text-slate-800 hover:bg-slate-100 cursor-pointer">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(psp); }} className="text-foreground hover:bg-muted cursor-pointer">
                           <Edit className="w-4 h-4 mr-2" /> Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDelete(psp.psp_id); }} className="text-red-600 hover:bg-red-50 cursor-pointer">
@@ -1100,51 +1100,51 @@ export default function PSPs() {
               <CardContent>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-500 text-sm flex items-center gap-1">
+                    <span className="text-muted-foreground text-sm flex items-center gap-1">
                       <Percent className="w-3 h-3" /> Commission
                     </span>
-                    <span className="text-slate-800 font-mono">{psp.commission_rate}%</span>
+                    <span className="text-foreground font-mono">{psp.commission_rate}%</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-500 text-sm flex items-center gap-1">
+                    <span className="text-muted-foreground text-sm flex items-center gap-1">
                       <AlertTriangle className="w-3 h-3" /> Reserve Fund
                     </span>
-                    <span className="text-slate-800 font-mono">{psp.reserve_fund_rate || psp.chargeback_rate || 0}%</span>
+                    <span className="text-foreground font-mono">{psp.reserve_fund_rate || psp.chargeback_rate || 0}%</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-500 text-sm flex items-center gap-1">
+                    <span className="text-muted-foreground text-sm flex items-center gap-1">
                       <Clock className="w-3 h-3" /> Holding
                     </span>
-                    <span className="text-slate-800 font-mono">{psp.holding_days || 0} days</span>
+                    <span className="text-foreground font-mono">{psp.holding_days || 0} days</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-500 text-sm flex items-center gap-1">
+                    <span className="text-muted-foreground text-sm flex items-center gap-1">
                       <Calendar className="w-3 h-3" /> Settlement
                     </span>
-                    <span className="text-slate-800 font-mono">T+{psp.settlement_days}</span>
+                    <span className="text-foreground font-mono">T+{psp.settlement_days}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-500 text-sm">Pending</span>
+                    <span className="text-muted-foreground text-sm">Pending</span>
                     <span className="text-yellow-400 font-mono">${(psp.pending_amount || 0).toLocaleString()}</span>
                   </div>
                   {psp.total_reserve_fund_held > 0 && (
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-500 flex items-center gap-1">
+                      <span className="text-muted-foreground flex items-center gap-1">
                         <Shield className="w-3 h-3" /> Reserve Held
                       </span>
                       <span className="text-orange-400 font-mono">${(psp.total_reserve_fund_held || 0).toLocaleString()}</span>
                     </div>
                   )}
                   {psp.overdue_count > 0 && (
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-200">
+                    <div className="flex items-center justify-between pt-2 border-t border">
                       <span className="text-red-400 text-sm flex items-center gap-1">
                         <AlertTriangle className="w-3 h-3" /> Overdue
                       </span>
                       <Badge className="bg-red-500/20 text-red-400 border-red-500/30">{psp.overdue_count} transactions</Badge>
                     </div>
                   )}
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-200">
-                    <span className="text-slate-500 text-sm">Status</span>
+                  <div className="flex items-center justify-between pt-2 border-t border">
+                    <span className="text-muted-foreground text-sm">Status</span>
                     {getStatusBadge(psp.status)}
                   </div>
                 </div>
@@ -1161,41 +1161,41 @@ export default function PSPs() {
 
       {/* View PSP Details - Full Page */}
       {viewPsp && (
-      <div className="fixed inset-0 z-50 bg-white overflow-y-auto dark:bg-slate-900">
+      <div className="fixed inset-0 z-50 bg-card overflow-y-auto dark:bg-slate-900">
         <div className="max-w-[1600px] mx-auto px-6 py-4 min-h-screen flex flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between mb-6 border-b border-slate-200 pb-4">
+          <div className="flex items-center justify-between mb-6 border-b border pb-4">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" onClick={() => { setViewPsp(null); setPendingTransactions([]); setPspWithdrawals([]); setSettlements([]); setSelectedSettleTxIds([]); setDepDateFrom(''); setDepDateTo(''); setWdrDateFrom(''); setWdrDateTo(''); setStlDateFrom(''); setStlDateTo(''); }} className="text-slate-600 hover:text-slate-800" data-testid="psp-detail-back">
+              <Button variant="ghost" size="sm" onClick={() => { setViewPsp(null); setPendingTransactions([]); setPspWithdrawals([]); setSettlements([]); setSelectedSettleTxIds([]); setDepDateFrom(''); setDepDateTo(''); setWdrDateFrom(''); setWdrDateTo(''); setStlDateFrom(''); setStlDateTo(''); }} className="text-card-foreground hover:text-foreground" data-testid="psp-detail-back">
                 <ArrowLeft className="w-4 h-4 mr-1" /> Back
               </Button>
               <div className="flex items-center gap-3">
-                <CreditCard className="w-7 h-7 text-blue-600" />
-                <h1 className="text-3xl font-bold uppercase tracking-tight text-slate-800" style={{ fontFamily: 'Barlow Condensed' }}>{viewPsp.psp_name}</h1>
+                <CreditCard className="w-7 h-7 text-primary" />
+                <h1 className="text-xl font-bold tracking-tight text-foreground">{viewPsp.psp_name}</h1>
               </div>
             </div>
           </div>
             <div className="space-y-4 flex-1 flex flex-col">
               {/* PSP Info */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 p-4 bg-slate-50 rounded-sm">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 p-4 bg-muted/50 rounded-sm">
                 <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Commission Rate</p>
-                  <p className="text-xl font-mono text-slate-800">{viewPsp.commission_rate}%</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Commission Rate</p>
+                  <p className="text-xl font-mono text-foreground">{viewPsp.commission_rate}%</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Reserve Fund Rate</p>
-                  <p className="text-xl font-mono text-slate-800">{viewPsp.reserve_fund_rate || viewPsp.chargeback_rate || 0}%</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Reserve Fund Rate</p>
+                  <p className="text-xl font-mono text-foreground">{viewPsp.reserve_fund_rate || viewPsp.chargeback_rate || 0}%</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Holding Time</p>
-                  <p className="text-xl font-mono text-slate-800">{viewPsp.holding_days || 0} days</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Holding Time</p>
+                  <p className="text-xl font-mono text-foreground">{viewPsp.holding_days || 0} days</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Settlement Time</p>
-                  <p className="text-xl font-mono text-slate-800">T+{viewPsp.settlement_days}</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Settlement Time</p>
+                  <p className="text-xl font-mono text-foreground">T+{viewPsp.settlement_days}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Net Pending</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Net Pending</p>
                   {(() => {
                     const totalDeposits = pendingTransactions.reduce((s, tx) => s + (tx.amount || 0), 0);
                     const totalWithdrawals = pspWithdrawals.filter(tx => tx.status === 'approved').reduce((s, tx) => s + (tx.amount || 0), 0);
@@ -1210,8 +1210,8 @@ export default function PSPs() {
                     const hasItems = pendingTransactions.length > 0 || pspWithdrawals.filter(tx => tx.status === 'approved').length > 0;
                     return (
                       <div>
-                        <p className={`text-xl font-mono ${net === 0 ? 'text-slate-400' : 'text-yellow-400'}`}>${net.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
-                        {hasItems && <p className="text-[10px] text-slate-400">Dep: ${totalDeposits.toLocaleString()} - Wdr: ${totalWithdrawals.toLocaleString()} - Ded: ${totalAllDeductions.toLocaleString()}</p>}
+                        <p className={`text-xl font-mono ${net === 0 ? 'text-muted-foreground' : 'text-yellow-400'}`}>${net.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
+                        {hasItems && <p className="text-[10px] text-muted-foreground">Dep: ${totalDeposits.toLocaleString()} - Wdr: ${totalWithdrawals.toLocaleString()} - Ded: ${totalAllDeductions.toLocaleString()}</p>}
                         {net > 0 && hasItems && (
                           <Button
                             size="sm"
@@ -1227,42 +1227,42 @@ export default function PSPs() {
                   })()}
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Settlement To</p>
-                  <p className="text-sm text-slate-800">{viewPsp.settlement_destination_name}</p>
-                  <p className="text-xs text-slate-500">{viewPsp.settlement_destination_bank}</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Settlement To</p>
+                  <p className="text-sm text-foreground">{viewPsp.settlement_destination_name}</p>
+                  <p className="text-xs text-muted-foreground">{viewPsp.settlement_destination_bank}</p>
                 </div>
               </div>
               {/* Fee Details Row */}
               {(viewPsp.gateway_fee > 0 || viewPsp.refund_fee > 0 || viewPsp.monthly_minimum_fee > 0) && (
-                <div className="grid grid-cols-3 gap-4 p-3 bg-slate-50 rounded-sm border border-slate-200 mt-3">
+                <div className="grid grid-cols-3 gap-4 p-3 bg-muted/50 rounded-sm border border mt-3">
                   <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Gateway Fee</p>
-                    <p className="text-lg font-mono text-slate-800">${(viewPsp.gateway_fee || 0).toLocaleString()}<span className="text-xs text-slate-500">/tx</span></p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Gateway Fee</p>
+                    <p className="text-lg font-mono text-foreground">${(viewPsp.gateway_fee || 0).toLocaleString()}<span className="text-xs text-muted-foreground">/tx</span></p>
                   </div>
                   <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Refund Fee</p>
-                    <p className="text-lg font-mono text-slate-800">${(viewPsp.refund_fee || 0).toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Refund Fee</p>
+                    <p className="text-lg font-mono text-foreground">${(viewPsp.refund_fee || 0).toLocaleString()}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Monthly Min Fee</p>
-                    <p className="text-lg font-mono text-slate-800">${(viewPsp.monthly_minimum_fee || 0).toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Monthly Min Fee</p>
+                    <p className="text-lg font-mono text-foreground">${(viewPsp.monthly_minimum_fee || 0).toLocaleString()}</p>
                   </div>
                 </div>
               )}
 
               {/* Tabs */}
               <Tabs defaultValue="pending" className="w-full flex-1 flex flex-col">
-                <TabsList className="bg-slate-50 border border-slate-200">
-                  <TabsTrigger value="pending" className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10]">
+                <TabsList className="bg-muted/50 border border">
+                  <TabsTrigger value="pending" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
                     Deposits ({pendingTransactions.length})
                   </TabsTrigger>
-                  <TabsTrigger value="withdrawals" className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10]">
+                  <TabsTrigger value="withdrawals" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
                     Withdrawals ({pspWithdrawals.length})
                   </TabsTrigger>
-                  <TabsTrigger value="reserve-fund" className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10]" data-testid="reserve-fund-tab">
+                  <TabsTrigger value="reserve-fund" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]" data-testid="reserve-fund-tab">
                     Reserve Fund
                   </TabsTrigger>
-                  <TabsTrigger value="history" className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10]">
+                  <TabsTrigger value="history" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
                     Settlement History
                   </TabsTrigger>
                 </TabsList>
@@ -1270,42 +1270,42 @@ export default function PSPs() {
                 <TabsContent value="pending" className="mt-4 flex-1 flex flex-col">
                   {/* Date Filter */}
                   <div className="flex items-center gap-2 mb-3 flex-wrap">
-                    <Input type="date" value={depDateFrom} onChange={e => setDepDateFrom(e.target.value)} className="w-36 h-8 text-xs bg-white border-slate-200 text-slate-800" placeholder="From" data-testid="dep-date-from" />
-                    <span className="text-slate-400 text-xs">to</span>
-                    <Input type="date" value={depDateTo} onChange={e => setDepDateTo(e.target.value)} className="w-36 h-8 text-xs bg-white border-slate-200 text-slate-800" placeholder="To" data-testid="dep-date-to" />
-                    {(depDateFrom || depDateTo) && <Button variant="ghost" size="sm" onClick={() => { setDepDateFrom(''); setDepDateTo(''); }} className="text-slate-400 hover:text-red-500 h-8 text-xs">Clear</Button>}
-                    <span className="text-xs text-slate-400 ml-auto">{depTotal} deposits</span>
+                    <Input type="date" value={depDateFrom} onChange={e => setDepDateFrom(e.target.value)} className="w-36 h-8 text-xs bg-card border text-foreground" placeholder="From" data-testid="dep-date-from" />
+                    <span className="text-muted-foreground text-xs">to</span>
+                    <Input type="date" value={depDateTo} onChange={e => setDepDateTo(e.target.value)} className="w-36 h-8 text-xs bg-card border text-foreground" placeholder="To" data-testid="dep-date-to" />
+                    {(depDateFrom || depDateTo) && <Button variant="ghost" size="sm" onClick={() => { setDepDateFrom(''); setDepDateTo(''); }} className="text-muted-foreground hover:text-red-500 h-8 text-xs">Clear</Button>}
+                    <span className="text-xs text-muted-foreground ml-auto">{depTotal} deposits</span>
                   </div>
                   <ScrollArea className="h-[calc(100vh-480px)]">
                     {pendingTransactions.length === 0 ? (
-                      <div className="text-center py-8 text-slate-500">
+                      <div className="text-center py-8 text-muted-foreground">
                         <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-green-500" />
                         No pending settlements
                       </div>
                     ) : (
                       <Table>
                         <TableHeader>
-                          <TableRow className="border-slate-200 hover:bg-transparent">
+                          <TableRow className="border hover:bg-transparent">
                             <TableHead className="w-10">
                               <input
                                 type="checkbox"
                                 checked={selectedSettleTxIds.length === pendingTransactions.length && pendingTransactions.length > 0}
                                 onChange={toggleAllSettleTx}
-                                className="rounded border-slate-300 accent-[#1FA21B]"
+                                className="rounded border accent-[#66FCF1]"
                                 data-testid="select-all-settle-checkbox"
                               />
                             </TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reference</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Tx Date</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Pay Currency</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Gross</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Deductions</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Net</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Extra Comm.</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Holding</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Release Date</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Reference</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Tx Date</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Pay Currency</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Gross</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Deductions</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Net</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">Extra Comm.</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Holding</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Release Date</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Status</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1324,64 +1324,64 @@ export default function PSPs() {
                             const baseExtra = hasDiffCurrency ? ((tx.psp_extra_charges || 0) / rate) : null;
                             const baseNet = hasDiffCurrency ? (baseGross - baseComm - baseReserve - baseExtra) : null;
                             return (
-                              <TableRow key={tx.transaction_id} className={`border-slate-200 hover:bg-slate-100 ${overdue ? 'bg-red-500/5' : ''} ${selectedSettleTxIds.includes(tx.transaction_id) ? 'bg-[#1FA21B]/5' : ''}`}>
+                              <TableRow key={tx.transaction_id} className={`border hover:bg-muted ${overdue ? 'bg-red-500/5' : ''} ${selectedSettleTxIds.includes(tx.transaction_id) ? 'bg-[#66FCF1]/5' : ''}`}>
                                 <TableCell>
                                   <input
                                     type="checkbox"
                                     checked={selectedSettleTxIds.includes(tx.transaction_id)}
                                     onChange={() => toggleSettleTx(tx.transaction_id)}
-                                    className="rounded border-slate-300 accent-[#1FA21B]"
+                                    className="rounded border accent-[#66FCF1]"
                                     data-testid={`select-settle-${tx.transaction_id}`}
                                   />
                                 </TableCell>
                                 <TableCell>
                                   <div>
                                     <div className="flex items-center gap-1">
-                                      <span className="font-mono text-slate-800 text-xs">{tx.reference}</span>
+                                      <span className="font-mono text-foreground text-xs">{tx.reference}</span>
                                       {(tx.proof_images?.length || tx.proof_image) && (
-                                        <button onClick={() => { const imgs = tx.proof_images?.length ? tx.proof_images : [tx.proof_image]; setProofGallery({ images: imgs, label: tx.reference }); }} className="text-blue-500 hover:text-blue-700" title="View proof images">
+                                        <button onClick={() => { const imgs = tx.proof_images?.length ? tx.proof_images : [tx.proof_image]; setProofGallery({ images: imgs, label: tx.reference }); }} className="text-primary/80 hover:text-primary" title="View proof images">
                                           <ImageIcon className="w-3 h-3" />
                                         </button>
                                       )}
                                     </div>
-                                    <p className="text-[10px] text-slate-500">{tx.client_name}</p>
+                                    <p className="text-[10px] text-muted-foreground">{tx.client_name}</p>
                                   </div>
                                 </TableCell>
                                 <TableCell>
-                                  <span className="text-xs text-slate-600">{(tx.transaction_date || tx.created_at) ? new Date(tx.transaction_date || tx.created_at).toLocaleDateString() : '-'}</span>
+                                  <span className="text-xs text-card-foreground">{(tx.transaction_date || tx.created_at) ? new Date(tx.transaction_date || tx.created_at).toLocaleDateString() : '-'}</span>
                                 </TableCell>
-                                <TableCell className="text-xs text-slate-800 font-medium" data-testid={`pay-currency-${tx.transaction_id}`}>
+                                <TableCell className="text-xs text-foreground font-medium" data-testid={`pay-currency-${tx.transaction_id}`}>
                                   {hasDiffCurrency ? tx.base_currency : tx.currency || 'USD'}
-                                  {hasDiffCurrency && <p className="text-[10px] text-slate-400">Rate: {rate}</p>}
+                                  {hasDiffCurrency && <p className="text-[10px] text-muted-foreground">Rate: {rate}</p>}
                                 </TableCell>
                                 <TableCell>
-                                  <div className="font-mono text-slate-800 text-xs">
+                                  <div className="font-mono text-foreground text-xs">
                                     ${tx.amount?.toLocaleString()}
-                                    {hasDiffCurrency && <p className="text-[10px] text-blue-500">{baseGross?.toLocaleString(undefined, {maximumFractionDigits: 2})} {tx.base_currency}</p>}
+                                    {hasDiffCurrency && <p className="text-[10px] text-primary/80">{baseGross?.toLocaleString(undefined, {maximumFractionDigits: 2})} {tx.base_currency}</p>}
                                   </div>
                                 </TableCell>
                                 <TableCell>
                                   <div className="text-xs">
                                     <div className="flex justify-between">
-                                      <span className="text-slate-500">Comm:</span>
+                                      <span className="text-muted-foreground">Comm:</span>
                                       <span className="font-mono text-yellow-400">-${(tx.psp_commission_amount || 0).toLocaleString()}</span>
                                     </div>
                                     {hasDiffCurrency && (
                                       <div className="flex justify-between">
                                         <span></span>
-                                        <span className="font-mono text-[10px] text-blue-500">-{baseComm?.toLocaleString(undefined, {maximumFractionDigits: 2})} {tx.base_currency}</span>
+                                        <span className="font-mono text-[10px] text-primary/80">-{baseComm?.toLocaleString(undefined, {maximumFractionDigits: 2})} {tx.base_currency}</span>
                                       </div>
                                     )}
                                     {(tx.psp_reserve_fund_amount || tx.psp_chargeback_amount) > 0 && (
                                       <>
                                         <div className="flex justify-between">
-                                          <span className="text-slate-500">Reserve:</span>
+                                          <span className="text-muted-foreground">Reserve:</span>
                                           <span className="font-mono text-red-400">-${(tx.psp_reserve_fund_amount || tx.psp_chargeback_amount).toLocaleString()}</span>
                                         </div>
                                         {hasDiffCurrency && (
                                           <div className="flex justify-between">
                                             <span></span>
-                                            <span className="font-mono text-[10px] text-blue-500">-{baseReserve?.toLocaleString(undefined, {maximumFractionDigits: 2})} {tx.base_currency}</span>
+                                            <span className="font-mono text-[10px] text-primary/80">-{baseReserve?.toLocaleString(undefined, {maximumFractionDigits: 2})} {tx.base_currency}</span>
                                           </div>
                                         )}
                                       </>
@@ -1389,13 +1389,13 @@ export default function PSPs() {
                                     {tx.psp_extra_charges > 0 && (
                                       <>
                                         <div className="flex justify-between">
-                                          <span className="text-slate-500">Extra:</span>
+                                          <span className="text-muted-foreground">Extra:</span>
                                           <span className="font-mono text-red-400">-${tx.psp_extra_charges.toLocaleString()}</span>
                                         </div>
                                         {hasDiffCurrency && (
                                           <div className="flex justify-between">
                                             <span></span>
-                                            <span className="font-mono text-[10px] text-blue-500">-{baseExtra?.toLocaleString(undefined, {maximumFractionDigits: 2})} {tx.base_currency}</span>
+                                            <span className="font-mono text-[10px] text-primary/80">-{baseExtra?.toLocaleString(undefined, {maximumFractionDigits: 2})} {tx.base_currency}</span>
                                           </div>
                                         )}
                                       </>
@@ -1403,9 +1403,9 @@ export default function PSPs() {
                                   </div>
                                 </TableCell>
                                 <TableCell>
-                                  <div className="font-mono text-blue-600 font-bold">
+                                  <div className="font-mono text-primary font-bold">
                                     ${netAmount.toLocaleString()}
-                                    {hasDiffCurrency && <p className="text-[10px] text-blue-500 font-normal">{baseNet?.toLocaleString(undefined, {maximumFractionDigits: 2})} {tx.base_currency}</p>}
+                                    {hasDiffCurrency && <p className="text-[10px] text-primary/80 font-normal">{baseNet?.toLocaleString(undefined, {maximumFractionDigits: 2})} {tx.base_currency}</p>}
                                   </div>
                                 </TableCell>
                                 <TableCell className="text-right">
@@ -1413,7 +1413,7 @@ export default function PSPs() {
                                     {tx.psp_extra_commission > 0 ? (
                                       <div>
                                         <span className="font-mono text-orange-400 text-xs hover:underline">${tx.psp_extra_commission.toLocaleString()}</span>
-                                        {tx.psp_extra_commission_note && <p className="text-[10px] text-slate-400 truncate max-w-[80px]" title={tx.psp_extra_commission_note}>{tx.psp_extra_commission_note}</p>}
+                                        {tx.psp_extra_commission_note && <p className="text-[10px] text-muted-foreground truncate max-w-[80px]" title={tx.psp_extra_commission_note}>{tx.psp_extra_commission_note}</p>}
                                       </div>
                                     ) : (
                                       <span className="text-[10px] text-orange-400 hover:text-orange-600">+ Add</span>
@@ -1422,18 +1422,18 @@ export default function PSPs() {
                                 </TableCell>
                                 <TableCell>
                                   <div className="flex items-center gap-1">
-                                    <Timer className="w-3 h-3 text-slate-500" />
-                                    <span className="text-slate-800 font-mono text-xs">{holdingDays} days</span>
+                                    <Timer className="w-3 h-3 text-muted-foreground" />
+                                    <span className="text-foreground font-mono text-xs">{holdingDays} days</span>
                                   </div>
                                 </TableCell>
                                 <TableCell>
                                   {tx.psp_holding_release_date ? (
-                                    <span className={`flex items-center gap-1 text-xs ${isReleased ? 'text-green-400' : 'text-slate-500'}`}>
+                                    <span className={`flex items-center gap-1 text-xs ${isReleased ? 'text-green-400' : 'text-muted-foreground'}`}>
                                       {isReleased ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
                                       {formatDate(tx.psp_holding_release_date)}
                                     </span>
                                   ) : (
-                                    <span className="text-slate-500 text-xs">-</span>
+                                    <span className="text-muted-foreground text-xs">-</span>
                                   )}
                                 </TableCell>
                                 <TableCell>
@@ -1442,7 +1442,7 @@ export default function PSPs() {
                                   ) : isReleased ? (
                                     <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">Ready</Badge>
                                   ) : (
-                                    <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-xs">Holding</Badge>
+                                    <Badge className="bg-primary/80/20 text-primary/60 border-primary/30 text-xs">Holding</Badge>
                                   )}
                                 </TableCell>
                                 <TableCell className="text-right">
@@ -1451,7 +1451,7 @@ export default function PSPs() {
                                       size="sm"
                                       variant="ghost"
                                       onClick={() => openChargesDialog(tx)}
-                                      className="text-slate-500 hover:text-slate-800 hover:bg-white/10 px-2"
+                                      className="text-muted-foreground hover:text-foreground hover:bg-card/10 px-2"
                                       title="Record Charges (Reserve Fund/Extra)"
                                     >
                                       <Receipt className="w-3 h-3" />
@@ -1478,19 +1478,19 @@ export default function PSPs() {
                   </ScrollArea>
                   {depTotalPages > 1 && (
                     <div className="mt-2">
-                     <PaginationControls currentPage={depPage} totalPages={depTotalPages} totalItems={depTotal} pageSize={depPageSize} onPageChange={(p) => fetchPendingTransactions(viewPsp.psp_id, p)} onPageSizeChange={(ps) => { setDepPageSize(ps); fetchPendingTransactions(viewPsp.psp_id, 1, ps); }} />
+                      <PaginationControls currentPage={depPage} totalPages={depTotalPages} totalItems={depTotal} pageSize={depPageSize} onPageChange={(p) => fetchPendingTransactions(viewPsp.psp_id, p)} onPageSizeChange={(ps) => { setDepPageSize(ps); fetchPendingTransactions(viewPsp.psp_id, 1, ps); }} />
                     </div>
                   )}
 
                   {/* Batch Settlement Action Bar */}
                   {selectedSettleTxIds.length > 0 && (
-                    <div className="mt-3 p-3 bg-[#0B0C10] border border-[#1FA21B]/30 rounded-sm flex items-center justify-between" data-testid="batch-settle-bar">
+                    <div className="mt-3 p-3 bg-[#0B0C10] border border-[#66FCF1]/30 rounded-sm flex items-center justify-between" data-testid="batch-settle-bar">
                       <div className="flex items-center gap-4">
-                        <span className="text-[#1FA21B] text-sm font-medium">{batchSummary.count} selected</span>
+                        <span className="text-[#66FCF1] text-sm font-medium">{batchSummary.count} selected</span>
                         <div className="flex gap-3 text-xs">
-                          <span className="text-slate-400">Gross: <span className="text-white font-mono">${batchSummary.gross.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>{batchSummary.payCurrency && <span className="text-blue-400 ml-1">({batchSummary.baseGross?.toLocaleString(undefined, {maximumFractionDigits: 2})} {batchSummary.payCurrency})</span>}</span>
-                          <span className="text-slate-400">Deductions: <span className="text-yellow-400 font-mono">-${batchSummary.deductions.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>{batchSummary.payCurrency && <span className="text-yellow-400/70 ml-1">(-{batchSummary.baseDeductions?.toLocaleString(undefined, {maximumFractionDigits: 2})} {batchSummary.payCurrency})</span>}</span>
-                          <span className="text-slate-400">Net: <span className="text-green-400 font-mono font-bold">${batchSummary.net.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>{batchSummary.payCurrency && <span className="text-green-400/70 ml-1">({batchSummary.baseNet?.toLocaleString(undefined, {maximumFractionDigits: 2})} {batchSummary.payCurrency})</span>}</span>
+                          <span className="text-muted-foreground">Gross: <span className="text-white font-mono">${batchSummary.gross.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>{batchSummary.payCurrency && <span className="text-primary/60 ml-1">({batchSummary.baseGross?.toLocaleString(undefined, {maximumFractionDigits: 2})} {batchSummary.payCurrency})</span>}</span>
+                          <span className="text-muted-foreground">Deductions: <span className="text-yellow-400 font-mono">-${batchSummary.deductions.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>{batchSummary.payCurrency && <span className="text-yellow-400/70 ml-1">(-{batchSummary.baseDeductions?.toLocaleString(undefined, {maximumFractionDigits: 2})} {batchSummary.payCurrency})</span>}</span>
+                          <span className="text-muted-foreground">Net: <span className="text-green-400 font-mono font-bold">${batchSummary.net.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>{batchSummary.payCurrency && <span className="text-green-400/70 ml-1">({batchSummary.baseNet?.toLocaleString(undefined, {maximumFractionDigits: 2})} {batchSummary.payCurrency})</span>}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -1498,14 +1498,14 @@ export default function PSPs() {
                           size="sm"
                           variant="ghost"
                           onClick={() => setSelectedSettleTxIds([])}
-                          className="text-slate-400 hover:text-white h-7 text-xs"
+                          className="text-muted-foreground hover:text-white h-7 text-xs"
                         >
                           Clear
                         </Button>
                         <Button
                           size="sm"
                           onClick={() => { setBatchSettleDate(new Date().toISOString().split('T')[0]); setBatchSettleDialogOpen(true); }}
-                          className="bg-[#1FA21B] text-[#0B0C10] hover:bg-[#1FA21B]/80 h-7 text-xs font-bold"
+                          className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#66FCF1]/80 h-7 text-xs font-bold"
                           data-testid="settle-selected-btn"
                         >
                           Settle Selected ({batchSummary.count})
@@ -1519,72 +1519,72 @@ export default function PSPs() {
                 <TabsContent value="withdrawals" className="mt-4 flex-1 flex flex-col">
                   {/* Date Filter */}
                   <div className="flex items-center gap-2 mb-3 flex-wrap">
-                    <Input type="date" value={wdrDateFrom} onChange={e => setWdrDateFrom(e.target.value)} className="w-36 h-8 text-xs bg-white border-slate-200 text-slate-800" data-testid="wdr-date-from" />
-                    <span className="text-slate-400 text-xs">to</span>
-                    <Input type="date" value={wdrDateTo} onChange={e => setWdrDateTo(e.target.value)} className="w-36 h-8 text-xs bg-white border-slate-200 text-slate-800" data-testid="wdr-date-to" />
-                    {(wdrDateFrom || wdrDateTo) && <Button variant="ghost" size="sm" onClick={() => { setWdrDateFrom(''); setWdrDateTo(''); }} className="text-slate-400 hover:text-red-500 h-8 text-xs">Clear</Button>}
-                    <span className="text-xs text-slate-400 ml-auto">{wdrTotal} withdrawals</span>
+                    <Input type="date" value={wdrDateFrom} onChange={e => setWdrDateFrom(e.target.value)} className="w-36 h-8 text-xs bg-card border text-foreground" data-testid="wdr-date-from" />
+                    <span className="text-muted-foreground text-xs">to</span>
+                    <Input type="date" value={wdrDateTo} onChange={e => setWdrDateTo(e.target.value)} className="w-36 h-8 text-xs bg-card border text-foreground" data-testid="wdr-date-to" />
+                    {(wdrDateFrom || wdrDateTo) && <Button variant="ghost" size="sm" onClick={() => { setWdrDateFrom(''); setWdrDateTo(''); }} className="text-muted-foreground hover:text-red-500 h-8 text-xs">Clear</Button>}
+                    <span className="text-xs text-muted-foreground ml-auto">{wdrTotal} withdrawals</span>
                   </div>
 
                   {/* Withdrawal Summary */}
                   <div className="grid grid-cols-4 gap-3 mb-4">
-                    <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 text-center">
-                      <p className="text-[10px] text-slate-500 uppercase tracking-wider">Total Withdrawals</p>
+                    <div className="p-3 bg-muted/50 rounded-sm border border text-center">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Withdrawals</p>
                       <p className="text-lg font-mono text-red-500 font-bold">${pspWithdrawals.reduce((s, tx) => s + (tx.amount || 0), 0).toLocaleString()}</p>
                     </div>
-                    <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 text-center">
-                      <p className="text-[10px] text-slate-500 uppercase tracking-wider">Commission</p>
+                    <div className="p-3 bg-muted/50 rounded-sm border border text-center">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Commission</p>
                       <p className="text-lg font-mono text-yellow-500 font-bold">${pspWithdrawals.reduce((s, tx) => s + (tx.psp_commission_amount || 0), 0).toLocaleString()}</p>
                     </div>
-                    <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 text-center">
-                      <p className="text-[10px] text-slate-500 uppercase tracking-wider">Extra Commission</p>
+                    <div className="p-3 bg-muted/50 rounded-sm border border text-center">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Extra Commission</p>
                       <p className="text-lg font-mono text-orange-400 font-bold">${pspWithdrawals.reduce((s, tx) => s + (tx.psp_withdrawal_extra_commission || 0), 0).toLocaleString()}</p>
                     </div>
-                    <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 text-center">
-                      <p className="text-[10px] text-slate-500 uppercase tracking-wider">Count</p>
-                      <p className="text-lg font-mono text-slate-800 font-bold">{wdrTotal}</p>
+                    <div className="p-3 bg-muted/50 rounded-sm border border text-center">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Count</p>
+                      <p className="text-lg font-mono text-foreground font-bold">{wdrTotal}</p>
                     </div>
                   </div>
 
                   <ScrollArea className="h-[calc(100vh-540px)]">
                     {pspWithdrawals.length === 0 ? (
-                      <div className="text-center py-8 text-slate-500">
+                      <div className="text-center py-8 text-muted-foreground">
                         <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-green-500" />
                         No withdrawal transactions
                       </div>
                     ) : (
                       <Table>
                         <TableHeader>
-                          <TableRow className="border-slate-200 hover:bg-transparent">
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reference</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Tx Date</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Client</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Amount</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Commission</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Extra Comm.</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
+                          <TableRow className="border hover:bg-transparent">
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Reference</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Tx Date</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Client</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">Amount</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">Commission</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">Extra Comm.</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Status</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {pspWithdrawals.map((tx) => (
-                            <TableRow key={tx.transaction_id} className="border-slate-200 hover:bg-slate-100">
+                            <TableRow key={tx.transaction_id} className="border hover:bg-muted">
                               <TableCell>
                                 <div>
-                                  <span className="font-mono text-slate-800 text-xs">{tx.reference}</span>
-                                  <p className="text-[10px] text-slate-500">{tx.crm_reference || ''}</p>
+                                  <span className="font-mono text-foreground text-xs">{tx.reference}</span>
+                                  <p className="text-[10px] text-muted-foreground">{tx.crm_reference || ''}</p>
                                 </div>
                               </TableCell>
-                              <TableCell className="text-xs text-slate-600">
+                              <TableCell className="text-xs text-card-foreground">
                                 {(tx.transaction_date || tx.created_at) ? new Date(tx.transaction_date || tx.created_at).toLocaleDateString() : '-'}
                               </TableCell>
-                              <TableCell className="text-xs text-slate-600">{tx.client_name || '-'}</TableCell>
+                              <TableCell className="text-xs text-card-foreground">{tx.client_name || '-'}</TableCell>
                               <TableCell className="font-mono text-right text-red-500 text-sm">${tx.amount?.toLocaleString()}</TableCell>
                               <TableCell className="font-mono text-right text-yellow-500 text-xs">${(tx.psp_commission_amount || 0).toLocaleString()}</TableCell>
                               <TableCell className="font-mono text-right text-orange-400 text-xs">
                                 {tx.psp_withdrawal_extra_commission ? `$${tx.psp_withdrawal_extra_commission.toLocaleString()}` : '-'}
                                 {tx.psp_withdrawal_extra_commission_note && (
-                                  <p className="text-[10px] text-slate-400 truncate max-w-[100px]" title={tx.psp_withdrawal_extra_commission_note}>{tx.psp_withdrawal_extra_commission_note}</p>
+                                  <p className="text-[10px] text-muted-foreground truncate max-w-[100px]" title={tx.psp_withdrawal_extra_commission_note}>{tx.psp_withdrawal_extra_commission_note}</p>
                                 )}
                               </TableCell>
                               <TableCell>
@@ -1611,7 +1611,7 @@ export default function PSPs() {
                   </ScrollArea>
                   {wdrTotalPages > 1 && (
                     <div className="mt-2">
-                   <PaginationControls currentPage={wdrPage} totalPages={wdrTotalPages} totalItems={wdrTotal} pageSize={wdrPageSize} onPageChange={(p) => fetchPspWithdrawals(viewPsp.psp_id, p)} onPageSizeChange={(ps) => { setWdrPageSize(ps); fetchPspWithdrawals(viewPsp.psp_id, 1, ps); }} />
+                      <PaginationControls currentPage={wdrPage} totalPages={wdrTotalPages} totalItems={wdrTotal} pageSize={wdrPageSize} onPageChange={(p) => fetchPspWithdrawals(viewPsp.psp_id, p)} onPageSizeChange={(ps) => { setWdrPageSize(ps); fetchPspWithdrawals(viewPsp.psp_id, 1, ps); }} />
                     </div>
                   )}
                 </TabsContent>
@@ -1620,27 +1620,27 @@ export default function PSPs() {
                 <TabsContent value="reserve-fund" className="mt-4 flex-1 flex flex-col">
                   {reserveFundLoading ? (
                     <div className="flex justify-center py-8">
-                      <div className="w-6 h-6 border-2 border-[#1FA21B] border-t-transparent rounded-full animate-spin" />
+                      <div className="w-6 h-6 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
                     </div>
                   ) : reserveFundLedger ? (
                     <>
                       {/* Summary Cards */}
                       <div className="grid grid-cols-4 gap-3 mb-4">
-                        <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 text-center">
-                          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Total Held</p>
+                        <div className="p-3 bg-muted/50 rounded-sm border border text-center">
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Held</p>
                           <p className="text-lg font-mono text-orange-400 font-bold">${reserveFundLedger.summary.total_held.toLocaleString()}</p>
                         </div>
-                        <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 text-center">
-                          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Due This Week</p>
+                        <div className="p-3 bg-muted/50 rounded-sm border border text-center">
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Due This Week</p>
                           <p className="text-lg font-mono text-yellow-400 font-bold">${reserveFundLedger.summary.due_this_week.toLocaleString()}</p>
                         </div>
-                        <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 text-center">
-                          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Released</p>
+                        <div className="p-3 bg-muted/50 rounded-sm border border text-center">
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Released</p>
                           <p className="text-lg font-mono text-green-400 font-bold">${reserveFundLedger.summary.total_released.toLocaleString()}</p>
                         </div>
-                        <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 text-center">
-                          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Holding Period</p>
-                          <p className="text-lg font-mono text-slate-800 font-bold">{reserveFundLedger.summary.holding_days} days</p>
+                        <div className="p-3 bg-muted/50 rounded-sm border border text-center">
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Holding Period</p>
+                          <p className="text-lg font-mono text-foreground font-bold">{reserveFundLedger.summary.holding_days} days</p>
                         </div>
                       </div>
 
@@ -1648,10 +1648,10 @@ export default function PSPs() {
                       {selectedReleaseIds.length > 0 && (
                         <div className="flex items-center gap-3 mb-3 p-2 bg-orange-500/10 border border-orange-500/20 rounded-sm">
                           <span className="text-orange-400 text-sm">{selectedReleaseIds.length} selected</span>
-                          <Button size="sm" onClick={handleBulkRelease} className="bg-green-600 hover:bg-green-700 text-slate-800 h-7 text-xs" data-testid="bulk-release-btn">
+                          <Button size="sm" onClick={handleBulkRelease} className="bg-green-600 hover:bg-green-700 text-foreground h-7 text-xs" data-testid="bulk-release-btn">
                             Release Selected
                           </Button>
-                          <Button size="sm" variant="ghost" onClick={() => setSelectedReleaseIds([])} className="text-slate-500 h-7 text-xs">
+                          <Button size="sm" variant="ghost" onClick={() => setSelectedReleaseIds([])} className="text-muted-foreground h-7 text-xs">
                             Clear
                           </Button>
                         </div>
@@ -1659,12 +1659,12 @@ export default function PSPs() {
 
                       <ScrollArea className="h-[300px]">
                         {reserveFundLedger.ledger.length === 0 ? (
-                          <div className="text-center py-8 text-slate-500">No reserve fund entries</div>
+                          <div className="text-center py-8 text-muted-foreground">No reserve fund entries</div>
                         ) : (
                           <Table>
                             <TableHeader>
-                              <TableRow className="border-slate-200 hover:bg-transparent">
-                                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs w-8">
+                              <TableRow className="border hover:bg-transparent">
+                                <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs w-8">
                                   <input
                                     type="checkbox"
                                     className="rounded border-white/20"
@@ -1678,20 +1678,20 @@ export default function PSPs() {
                                     }}
                                   />
                                 </TableHead>
-                                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reference</TableHead>
-                                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Client</TableHead>
-                                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Tx Amount</TableHead>
-                                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reserve Held</TableHead>
-                                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Hold Date</TableHead>
-                                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Release Date</TableHead>
-                                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Days Left</TableHead>
-                                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
-                                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Action</TableHead>
+                                <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Reference</TableHead>
+                                <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Client</TableHead>
+                                <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Tx Amount</TableHead>
+                                <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Reserve Held</TableHead>
+                                <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Hold Date</TableHead>
+                                <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Release Date</TableHead>
+                                <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Days Left</TableHead>
+                                <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Status</TableHead>
+                                <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">Action</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
                               {reserveFundLedger.ledger.map((entry) => (
-                                <TableRow key={entry.transaction_id} className={`border-slate-200 hover:bg-slate-100 ${entry.status === 'due' ? 'bg-yellow-500/5' : ''}`}>
+                                <TableRow key={entry.transaction_id} className={`border hover:bg-muted ${entry.status === 'due' ? 'bg-yellow-500/5' : ''}`}>
                                   <TableCell>
                                     {entry.status !== 'released' && (
                                       <input
@@ -1708,13 +1708,13 @@ export default function PSPs() {
                                       />
                                     )}
                                   </TableCell>
-                                  <TableCell className="font-mono text-slate-800 text-xs">{entry.reference}</TableCell>
-                                  <TableCell className="text-slate-500 text-xs">{entry.client_name || '-'}</TableCell>
-                                  <TableCell className="font-mono text-slate-800 text-xs">${entry.amount?.toLocaleString()}</TableCell>
+                                  <TableCell className="font-mono text-foreground text-xs">{entry.reference}</TableCell>
+                                  <TableCell className="text-muted-foreground text-xs">{entry.client_name || '-'}</TableCell>
+                                  <TableCell className="font-mono text-foreground text-xs">${entry.amount?.toLocaleString()}</TableCell>
                                   <TableCell className="font-mono text-orange-400 font-bold">${entry.reserve_fund_amount.toLocaleString()}</TableCell>
-                                  <TableCell className="text-slate-500 text-xs">{formatDate(entry.hold_date)}</TableCell>
-                                  <TableCell className="text-slate-500 text-xs">{formatDate(entry.release_date)}</TableCell>
-                                  <TableCell className="font-mono text-slate-800 text-xs">
+                                  <TableCell className="text-muted-foreground text-xs">{formatDate(entry.hold_date)}</TableCell>
+                                  <TableCell className="text-muted-foreground text-xs">{formatDate(entry.release_date)}</TableCell>
+                                  <TableCell className="font-mono text-foreground text-xs">
                                     {entry.status === 'released' ? '-' : entry.days_remaining === 0 ? (
                                       <span className="text-yellow-400">Due now</span>
                                     ) : (
@@ -1742,7 +1742,7 @@ export default function PSPs() {
                                         Release
                                       </Button>
                                     ) : (
-                                      <span className="text-xs text-slate-500">{entry.released_by_name}</span>
+                                      <span className="text-xs text-muted-foreground">{entry.released_by_name}</span>
                                     )}
                                   </TableCell>
                                 </TableRow>
@@ -1753,17 +1753,17 @@ export default function PSPs() {
                       </ScrollArea>
                     </>
                   ) : (
-                    <div className="text-center py-8 text-slate-500">No data available</div>
+                    <div className="text-center py-8 text-muted-foreground">No data available</div>
                   )}
                 </TabsContent>
 
                 <TabsContent value="history" className="mt-4 flex-1 flex flex-col">
                   {/* Date Filter */}
                   <div className="flex items-center gap-2 mb-3 flex-wrap">
-                    <Input type="date" value={stlDateFrom} onChange={e => setStlDateFrom(e.target.value)} className="w-36 h-8 text-xs bg-white border-slate-200 text-slate-800" data-testid="stl-date-from" />
-                    <span className="text-slate-400 text-xs">to</span>
-                    <Input type="date" value={stlDateTo} onChange={e => setStlDateTo(e.target.value)} className="w-36 h-8 text-xs bg-white border-slate-200 text-slate-800" data-testid="stl-date-to" />
-                    {(stlDateFrom || stlDateTo) && <Button variant="ghost" size="sm" onClick={() => { setStlDateFrom(''); setStlDateTo(''); }} className="text-slate-400 hover:text-red-500 h-8 text-xs">Clear</Button>}
+                    <Input type="date" value={stlDateFrom} onChange={e => setStlDateFrom(e.target.value)} className="w-36 h-8 text-xs bg-card border text-foreground" data-testid="stl-date-from" />
+                    <span className="text-muted-foreground text-xs">to</span>
+                    <Input type="date" value={stlDateTo} onChange={e => setStlDateTo(e.target.value)} className="w-36 h-8 text-xs bg-card border text-foreground" data-testid="stl-date-to" />
+                    {(stlDateFrom || stlDateTo) && <Button variant="ghost" size="sm" onClick={() => { setStlDateFrom(''); setStlDateTo(''); }} className="text-muted-foreground hover:text-red-500 h-8 text-xs">Clear</Button>}
                   </div>
                   {(() => {
                     const filteredStls = settlements.filter(s => {
@@ -1775,22 +1775,22 @@ export default function PSPs() {
                     return (
                   <ScrollArea className="h-[calc(100vh-420px)]">
                     {filteredStls.length === 0 ? (
-                      <div className="text-center py-8 text-slate-500">
+                      <div className="text-center py-8 text-muted-foreground">
                         No settlement history
                       </div>
                     ) : (
                       <Table>
                         <TableHeader>
-                          <TableRow className="border-slate-200 hover:bg-transparent">
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reference</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Pay Currency</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Gross</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Commission</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reserve Fund</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Extra Charges</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Net Received</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Date</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
+                          <TableRow className="border hover:bg-transparent">
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Reference</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Pay Currency</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Gross</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Commission</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Reserve Fund</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Extra Charges</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Net Received</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Date</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Status</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1808,22 +1808,22 @@ export default function PSPs() {
                             const isExpanded = expandedSettlement === settlement.settlement_id;
                             return (
                             <React.Fragment key={settlement.settlement_id}>
-                            <TableRow className={`border-slate-200 hover:bg-slate-100 ${isExpanded ? 'bg-slate-50' : ''}`} data-testid={`settlement-row-${settlement.settlement_id}`}>
+                            <TableRow className={`border hover:bg-muted ${isExpanded ? 'bg-muted/50' : ''}`} data-testid={`settlement-row-${settlement.settlement_id}`}>
                               <TableCell>
                                 <div className="flex items-center gap-2">
                                   {isCompound && (
                                     <button
                                       onClick={() => toggleSettlementDetail(settlement)}
-                                      className="text-slate-400 hover:text-[#1FA21B] transition-colors"
+                                      className="text-muted-foreground hover:text-[#66FCF1] transition-colors"
                                       data-testid={`expand-settlement-${settlement.settlement_id}`}
                                     >
                                       <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                                     </button>
                                   )}
                                   <div>
-                                    <span className="font-mono text-slate-800 text-xs">{settlement.reference || settlement.settlement_id}</span>
+                                    <span className="font-mono text-foreground text-xs">{settlement.reference || settlement.settlement_id}</span>
                                     {settlement.transaction_count > 1 && (
-                                      <p className="text-[10px] text-slate-500">
+                                      <p className="text-[10px] text-muted-foreground">
                                         {isNetSettle 
                                           ? `${settlement.deposit_count || 0} deposits + ${settlement.withdrawal_count || 0} withdrawals`
                                           : `${settlement.transaction_count} transactions`}
@@ -1832,54 +1832,54 @@ export default function PSPs() {
                                     {isNetSettle ? (
                                       <Badge className="bg-green-100 text-green-700 border-green-300 text-[9px] mt-0.5">Net Settlement</Badge>
                                     ) : isCompound && (
-                                      <Badge className="bg-[#1FA21B]/10 text-[#0B0C10] border-[#1FA21B]/30 text-[9px] mt-0.5">Compound</Badge>
+                                      <Badge className="bg-[#66FCF1]/10 text-[#0B0C10] border-[#66FCF1]/30 text-[9px] mt-0.5">Compound</Badge>
                                     )}
                                   </div>
                                 </div>
                               </TableCell>
-                              <TableCell className="text-xs text-slate-800 font-medium">
+                              <TableCell className="text-xs text-foreground font-medium">
                                 {settlement.payment_currency || 'USD'}
-                                {hasDiffCurrency && rate !== 1 && <p className="text-[10px] text-slate-400">Rate: {rate}</p>}
+                                {hasDiffCurrency && rate !== 1 && <p className="text-[10px] text-muted-foreground">Rate: {rate}</p>}
                               </TableCell>
                               <TableCell>
-                                <div className="font-mono text-slate-800 text-xs">
+                                <div className="font-mono text-foreground text-xs">
                                   ${settlement.gross_amount?.toLocaleString()}
-                                  {hasDiffCurrency && baseGross && <p className="text-[10px] text-blue-500">{baseGross.toLocaleString(undefined, {maximumFractionDigits: 2})} {settlement.payment_currency}</p>}
+                                  {hasDiffCurrency && baseGross && <p className="text-[10px] text-primary/80">{baseGross.toLocaleString(undefined, {maximumFractionDigits: 2})} {settlement.payment_currency}</p>}
                                 </div>
                               </TableCell>
                               <TableCell>
                                 <div className="font-mono text-yellow-400 text-xs">
                                   -${(settlement.commission_amount || 0).toLocaleString()}
-                                  {hasDiffCurrency && baseComm != null && <p className="text-[10px] text-blue-500">-{baseComm.toLocaleString(undefined, {maximumFractionDigits: 2})} {settlement.payment_currency}</p>}
+                                  {hasDiffCurrency && baseComm != null && <p className="text-[10px] text-primary/80">-{baseComm.toLocaleString(undefined, {maximumFractionDigits: 2})} {settlement.payment_currency}</p>}
                                 </div>
                               </TableCell>
                               <TableCell>
                                 <div className="font-mono text-red-400 text-xs">
                                   {settlement.chargeback_amount || settlement.reserve_fund_amount ? `-$${(settlement.reserve_fund_amount || settlement.chargeback_amount).toLocaleString()}` : '-'}
-                                  {hasDiffCurrency && baseReserve != null && baseReserve > 0 && <p className="text-[10px] text-blue-500">-{baseReserve.toLocaleString(undefined, {maximumFractionDigits: 2})} {settlement.payment_currency}</p>}
+                                  {hasDiffCurrency && baseReserve != null && baseReserve > 0 && <p className="text-[10px] text-primary/80">-{baseReserve.toLocaleString(undefined, {maximumFractionDigits: 2})} {settlement.payment_currency}</p>}
                                 </div>
                               </TableCell>
                               <TableCell>
                                 <div className="font-mono text-orange-400 text-xs">
                                   {extraUsd > 0 ? `-$${extraUsd.toLocaleString()}` : '-'}
-                                  {hasDiffCurrency && baseExtra != null && baseExtra > 0 && <p className="text-[10px] text-blue-500">-{baseExtra.toLocaleString(undefined, {maximumFractionDigits: 2})} {settlement.payment_currency}</p>}
+                                  {hasDiffCurrency && baseExtra != null && baseExtra > 0 && <p className="text-[10px] text-primary/80">-{baseExtra.toLocaleString(undefined, {maximumFractionDigits: 2})} {settlement.payment_currency}</p>}
                                 </div>
                               </TableCell>
                               <TableCell>
                                 <div className="font-mono text-green-500 font-bold text-xs">
                                   +${settlement.net_amount?.toLocaleString()}
-                                  {hasDiffCurrency && baseNet != null && <p className="text-[10px] text-blue-500 font-normal">{baseNet.toLocaleString(undefined, {maximumFractionDigits: 2})} {settlement.payment_currency}</p>}
+                                  {hasDiffCurrency && baseNet != null && <p className="text-[10px] text-primary/80 font-normal">{baseNet.toLocaleString(undefined, {maximumFractionDigits: 2})} {settlement.payment_currency}</p>}
                                 </div>
                               </TableCell>
-                              <TableCell className="text-slate-500 text-xs">{formatDate(settlement.settled_at || settlement.created_at)}</TableCell>
+                              <TableCell className="text-muted-foreground text-xs">{formatDate(settlement.settled_at || settlement.created_at)}</TableCell>
                               <TableCell>{getStatusBadge(settlement.status)}</TableCell>
                             </TableRow>
                             {/* Expanded detail: individual transactions in compound settlement */}
                             {isExpanded && (
-                              <TableRow className="bg-slate-50/80">
+                              <TableRow className="bg-muted/50/80">
                                 <TableCell colSpan={9} className="p-0">
-                                  <div className="px-6 py-3 border-l-2 border-[#1FA21B] ml-4">
-                                    <p className="text-xs text-slate-500 font-bold mb-2 uppercase tracking-wider">
+                                  <div className="px-6 py-3 border-l-2 border-[#66FCF1] ml-4">
+                                    <p className="text-xs text-muted-foreground font-bold mb-2 uppercase tracking-wider">
                                       Included Transactions ({expandedTxs.length})
                                       {isNetSettle && expandedTxs.length > 0 && (
                                         <span className="normal-case font-normal ml-2">
@@ -1888,11 +1888,11 @@ export default function PSPs() {
                                       )}
                                     </p>
                                     {expandedTxs.length === 0 ? (
-                                      <p className="text-xs text-slate-400">Loading...</p>
+                                      <p className="text-xs text-muted-foreground">Loading...</p>
                                     ) : (
                                       <table className="w-full text-xs">
                                         <thead>
-                                          <tr className="text-slate-400 border-b border-slate-200">
+                                          <tr className="text-muted-foreground border-b border">
                                             <th className="text-left py-1 font-medium">Reference</th>
                                             <th className="text-left py-1 font-medium">Type</th>
                                             <th className="text-left py-1 font-medium">Client</th>
@@ -1915,15 +1915,15 @@ export default function PSPs() {
                                               ? -(tx.amount + extraComm)
                                               : (tx.amount - comm - extraCharges - extraComm - reserve);
                                             return (
-                                            <tr key={tx.transaction_id} className="border-b border-slate-100">
-                                              <td className="py-1.5 font-mono text-slate-700">{tx.reference || tx.transaction_id}</td>
+                                            <tr key={tx.transaction_id} className="border-b border/60">
+                                              <td className="py-1.5 font-mono text-card-foreground">{tx.reference || tx.transaction_id}</td>
                                               <td className="py-1.5">
                                                 <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${isWithdrawal ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
                                                   {tx.transaction_type || '-'}
                                                 </span>
                                               </td>
-                                              <td className="py-1.5 text-slate-600">{tx.client_name || '-'}</td>
-                                              <td className={`py-1.5 text-right font-mono ${isWithdrawal ? 'text-red-500' : 'text-slate-800'}`}>
+                                              <td className="py-1.5 text-card-foreground">{tx.client_name || '-'}</td>
+                                              <td className={`py-1.5 text-right font-mono ${isWithdrawal ? 'text-red-500' : 'text-foreground'}`}>
                                                 {isWithdrawal ? '-' : ''}${tx.amount?.toLocaleString()}
                                               </td>
                                               <td className="py-1.5 text-right font-mono text-yellow-500">
@@ -1938,7 +1938,7 @@ export default function PSPs() {
                                               <td className={`py-1.5 text-right font-mono font-bold ${netAmt >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                                                 {netAmt >= 0 ? '+' : ''}${netAmt.toLocaleString(undefined, {maximumFractionDigits: 2})}
                                               </td>
-                                              <td className="py-1.5 text-slate-500">{(tx.transaction_date || tx.created_at) ? new Date(tx.transaction_date || tx.created_at).toLocaleDateString() : '-'}</td>
+                                              <td className="py-1.5 text-muted-foreground">{(tx.transaction_date || tx.created_at) ? new Date(tx.transaction_date || tx.created_at).toLocaleDateString() : '-'}</td>
                                             </tr>
                                             );
                                           })}
@@ -1960,7 +1960,7 @@ export default function PSPs() {
                   })()}
                   {stlTotalPages > 1 && (
                     <div className="mt-2">
-                       <PaginationControls currentPage={stlPage} totalPages={stlTotalPages} totalItems={stlTotal} pageSize={stlPageSize} onPageChange={(p) => fetchSettlements(viewPsp.psp_id, p)} onPageSizeChange={(ps) => { setStlPageSize(ps); fetchSettlements(viewPsp.psp_id, 1, ps); }} />
+                      <PaginationControls currentPage={stlPage} totalPages={stlTotalPages} totalItems={stlTotal} pageSize={stlPageSize} onPageChange={(p) => fetchSettlements(viewPsp.psp_id, p)} onPageSizeChange={(ps) => { setStlPageSize(ps); fetchSettlements(viewPsp.psp_id, 1, ps); }} />
                     </div>
                   )}
                 </TabsContent>
@@ -1972,49 +1972,49 @@ export default function PSPs() {
 
       {/* Settle Transaction Dialog */}
       <Dialog open={settleDialogOpen} onOpenChange={() => { setSettleDialogOpen(false); setSelectedTransaction(null); setSettlementDestination(''); }}>
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
+        <DialogContent className="bg-card border text-foreground max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
+            <DialogTitle className="text-lg font-bold text-foreground">
               Confirm Settlement
             </DialogTitle>
           </DialogHeader>
           {selectedTransaction && (
             <div className="space-y-4">
-              <div className="p-4 bg-slate-50 rounded-sm space-y-3">
+              <div className="p-4 bg-muted/50 rounded-sm space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Reference</span>
-                  <span className="text-slate-800 font-mono">{selectedTransaction.reference}</span>
+                  <span className="text-muted-foreground">Reference</span>
+                  <span className="text-foreground font-mono">{selectedTransaction.reference}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Client</span>
-                  <span className="text-slate-800">{selectedTransaction.client_name}</span>
+                  <span className="text-muted-foreground">Client</span>
+                  <span className="text-foreground">{selectedTransaction.client_name}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Gross Amount</span>
-                  <span className="text-slate-800 font-mono">${selectedTransaction.amount?.toLocaleString()}</span>
+                  <span className="text-muted-foreground">Gross Amount</span>
+                  <span className="text-foreground font-mono">${selectedTransaction.amount?.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Commission ({selectedTransaction.psp_commission_paid_by === 'client' ? 'Client pays' : 'Broker pays'})</span>
+                  <span className="text-muted-foreground">Commission ({selectedTransaction.psp_commission_paid_by === 'client' ? 'Client pays' : 'Broker pays'})</span>
                   <span className="text-red-400 font-mono">-${selectedTransaction.psp_commission_amount?.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between pt-2 border-t border-slate-200">
-                  <span className="text-slate-500 font-medium">Net to Settle</span>
+                <div className="flex justify-between pt-2 border-t border">
+                  <span className="text-muted-foreground font-medium">Net to Settle</span>
                   <span className="text-green-400 font-mono text-lg">${selectedTransaction.psp_net_amount?.toLocaleString()}</span>
                 </div>
               </div>
               
               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">Settlement Destination</Label>
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Settlement Destination</Label>
                 <Select
                   value={settlementDestination || (psps.find(p => p.psp_id === selectedTransaction.psp_id)?.settlement_destination_id || '')}
                   onValueChange={setSettlementDestination}
                 >
-                  <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800">
+                  <SelectTrigger className="bg-muted/50 border text-foreground">
                     <SelectValue placeholder="Select treasury account" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border-slate-200">
+                  <SelectContent className="bg-card border">
                     {treasuryAccounts.map((account) => (
-                      <SelectItem key={account.account_id} value={account.account_id} className="text-slate-800 hover:bg-slate-100">
+                      <SelectItem key={account.account_id} value={account.account_id} className="text-foreground hover:bg-muted">
                         {account.account_name} - {account.bank_name}
                       </SelectItem>
                     ))}
@@ -2027,13 +2027,13 @@ export default function PSPs() {
                   type="button"
                   variant="outline"
                   onClick={() => { setSettleDialogOpen(false); setSelectedTransaction(null); setSettlementDestination(''); }}
-                  className="border-slate-200 text-slate-500 hover:bg-slate-100"
+                  className="border text-muted-foreground hover:bg-muted"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleSettleTransaction}
-                  className="bg-green-500 text-slate-800 hover:bg-green-600 font-bold uppercase tracking-wider"
+                  className="bg-green-500 text-foreground hover:bg-green-600 font-bold uppercase tracking-wider"
                   data-testid="confirm-settle-btn"
                 >
                   <CheckCircle2 className="w-4 h-4 mr-2" />
@@ -2047,55 +2047,55 @@ export default function PSPs() {
 
       {/* Record Charges Dialog */}
       <Dialog open={chargesDialogOpen} onOpenChange={(open) => { if (!open) { setChargesDialogOpen(false); setSelectedTransaction(null); } }}>
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
+        <DialogContent className="bg-card border text-foreground max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
+            <DialogTitle className="text-lg font-bold text-foreground">
               Record Charges
             </DialogTitle>
           </DialogHeader>
           {selectedTransaction && (
             <form onSubmit={handleRecordCharges} className="space-y-4">
-              <div className="p-3 bg-slate-50 rounded-lg">
-                <p className="text-sm text-slate-500">Transaction: <span className="text-slate-800 font-mono">{selectedTransaction.transaction_id}</span></p>
-                <p className="text-sm text-slate-500">Amount: <span className="text-slate-800 font-mono">${selectedTransaction.amount?.toLocaleString()}</span></p>
-                <p className="text-sm text-slate-500">Commission: <span className="text-yellow-400 font-mono">-${(selectedTransaction.psp_commission_amount || 0).toLocaleString()}</span></p>
+              <div className="p-3 bg-muted/50 rounded-lg">
+                <p className="text-sm text-muted-foreground">Transaction: <span className="text-foreground font-mono">{selectedTransaction.transaction_id}</span></p>
+                <p className="text-sm text-muted-foreground">Amount: <span className="text-foreground font-mono">${selectedTransaction.amount?.toLocaleString()}</span></p>
+                <p className="text-sm text-muted-foreground">Commission: <span className="text-yellow-400 font-mono">-${(selectedTransaction.psp_commission_amount || 0).toLocaleString()}</span></p>
               </div>
               
               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">Reserve Fund Amount (USD)</Label>
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Reserve Fund Amount (USD)</Label>
                 <Input
                   type="number"
                   step="0.01"
                   min="0"
                   value={chargesForm.reserve_fund_amount}
                   onChange={(e) => setChargesForm({ ...chargesForm, reserve_fund_amount: e.target.value })}
-                  className="bg-slate-50 border-slate-200 text-slate-800 font-mono"
+                  className="bg-muted/50 border text-foreground font-mono"
                   placeholder="0.00"
                 />
               </div>
               
               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">Extra Charges ({selectedTransaction?.base_currency && selectedTransaction?.base_currency !== 'USD' ? selectedTransaction.base_currency : 'USD'})</Label>
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Extra Charges ({selectedTransaction?.base_currency && selectedTransaction?.base_currency !== 'USD' ? selectedTransaction.base_currency : 'USD'})</Label>
                 <Input
                   type="number"
                   step="0.01"
                   min="0"
                   value={chargesForm.extra_charges}
                   onChange={(e) => setChargesForm({ ...chargesForm, extra_charges: e.target.value })}
-                  className="bg-slate-50 border-slate-200 text-slate-800 font-mono"
+                  className="bg-muted/50 border text-foreground font-mono"
                   placeholder="0.00"
                 />
                 {selectedTransaction?.base_currency && selectedTransaction?.base_currency !== 'USD' && selectedTransaction?.exchange_rate && (
-                  <p className="text-[10px] text-blue-500">= ${(parseFloat(chargesForm.extra_charges || 0) * (selectedTransaction.exchange_rate || 1)).toLocaleString(undefined, {maximumFractionDigits: 2})} USD (rate: {selectedTransaction.exchange_rate})</p>
+                  <p className="text-[10px] text-primary/80">= ${(parseFloat(chargesForm.extra_charges || 0) * (selectedTransaction.exchange_rate || 1)).toLocaleString(undefined, {maximumFractionDigits: 2})} USD (rate: {selectedTransaction.exchange_rate})</p>
                 )}
               </div>
               
               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">Description</Label>
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Description</Label>
                 <Input
                   value={chargesForm.charges_description}
                   onChange={(e) => setChargesForm({ ...chargesForm, charges_description: e.target.value })}
-                  className="bg-slate-50 border-slate-200 text-slate-800"
+                  className="bg-muted/50 border text-foreground"
                   placeholder="Reason for charges..."
                 />
               </div>
@@ -2117,41 +2117,41 @@ export default function PSPs() {
                 const netUsd = grossUsd - commUsd - reserveInUsd - extraInUsd;
                 const netBase = hasDiffCurrency ? grossBase - commBase - reserveInPayCurrency - extraInPayCurrency : null;
                 return (
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                <p className="text-xs text-slate-500 uppercase mb-2">Settlement Preview</p>
+              <div className="p-3 bg-muted/50 rounded-lg border border">
+                <p className="text-xs text-muted-foreground uppercase mb-2">Settlement Preview</p>
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Gross Amount</span>
+                    <span className="text-muted-foreground">Gross Amount</span>
                     <div className="text-right">
-                      <span className="text-slate-800 font-mono">${grossUsd.toLocaleString()}</span>
-                      {payCurr && <p className="text-[10px] text-blue-500">{grossBase.toLocaleString()} {payCurr}</p>}
+                      <span className="text-foreground font-mono">${grossUsd.toLocaleString()}</span>
+                      {payCurr && <p className="text-[10px] text-primary/80">{grossBase.toLocaleString()} {payCurr}</p>}
                     </div>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Commission</span>
+                    <span className="text-muted-foreground">Commission</span>
                     <div className="text-right">
                       <span className="text-red-400 font-mono">-${commUsd.toLocaleString()}</span>
-                      {payCurr && <p className="text-[10px] text-blue-500">-{commBase.toLocaleString(undefined, {maximumFractionDigits: 2})} {payCurr}</p>}
+                      {payCurr && <p className="text-[10px] text-primary/80">-{commBase.toLocaleString(undefined, {maximumFractionDigits: 2})} {payCurr}</p>}
                     </div>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Reserve Fund</span>
+                    <span className="text-muted-foreground">Reserve Fund</span>
                     <div className="text-right">
                       <span className="text-red-400 font-mono">-${reserveInUsd.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
-                      {payCurr && <p className="text-[10px] text-blue-500">-{reserveInPayCurrency.toLocaleString()} {payCurr}</p>}
+                      {payCurr && <p className="text-[10px] text-primary/80">-{reserveInPayCurrency.toLocaleString()} {payCurr}</p>}
                     </div>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Extra Charges</span>
+                    <span className="text-muted-foreground">Extra Charges</span>
                     <div className="text-right">
                       <span className="text-red-400 font-mono">-${extraInUsd.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
-                      {payCurr && <p className="text-[10px] text-blue-500">-{extraInPayCurrency.toLocaleString()} {payCurr}</p>}
+                      {payCurr && <p className="text-[10px] text-primary/80">-{extraInPayCurrency.toLocaleString()} {payCurr}</p>}
                     </div>
                   </div>
-                  <div className="flex justify-between pt-2 border-t border-slate-200">
-                    <span className="text-slate-800 font-bold">Net Settlement</span>
+                  <div className="flex justify-between pt-2 border-t border">
+                    <span className="text-foreground font-bold">Net Settlement</span>
                     <div className="text-right">
-                      <span className="text-blue-600 font-mono font-bold">${netUsd.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                      <span className="text-primary font-mono font-bold">${netUsd.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
                       {payCurr && netBase != null && <p className="text-[10px] text-green-500 font-bold">{netBase.toLocaleString(undefined, {maximumFractionDigits: 2})} {payCurr}</p>}
                     </div>
                   </div>
@@ -2161,10 +2161,10 @@ export default function PSPs() {
               })()}
               
               <div className="flex justify-end gap-3">
-                <Button type="button" variant="outline" onClick={() => setChargesDialogOpen(false)} className="border-slate-200 text-slate-500">
+                <Button type="button" variant="outline" onClick={() => setChargesDialogOpen(false)} className="border text-muted-foreground">
                   Cancel
                 </Button>
-                <Button type="submit" className="bg-[#1FA21B] hover:bg-[#1FA21B]/90 text-[#0B0C10] font-bold uppercase">
+                <Button type="submit" className="bg-[#66FCF1] hover:bg-[#66FCF1]/90 text-[#0B0C10] font-bold uppercase">
                   Save Charges
                 </Button>
               </div>
@@ -2175,9 +2175,9 @@ export default function PSPs() {
 
       {/* Record Payment Received Dialog */}
       <Dialog open={recordPaymentDialogOpen} onOpenChange={(open) => { if (!open) { setRecordPaymentDialogOpen(false); setSelectedTransaction(null); } }}>
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
+        <DialogContent className="bg-card border text-foreground max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold uppercase tracking-tight flex items-center gap-2" style={{ fontFamily: 'Barlow Condensed' }}>
+            <DialogTitle className="text-lg font-bold text-foreground flex items-center gap-2">
               <Wallet className="w-5 h-5 text-green-400" />
               Record Payment Received
             </DialogTitle>
@@ -2185,43 +2185,43 @@ export default function PSPs() {
           {selectedTransaction && (
             <div className="space-y-4">
               {/* Transaction Summary */}
-              <div className="p-4 bg-slate-50 rounded-lg space-y-2">
+              <div className="p-4 bg-muted/50 rounded-lg space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Reference</span>
-                  <span className="text-slate-800 font-mono">{selectedTransaction.reference}</span>
+                  <span className="text-muted-foreground">Reference</span>
+                  <span className="text-foreground font-mono">{selectedTransaction.reference}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Client</span>
-                  <span className="text-slate-800">{selectedTransaction.client_name}</span>
+                  <span className="text-muted-foreground">Client</span>
+                  <span className="text-foreground">{selectedTransaction.client_name}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">PSP</span>
-                  <span className="text-slate-800">{selectedTransaction.psp_name}</span>
+                  <span className="text-muted-foreground">PSP</span>
+                  <span className="text-foreground">{selectedTransaction.psp_name}</span>
                 </div>
-                <div className="border-t border-slate-200 pt-2 mt-2">
+                <div className="border-t border pt-2 mt-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Gross Amount</span>
-                    <span className="text-slate-800 font-mono">${(selectedTransaction.amount || 0).toLocaleString()}</span>
+                    <span className="text-muted-foreground">Gross Amount</span>
+                    <span className="text-foreground font-mono">${(selectedTransaction.amount || 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Commission</span>
+                    <span className="text-muted-foreground">Commission</span>
                     <span className="text-yellow-400 font-mono">-${(selectedTransaction.psp_commission_amount || 0).toLocaleString()}</span>
                   </div>
                   {(selectedTransaction.psp_reserve_fund_amount || selectedTransaction.psp_chargeback_amount) > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-500">Reserve Fund</span>
+                      <span className="text-muted-foreground">Reserve Fund</span>
                       <span className="text-red-400 font-mono">-${(selectedTransaction.psp_reserve_fund_amount || selectedTransaction.psp_chargeback_amount).toLocaleString()}</span>
                     </div>
                   )}
                   {selectedTransaction.psp_extra_charges > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-500">Extra Charges</span>
+                      <span className="text-muted-foreground">Extra Charges</span>
                       <span className="text-red-400 font-mono">-${selectedTransaction.psp_extra_charges.toLocaleString()}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-sm pt-2 border-t border-slate-200 mt-2">
-                    <span className="text-slate-800 font-bold">Expected Net</span>
-                    <span className="text-blue-600 font-mono font-bold">
+                  <div className="flex justify-between text-sm pt-2 border-t border mt-2">
+                    <span className="text-foreground font-bold">Expected Net</span>
+                    <span className="text-primary font-mono font-bold">
                       ${((selectedTransaction.amount || 0) - (selectedTransaction.psp_commission_amount || 0) - (selectedTransaction.psp_reserve_fund_amount || selectedTransaction.psp_chargeback_amount || 0) - (selectedTransaction.psp_extra_charges || 0)).toLocaleString()}
                     </span>
                   </div>
@@ -2230,13 +2230,13 @@ export default function PSPs() {
 
               {/* Holding Info */}
               {selectedTransaction.psp_holding_days > 0 && (
-                <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                  <div className="flex items-center gap-2 text-blue-400 text-sm">
+                <div className="p-3 bg-primary/80/10 border border-primary/30 rounded-lg">
+                  <div className="flex items-center gap-2 text-primary/60 text-sm">
                     <Timer className="w-4 h-4" />
                     <span>Holding Period: {selectedTransaction.psp_holding_days} days</span>
                   </div>
                   {selectedTransaction.psp_holding_release_date && (
-                    <p className="text-xs text-slate-500 mt-1 ml-6">
+                    <p className="text-xs text-muted-foreground mt-1 ml-6">
                       Release Date: {formatDate(selectedTransaction.psp_holding_release_date)}
                     </p>
                   )}
@@ -2245,33 +2245,33 @@ export default function PSPs() {
 
               {/* Actual Amount Received */}
               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">Actual Amount Received (USD)</Label>
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Actual Amount Received (USD)</Label>
                 <Input
                   type="number"
                   step="0.01"
                   min="0"
                   value={paymentForm.actual_amount_received}
                   onChange={(e) => setPaymentForm({ ...paymentForm, actual_amount_received: e.target.value })}
-                  className="bg-slate-50 border-slate-200 text-slate-800 font-mono text-lg"
+                  className="bg-muted/50 border text-foreground font-mono text-lg"
                   placeholder="Enter actual amount received"
                   data-testid="actual-amount-received"
                 />
-                <p className="text-xs text-slate-500">Leave as-is if the amount matches the expected net settlement</p>
+                <p className="text-xs text-muted-foreground">Leave as-is if the amount matches the expected net settlement</p>
               </div>
 
               {/* Settlement Destination */}
               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">Credit to Treasury Account</Label>
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Credit to Treasury Account</Label>
                 <Select
                   value={paymentForm.destination_account_id || (psps.find(p => p.psp_id === selectedTransaction.psp_id)?.settlement_destination_id || '')}
                   onValueChange={(value) => setPaymentForm({ ...paymentForm, destination_account_id: value })}
                 >
-                  <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800">
+                  <SelectTrigger className="bg-muted/50 border text-foreground">
                     <SelectValue placeholder="Select treasury account" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border-slate-200">
+                  <SelectContent className="bg-card border">
                     {treasuryAccounts.map((account) => (
-                      <SelectItem key={account.account_id} value={account.account_id} className="text-slate-800 hover:bg-slate-100">
+                      <SelectItem key={account.account_id} value={account.account_id} className="text-foreground hover:bg-muted">
                         {account.account_name} - {account.bank_name} ({account.currency})
                       </SelectItem>
                     ))}
@@ -2296,13 +2296,13 @@ export default function PSPs() {
                   type="button"
                   variant="outline"
                   onClick={() => { setRecordPaymentDialogOpen(false); setSelectedTransaction(null); }}
-                  className="border-slate-200 text-slate-500 hover:bg-slate-100"
+                  className="border text-muted-foreground hover:bg-muted"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleRecordPayment}
-                  className="bg-green-500 text-slate-800 hover:bg-green-600 font-bold uppercase tracking-wider"
+                  className="bg-green-500 text-foreground hover:bg-green-600 font-bold uppercase tracking-wider"
                   data-testid="confirm-record-payment-btn"
                 >
                   <CheckCircle2 className="w-4 h-4 mr-2" />
@@ -2316,37 +2316,37 @@ export default function PSPs() {
 
       {/* Batch/Compound Settlement Confirmation Dialog */}
       <Dialog open={batchSettleDialogOpen} onOpenChange={setBatchSettleDialogOpen}>
-        <DialogContent className="sm:max-w-lg bg-white border border-slate-200">
+        <DialogContent className="sm:max-w-lg bg-card border border">
           <DialogHeader>
-            <DialogTitle className="text-slate-800 flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-[#1FA21B]" />
+            <DialogTitle className="text-foreground flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-[#66FCF1]" />
               Compound Settlement
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <p className="text-sm text-slate-500">
-              You are creating <strong className="text-slate-800">1 compound settlement</strong> from <strong className="text-[#1FA21B]">{batchSummary.count} transactions</strong>. 
+            <p className="text-sm text-muted-foreground">
+              You are creating <strong className="text-foreground">1 compound settlement</strong> from <strong className="text-[#66FCF1]">{batchSummary.count} transactions</strong>. 
               The net amount will be credited to your treasury as a single lump sum entry.
             </p>
 
             {/* Summary Breakdown */}
-            <div className="bg-slate-50 border border-slate-200 rounded-sm p-4 space-y-2">
+            <div className="bg-muted/50 border border rounded-sm p-4 space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Gross Amount ({batchSummary.count} txns)</span>
+                <span className="text-muted-foreground">Gross Amount ({batchSummary.count} txns)</span>
                 <div className="text-right">
-                  <span className="font-mono text-slate-800 font-bold">${batchSummary.gross.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
-                  {batchSummary.payCurrency && <p className="text-[10px] text-blue-500 font-mono">{batchSummary.baseGross?.toLocaleString(undefined, {maximumFractionDigits: 2})} {batchSummary.payCurrency}</p>}
+                  <span className="font-mono text-foreground font-bold">${batchSummary.gross.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                  {batchSummary.payCurrency && <p className="text-[10px] text-primary/80 font-mono">{batchSummary.baseGross?.toLocaleString(undefined, {maximumFractionDigits: 2})} {batchSummary.payCurrency}</p>}
                 </div>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Commission</span>
+                <span className="text-muted-foreground">Commission</span>
                 <div className="text-right">
                   <span className="font-mono text-yellow-600">-${batchSummary.commission.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
                   {batchSummary.payCurrency && batchSummary.avgRate && <p className="text-[10px] text-yellow-500 font-mono">-{(batchSummary.commission / batchSummary.avgRate).toLocaleString(undefined, {maximumFractionDigits: 2})} {batchSummary.payCurrency}</p>}
                 </div>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Reserve Fund</span>
+                <span className="text-muted-foreground">Reserve Fund</span>
                 <div className="text-right">
                   <span className="font-mono text-red-500">-${batchSummary.reserve.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
                   {batchSummary.payCurrency && batchSummary.avgRate && batchSummary.reserve > 0 && <p className="text-[10px] text-red-400 font-mono">-{(batchSummary.reserve / batchSummary.avgRate).toLocaleString(undefined, {maximumFractionDigits: 2})} {batchSummary.payCurrency}</p>}
@@ -2354,22 +2354,22 @@ export default function PSPs() {
               </div>
               {batchSummary.extra > 0 && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Extra Charges</span>
+                  <span className="text-muted-foreground">Extra Charges</span>
                   <div className="text-right">
                     <span className="font-mono text-red-500">-${batchSummary.extra.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
                     {batchSummary.payCurrency && batchSummary.avgRate && <p className="text-[10px] text-red-400 font-mono">-{(batchSummary.extra / batchSummary.avgRate).toLocaleString(undefined, {maximumFractionDigits: 2})} {batchSummary.payCurrency}</p>}
                   </div>
                 </div>
               )}
-              <div className="border-t border-slate-300 pt-2 flex justify-between text-sm font-bold">
-                <span className="text-slate-700">Net to Treasury</span>
+              <div className="border-t border pt-2 flex justify-between text-sm font-bold">
+                <span className="text-card-foreground">Net to Treasury</span>
                 <div className="text-right">
                   <span className="font-mono text-green-600">${batchSummary.net.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
                   {batchSummary.payCurrency && <p className="text-[10px] text-green-500 font-mono font-bold">{batchSummary.baseNet?.toLocaleString(undefined, {maximumFractionDigits: 2})} {batchSummary.payCurrency}</p>}
                 </div>
               </div>
               {batchSummary.payCurrency && batchSummary.avgRate && (
-                <div className="pt-1 text-[10px] text-slate-400 text-right">
+                <div className="pt-1 text-[10px] text-muted-foreground text-right">
                   Avg. FX Rate: 1 {batchSummary.payCurrency} = {batchSummary.avgRate.toFixed(4)} USD
                 </div>
               )}
@@ -2377,12 +2377,12 @@ export default function PSPs() {
 
             {/* Destination Treasury Account */}
             <div className="space-y-1.5">
-              <Label className="text-slate-600 text-xs uppercase tracking-wider">Destination Treasury Account</Label>
+              <Label className="text-card-foreground text-xs uppercase tracking-wider">Destination Treasury Account</Label>
               <Select
                 value={batchSettleDestination || viewPsp?.settlement_destination_id || ''}
                 onValueChange={setBatchSettleDestination}
               >
-                <SelectTrigger className="border-slate-200 bg-white text-slate-800" data-testid="batch-settle-destination">
+                <SelectTrigger className="border bg-card text-foreground" data-testid="batch-settle-destination">
                   <SelectValue placeholder="Use PSP default destination" />
                 </SelectTrigger>
                 <SelectContent>
@@ -2394,21 +2394,21 @@ export default function PSPs() {
                 </SelectContent>
               </Select>
               {viewPsp?.settlement_destination_name && !batchSettleDestination && (
-                <p className="text-[10px] text-slate-400">Default: {viewPsp.settlement_destination_name}</p>
+                <p className="text-[10px] text-muted-foreground">Default: {viewPsp.settlement_destination_name}</p>
               )}
             </div>
 
             {/* Settlement Date */}
             <div className="space-y-1.5">
-              <Label className="text-slate-600 text-xs uppercase tracking-wider">Settlement Date (When credited to bank)</Label>
+              <Label className="text-card-foreground text-xs uppercase tracking-wider">Settlement Date (When credited to bank)</Label>
               <Input
                 type="date"
                 value={batchSettleDate}
                 onChange={e => setBatchSettleDate(e.target.value)}
-                className="border-slate-200 bg-white text-slate-800"
+                className="border bg-card text-foreground"
                 data-testid="batch-settle-date"
               />
-              <p className="text-[10px] text-slate-400">Date the PSP settlement was received in the bank. Used for reconciliation matching.</p>
+              <p className="text-[10px] text-muted-foreground">Date the PSP settlement was received in the bank. Used for reconciliation matching.</p>
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
@@ -2416,7 +2416,7 @@ export default function PSPs() {
                 variant="outline"
                 size="sm"
                 onClick={() => setBatchSettleDialogOpen(false)}
-                className="border-slate-200 text-slate-600"
+                className="border text-card-foreground"
               >
                 Cancel
               </Button>
@@ -2424,7 +2424,7 @@ export default function PSPs() {
                 size="sm"
                 onClick={handleBatchSettle}
                 disabled={batchSettling}
-                className="bg-[#1FA21B] text-[#0B0C10] hover:bg-[#1FA21B]/80 font-bold"
+                className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#66FCF1]/80 font-bold"
                 data-testid="confirm-batch-settle-btn"
               >
                 {batchSettling ? 'Processing...' : `Settle $${batchSummary.net.toLocaleString(undefined, {maximumFractionDigits: 2})}`}
@@ -2436,50 +2436,50 @@ export default function PSPs() {
 
       {/* Extra Commission Dialog */}
       <Dialog open={extraCommDialog.open} onOpenChange={(open) => { if (!open) setExtraCommDialog({ open: false, tx: null, amount: '', note: '' }); }}>
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
+        <DialogContent className="bg-card border text-foreground max-w-md">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold">Extra Commission</DialogTitle>
           </DialogHeader>
           {extraCommDialog.tx && (
             <div className="space-y-4">
-              <div className="p-3 bg-slate-50 rounded-sm border border-slate-200">
+              <div className="p-3 bg-muted/50 rounded-sm border border">
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Reference:</span>
-                  <span className="font-mono text-slate-800">{extraCommDialog.tx.reference}</span>
+                  <span className="text-muted-foreground">Reference:</span>
+                  <span className="font-mono text-foreground">{extraCommDialog.tx.reference}</span>
                 </div>
                 <div className="flex justify-between text-sm mt-1">
-                  <span className="text-slate-500">Amount:</span>
+                  <span className="text-muted-foreground">Amount:</span>
                   <span className="font-mono text-red-500">${extraCommDialog.tx.amount?.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-sm mt-1">
-                  <span className="text-slate-500">Client:</span>
-                  <span className="text-slate-800">{extraCommDialog.tx.client_name || '-'}</span>
+                  <span className="text-muted-foreground">Client:</span>
+                  <span className="text-foreground">{extraCommDialog.tx.client_name || '-'}</span>
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">Extra Commission Amount (USD)</Label>
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Extra Commission Amount (USD)</Label>
                 <Input
                   type="number"
                   step="0.01"
                   value={extraCommDialog.amount}
                   onChange={(e) => setExtraCommDialog(prev => ({ ...prev, amount: e.target.value }))}
-                  className="border-slate-200 bg-white text-slate-800"
+                  className="border bg-card text-foreground"
                   placeholder="0.00"
                   data-testid="extra-comm-amount"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">Note (Optional)</Label>
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Note (Optional)</Label>
                 <Input
                   value={extraCommDialog.note}
                   onChange={(e) => setExtraCommDialog(prev => ({ ...prev, note: e.target.value }))}
-                  className="border-slate-200 bg-white text-slate-800"
+                  className="border bg-card text-foreground"
                   placeholder="Reason for extra commission"
                   data-testid="extra-comm-note"
                 />
               </div>
               <div className="flex justify-end gap-2">
-                <Button variant="outline" size="sm" onClick={() => setExtraCommDialog({ open: false, tx: null, amount: '', note: '' })} className="border-slate-200 text-slate-600">Cancel</Button>
+                <Button variant="outline" size="sm" onClick={() => setExtraCommDialog({ open: false, tx: null, amount: '', note: '' })} className="border text-card-foreground">Cancel</Button>
                 <Button size="sm" onClick={handleExtraCommission} className="bg-orange-500 text-white hover:bg-orange-600" data-testid="save-extra-comm-btn">Save Extra Commission</Button>
               </div>
             </div>
@@ -2488,16 +2488,16 @@ export default function PSPs() {
       </Dialog>
       {/* Net Settlement Dialog */}
       <Dialog open={netSettleDialogOpen} onOpenChange={setNetSettleDialogOpen}>
-        <DialogContent className="sm:max-w-lg bg-white border border-slate-200">
+        <DialogContent className="sm:max-w-lg bg-card border border">
           <DialogHeader>
-            <DialogTitle className="text-slate-800 flex items-center gap-2">
+            <DialogTitle className="text-foreground flex items-center gap-2">
               <DollarSign className="w-5 h-5 text-green-600" />
               Net Pending Settlement
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <p className="text-sm text-slate-500">
-              This will settle <strong className="text-slate-800">all pending deposits and approved withdrawals</strong> for <strong className="text-[#1FA21B]">{viewPsp?.psp_name}</strong> as a single net amount to your treasury.
+            <p className="text-sm text-muted-foreground">
+              This will settle <strong className="text-foreground">all pending deposits and approved withdrawals</strong> for <strong className="text-[#66FCF1]">{viewPsp?.psp_name}</strong> as a single net amount to your treasury.
             </p>
 
             {(() => {
@@ -2516,42 +2516,42 @@ export default function PSPs() {
               const wdrTotal = wdrGross + wdrExtraComm;
               const netAmount = depNet - wdrTotal;
               return (
-                <div className="bg-slate-50 border border-slate-200 rounded-sm p-4 space-y-2">
-                  <p className="text-xs text-slate-500 uppercase tracking-wider font-bold mb-2">Deposits ({deps.length})</p>
+                <div className="bg-muted/50 border border rounded-sm p-4 space-y-2">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold mb-2">Deposits ({deps.length})</p>
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Gross Amount</span>
-                    <span className="font-mono text-slate-800">${depGross.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                    <span className="text-muted-foreground">Gross Amount</span>
+                    <span className="font-mono text-foreground">${depGross.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
                   </div>
                   {depDeductions > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-500">Deductions (Comm + Extra + Reserve)</span>
+                      <span className="text-muted-foreground">Deductions (Comm + Extra + Reserve)</span>
                       <span className="font-mono text-yellow-600">-${depDeductions.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-sm font-medium">
-                    <span className="text-slate-600">Deposit Net</span>
-                    <span className="font-mono text-slate-800">${depNet.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                    <span className="text-card-foreground">Deposit Net</span>
+                    <span className="font-mono text-foreground">${depNet.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
                   </div>
 
                   {wdrs.length > 0 && (
                     <>
-                      <div className="border-t border-slate-200 my-2" />
-                      <p className="text-xs text-slate-500 uppercase tracking-wider font-bold mb-2">Withdrawals ({wdrs.length})</p>
+                      <div className="border-t border my-2" />
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold mb-2">Withdrawals ({wdrs.length})</p>
                       <div className="flex justify-between text-sm">
-                        <span className="text-slate-500">Withdrawal Amount</span>
+                        <span className="text-muted-foreground">Withdrawal Amount</span>
                         <span className="font-mono text-red-500">-${wdrGross.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
                       </div>
                       {wdrExtraComm > 0 && (
                         <div className="flex justify-between text-sm">
-                          <span className="text-slate-500">Withdrawal Extra Commission</span>
+                          <span className="text-muted-foreground">Withdrawal Extra Commission</span>
                           <span className="font-mono text-red-500">-${wdrExtraComm.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
                         </div>
                       )}
                     </>
                   )}
 
-                  <div className="border-t border-slate-300 pt-2 flex justify-between text-sm font-bold">
-                    <span className="text-slate-700">Net to Treasury</span>
+                  <div className="border-t border pt-2 flex justify-between text-sm font-bold">
+                    <span className="text-card-foreground">Net to Treasury</span>
                     <span className="font-mono text-green-600">${netAmount.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
                   </div>
                 </div>
@@ -2559,12 +2559,12 @@ export default function PSPs() {
             })()}
 
             <div className="space-y-1.5">
-              <Label className="text-slate-600 text-xs uppercase tracking-wider">Destination Treasury Account</Label>
+              <Label className="text-card-foreground text-xs uppercase tracking-wider">Destination Treasury Account</Label>
               <Select
                 value={netSettleDestination || viewPsp?.settlement_destination_id || ''}
                 onValueChange={setNetSettleDestination}
               >
-                <SelectTrigger className="border-slate-200 bg-white text-slate-800" data-testid="net-settle-destination">
+                <SelectTrigger className="border bg-card text-foreground" data-testid="net-settle-destination">
                   <SelectValue placeholder="Use PSP default destination" />
                 </SelectTrigger>
                 <SelectContent>
@@ -2576,17 +2576,17 @@ export default function PSPs() {
                 </SelectContent>
               </Select>
               {viewPsp?.settlement_destination_name && !netSettleDestination && (
-                <p className="text-[10px] text-slate-400">Default: {viewPsp.settlement_destination_name}</p>
+                <p className="text-[10px] text-muted-foreground">Default: {viewPsp.settlement_destination_name}</p>
               )}
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-slate-600 text-xs uppercase tracking-wider">Settlement Date</Label>
+              <Label className="text-card-foreground text-xs uppercase tracking-wider">Settlement Date</Label>
               <Input
                 type="date"
                 value={netSettleDate}
                 onChange={e => setNetSettleDate(e.target.value)}
-                className="border-slate-200 bg-white text-slate-800"
+                className="border bg-card text-foreground"
                 data-testid="net-settle-date"
               />
             </div>
@@ -2596,7 +2596,7 @@ export default function PSPs() {
                 variant="outline"
                 size="sm"
                 onClick={() => setNetSettleDialogOpen(false)}
-                className="border-slate-200 text-slate-600"
+                className="border text-card-foreground"
               >
                 Cancel
               </Button>
@@ -2616,10 +2616,10 @@ export default function PSPs() {
 
       {/* Proof Images Gallery Modal */}
       <Dialog open={!!proofGallery} onOpenChange={() => setProofGallery(null)}>
-        <DialogContent className="bg-white border-slate-200 max-w-lg">
+        <DialogContent className="bg-card border max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-slate-800 text-sm font-bold uppercase">
-              <ImageIcon className="w-4 h-4 inline mr-2 text-blue-500" />
+            <DialogTitle className="text-foreground text-sm font-bold uppercase">
+              <ImageIcon className="w-4 h-4 inline mr-2 text-primary/80" />
               Proof Images — {proofGallery?.label} ({proofGallery?.images?.length})
             </DialogTitle>
           </DialogHeader>
@@ -2628,7 +2628,7 @@ export default function PSPs() {
               const src = url?.startsWith('http') ? url : `data:image/png;base64,${url}`;
               return (
                 <img key={i} src={src} alt={`Proof ${i+1}`}
-                  className="w-full rounded border border-slate-200 cursor-pointer hover:opacity-80"
+                  className="w-full rounded border border cursor-pointer hover:opacity-80"
                   onClick={() => window.open(src, '_blank')} />
               );
             })}

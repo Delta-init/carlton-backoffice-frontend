@@ -18,8 +18,6 @@ import {
   TableHeader,
   TableRow,
 } from "../components/ui/table";
-import PaginationControls from "../components/PaginationControls";
-
 import {
   Dialog,
   DialogContent,
@@ -42,8 +40,8 @@ import {
 import { Textarea } from "../components/ui/textarea";
 import { ScrollArea } from "../components/ui/scroll-area";
 import { toast } from "sonner";
-import { useAuth } from "../context/AuthContext";
 import { getApiError } from "../lib/utils";
+import { useAuth } from "../context/AuthContext";
 import {
   Banknote,
   Plus,
@@ -70,10 +68,12 @@ import {
   Filter,
   RotateCcw,
   FileText,
-    Paperclip,
+  Paperclip,
   Upload,
   ExternalLink,
 } from "lucide-react";
+
+import PaginationControls from "../components/PaginationControls";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -121,6 +121,9 @@ export default function Loans() {
   const [isSwapDialogOpen, setIsSwapDialogOpen] = useState(false);
   const [isBorrowerDialogOpen, setIsBorrowerDialogOpen] = useState(false);
   const [selectedLoan, setSelectedLoan] = useState(null);
+  const [selectedBorrower, setSelectedBorrower] = useState(null);
+  const [borrowerLoans, setBorrowerLoans] = useState([]);
+  const [borrowerLoansLoading, setBorrowerLoansLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
   const [summary, setSummary] = useState(null);
   const [vendorSearch, setExchangerSearch] = useState("");
@@ -186,7 +189,6 @@ export default function Loans() {
     new_due_date: "",
   });
 
-
   const [loanFiles, setLoanFiles] = useState([]);
 
   const isAdmin = user?.role === "admin";
@@ -211,12 +213,12 @@ export default function Loans() {
       if (response.ok) {
         const data = await response.json();
         setLoans(Array.isArray(data) ? data : data.items || []);
-        if (data?.total_pages) setTotalPages(data?.total_pages);
-        if (data?.total) setTotalItems(data?.total);
+        if (data.total_pages) setTotalPages(data.total_pages);
+        if (data.total) setTotalItems(data.total);
       }
-    } catch (err) {
-      console.error("Error fetching loans:", err);
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      console.error("Error fetching loans:", error);
+      toast.error("Failed to load loans");
     } finally {
       setLoading(false);
     }
@@ -307,8 +309,8 @@ export default function Loans() {
         setSelectedLoan(await response.json());
         setIsDetailDialogOpen(true);
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error("Failed to load loan details");
     }
   };
 
@@ -375,7 +377,7 @@ export default function Loans() {
       });
 
       if (response.ok) {
-         const newLoan = await response.json();
+        const newLoan = await response.json();
 
         // Upload attachments if any
         if (loanFiles.length > 0) {
@@ -406,8 +408,8 @@ export default function Loans() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || "Something went wrong. Please try again.");
     } finally {
       setSubmittingLoan(false);
     }
@@ -459,8 +461,8 @@ export default function Loans() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || "Something went wrong. Please try again.");
     }
   };
 
@@ -491,8 +493,8 @@ export default function Loans() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || "Something went wrong. Please try again.");
     }
   };
 
@@ -541,8 +543,8 @@ export default function Loans() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || "Something went wrong. Please try again.");
     }
   };
 
@@ -599,8 +601,8 @@ export default function Loans() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || "Something went wrong. Please try again.");
     } finally {
       setSubmittingRepayment(false);
     }
@@ -629,8 +631,8 @@ export default function Loans() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || "Something went wrong. Please try again.");
     }
   };
 
@@ -729,7 +731,7 @@ export default function Loans() {
         return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Rejected</Badge>;
       case "active":
         return (
-          <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
+          <Badge className="bg-primary/80/20 text-primary/60 border-primary/30">
             Active
           </Badge>
         );
@@ -747,7 +749,7 @@ export default function Loans() {
         );
       default:
         return (
-          <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/30">
+          <Badge className="bg-gray-500/20 text-muted-foreground border-gray-500/30">
             {loan.status}
           </Badge>
         );
@@ -825,6 +827,92 @@ export default function Loans() {
     }
   };
 
+  const handleSelectBorrower = async (vendor) => {
+    setSelectedBorrower(vendor);
+    setBorrowerLoansLoading(true);
+    try {
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(
+        `${API_URL}/api/loans?vendor_id=${vendor.vendor_id}&page_size=200`,
+        { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, credentials: "include" }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setBorrowerLoans(Array.isArray(data) ? data : data.items || []);
+      }
+    } catch (err) {
+      toast.error(err?.message || "Failed to load borrower loans");
+    } finally {
+      setBorrowerLoansLoading(false);
+    }
+  };
+
+  const handleExportBorrowerExcel = async () => {
+    if (!selectedBorrower) return;
+    try {
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(
+        `${API_URL}/api/loans/export/excel?vendor_id=${selectedBorrower.vendor_id}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${selectedBorrower.name}_loans_${new Date().toISOString().split("T")[0]}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+        toast.success("Exported to Excel");
+      } else {
+        toast.error(await getApiError(response));
+      }
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
+    }
+  };
+
+  const handleExportBorrowerPDF = async () => {
+    if (!selectedBorrower) return;
+    try {
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(
+        `${API_URL}/api/loans/export/pdf?vendor_id=${selectedBorrower.vendor_id}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${selectedBorrower.name}_loans_${new Date().toISOString().split("T")[0]}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+        toast.success("Exported to PDF");
+      } else {
+        toast.error(await getApiError(response));
+      }
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
+    }
+  };
+
+  const getBorrowerStats = () => {
+    const total = borrowerLoans.length;
+    const totalDisbursed = borrowerLoans.reduce((s, l) => s + (l.amount_usd || l.amount || 0), 0);
+    const outstanding = borrowerLoans.reduce((s, l) => s + (l.outstanding_balance || 0), 0);
+    const active = borrowerLoans.filter((l) => l.status === "active").length;
+    const overdue = borrowerLoans.filter((l) => l.is_overdue || (l.status === "active" && l.due_date && new Date(l.due_date) < new Date())).length;
+    const fullyPaid = borrowerLoans.filter((l) => l.status === "fully_paid").length;
+    const pending = borrowerLoans.filter((l) => l.status === "pending_approval").length;
+    const totalRepaid = borrowerLoans.reduce((s, l) => s + (l.total_repaid || 0), 0);
+    return { total, totalDisbursed, outstanding, active, overdue, fullyPaid, pending, totalRepaid };
+  };
+
   const handleExportPDF = async () => {
     try {
       const token = localStorage.getItem("auth_token");
@@ -856,17 +944,16 @@ export default function Loans() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1
-            className="text-4xl font-bold uppercase tracking-tight text-slate-800"
-            style={{ fontFamily: "Barlow Condensed" }}
+            className="text-3xl font-bold tracking-tight text-foreground"
           >
             Loan Management
           </h1>
-          <p className="text-slate-500">Track loans given to other companies</p>
+          <p className="text-muted-foreground">Track loans given to other companies</p>
         </div>
         <div className="flex gap-2">
           <Button
             onClick={() => setIsLoanDialogOpen(true)}
-            className="bg-primary text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-xl glow-cyan"
+            className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan"
             data-testid="add-loan-btn"
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -877,28 +964,28 @@ export default function Loans() {
 
       {/* Main Tabs */}
       <Tabs value={mainTab} onValueChange={setMainTab} className="w-full">
-        <TabsList className="bg-white border border-slate-200 mb-4">
+        <TabsList className="bg-card border border mb-4">
           <TabsTrigger
             value="dashboard"
-            className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-600"
+            className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary"
           >
             <BarChart3 className="w-4 h-4 mr-2" /> Dashboard
           </TabsTrigger>
           <TabsTrigger
             value="borrowers"
-            className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-600"
+            className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary"
           >
             <Users className="w-4 h-4 mr-2" /> Borrowers
           </TabsTrigger>
           <TabsTrigger
             value="loans"
-            className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-600"
+            className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary"
           >
             <Banknote className="w-4 h-4 mr-2" /> All Loans
           </TabsTrigger>
           <TabsTrigger
             value="transactions"
-            className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-600"
+            className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary"
           >
             <History className="w-4 h-4 mr-2" /> Transactions
           </TabsTrigger>
@@ -910,47 +997,47 @@ export default function Loans() {
             <div className="space-y-6">
               {/* Portfolio Overview */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Card className="bg-white border-slate-200">
+                <Card className="bg-card border">
                   <CardContent className="p-5">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
                           Total Disbursed
                         </p>
-                        <p className="text-xl font-bold font-mono text-slate-800">
+                        <p className="text-xl font-bold font-mono text-foreground">
                           $
                           {dashboard.portfolio_overview.total_disbursed_usd?.toLocaleString()}
                         </p>
                       </div>
-                      <div className="p-2 bg-blue-500/10 rounded-xl">
-                        <Banknote className="w-5 h-5 text-blue-400" />
+                      <div className="p-2 bg-primary/80/10 rounded-sm">
+                        <Banknote className="w-5 h-5 text-primary/60" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="bg-white border-slate-200">
+                <Card className="bg-card border">
                   <CardContent className="p-5">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
                           Outstanding
                         </p>
-                        <p className="text-xl font-bold font-mono text-blue-600">
+                        <p className="text-xl font-bold font-mono text-primary">
                           $
                           {dashboard.portfolio_overview.total_outstanding_usd?.toLocaleString()}
                         </p>
                       </div>
-                      <div className="p-2 bg-cyan-500/10 rounded-xl">
-                        <PiggyBank className="w-5 h-5 text-blue-600" />
+                      <div className="p-2 bg-cyan-500/10 rounded-sm">
+                        <PiggyBank className="w-5 h-5 text-primary" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="bg-white border-slate-200">
+                <Card className="bg-card border">
                   <CardContent className="p-5">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
                           Total Repaid
                         </p>
                         <p className="text-xl font-bold font-mono text-green-400">
@@ -958,24 +1045,24 @@ export default function Loans() {
                           {dashboard.portfolio_overview.total_repaid_usd?.toLocaleString()}
                         </p>
                       </div>
-                      <div className="p-2 bg-green-500/10 rounded-xl">
+                      <div className="p-2 bg-green-500/10 rounded-sm">
                         <DollarSign className="w-5 h-5 text-green-400" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="bg-white border-slate-200">
+                <Card className="bg-card border">
                   <CardContent className="p-5">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
                           Collected This Month
                         </p>
                         <p className="text-xl font-bold font-mono text-yellow-400">
                           ${dashboard.collection_this_month?.toLocaleString()}
                         </p>
                       </div>
-                      <div className="p-2 bg-yellow-500/10 rounded-xl">
+                      <div className="p-2 bg-yellow-500/10 rounded-sm">
                         <TrendingUp className="w-5 h-5 text-yellow-400" />
                       </div>
                     </div>
@@ -985,16 +1072,16 @@ export default function Loans() {
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Aging Analysis */}
-                <Card className="bg-white border-slate-200">
+                <Card className="bg-card border">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-slate-800 text-lg flex items-center gap-2">
-                      <Clock className="w-5 h-5 text-blue-600" /> Aging Analysis
+                    <CardTitle className="text-foreground text-lg flex items-center gap-2">
+                      <Clock className="w-5 h-5 text-primary" /> Aging Analysis
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
-                        <span className="text-slate-500 text-sm">
+                        <span className="text-muted-foreground text-sm">
                           Current (Not Due)
                         </span>
                         <span className="text-green-400 font-mono">
@@ -1002,7 +1089,7 @@ export default function Loans() {
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-slate-500 text-sm">
+                        <span className="text-muted-foreground text-sm">
                           1-30 Days Overdue
                         </span>
                         <span className="text-yellow-400 font-mono">
@@ -1011,7 +1098,7 @@ export default function Loans() {
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-slate-500 text-sm">
+                        <span className="text-muted-foreground text-sm">
                           31-60 Days Overdue
                         </span>
                         <span className="text-orange-400 font-mono">
@@ -1020,7 +1107,7 @@ export default function Loans() {
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-slate-500 text-sm">
+                        <span className="text-muted-foreground text-sm">
                           61-90 Days Overdue
                         </span>
                         <span className="text-red-400 font-mono">
@@ -1029,7 +1116,7 @@ export default function Loans() {
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-slate-500 text-sm">
+                        <span className="text-muted-foreground text-sm">
                           90+ Days Overdue
                         </span>
                         <span className="text-red-600 font-mono font-bold">
@@ -1042,10 +1129,10 @@ export default function Loans() {
                 </Card>
 
                 {/* Top Borrowers */}
-                <Card className="bg-white border-slate-200">
+                <Card className="bg-card border">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-slate-800 text-lg flex items-center gap-2">
-                      <Building2 className="w-5 h-5 text-blue-600" /> Top
+                    <CardTitle className="text-foreground text-lg flex items-center gap-2">
+                      <Building2 className="w-5 h-5 text-primary" /> Top
                       Borrowers
                     </CardTitle>
                   </CardHeader>
@@ -1057,21 +1144,21 @@ export default function Loans() {
                           className="flex justify-between items-center"
                         >
                           <div>
-                            <span className="text-slate-800 text-sm">
+                            <span className="text-foreground text-sm">
                               {b.name}
                             </span>
-                            <span className="text-slate-400 text-xs ml-2">
+                            <span className="text-muted-foreground text-xs ml-2">
                               ({b.loan_count} loans)
                             </span>
                           </div>
-                          <span className="text-blue-600 font-mono">
+                          <span className="text-primary font-mono">
                             ${b.outstanding?.toLocaleString()}
                           </span>
                         </div>
                       ))}
                       {(!dashboard.top_borrowers ||
                         dashboard.top_borrowers.length === 0) && (
-                        <p className="text-slate-400 text-sm text-center py-4">
+                        <p className="text-muted-foreground text-sm text-center py-4">
                           No borrowers yet
                         </p>
                       )}
@@ -1081,9 +1168,9 @@ export default function Loans() {
               </div>
 
               {/* Upcoming Dues */}
-              <Card className="bg-white border-slate-200">
+              <Card className="bg-card border">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-slate-800 text-lg flex items-center gap-2">
+                  <CardTitle className="text-foreground text-lg flex items-center gap-2">
                     <AlertTriangle className="w-5 h-5 text-yellow-400" />{" "}
                     Upcoming Dues (Next 30 Days)
                   </CardTitle>
@@ -1092,17 +1179,17 @@ export default function Loans() {
                   {dashboard.upcoming_dues?.length > 0 ? (
                     <Table>
                       <TableHeader>
-                        <TableRow className="border-slate-200 hover:bg-transparent">
-                          <TableHead className="text-slate-500 text-xs">
+                        <TableRow className="border hover:bg-transparent">
+                          <TableHead className="text-muted-foreground text-xs">
                             Borrower
                           </TableHead>
-                          <TableHead className="text-slate-500 text-xs text-right">
+                          <TableHead className="text-muted-foreground text-xs text-right">
                             Outstanding
                           </TableHead>
-                          <TableHead className="text-slate-500 text-xs">
+                          <TableHead className="text-muted-foreground text-xs">
                             Due Date
                           </TableHead>
-                          <TableHead className="text-slate-500 text-xs text-right">
+                          <TableHead className="text-muted-foreground text-xs text-right">
                             Days Left
                           </TableHead>
                         </TableRow>
@@ -1111,15 +1198,15 @@ export default function Loans() {
                         {dashboard.upcoming_dues.map((d, i) => (
                           <TableRow
                             key={i}
-                            className="border-slate-200 hover:bg-slate-100"
+                            className="border hover:bg-muted"
                           >
-                            <TableCell className="text-slate-800 text-sm">
+                            <TableCell className="text-foreground text-sm">
                               {d.borrower}
                             </TableCell>
-                            <TableCell className="text-blue-600 font-mono text-sm text-right">
+                            <TableCell className="text-primary font-mono text-sm text-right">
                               ${d.outstanding?.toFixed(2)}
                             </TableCell>
-                            <TableCell className="text-slate-800 text-sm">
+                            <TableCell className="text-foreground text-sm">
                               {formatDate(d.due_date)}
                             </TableCell>
                             <TableCell className="text-right">
@@ -1138,7 +1225,7 @@ export default function Loans() {
                       </TableBody>
                     </Table>
                   ) : (
-                    <p className="text-slate-400 text-sm text-center py-6">
+                    <p className="text-muted-foreground text-sm text-center py-6">
                       No upcoming dues in the next 30 days
                     </p>
                   )}
@@ -1146,7 +1233,7 @@ export default function Loans() {
               </Card>
             </div>
           ) : (
-            <Card className="bg-white border-slate-200">
+            <Card className="bg-card border">
               <CardContent className="p-12 flex justify-center">
                 <div className="w-8 h-8 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
               </CardContent>
@@ -1156,15 +1243,15 @@ export default function Loans() {
 
         {/* Borrowers Tab */}
         <TabsContent value="borrowers">
-          <Card className="bg-white border-slate-200">
+          <Card className="bg-card border">
             <CardHeader className="pb-3 flex flex-row items-center justify-between">
-              <CardTitle className="text-slate-800 text-lg flex items-center gap-2">
-                <Users className="w-5 h-5 text-blue-600" /> Borrower Companies
+              <CardTitle className="text-foreground text-lg flex items-center gap-2">
+                <Users className="w-5 h-5 text-primary" /> Borrower Companies
                 (Exchangers)
               </CardTitle>
               <Button
                 onClick={() => setIsBorrowerDialogOpen(true)}
-                className="bg-primary text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-xl text-xs"
+                className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm text-xs"
                 data-testid="add-borrower-btn"
               >
                 <Plus className="w-4 h-4 mr-1" />
@@ -1172,116 +1259,89 @@ export default function Loans() {
               </Button>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[500px]">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-slate-200 hover:bg-transparent">
-                      <TableHead className="text-slate-500 text-xs">
-                        Company
-                      </TableHead>
-                      <TableHead className="text-slate-500 text-xs text-right">
-                        Total Loans
-                      </TableHead>
-                      <TableHead className="text-slate-500 text-xs text-right">
-                        Disbursed (USD)
-                      </TableHead>
-                      <TableHead className="text-slate-500 text-xs text-center">
-                        Payment Currency
-                      </TableHead>
-                      <TableHead className="text-slate-500 text-xs text-right">
-                        Outstanding
-                      </TableHead>
-                      <TableHead className="text-slate-500 text-xs text-center">
-                        Active
-                      </TableHead>
-                      <TableHead className="text-slate-500 text-xs">
-                        Status
-                      </TableHead>
-                      <TableHead className="text-slate-500 text-xs text-center">
-                        Action
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {vendors.map((v) => (
-                      <TableRow
-                        key={v.vendor_id}
-                        className="border-slate-200 hover:bg-slate-100 cursor-pointer"
-                        onClick={() => navigate(`/loans/borrower/${v.vendor_id}`)}
-                      >
-                        <TableCell>
-                          <div className="text-slate-800 font-medium">
-                            {v.name}
-                          </div>
-                          <div className="text-[10px] text-slate-400">
-                            {v.email}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-slate-800 font-mono text-right">
-                          {v.loan_stats.total_loans}
-                        </TableCell>
-                        <TableCell className="text-slate-800 font-mono text-right">
-                          ${v.loan_stats.total_disbursed_usd?.toLocaleString()}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex flex-wrap gap-1 justify-center">
-                            {(v.loan_stats.currencies || ["USD"]).map((cur) => (
-                              <Badge key={cur} className="bg-purple-500/20 text-purple-600 text-[10px] px-1.5 py-0">{cur}</Badge>
-                            ))}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-blue-600 font-mono text-right font-semibold">
-                          $
-                          {v.loan_stats.total_outstanding_usd?.toLocaleString()}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge
-                            className={
-                              v.loan_stats.active_loans > 0
-                                ? "bg-blue-500/20 text-blue-400"
-                                : "bg-gray-500/20 text-gray-400"
-                            }
-                          >
-                            {v.loan_stats.active_loans}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            className={
-                              v.status === "active"
-                                ? "bg-green-500/20 text-green-400"
-                                : "bg-red-500/20 text-red-400"
-                            }
-                          >
-                            {v.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-[#1FA21B] hover:bg-green-50 text-xs"
-                            onClick={(e) => { e.stopPropagation(); navigate(`/loans/borrower/${v.vendor_id}`); }}
-                          >
-                            <Eye className="w-3.5 h-3.5 mr-1" /> View
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {vendors.length === 0 && (
-                      <TableRow>
-                        <TableCell
-                          colSpan={6}
-                          className="text-center text-slate-400 py-8"
+              <Table>
+                <TableHeader>
+                  <TableRow className="border hover:bg-transparent">
+                    <TableHead className="text-muted-foreground text-xs">Company</TableHead>
+                    <TableHead className="text-muted-foreground text-xs text-right">Total Loans</TableHead>
+                    <TableHead className="text-muted-foreground text-xs text-right">Disbursed (USD)</TableHead>
+                    <TableHead className="text-muted-foreground text-xs text-center">Payment Currency</TableHead>
+                    <TableHead className="text-muted-foreground text-xs text-right">Outstanding</TableHead>
+                    <TableHead className="text-muted-foreground text-xs text-center">Active</TableHead>
+                    <TableHead className="text-muted-foreground text-xs">Status</TableHead>
+                    <TableHead className="text-muted-foreground text-xs text-center">Details</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {vendors.map((v) => (
+                    <TableRow
+                      key={v.vendor_id}
+                      className="border hover:bg-muted/50 cursor-pointer"
+                      onClick={() => navigate(`/loans/borrower/${v.vendor_id}`)}
+                    >
+                      <TableCell>
+                        <div className="text-foreground font-medium">{v.name}</div>
+                        <div className="text-[10px] text-muted-foreground">{v.email}</div>
+                      </TableCell>
+                      <TableCell className="text-foreground font-mono text-right">
+                        {v.loan_stats.total_loans}
+                      </TableCell>
+                      <TableCell className="text-foreground font-mono text-right">
+                        ${v.loan_stats.total_disbursed_usd?.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex flex-wrap gap-1 justify-center">
+                          {(v.loan_stats.currencies || ["USD"]).map((cur) => (
+                            <Badge key={cur} className="bg-purple-500/20 text-purple-600 text-[10px] px-1.5 py-0">{cur}</Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-primary font-mono text-right font-semibold">
+                        ${v.loan_stats.total_outstanding_usd?.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge
+                          className={
+                            v.loan_stats.active_loans > 0
+                              ? "bg-primary/80/20 text-primary/60"
+                              : "bg-gray-500/20 text-muted-foreground"
+                          }
                         >
-                          No exchangers found. Add exchangers in the Exchangers
-                          module.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
+                          {v.loan_stats.active_loans}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          className={
+                            v.status === "active"
+                              ? "bg-green-500/20 text-green-400"
+                              : "bg-red-500/20 text-red-400"
+                          }
+                        >
+                          {v.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-primary hover:bg-primary/10 text-xs"
+                          onClick={(e) => { e.stopPropagation(); navigate(`/loans/borrower/${v.vendor_id}`); }}
+                        >
+                          <Eye className="w-3.5 h-3.5 mr-1" /> View
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {vendors.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                        No exchangers found. Add exchangers in the Exchangers module.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>
@@ -1291,69 +1351,69 @@ export default function Loans() {
           {/* Summary Cards */}
           {summary && (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-              <Card className="bg-white border-slate-200">
+              <Card className="bg-card border">
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
                         Total Disbursed
                       </p>
-                      <p className="text-xl font-bold font-mono text-slate-800">
+                      <p className="text-xl font-bold font-mono text-foreground">
                         ${summary.total_disbursed_usd?.toLocaleString()}
                       </p>
                     </div>
-                    <div className="p-2 bg-blue-500/10 rounded-xl">
-                      <Banknote className="w-5 h-5 text-blue-400" />
+                    <div className="p-2 bg-primary/80/10 rounded-sm">
+                      <Banknote className="w-5 h-5 text-primary/60" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
-              <Card className="bg-white border-slate-200">
+              <Card className="bg-card border">
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
                         Outstanding
                       </p>
-                      <p className="text-xl font-bold font-mono text-blue-600">
+                      <p className="text-xl font-bold font-mono text-primary">
                         ${summary.total_outstanding_usd?.toLocaleString()}
                       </p>
                     </div>
-                    <div className="p-2 bg-cyan-500/10 rounded-xl">
-                      <PiggyBank className="w-5 h-5 text-blue-600" />
+                    <div className="p-2 bg-cyan-500/10 rounded-sm">
+                      <PiggyBank className="w-5 h-5 text-primary" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
-              <Card className="bg-white border-slate-200">
+              <Card className="bg-card border">
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
                         Total Repaid
                       </p>
                       <p className="text-xl font-bold font-mono text-green-400">
                         ${summary.total_repaid_usd?.toLocaleString()}
                       </p>
                     </div>
-                    <div className="p-2 bg-green-500/10 rounded-xl">
+                    <div className="p-2 bg-green-500/10 rounded-sm">
                       <DollarSign className="w-5 h-5 text-green-400" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
-              <Card className="bg-white border-slate-200">
+              <Card className="bg-card border">
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
                         Interest Earned
                       </p>
                       <p className="text-xl font-bold font-mono text-yellow-400">
                         ${summary.total_interest_earned_usd?.toLocaleString()}
                       </p>
                     </div>
-                    <div className="p-2 bg-yellow-500/10 rounded-xl">
+                    <div className="p-2 bg-yellow-500/10 rounded-sm">
                       <TrendingUp className="w-5 h-5 text-yellow-400" />
                     </div>
                   </div>
@@ -1365,7 +1425,7 @@ export default function Loans() {
           {/* Status Summary */}
           {summary && (
             <div className="flex gap-4 flex-wrap mb-4">
-              <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 px-3 py-1">
+              <Badge className="bg-primary/80/20 text-primary/60 border-primary/30 px-3 py-1">
                 Active: {summary.status_breakdown?.active || 0}
               </Badge>
               <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 px-3 py-1">
@@ -1386,16 +1446,16 @@ export default function Loans() {
             onValueChange={setActiveTab}
             className="w-full"
           >
-            <TabsList className="bg-white border border-slate-200">
+            <TabsList className="bg-card border border">
               <TabsTrigger
                 value="all"
-                className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-600"
+                className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary"
               >
                 All Loans ({loans.length})
               </TabsTrigger>
               <TabsTrigger
                 value="active"
-                className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-400"
+                className="data-[state=active]:bg-primary/80/20 data-[state=active]:text-primary/60"
               >
                 Active
               </TabsTrigger>
@@ -1414,11 +1474,11 @@ export default function Loans() {
             </TabsList>
 
             {/* Filters Section */}
-            <Card className="bg-white border-slate-200 mt-4 mb-4">
+            <Card className="bg-card border mt-4 mb-4">
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <Filter className="w-4 h-4 text-slate-500" />
-                  <span className="text-sm font-medium text-slate-600 uppercase tracking-wider">
+                  <Filter className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-medium text-card-foreground uppercase tracking-wider">
                     Filters
                   </span>
                   {hasActiveFilters && (
@@ -1426,7 +1486,7 @@ export default function Loans() {
                       variant="ghost"
                       size="sm"
                       onClick={clearAllFilters}
-                      className="text-slate-500 hover:text-slate-700 h-7 px-2"
+                      className="text-muted-foreground hover:text-card-foreground h-7 px-2"
                     >
                       <RotateCcw className="w-3 h-3 mr-1" />
                       Clear All
@@ -1458,16 +1518,16 @@ export default function Loans() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {/* Borrower Filter */}
                   <div>
-                    <Label className="text-xs text-slate-500 uppercase tracking-wider mb-1.5 block">
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">
                       Borrower
                     </Label>
                     <div className="relative">
-                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <Input
                         placeholder="Search borrower..."
                         value={borrowerFilter}
                         onChange={(e) => setBorrowerFilter(e.target.value)}
-                        className="pl-8 h-9 border-slate-200 text-sm"
+                        className="pl-8 h-9 border text-sm"
                         data-testid="borrower-filter"
                       />
                     </div>
@@ -1475,7 +1535,7 @@ export default function Loans() {
 
                   {/* Principal Range Filter */}
                   <div>
-                    <Label className="text-xs text-slate-500 uppercase tracking-wider mb-1.5 block">
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">
                       Principal Range
                     </Label>
                     <div className="flex gap-2">
@@ -1484,7 +1544,7 @@ export default function Loans() {
                         placeholder="Min"
                         value={principalMinFilter}
                         onChange={(e) => setPrincipalMinFilter(e.target.value)}
-                        className="h-9 border-slate-200 text-sm"
+                        className="h-9 border text-sm"
                         data-testid="principal-min-filter"
                       />
                       <Input
@@ -1492,7 +1552,7 @@ export default function Loans() {
                         placeholder="Max"
                         value={principalMaxFilter}
                         onChange={(e) => setPrincipalMaxFilter(e.target.value)}
-                        className="h-9 border-slate-200 text-sm"
+                        className="h-9 border text-sm"
                         data-testid="principal-max-filter"
                       />
                     </div>
@@ -1500,7 +1560,7 @@ export default function Loans() {
 
                   {/* Outstanding Range Filter */}
                   <div>
-                    <Label className="text-xs text-slate-500 uppercase tracking-wider mb-1.5 block">
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">
                       Outstanding Range
                     </Label>
                     <div className="flex gap-2">
@@ -1511,7 +1571,7 @@ export default function Loans() {
                         onChange={(e) =>
                           setOutstandingMinFilter(e.target.value)
                         }
-                        className="h-9 border-slate-200 text-sm"
+                        className="h-9 border text-sm"
                         data-testid="outstanding-min-filter"
                       />
                       <Input
@@ -1521,7 +1581,7 @@ export default function Loans() {
                         onChange={(e) =>
                           setOutstandingMaxFilter(e.target.value)
                         }
-                        className="h-9 border-slate-200 text-sm"
+                        className="h-9 border text-sm"
                         data-testid="outstanding-max-filter"
                       />
                     </div>
@@ -1529,12 +1589,12 @@ export default function Loans() {
 
                   {/* Status Filter (Select) */}
                   <div>
-                    <Label className="text-xs text-slate-500 uppercase tracking-wider mb-1.5 block">
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">
                       Status
                     </Label>
                     <Select value={activeTab} onValueChange={setActiveTab}>
                       <SelectTrigger
-                        className="h-9 border-slate-200"
+                        className="h-9 border"
                         data-testid="status-filter"
                       >
                         <SelectValue placeholder="All statuses" />
@@ -1552,10 +1612,10 @@ export default function Loans() {
                 </div>
 
                 {hasActiveFilters && (
-                  <div className="mt-3 pt-3 border-t border-slate-100">
-                    <p className="text-xs text-slate-500">
+                  <div className="mt-3 pt-3 border-t border/60">
+                    <p className="text-xs text-muted-foreground">
                       Showing{" "}
-                      <span className="font-semibold text-slate-700">
+                      <span className="font-semibold text-card-foreground">
                         {filteredLoans.length}
                       </span>{" "}
                       of {loans.length} loans
@@ -1568,44 +1628,44 @@ export default function Loans() {
             {/* Loans Table */}
             <TabsContent value={activeTab} className="mt-4">
               {loading ? (
-                <Card className="bg-white border-slate-200">
+                <Card className="bg-card border">
                   <CardContent className="p-12 flex justify-center">
                     <div className="w-8 h-8 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
                   </CardContent>
                 </Card>
               ) : filteredLoans.length === 0 ? (
-                <Card className="bg-white border-slate-200">
+                <Card className="bg-card border">
                   <CardContent className="p-12 text-center">
-                    <Banknote className="w-12 h-12 text-slate-500 mx-auto mb-4" />
-                    <p className="text-slate-500">No loans found</p>
-                    <p className="text-sm text-slate-500/60 mt-2">
+                    <Banknote className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No loans found</p>
+                    <p className="text-sm text-muted-foreground/60 mt-2">
                       Click "New Loan" to create one
                     </p>
                   </CardContent>
                 </Card>
               ) : (
-                <Card className="bg-white border-slate-200">
+                <Card className="bg-card border">
                   <CardContent className="p-0">
                     <ScrollArea className="h-[500px]">
                       <Table>
                         <TableHeader>
-                          <TableRow className="border-slate-200 hover:bg-transparent">
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                          <TableRow className="border hover:bg-transparent">
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                               Borrower
                             </TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">
                               Principal
                             </TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">
                               Outstanding
                             </TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                               Due
                             </TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                               Status
                             </TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">
                               Actions
                             </TableHead>
                           </TableRow>
@@ -1614,18 +1674,18 @@ export default function Loans() {
                           {filteredLoans.map((loan) => (
                             <TableRow
                               key={loan.loan_id}
-                              className="border-slate-200 hover:bg-slate-100"
+                              className="border hover:bg-muted"
                             >
                               <TableCell>
-                                <div className="text-slate-800 font-medium">
+                                <div className="text-foreground font-medium">
                                   {loan.borrower_name}
                                 </div>
-                                <div className="text-[10px] text-slate-400">
+                                <div className="text-[10px] text-muted-foreground">
                                   {loan.source_treasury_name || "—"}
                                 </div>
                               </TableCell>
                               <TableCell className="text-right">
-                                <div className="text-slate-800 font-mono text-sm">
+                                <div className="text-foreground font-mono text-sm">
                                   {loan.currency === "USD" ? "$" : ""}
                                   {loan.amount?.toLocaleString()}
                                   {loan.currency !== "USD"
@@ -1639,7 +1699,7 @@ export default function Loans() {
                                 )}
                               </TableCell>
                               <TableCell className="text-right">
-                                <span className="text-blue-600 font-mono text-sm font-semibold">
+                                <span className="text-primary font-mono text-sm font-semibold">
                                   {loan.currency === "USD" ? "$" : ""}
                                   {loan.outstanding_balance?.toLocaleString()}
                                   {loan.currency !== "USD"
@@ -1647,7 +1707,7 @@ export default function Loans() {
                                     : ""}
                                 </span>
                               </TableCell>
-                              <TableCell className="text-slate-800 text-sm">
+                              <TableCell className="text-foreground text-sm">
                                 {formatDate(loan.due_date)}
                               </TableCell>
                               <TableCell>{getStatusBadge(loan)}</TableCell>
@@ -1659,7 +1719,7 @@ export default function Loans() {
                                     onClick={() =>
                                       fetchLoanDetail(loan.loan_id)
                                     }
-                                    className="text-blue-600 hover:text-blue-600 hover:bg-blue-100 h-7 w-7 p-0"
+                                    className="text-primary hover:text-primary hover:bg-primary/15 h-7 w-7 p-0"
                                     title="View Details"
                                   >
                                     <Eye className="w-3.5 h-3.5" />
@@ -1738,10 +1798,10 @@ export default function Loans() {
 
         {/* Transactions Tab */}
         <TabsContent value="transactions">
-          <Card className="bg-white border-slate-200">
+          <Card className="bg-card border">
             <CardHeader className="pb-3">
-              <CardTitle className="text-slate-800 text-lg flex items-center gap-2">
-                <History className="w-5 h-5 text-blue-600" /> Loan Transactions
+              <CardTitle className="text-foreground text-lg flex items-center gap-2">
+                <History className="w-5 h-5 text-primary" /> Loan Transactions
                 Log
               </CardTitle>
             </CardHeader>
@@ -1749,32 +1809,32 @@ export default function Loans() {
               <ScrollArea className="h-[500px]">
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-slate-200 hover:bg-transparent">
-                      <TableHead className="text-slate-500 text-xs">
+                    <TableRow className="border hover:bg-transparent">
+                      <TableHead className="text-muted-foreground text-xs">
                         Date
                       </TableHead>
-                      <TableHead className="text-slate-500 text-xs">
+                      <TableHead className="text-muted-foreground text-xs">
                         Type
                       </TableHead>
-                      <TableHead className="text-slate-500 text-xs">
+                      <TableHead className="text-muted-foreground text-xs">
                         Description
                       </TableHead>
-                      <TableHead className="text-slate-500 text-xs">
+                      <TableHead className="text-muted-foreground text-xs">
                         Source / Destination
                       </TableHead>
-                      <TableHead className="text-slate-500 text-xs">
+                      <TableHead className="text-muted-foreground text-xs">
                         Payment Currency
                       </TableHead>
-                      <TableHead className="text-slate-500 text-xs text-right">
+                      <TableHead className="text-muted-foreground text-xs text-right">
                         Amount (USD)
                       </TableHead>
-                      <TableHead className="text-slate-500 text-xs">
+                      <TableHead className="text-muted-foreground text-xs">
                         Status
                       </TableHead>
-                      <TableHead className="text-slate-500 text-xs">
+                      <TableHead className="text-muted-foreground text-xs">
                         Attachments
                       </TableHead>
-                      <TableHead className="text-slate-500 text-xs">
+                      <TableHead className="text-muted-foreground text-xs">
                         By
                       </TableHead>
                     </TableRow>
@@ -1783,16 +1843,16 @@ export default function Loans() {
                     {loanTransactions.map((tx) => (
                       <TableRow
                         key={tx.transaction_id}
-                        className="border-slate-200 hover:bg-slate-100"
+                        className="border hover:bg-muted"
                       >
-                        <TableCell className="text-slate-800 text-sm">
+                        <TableCell className="text-foreground text-sm">
                           {formatDate(tx.created_at)}
                         </TableCell>
                         <TableCell>
                           <Badge
                             className={
                               tx.transaction_type === "disbursement"
-                                ? "bg-blue-500/20 text-blue-400"
+                                ? "bg-primary/80/20 text-primary/60"
                                 : tx.transaction_type === "repayment"
                                   ? "bg-green-500/20 text-green-400"
                                   : tx.transaction_type === "swap_out" ||
@@ -1800,13 +1860,13 @@ export default function Loans() {
                                     ? "bg-purple-500/20 text-purple-400"
                                     : tx.transaction_type === "write_off"
                                       ? "bg-red-500/20 text-red-400"
-                                      : "bg-gray-500/20 text-gray-400"
+                                      : "bg-gray-500/20 text-muted-foreground"
                             }
                           >
                             {tx.transaction_type?.replace(/_/g, " ")}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-slate-500 text-sm max-w-[200px] truncate">
+                        <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
                           {tx.description}
                         </TableCell>
                         <TableCell className="text-sm">
@@ -1815,7 +1875,7 @@ export default function Loans() {
                               <span className="text-red-500 text-xs font-medium">
                                 Disburse From:
                               </span>
-                              <span className="text-slate-700">
+                              <span className="text-card-foreground">
                                 {tx.treasury_account_name ||
                                   tx.source_vendor_name ||
                                   "-"}
@@ -1827,7 +1887,7 @@ export default function Loans() {
                               <span className="text-green-500 text-xs font-medium">
                                 Credit To:
                               </span>
-                              <span className="text-slate-700">
+                              <span className="text-card-foreground">
                                 {tx.treasury_account_name ||
                                   tx.credit_vendor_name ||
                                   "-"}
@@ -1840,16 +1900,16 @@ export default function Loans() {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col">
-                            <Badge className="bg-blue-100 text-blue-700 text-xs w-fit">
+                            <Badge className="bg-primary/15 text-primary text-xs w-fit">
                               {tx.currency || "USD"}
                             </Badge>
-                            <span className="font-mono text-xs text-slate-600 mt-0.5">
+                            <span className="font-mono text-xs text-card-foreground mt-0.5">
                               {tx.amount?.toLocaleString()}{" "}
                               {tx.currency || "USD"}
                             </span>
                           </div>
                         </TableCell>
-                        <TableCell className="text-slate-800 font-mono text-sm text-right">
+                        <TableCell className="text-foreground font-mono text-sm text-right">
                           $
                           {tx.amount_usd?.toLocaleString() ||
                             tx.amount?.toLocaleString()}
@@ -1863,13 +1923,13 @@ export default function Loans() {
                                   ? "bg-yellow-100 text-yellow-700"
                                   : tx.status === "failed"
                                     ? "bg-red-100 text-red-700"
-                                    : "bg-blue-100 text-blue-700"
+                                    : "bg-primary/15 text-primary"
                             }
                           >
                             {tx.status || "Completed"}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-slate-400 text-sm">
+                        <TableCell className="text-muted-foreground text-sm">
                           {tx.attachments && tx.attachments.length > 0 ? (
                             <div className="flex flex-wrap gap-1">
                               {tx.attachments.map((att) => (
@@ -1878,7 +1938,7 @@ export default function Loans() {
                                   href={att.url}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded hover:bg-blue-100 transition-colors"
+                                  className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded hover:bg-primary/15 transition-colors"
                                   title={att.filename}
                                   data-testid={`attachment-${att.attachment_id}`}
                                 >
@@ -1900,7 +1960,7 @@ export default function Loans() {
                             "-"
                           )}
                         </TableCell>
-                        <TableCell className="text-slate-400 text-sm">
+                        <TableCell className="text-muted-foreground text-sm">
                           {tx.created_by_name}
                         </TableCell>
                       </TableRow>
@@ -1908,8 +1968,8 @@ export default function Loans() {
                     {loanTransactions.length === 0 && (
                       <TableRow>
                         <TableCell
-                          colSpan={8}
-                          className="text-center text-slate-400 py-8"
+                          colSpan={9}
+                          className="text-center text-muted-foreground py-8"
                         >
                           No transactions yet
                         </TableCell>
@@ -1922,17 +1982,21 @@ export default function Loans() {
           </Card>
         </TabsContent>
       </Tabs>
-      <PaginationControls
-        currentPage={currentPage}
-        totalPages={totalPages}
-        totalItems={totalItems}
-        pageSize={pageSize}
-        onPageChange={setCurrentPage}
-        onPageSizeChange={(s) => {
-          setPageSize(s);
-          setCurrentPage(1);
-        }}
-      />
+
+      {mainTab === "loans" && (
+        <PaginationControls
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(s) => {
+            setPageSize(s);
+            setCurrentPage(1);
+          }}
+        />
+      )}
+
       {/* Create Loan Dialog */}
       <Dialog
         open={isLoanDialogOpen}
@@ -1941,36 +2005,35 @@ export default function Loans() {
           if (!open) resetLoanForm();
         }}
       >
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-card border text-foreground max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle
-              className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2"
-              style={{ fontFamily: "Barlow Condensed" }}
+              className="text-lg font-bold text-foreground flex items-center gap-2"
             >
-              <Banknote className="w-6 h-6 text-blue-600" />
+              <Banknote className="w-6 h-6 text-primary" />
               New Loan
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleCreateLoan} className="space-y-4">
             {/* Exchanger/Borrower Selection */}
             <div className="space-y-2">
-              <Label className="text-slate-500 text-xs uppercase tracking-wider flex items-center gap-2">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider flex items-center gap-2">
                 <Building2 className="w-3 h-3" /> Borrower Company *
               </Label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   value={vendorSearch}
                   onChange={(e) => setExchangerSearch(e.target.value)}
-                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] pl-9"
+                  className="bg-muted/50 border text-foreground focus:border-[#66FCF1] pl-9"
                   placeholder="Search exchanger or enter new name..."
                   data-testid="loan-borrower-search"
                 />
               </div>
               {vendorSearch && (
-                <div className="bg-slate-50 border border-slate-200 rounded-xl max-h-32 overflow-y-auto">
+                <div className="bg-muted/50 border border rounded-md max-h-32 overflow-y-auto">
                   <div
-                    className="px-3 py-2 cursor-pointer hover:bg-blue-100 text-blue-600 flex items-center gap-2 border-b border-slate-200 text-sm"
+                    className="px-3 py-2 cursor-pointer hover:bg-primary/15 text-primary flex items-center gap-2 border-b border text-sm"
                     onClick={() => {
                       setLoanForm({
                         ...loanForm,
@@ -1989,7 +2052,7 @@ export default function Loans() {
                     .map((v) => (
                       <div
                         key={v.vendor_id}
-                        className={`px-3 py-2 cursor-pointer hover:bg-slate-100 text-slate-800 text-sm ${loanForm.vendor_id === v.vendor_id ? "bg-blue-100" : ""}`}
+                        className={`px-3 py-2 cursor-pointer hover:bg-muted text-foreground text-sm ${loanForm.vendor_id === v.vendor_id ? "bg-primary/15" : ""}`}
                         onClick={() => {
                           setLoanForm({
                             ...loanForm,
@@ -2001,7 +2064,7 @@ export default function Loans() {
                       >
                         {v.name}
                         {v.loan_stats.active_loans > 0 && (
-                          <span className="text-slate-400 text-xs ml-2">
+                          <span className="text-muted-foreground text-xs ml-2">
                             ({v.loan_stats.active_loans} active loans)
                           </span>
                         )}
@@ -2010,7 +2073,7 @@ export default function Loans() {
                 </div>
               )}
               {loanForm.borrower_name && (
-                <div className="flex items-center gap-2 text-xs text-blue-600">
+                <div className="flex items-center gap-2 text-xs text-primary">
                   <CheckCircle2 className="w-3 h-3" />
                   Selected: {loanForm.borrower_name}
                   <Button
@@ -2025,7 +2088,7 @@ export default function Loans() {
                       });
                       setExchangerSearch("");
                     }}
-                    className="h-5 px-1 text-slate-400"
+                    className="h-5 px-1 text-muted-foreground"
                   >
                     <X className="w-3 h-3" />
                   </Button>
@@ -2035,7 +2098,7 @@ export default function Loans() {
 
             {/* Loan Type */}
             <div className="space-y-2">
-              <Label className="text-slate-500 text-xs uppercase tracking-wider">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                 Loan Type
               </Label>
               <Select
@@ -2044,15 +2107,15 @@ export default function Loans() {
                   setLoanForm({ ...loanForm, loan_type: value })
                 }
               >
-                <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800">
+                <SelectTrigger className="bg-muted/50 border text-foreground">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-white border-slate-200">
+                <SelectContent className="bg-card border">
                   {loanTypes.map((lt) => (
                     <SelectItem
                       key={lt.value}
                       value={lt.value}
-                      className="text-slate-800 hover:bg-slate-100"
+                      className="text-foreground hover:bg-muted"
                     >
                       {lt.label}
                     </SelectItem>
@@ -2064,7 +2127,7 @@ export default function Loans() {
             {/* Amount & Currency */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                   Amount *
                 </Label>
                 <Input
@@ -2075,13 +2138,13 @@ export default function Loans() {
                   onChange={(e) =>
                     setLoanForm({ ...loanForm, amount: e.target.value })
                   }
-                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
+                  className="bg-muted/50 border text-foreground focus:border-[#66FCF1] font-mono"
                   placeholder="0.00"
                   data-testid="loan-amount"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                   Currency
                 </Label>
                 <Select
@@ -2090,15 +2153,15 @@ export default function Loans() {
                     setLoanForm({ ...loanForm, currency: value })
                   }
                 >
-                  <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800">
+                  <SelectTrigger className="bg-muted/50 border text-foreground">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border-slate-200">
+                  <SelectContent className="bg-card border">
                     {currencies.map((cur) => (
                       <SelectItem
                         key={cur}
                         value={cur}
-                        className="text-slate-800 hover:bg-slate-100"
+                        className="text-foreground hover:bg-muted"
                       >
                         {cur}
                       </SelectItem>
@@ -2110,7 +2173,7 @@ export default function Loans() {
 
             {/* Interest Rate */}
             <div className="space-y-2">
-              <Label className="text-slate-500 text-xs uppercase tracking-wider">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                 Annual Interest Rate (%) - Simple Interest
               </Label>
               <Input
@@ -2121,7 +2184,7 @@ export default function Loans() {
                 onChange={(e) =>
                   setLoanForm({ ...loanForm, interest_rate: e.target.value })
                 }
-                className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
+                className="bg-muted/50 border text-foreground focus:border-[#66FCF1] font-mono"
                 placeholder="0"
               />
             </div>
@@ -2129,7 +2192,7 @@ export default function Loans() {
             {/* Dates */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                   Loan Date *
                 </Label>
                 <Input
@@ -2138,11 +2201,11 @@ export default function Loans() {
                   onChange={(e) =>
                     setLoanForm({ ...loanForm, loan_date: e.target.value })
                   }
-                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                  className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                   Due Date *
                 </Label>
                 <Input
@@ -2151,14 +2214,14 @@ export default function Loans() {
                   onChange={(e) =>
                     setLoanForm({ ...loanForm, due_date: e.target.value })
                   }
-                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                  className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
                 />
               </div>
             </div>
 
             {/* Repayment Mode */}
             <div className="space-y-2">
-              <Label className="text-slate-500 text-xs uppercase tracking-wider">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                 Repayment Mode
               </Label>
               <Select
@@ -2167,15 +2230,15 @@ export default function Loans() {
                   setLoanForm({ ...loanForm, repayment_mode: value })
                 }
               >
-                <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800">
+                <SelectTrigger className="bg-muted/50 border text-foreground">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-white border-slate-200">
+                <SelectContent className="bg-card border">
                   {repaymentModes.map((mode) => (
                     <SelectItem
                       key={mode.value}
                       value={mode.value}
-                      className="text-slate-800 hover:bg-slate-100"
+                      className="text-foreground hover:bg-muted"
                     >
                       {mode.label}
                     </SelectItem>
@@ -2188,7 +2251,7 @@ export default function Loans() {
             {loanForm.repayment_mode === "emi" && (
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                     EMI Amount
                   </Label>
                   <Input
@@ -2202,12 +2265,12 @@ export default function Loans() {
                         installment_amount: e.target.value,
                       })
                     }
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
+                    className="bg-muted/50 border text-foreground focus:border-[#66FCF1] font-mono"
                     placeholder="0.00"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                     # of EMIs
                   </Label>
                   <Input
@@ -2220,12 +2283,12 @@ export default function Loans() {
                         num_installments: e.target.value,
                       })
                     }
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
+                    className="bg-muted/50 border text-foreground focus:border-[#66FCF1] font-mono"
                     placeholder="12"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                     Frequency
                   </Label>
                   <Select
@@ -2234,15 +2297,15 @@ export default function Loans() {
                       setLoanForm({ ...loanForm, installment_frequency: value })
                     }
                   >
-                    <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800">
+                    <SelectTrigger className="bg-muted/50 border text-foreground">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-white border-slate-200">
+                    <SelectContent className="bg-card border">
                       {installmentFrequencies.map((freq) => (
                         <SelectItem
                           key={freq.value}
                           value={freq.value}
-                          className="text-slate-800 hover:bg-slate-100"
+                          className="text-foreground hover:bg-muted"
                         >
                           {freq.label}
                         </SelectItem>
@@ -2255,7 +2318,7 @@ export default function Loans() {
 
             {/* Disburse From - Treasury or Exchanger */}
             <div className="space-y-2">
-              <Label className="text-slate-500 text-xs uppercase tracking-wider">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                 Disburse From *
               </Label>
               <div className="grid grid-cols-2 gap-2">
@@ -2270,17 +2333,17 @@ export default function Loans() {
                   }
                 >
                   <SelectTrigger
-                    className="bg-slate-50 border-slate-200 text-slate-800"
+                    className="bg-muted/50 border text-foreground"
                     data-testid="loan-treasury"
                   >
                     <SelectValue placeholder="Treasury Account" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border-slate-200">
+                  <SelectContent className="bg-card border">
                     {treasuryAccounts.map((acc) => (
                       <SelectItem
                         key={acc.account_id}
                         value={acc.account_id}
-                        className="text-slate-800 hover:bg-slate-100"
+                        className="text-foreground hover:bg-muted"
                       >
                         {acc.account_name} ({acc.balance?.toLocaleString()}{" "}
                         {acc.currency})
@@ -2299,17 +2362,17 @@ export default function Loans() {
                   }
                 >
                   <SelectTrigger
-                    className="bg-slate-50 border-slate-200 text-slate-800"
+                    className="bg-muted/50 border text-foreground"
                     data-testid="loan-vendor"
                   >
                     <SelectValue placeholder="Or Exchanger" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border-slate-200">
+                  <SelectContent className="bg-card border">
                     {vendors.map((v) => (
                       <SelectItem
                         key={v.vendor_id}
                         value={v.vendor_id}
-                        className="text-slate-800 hover:bg-slate-100"
+                        className="text-foreground hover:bg-muted"
                       >
                         {v.name}
                       </SelectItem>
@@ -2319,7 +2382,7 @@ export default function Loans() {
               </div>
               {(loanForm.treasury_account_id ||
                 loanForm.disburse_from_vendor_id) && (
-                <p className="text-xs text-blue-600">
+                <p className="text-xs text-primary">
                   Selected:{" "}
                   {loanForm.treasury_account_id
                     ? treasuryAccounts.find(
@@ -2334,7 +2397,7 @@ export default function Loans() {
 
             {/* Collateral */}
             <div className="space-y-2">
-              <Label className="text-slate-500 text-xs uppercase tracking-wider">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                 Collateral / Security (Optional)
               </Label>
               <Input
@@ -2342,7 +2405,7 @@ export default function Loans() {
                 onChange={(e) =>
                   setLoanForm({ ...loanForm, collateral: e.target.value })
                 }
-                className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
                 placeholder="e.g., Property deed, Bank guarantee..."
               />
             </div>
@@ -2350,7 +2413,7 @@ export default function Loans() {
             {/* Bank Account Details - shown when disbursing from Exchanger */}
             {loanForm.disburse_from_vendor_id && (
               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                   Bank Account Details *
                 </Label>
                 <Textarea
@@ -2358,7 +2421,7 @@ export default function Loans() {
                   onChange={(e) =>
                     setLoanForm({ ...loanForm, bank_details: e.target.value })
                   }
-                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                  className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
                   rows={3}
                   placeholder="Enter bank account details for the exchanger (Account Name, Account Number, Bank Name, IFSC/SWIFT, etc.)"
                   data-testid="loan-bank-details"
@@ -2369,12 +2432,12 @@ export default function Loans() {
               </div>
             )}
 
-                {/* Attachments */}
+            {/* Attachments */}
             <div className="space-y-2">
-              <Label className="text-slate-500 text-xs uppercase tracking-wider flex items-center gap-2">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider flex items-center gap-2">
                 <Paperclip className="w-3 h-3" /> Attachments (Optional)
               </Label>
-              <div className="border-2 border-dashed border-slate-200 rounded-sm p-4 hover:border-[#66FCF1] transition-colors">
+              <div className="border-2 border-dashed border rounded-sm p-4 hover:border-[#66FCF1] transition-colors">
                 <input
                   type="file"
                   multiple
@@ -2392,11 +2455,11 @@ export default function Loans() {
                   htmlFor="loan-file-input"
                   className="cursor-pointer flex flex-col items-center gap-1"
                 >
-                  <Upload className="w-5 h-5 text-slate-400" />
-                  <span className="text-xs text-slate-500">
+                  <Upload className="w-5 h-5 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">
                     Click to attach files
                   </span>
-                  <span className="text-[10px] text-slate-400">
+                  <span className="text-[10px] text-muted-foreground">
                     PDF, Excel, Images (max 10MB each)
                   </span>
                 </label>
@@ -2406,14 +2469,14 @@ export default function Loans() {
                   {loanFiles.map((file, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-sm border border-slate-200"
+                      className="flex items-center justify-between bg-muted/50 px-3 py-2 rounded-sm border border"
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        <FileText className="w-4 h-4 text-blue-500 shrink-0" />
-                        <span className="text-sm text-slate-700 truncate">
+                        <FileText className="w-4 h-4 text-primary/80 shrink-0" />
+                        <span className="text-sm text-card-foreground truncate">
                           {file.name}
                         </span>
-                        <span className="text-[10px] text-slate-400 shrink-0">
+                        <span className="text-[10px] text-muted-foreground shrink-0">
                           ({(file.size / 1024).toFixed(0)} KB)
                         </span>
                       </div>
@@ -2438,7 +2501,7 @@ export default function Loans() {
 
             {/* Notes */}
             <div className="space-y-2">
-              <Label className="text-slate-500 text-xs uppercase tracking-wider">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                 Notes
               </Label>
               <Textarea
@@ -2446,7 +2509,7 @@ export default function Loans() {
                 onChange={(e) =>
                   setLoanForm({ ...loanForm, notes: e.target.value })
                 }
-                className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
                 rows={2}
                 placeholder="Additional notes..."
               />
@@ -2461,14 +2524,14 @@ export default function Loans() {
                   setIsLoanDialogOpen(false);
                   resetLoanForm();
                 }}
-                className="border-slate-200 text-slate-500 hover:bg-slate-100"
+                className="border text-muted-foreground hover:bg-muted"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={submittingLoan}
-                className="bg-primary text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider disabled:opacity-50"
+                className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider disabled:opacity-50"
                 data-testid="create-loan-btn"
               >
                 {submittingLoan ? (
@@ -2493,11 +2556,10 @@ export default function Loans() {
           if (!open) resetRepaymentForm();
         }}
       >
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
+        <DialogContent className="bg-card border text-foreground max-w-md">
           <DialogHeader>
             <DialogTitle
-              className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2"
-              style={{ fontFamily: "Barlow Condensed" }}
+              className="text-lg font-bold text-foreground flex items-center gap-2"
             >
               <CreditCard className="w-6 h-6 text-green-400" />
               Record Repayment
@@ -2505,26 +2567,26 @@ export default function Loans() {
           </DialogHeader>
 
           {selectedLoan && (
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 mb-4">
-              <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">
+            <div className="p-4 bg-muted/50 rounded-sm border border mb-4">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
                 Loan Details
               </p>
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Borrower:</span>
-                  <span className="text-slate-800">
+                  <span className="text-muted-foreground">Borrower:</span>
+                  <span className="text-foreground">
                     {selectedLoan.borrower_name}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Loan Currency:</span>
-                  <Badge className="bg-blue-100 text-blue-700">
+                  <span className="text-muted-foreground">Loan Currency:</span>
+                  <Badge className="bg-primary/15 text-primary">
                     {selectedLoan.currency}
                   </Badge>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Outstanding:</span>
-                  <span className="text-blue-600 font-mono">
+                  <span className="text-muted-foreground">Outstanding:</span>
+                  <span className="text-primary font-mono">
                     {selectedLoan.outstanding_balance?.toLocaleString()}{" "}
                     {selectedLoan.currency}
                   </span>
@@ -2537,7 +2599,7 @@ export default function Loans() {
             {/* Amount & Payment Currency */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                   Payment Amount *
                 </Label>
                 <Input
@@ -2548,13 +2610,13 @@ export default function Loans() {
                   onChange={(e) =>
                     updateRepaymentCalc("amount", e.target.value)
                   }
-                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
+                  className="bg-muted/50 border text-foreground focus:border-[#66FCF1] font-mono"
                   placeholder="0.00"
                   data-testid="repayment-amount"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                   Payment Currency
                 </Label>
                 <Select
@@ -2568,15 +2630,15 @@ export default function Loans() {
                     }));
                   }}
                 >
-                  <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800">
+                  <SelectTrigger className="bg-muted/50 border text-foreground">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border-slate-200">
+                  <SelectContent className="bg-card border">
                     {currencies.map((cur) => (
                       <SelectItem
                         key={cur}
                         value={cur}
-                        className="text-slate-800 hover:bg-slate-100"
+                        className="text-foreground hover:bg-muted"
                       >
                         {cur}
                       </SelectItem>
@@ -2589,7 +2651,7 @@ export default function Loans() {
             {/* Exchange Rate Section - only shown when currencies differ */}
             {selectedLoan &&
               repaymentForm.currency !== selectedLoan.currency && (
-                <div className="p-3 bg-amber-50/5border border-amber-200 rounded-xl space-y-3">
+                <div className="p-3 bg-amber-50/5border border-amber-200 rounded-sm space-y-3">
                   <p className="text-xs text-amber-700 uppercase tracking-wider font-semibold">
                     Currency Conversion
                   </p>
@@ -2607,7 +2669,7 @@ export default function Loans() {
                         onChange={(e) =>
                           updateRepaymentCalc("exchange_rate", e.target.value)
                         }
-                        className="bg-white border-amber-200 text-slate-800 focus:border-amber-400 font-mono"
+                        className="bg-card border-amber-200 text-foreground focus:border-amber-400 font-mono"
                         placeholder="e.g. 22.5"
                         data-testid="repayment-exchange-rate"
                       />
@@ -2621,7 +2683,7 @@ export default function Loans() {
                         step="0.01"
                         value={repaymentForm.amount_in_loan_currency}
                         readOnly
-                        className="bg-slate-100 border-amber-200 text-blue-700 font-mono font-bold"
+                        className="bg-muted border-amber-200 text-primary font-mono font-bold"
                         placeholder="Auto-calculated"
                         data-testid="repayment-loan-equivalent"
                       />
@@ -2648,7 +2710,7 @@ export default function Loans() {
 
             {/* Credit To - Treasury or Exchanger */}
             <div className="space-y-2">
-              <Label className="text-slate-500 text-xs uppercase tracking-wider">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                 Credit To *
               </Label>
               <div className="grid grid-cols-2 gap-2">
@@ -2663,17 +2725,17 @@ export default function Loans() {
                   }
                 >
                   <SelectTrigger
-                    className="bg-slate-50 border-slate-200 text-slate-800"
+                    className="bg-muted/50 border text-foreground"
                     data-testid="repayment-treasury"
                   >
                     <SelectValue placeholder="Treasury Account" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border-slate-200">
+                  <SelectContent className="bg-card border">
                     {treasuryAccounts.map((acc) => (
                       <SelectItem
                         key={acc.account_id}
                         value={acc.account_id}
-                        className="text-slate-800 hover:bg-slate-100"
+                        className="text-foreground hover:bg-muted"
                       >
                         {acc.account_name} ({acc.currency})
                       </SelectItem>
@@ -2691,17 +2753,17 @@ export default function Loans() {
                   }
                 >
                   <SelectTrigger
-                    className="bg-slate-50 border-slate-200 text-slate-800"
+                    className="bg-muted/50 border text-foreground"
                     data-testid="repayment-vendor"
                   >
                     <SelectValue placeholder="Or Exchanger" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border-slate-200">
+                  <SelectContent className="bg-card border">
                     {vendors.map((v) => (
                       <SelectItem
                         key={v.vendor_id}
                         value={v.vendor_id}
-                        className="text-slate-800 hover:bg-slate-100"
+                        className="text-foreground hover:bg-muted"
                       >
                         {v.name}
                       </SelectItem>
@@ -2728,7 +2790,7 @@ export default function Loans() {
 
             {/* Payment Date */}
             <div className="space-y-2">
-              <Label className="text-slate-500 text-xs uppercase tracking-wider">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                 Payment Date
               </Label>
               <Input
@@ -2740,13 +2802,13 @@ export default function Loans() {
                     payment_date: e.target.value,
                   })
                 }
-                className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
               />
             </div>
 
             {/* Reference */}
             <div className="space-y-2">
-              <Label className="text-slate-500 text-xs uppercase tracking-wider">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                 Reference
               </Label>
               <Input
@@ -2757,7 +2819,7 @@ export default function Loans() {
                     reference: e.target.value,
                   })
                 }
-                className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
                 placeholder="Payment reference..."
               />
             </div>
@@ -2771,14 +2833,14 @@ export default function Loans() {
                   setIsRepaymentDialogOpen(false);
                   resetRepaymentForm();
                 }}
-                className="border-slate-200 text-slate-500 hover:bg-slate-100"
+                className="border text-muted-foreground hover:bg-muted"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={submittingRepayment}
-                className="bg-green-500 hover:bg-green-600 text-slate-800 font-bold uppercase tracking-wider disabled:opacity-50"
+                className="bg-green-500 hover:bg-green-600 text-foreground font-bold uppercase tracking-wider disabled:opacity-50"
                 data-testid="record-repayment-btn"
               >
                 {submittingRepayment ? (
@@ -2797,11 +2859,10 @@ export default function Loans() {
 
       {/* Loan Detail Dialog */}
       <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-card border text-foreground max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle
-              className="text-2xl font-bold uppercase tracking-tight"
-              style={{ fontFamily: "Barlow Condensed" }}
+              className="text-lg font-bold text-foreground"
             >
               Loan Details
             </DialogTitle>
@@ -2811,39 +2872,39 @@ export default function Loans() {
             <div className="space-y-6">
               {/* Loan Info */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                <div className="p-4 bg-muted/50 rounded-sm border border">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Borrower
                   </p>
-                  <p className="text-slate-800 font-medium">
+                  <p className="text-foreground font-medium">
                     {selectedLoan.borrower_name}
                   </p>
                 </div>
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                <div className="p-4 bg-muted/50 rounded-sm border border">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Status
                   </p>
                   {getStatusBadge(selectedLoan)}
                 </div>
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                <div className="p-4 bg-muted/50 rounded-sm border border">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Loan Amount
                   </p>
-                  <p className="text-slate-800 font-mono">
+                  <p className="text-foreground font-mono">
                     {selectedLoan.amount?.toLocaleString()}{" "}
                     {selectedLoan.currency}
                   </p>
                 </div>
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                <div className="p-4 bg-muted/50 rounded-sm border border">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Interest Rate
                   </p>
-                  <p className="text-slate-800 font-mono">
+                  <p className="text-foreground font-mono">
                     {selectedLoan.interest_rate}%
                   </p>
                 </div>
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                <div className="p-4 bg-muted/50 rounded-sm border border">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Total Interest
                   </p>
                   <p className="text-yellow-400 font-mono">
@@ -2851,28 +2912,28 @@ export default function Loans() {
                     {selectedLoan.currency}
                   </p>
                 </div>
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                <div className="p-4 bg-muted/50 rounded-sm border border">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Outstanding
                   </p>
-                  <p className="text-blue-600 font-mono">
+                  <p className="text-primary font-mono">
                     {selectedLoan.outstanding_balance?.toLocaleString()}{" "}
                     {selectedLoan.currency}
                   </p>
                 </div>
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                <div className="p-4 bg-muted/50 rounded-sm border border">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Loan Date
                   </p>
-                  <p className="text-slate-800">
+                  <p className="text-foreground">
                     {formatDate(selectedLoan.loan_date)}
                   </p>
                 </div>
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                <div className="p-4 bg-muted/50 rounded-sm border border">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Due Date
                   </p>
-                  <p className="text-slate-800">
+                  <p className="text-foreground">
                     {formatDate(selectedLoan.due_date)}
                   </p>
                 </div>
@@ -2880,24 +2941,24 @@ export default function Loans() {
 
               {/* Repayment History */}
               <div>
-                <h3 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
-                  <Receipt className="w-5 h-5 text-blue-600" />
+                <h3 className="text-lg font-bold text-foreground mb-3 flex items-center gap-2">
+                  <Receipt className="w-5 h-5 text-primary" />
                   Repayment History ({selectedLoan.repayments?.length || 0})
                 </h3>
                 {selectedLoan.repayments?.length > 0 ? (
                   <Table>
                     <TableHeader>
-                      <TableRow className="border-slate-200 hover:bg-transparent">
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                      <TableRow className="border hover:bg-transparent">
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                           Date
                         </TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">
                           Amount
                         </TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                           Treasury
                         </TableHead>
-                        <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                           Reference
                         </TableHead>
                       </TableRow>
@@ -2906,18 +2967,18 @@ export default function Loans() {
                       {selectedLoan.repayments.map((rep) => (
                         <TableRow
                           key={rep.repayment_id}
-                          className="border-slate-200 hover:bg-slate-100"
+                          className="border hover:bg-muted"
                         >
-                          <TableCell className="text-slate-800 text-sm">
+                          <TableCell className="text-foreground text-sm">
                             {formatDate(rep.payment_date)}
                           </TableCell>
                           <TableCell className="text-green-400 font-mono text-right">
                             +{rep.amount?.toLocaleString()} {rep.currency}
                           </TableCell>
-                          <TableCell className="text-slate-500 text-sm">
+                          <TableCell className="text-muted-foreground text-sm">
                             {rep.treasury_account_name}
                           </TableCell>
-                          <TableCell className="text-slate-500 text-sm">
+                          <TableCell className="text-muted-foreground text-sm">
                             {rep.reference || "-"}
                           </TableCell>
                         </TableRow>
@@ -2925,21 +2986,20 @@ export default function Loans() {
                     </TableBody>
                   </Table>
                 ) : (
-                  <p className="text-slate-500 text-sm">
+                  <p className="text-muted-foreground text-sm">
                     No repayments recorded yet
                   </p>
                 )}
               </div>
 
-
- {/* Attachments Section */}
+              {/* Attachments Section */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                     <Paperclip className="w-3 h-3" /> Attachments
                   </p>
                   <label htmlFor="detail-file-input" className="cursor-pointer">
-                    <span className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100 transition-colors">
+                    <span className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-1 rounded hover:bg-primary/15 transition-colors">
                       <Upload className="w-3 h-3" /> Add Files
                     </span>
                     <input
@@ -2997,22 +3057,22 @@ export default function Loans() {
                     {selectedLoan.attachments.map((att) => (
                       <div
                         key={att.attachment_id}
-                        className="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-sm border border-slate-200"
+                        className="flex items-center justify-between bg-muted/50 px-3 py-2 rounded-sm border border"
                       >
                         <a
                           href={att.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-2 text-sm text-blue-600 hover:underline min-w-0 truncate"
+                          className="flex items-center gap-2 text-sm text-primary hover:underline min-w-0 truncate"
                           data-testid={`detail-att-${att.attachment_id}`}
                         >
                           <FileText className="w-4 h-4 shrink-0" />
                           <span className="truncate">{att.filename}</span>
-                          <span className="text-[10px] text-slate-400 shrink-0">
+                          <span className="text-[10px] text-muted-foreground shrink-0">
                             ({(att.size / 1024).toFixed(0)} KB)
                           </span>
                         </a>
-                        <span className="text-[10px] text-slate-400 ml-2 shrink-0">
+                        <span className="text-[10px] text-muted-foreground ml-2 shrink-0">
                           {att.uploaded_by_name} -{" "}
                           {new Date(att.uploaded_at).toLocaleDateString()}
                         </span>
@@ -3020,9 +3080,10 @@ export default function Loans() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-slate-400 text-xs">No attachments</p>
+                  <p className="text-muted-foreground text-xs">No attachments</p>
                 )}
               </div>
+
               {/* Action Button */}
               {selectedLoan.status !== "fully_paid" && (
                 <div className="flex justify-end">
@@ -3031,7 +3092,7 @@ export default function Loans() {
                       setIsDetailDialogOpen(false);
                       openRepaymentDialog(selectedLoan);
                     }}
-                    className="bg-green-500 hover:bg-green-600 text-slate-800 font-bold uppercase tracking-wider"
+                    className="bg-green-500 hover:bg-green-600 text-foreground font-bold uppercase tracking-wider"
                   >
                     <CreditCard className="w-4 h-4 mr-2" />
                     Record Repayment
@@ -3059,11 +3120,10 @@ export default function Loans() {
             });
         }}
       >
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
+        <DialogContent className="bg-card border text-foreground max-w-md">
           <DialogHeader>
             <DialogTitle
-              className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2"
-              style={{ fontFamily: "Barlow Condensed" }}
+              className="text-lg font-bold text-foreground flex items-center gap-2"
             >
               <ArrowRightLeft className="w-6 h-6 text-purple-400" />
               Swap / Transfer Loan
@@ -3072,14 +3132,14 @@ export default function Loans() {
 
           {selectedLoan && (
             <div className="space-y-4">
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">
+              <div className="p-4 bg-muted/50 rounded-sm border border">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
                   Current Loan
                 </p>
-                <p className="text-slate-800 font-medium">
+                <p className="text-foreground font-medium">
                   {selectedLoan.borrower_name}
                 </p>
-                <p className="text-blue-600 font-mono">
+                <p className="text-primary font-mono">
                   Outstanding: {selectedLoan.currency === "USD" ? "$" : ""}
                   {selectedLoan.outstanding_balance?.toLocaleString()}
                   {selectedLoan.currency !== "USD"
@@ -3090,11 +3150,11 @@ export default function Loans() {
 
               {/* New Borrower */}
               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                   Transfer To (New Borrower) *
                 </Label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     value={swapForm.target_borrower_name}
                     onChange={(e) =>
@@ -3104,7 +3164,7 @@ export default function Loans() {
                         target_vendor_id: "",
                       })
                     }
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] pl-9"
+                    className="bg-muted/50 border text-foreground focus:border-[#66FCF1] pl-9"
                     placeholder="New borrower name..."
                   />
                 </div>
@@ -3114,7 +3174,7 @@ export default function Loans() {
                       .toLowerCase()
                       .includes(swapForm.target_borrower_name.toLowerCase()),
                   ).length > 0 && (
-                    <div className="bg-slate-50 border border-slate-200 rounded-xl max-h-24 overflow-y-auto">
+                    <div className="bg-muted/50 border border rounded-md max-h-24 overflow-y-auto">
                       {vendors
                         .filter((v) =>
                           v.name
@@ -3126,7 +3186,7 @@ export default function Loans() {
                         .map((v) => (
                           <div
                             key={v.vendor_id}
-                            className="px-3 py-1.5 cursor-pointer hover:bg-slate-100 text-slate-800 text-sm"
+                            className="px-3 py-1.5 cursor-pointer hover:bg-muted text-foreground text-sm"
                             onClick={() =>
                               setSwapForm({
                                 ...swapForm,
@@ -3144,7 +3204,7 @@ export default function Loans() {
 
               {/* Reason */}
               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                   Reason for Transfer
                 </Label>
                 <Textarea
@@ -3152,7 +3212,7 @@ export default function Loans() {
                   onChange={(e) =>
                     setSwapForm({ ...swapForm, reason: e.target.value })
                   }
-                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                  className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
                   rows={2}
                   placeholder="Business restructuring, ownership change, etc."
                 />
@@ -3167,11 +3227,11 @@ export default function Loans() {
                   onChange={(e) =>
                     setSwapForm({ ...swapForm, adjust_terms: e.target.checked })
                   }
-                  className="rounded border-slate-200 bg-slate-50"
+                  className="rounded border bg-muted/50"
                 />
                 <Label
                   htmlFor="adjustTerms"
-                  className="text-slate-500 text-sm cursor-pointer"
+                  className="text-muted-foreground text-sm cursor-pointer"
                 >
                   Adjust loan terms
                 </Label>
@@ -3180,7 +3240,7 @@ export default function Loans() {
               {swapForm.adjust_terms && (
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                    <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                       New Interest Rate (%)
                     </Label>
                     <Input
@@ -3193,12 +3253,12 @@ export default function Loans() {
                           new_interest_rate: e.target.value,
                         })
                       }
-                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
+                      className="bg-muted/50 border text-foreground focus:border-[#66FCF1] font-mono"
                       placeholder={selectedLoan.interest_rate?.toString()}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                    <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                       New Due Date
                     </Label>
                     <Input
@@ -3210,7 +3270,7 @@ export default function Loans() {
                           new_due_date: e.target.value,
                         })
                       }
-                      className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                      className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
                     />
                   </div>
                 </div>
@@ -3221,13 +3281,13 @@ export default function Loans() {
                 <Button
                   variant="outline"
                   onClick={() => setIsSwapDialogOpen(false)}
-                  className="border-slate-200 text-slate-500 hover:bg-slate-100"
+                  className="border text-muted-foreground hover:bg-muted"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleSwapLoan}
-                  className="bg-purple-500 hover:bg-purple-600 text-slate-800 font-bold uppercase tracking-wider"
+                  className="bg-purple-500 hover:bg-purple-600 text-foreground font-bold uppercase tracking-wider"
                 >
                   <ArrowRightLeft className="w-4 h-4 mr-2" />
                   Transfer Loan
@@ -3253,13 +3313,12 @@ export default function Loans() {
             });
         }}
       >
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
+        <DialogContent className="bg-card border text-foreground max-w-md">
           <DialogHeader>
             <DialogTitle
-              className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2"
-              style={{ fontFamily: "Barlow Condensed" }}
+              className="text-lg font-bold text-foreground flex items-center gap-2"
             >
-              <Building2 className="w-6 h-6 text-blue-600" />
+              <Building2 className="w-6 h-6 text-primary" />
               Add Borrower Company
             </DialogTitle>
           </DialogHeader>
@@ -3267,7 +3326,7 @@ export default function Loans() {
           <form onSubmit={handleCreateBorrower} className="space-y-4">
             {/* Company Name */}
             <div className="space-y-2">
-              <Label className="text-slate-500 text-xs uppercase tracking-wider">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                 Company Name *
               </Label>
               <Input
@@ -3275,7 +3334,7 @@ export default function Loans() {
                 onChange={(e) =>
                   setBorrowerForm({ ...borrowerForm, name: e.target.value })
                 }
-                className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
                 placeholder="ABC Company Ltd"
                 data-testid="borrower-name"
               />
@@ -3283,7 +3342,7 @@ export default function Loans() {
 
             {/* Contact Person */}
             <div className="space-y-2">
-              <Label className="text-slate-500 text-xs uppercase tracking-wider">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                 Contact Person
               </Label>
               <Input
@@ -3294,7 +3353,7 @@ export default function Loans() {
                     contact_person: e.target.value,
                   })
                 }
-                className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
                 placeholder="John Doe"
               />
             </div>
@@ -3302,7 +3361,7 @@ export default function Loans() {
             {/* Email & Phone */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                   Email
                 </Label>
                 <Input
@@ -3311,12 +3370,12 @@ export default function Loans() {
                   onChange={(e) =>
                     setBorrowerForm({ ...borrowerForm, email: e.target.value })
                   }
-                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                  className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
                   placeholder="contact@company.com"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                   Phone
                 </Label>
                 <Input
@@ -3324,7 +3383,7 @@ export default function Loans() {
                   onChange={(e) =>
                     setBorrowerForm({ ...borrowerForm, phone: e.target.value })
                   }
-                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                  className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
                   placeholder="+971 50 123 4567"
                 />
               </div>
@@ -3332,7 +3391,7 @@ export default function Loans() {
 
             {/* Address */}
             <div className="space-y-2">
-              <Label className="text-slate-500 text-xs uppercase tracking-wider">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                 Address
               </Label>
               <Textarea
@@ -3340,7 +3399,7 @@ export default function Loans() {
                 onChange={(e) =>
                   setBorrowerForm({ ...borrowerForm, address: e.target.value })
                 }
-                className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
                 rows={2}
                 placeholder="Business address..."
               />
@@ -3352,13 +3411,13 @@ export default function Loans() {
                 type="button"
                 variant="outline"
                 onClick={() => setIsBorrowerDialogOpen(false)}
-                className="border-slate-200 text-slate-500 hover:bg-slate-100"
+                className="border text-muted-foreground hover:bg-muted"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
-                className="bg-primary text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider"
+                className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Create Borrower

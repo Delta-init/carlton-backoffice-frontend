@@ -38,8 +38,8 @@ import {
   CommandList,
 } from "../components/ui/command";
 import { toast } from "sonner";
-import { useAuth } from "../context/AuthContext";
 import { getApiError } from "../lib/utils";
+import { useAuth } from "../context/AuthContext";
 import {
   Plus,
   FileText,
@@ -136,7 +136,7 @@ function ClientSearchPicker({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between bg-slate-50 border-slate-200 text-slate-800 font-normal hover:bg-slate-100 h-9"
+          className="w-full justify-between bg-muted/50 border text-foreground font-normal hover:bg-muted h-9"
           data-testid={testId}
         >
           {selected
@@ -146,7 +146,7 @@ function ClientSearchPicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-[300px] p-0 bg-white border-slate-200"
+        className="w-[300px] p-0 bg-card border"
         align="start"
       >
         <div className="flex items-center border-b px-3">
@@ -163,7 +163,7 @@ function ClientSearchPicker({
         </div>
         <div className="max-h-[200px] overflow-auto p-1">
           {searchResults.length === 0 ? (
-            <div className="py-6 text-center text-sm text-slate-500">
+            <div className="py-6 text-center text-sm text-muted-foreground">
               {searching
                 ? "Searching..."
                 : searchTerm.length >= 2
@@ -190,7 +190,7 @@ function ClientSearchPicker({
                     {c.first_name} {c.last_name}
                   </span>
                   {c.email && (
-                    <span className="text-xs text-slate-400 ml-2">
+                    <span className="text-xs text-muted-foreground ml-2">
                       {c.email}
                     </span>
                   )}
@@ -312,7 +312,7 @@ function EditableRequestCard({
 
   return (
     <Card
-      className={`border transition-all duration-200 ${isPending ? "border-yellow-200 bg-white hover:shadow-md" : "border-green-200/20 bg-green-50/5"}`}
+      className={`border transition-all duration-200 ${isPending ? "border-yellow-200 bg-card hover:shadow-md" : "border-green-200/10 bg-green-50/5"}`}
       data-testid={`request-card-${req.request_id}`}
     >
       {/* Collapsed header - always visible */}
@@ -336,16 +336,16 @@ function EditableRequestCard({
             )}
             {req.transaction_type}
           </Badge>
-          <span className="text-sm font-medium text-slate-800 truncate">
+          <span className="text-sm font-medium text-foreground truncate">
             {req.client_name}
           </span>
-          <span className="font-mono text-sm font-bold text-slate-700">
+          <span className="font-mono text-sm font-bold text-card-foreground">
             ${req.amount?.toLocaleString()}
           </span>
           {req.base_currency &&
             req.base_currency !== "USD" &&
             req.base_amount && (
-              <span className="text-xs text-slate-400">
+              <span className="text-xs text-muted-foreground">
                 {req.base_amount?.toLocaleString()} {req.base_currency}
               </span>
             )}
@@ -367,12 +367,12 @@ function EditableRequestCard({
             <Badge
               className={
                 req.transaction_status === "approved"
-                  ? "bg-blue-100 text-blue-700 text-xs"
+                  ? "bg-primary/15 text-primary text-xs"
                   : req.transaction_status === "rejected"
                     ? "bg-red-100 text-red-700 text-xs"
                     : req.transaction_status === "completed"
                       ? "bg-emerald-100 text-emerald-700 text-xs"
-                      : "bg-slate-100 text-slate-600 text-xs"
+                      : "bg-muted text-card-foreground text-xs"
               }
             >
               {req.transaction_status}
@@ -392,26 +392,26 @@ function EditableRequestCard({
           })}
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-muted-foreground">
             {formatDate(req.transaction_date || req.created_at)}
           </span>
           {expanded ? (
-            <ChevronUp className="w-4 h-4 text-slate-400" />
+            <ChevronUp className="w-4 h-4 text-muted-foreground" />
           ) : (
-            <ChevronDown className="w-4 h-4 text-slate-400" />
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
           )}
         </div>
       </div>
 
       {/* Expanded form */}
       {expanded && (
-        <CardContent className="pt-0 pb-4 px-4 border-t border-slate-100">
+        <CardContent className="pt-0 pb-4 px-4 border-t border/60">
           {isPending ? (
             <div className="space-y-4 mt-4">
               {/* Row 1: Type & Client */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs text-slate-500 uppercase font-bold">
+                  <Label className="text-xs text-muted-foreground uppercase font-bold">
                     Type
                   </Label>
                   <Select
@@ -421,7 +421,7 @@ function EditableRequestCard({
                     }
                   >
                     <SelectTrigger
-                      className="bg-slate-50 border-slate-200"
+                      className="bg-muted/50 border"
                       data-testid={`edit-type-${req.request_id}`}
                     >
                       <SelectValue />
@@ -433,14 +433,14 @@ function EditableRequestCard({
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-xs text-slate-500 uppercase font-bold">
+                  <Label className="text-xs text-muted-foreground uppercase font-bold">
                     Client
                   </Label>
                   <ClientSearchPicker
                     clients={clients}
                     value={form.client_id}
                     onChange={(v) => setForm({ ...form, client_id: v })}
-                    testId="create-client-search"
+                    testId={`edit-client-${req.request_id}`}
                     authHeaders={authHeaders}
                   />
                 </div>
@@ -449,7 +449,7 @@ function EditableRequestCard({
               {/* Row 2: Payment Currency & Type-specific currency fields */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs text-slate-500 uppercase font-bold">
+                  <Label className="text-xs text-muted-foreground uppercase font-bold">
                     Payment Currency
                   </Label>
                   <Select
@@ -457,7 +457,7 @@ function EditableRequestCard({
                     onValueChange={handleBaseCurrencyChange}
                   >
                     <SelectTrigger
-                      className="bg-slate-50 border-slate-200"
+                      className="bg-muted/50 border"
                       data-testid={`edit-base-currency-${req.request_id}`}
                     >
                       <SelectValue />
@@ -473,7 +473,7 @@ function EditableRequestCard({
                 </div>
                 {form.base_currency === "USD" ? (
                   <div>
-                    <Label className="text-xs text-slate-500 uppercase font-bold">
+                    <Label className="text-xs text-muted-foreground uppercase font-bold">
                       Amount (USD) *
                     </Label>
                     <Input
@@ -483,14 +483,14 @@ function EditableRequestCard({
                       onChange={(e) =>
                         setForm({ ...form, amount: e.target.value })
                       }
-                      className="bg-slate-50 border-slate-200 font-mono"
+                      className="bg-muted/50 border font-mono"
                       placeholder="0.00 USD"
                       data-testid={`edit-amount-${req.request_id}`}
                     />
                   </div>
                 ) : (
                   <div>
-                    <Label className="text-xs text-slate-500 uppercase font-bold">
+                    <Label className="text-xs text-muted-foreground uppercase font-bold">
                       Amount in {form.base_currency} *
                     </Label>
                     <Input
@@ -498,7 +498,7 @@ function EditableRequestCard({
                       step="0.01"
                       value={form.base_amount}
                       onChange={(e) => handleBaseAmountChange(e.target.value)}
-                      className="bg-slate-50 border-slate-200 font-mono"
+                      className="bg-muted/50 border font-mono"
                       placeholder={`0.00 ${form.base_currency}`}
                       data-testid={`edit-base-amount-${req.request_id}`}
                     />
@@ -510,7 +510,7 @@ function EditableRequestCard({
               {form.base_currency !== "USD" && (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-xs text-slate-500 uppercase font-bold">
+                    <Label className="text-xs text-muted-foreground uppercase font-bold">
                       Exchange Rate (1 {form.base_currency} = ? USD)
                     </Label>
                     <Input
@@ -518,24 +518,24 @@ function EditableRequestCard({
                       step="0.0001"
                       value={form.exchange_rate}
                       onChange={(e) => handleExchangeRateChange(e.target.value)}
-                      className="bg-slate-50 border-slate-200 font-mono"
+                      className="bg-muted/50 border font-mono"
                       placeholder="0.0000"
                       data-testid={`edit-rate-${req.request_id}`}
                     />
                   </div>
                   <div>
-                    <Label className="text-xs text-slate-500 uppercase font-bold">
+                    <Label className="text-xs text-muted-foreground uppercase font-bold">
                       Amount in USD (Auto)
                     </Label>
                     <Input
                       type="number"
                       value={form.amount}
                       readOnly
-                      className="bg-slate-100 border-slate-200 font-mono text-slate-500"
+                      className="bg-muted border font-mono text-muted-foreground"
                       placeholder="Auto-calculated"
                     />
                     {form.base_amount && form.exchange_rate && (
-                      <p className="text-xs text-blue-600 mt-1">
+                      <p className="text-xs text-primary mt-1">
                         {form.base_amount} {form.base_currency} x{" "}
                         {form.exchange_rate} = {form.amount} USD
                       </p>
@@ -546,7 +546,7 @@ function EditableRequestCard({
 
               {/* Row 3: Destination Type */}
               <div>
-                <Label className="text-xs text-slate-500 uppercase font-bold">
+                <Label className="text-xs text-muted-foreground uppercase font-bold">
                   Destination Type
                 </Label>
                 {form.transaction_type === "deposit" ? (
@@ -563,7 +563,7 @@ function EditableRequestCard({
                     }
                   >
                     <SelectTrigger
-                      className="bg-slate-50 border-slate-200"
+                      className="bg-muted/50 border"
                       data-testid={`edit-dest-${req.request_id}`}
                     >
                       <SelectValue />
@@ -591,7 +591,7 @@ function EditableRequestCard({
                     }
                   >
                     <SelectTrigger
-                      className="bg-slate-50 border-slate-200"
+                      className="bg-muted/50 border"
                       data-testid={`edit-dest-${req.request_id}`}
                     >
                       <SelectValue />
@@ -608,7 +608,7 @@ function EditableRequestCard({
               {/* Conditional: Treasury selector (deposit to treasury) */}
               {form.destination_type === "treasury" && (
                 <div>
-                  <Label className="text-xs text-slate-500 uppercase font-bold">
+                  <Label className="text-xs text-muted-foreground uppercase font-bold">
                     Treasury Account
                   </Label>
                   <Select
@@ -617,7 +617,7 @@ function EditableRequestCard({
                       setForm({ ...form, destination_account_id: v })
                     }
                   >
-                    <SelectTrigger className="bg-slate-50 border-slate-200">
+                    <SelectTrigger className="bg-muted/50 border">
                       <SelectValue placeholder="Select treasury account" />
                     </SelectTrigger>
                     <SelectContent>
@@ -637,14 +637,14 @@ function EditableRequestCard({
               {form.transaction_type === "deposit" &&
                 form.destination_type === "psp" && (
                   <div>
-                    <Label className="text-xs text-slate-500 uppercase font-bold">
+                    <Label className="text-xs text-muted-foreground uppercase font-bold">
                       PSP
                     </Label>
                     <Select
                       value={form.psp_id}
                       onValueChange={(v) => setForm({ ...form, psp_id: v })}
                     >
-                      <SelectTrigger className="bg-slate-50 border-slate-200">
+                      <SelectTrigger className="bg-muted/50 border">
                         <SelectValue placeholder="Select PSP" />
                       </SelectTrigger>
                       <SelectContent>
@@ -662,14 +662,14 @@ function EditableRequestCard({
               {form.transaction_type === "deposit" &&
                 form.destination_type === "vendor" && (
                   <div>
-                    <Label className="text-xs text-slate-500 uppercase font-bold">
+                    <Label className="text-xs text-muted-foreground uppercase font-bold">
                       Exchanger
                     </Label>
                     <Select
                       value={form.vendor_id}
                       onValueChange={(v) => setForm({ ...form, vendor_id: v })}
                     >
-                      <SelectTrigger className="bg-slate-50 border-slate-200">
+                      <SelectTrigger className="bg-muted/50 border">
                         <SelectValue placeholder="Select exchanger" />
                       </SelectTrigger>
                       <SelectContent>
@@ -685,8 +685,8 @@ function EditableRequestCard({
 
               {/* Conditional: Bank details (withdrawal to bank) */}
               {form.destination_type === "bank" && (
-                <div className="space-y-2 p-3 bg-slate-50 rounded border border-slate-200">
-                  <p className="text-xs text-slate-500 uppercase font-bold">
+                <div className="space-y-2 p-3 bg-muted/50 rounded border border">
+                  <p className="text-xs text-muted-foreground uppercase font-bold">
                     Bank Details
                   </p>
                   <div className="grid grid-cols-2 gap-2">
@@ -696,7 +696,7 @@ function EditableRequestCard({
                       onChange={(e) =>
                         setForm({ ...form, client_bank_name: e.target.value })
                       }
-                      className="bg-white border-slate-200"
+                      className="bg-card border"
                     />
                     <Input
                       placeholder="Account Holder Name"
@@ -707,7 +707,7 @@ function EditableRequestCard({
                           client_bank_account_name: e.target.value,
                         })
                       }
-                      className="bg-white border-slate-200"
+                      className="bg-card border"
                     />
                     <Input
                       placeholder="Account Number"
@@ -718,10 +718,10 @@ function EditableRequestCard({
                           client_bank_account_number: e.target.value,
                         })
                       }
-                      className="bg-white border-slate-200 font-mono"
+                      className="bg-card border font-mono"
                     />
                     <Input
-                      placeholder="IFSC / IBAN"
+                      placeholder="SWIFT / IBAN"
                       value={form.client_bank_swift_iban}
                       onChange={(e) =>
                         setForm({
@@ -729,7 +729,7 @@ function EditableRequestCard({
                           client_bank_swift_iban: e.target.value,
                         })
                       }
-                      className="bg-white border-slate-200 font-mono"
+                      className="bg-card border font-mono"
                     />
                     <Input
                       placeholder="Currency (e.g. INR)"
@@ -740,7 +740,7 @@ function EditableRequestCard({
                           client_bank_currency: e.target.value,
                         })
                       }
-                      className="bg-white border-slate-200"
+                      className="bg-card border"
                     />
                   </div>
                 </div>
@@ -748,8 +748,8 @@ function EditableRequestCard({
 
               {/* Conditional: USDT details (withdrawal to usdt) */}
               {form.destination_type === "usdt" && (
-                <div className="space-y-2 p-3 bg-slate-50 rounded border border-slate-200">
-                  <p className="text-xs text-slate-500 uppercase font-bold">
+                <div className="space-y-2 p-3 bg-muted/50 rounded border border">
+                  <p className="text-xs text-muted-foreground uppercase font-bold">
                     USDT Details
                   </p>
                   <Input
@@ -758,7 +758,7 @@ function EditableRequestCard({
                     onChange={(e) =>
                       setForm({ ...form, client_usdt_address: e.target.value })
                     }
-                    className="bg-white border-slate-200 font-mono"
+                    className="bg-card border font-mono"
                   />
                   <Select
                     value={form.client_usdt_network}
@@ -766,7 +766,7 @@ function EditableRequestCard({
                       setForm({ ...form, client_usdt_network: v })
                     }
                   >
-                    <SelectTrigger className="bg-white border-slate-200">
+                    <SelectTrigger className="bg-card border">
                       <SelectValue placeholder="Select Network" />
                     </SelectTrigger>
                     <SelectContent>
@@ -781,7 +781,7 @@ function EditableRequestCard({
               {/* Row 4: Reference & CRM Ref */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs text-slate-500 uppercase font-bold">
+                  <Label className="text-xs text-muted-foreground uppercase font-bold">
                     Reference
                   </Label>
                   <Input
@@ -789,12 +789,12 @@ function EditableRequestCard({
                     onChange={(e) =>
                       setForm({ ...form, reference: e.target.value })
                     }
-                    className="bg-slate-50 border-slate-200 font-mono"
+                    className="bg-muted/50 border font-mono"
                     placeholder="Optional"
                   />
                 </div>
                 <div>
-                  <Label className="text-xs text-slate-500 uppercase font-bold">
+                  <Label className="text-xs text-muted-foreground uppercase font-bold">
                     CRM Reference
                   </Label>
                   <Input
@@ -802,7 +802,7 @@ function EditableRequestCard({
                     onChange={(e) =>
                       setForm({ ...form, crm_reference: e.target.value })
                     }
-                    className="bg-slate-50 border-slate-200 font-mono"
+                    className="bg-muted/50 border font-mono"
                     placeholder="Unique"
                     data-testid={`edit-crm-ref-${req.request_id}`}
                   />
@@ -811,7 +811,7 @@ function EditableRequestCard({
 
               {/* Transaction Date */}
               <div>
-                <Label className="text-xs text-slate-500 uppercase font-bold">
+                <Label className="text-xs text-muted-foreground uppercase font-bold">
                   Transaction Date
                 </Label>
                 <Input
@@ -820,13 +820,13 @@ function EditableRequestCard({
                   onChange={(e) =>
                     setForm({ ...form, transaction_date: e.target.value })
                   }
-                  className="bg-slate-50 border-slate-200"
+                  className="bg-muted/50 border"
                 />
               </div>
 
               {/* Row 5: Description */}
               <div>
-                <Label className="text-xs text-slate-500 uppercase font-bold">
+                <Label className="text-xs text-muted-foreground uppercase font-bold">
                   Description
                 </Label>
                 <Textarea
@@ -834,17 +834,17 @@ function EditableRequestCard({
                   onChange={(e) =>
                     setForm({ ...form, description: e.target.value })
                   }
-                  className="bg-slate-50 border-slate-200"
+                  className="bg-muted/50 border"
                   rows={2}
                 />
               </div>
 
               {/* Action buttons */}
-              <div className="flex gap-2 pt-2 border-t border-slate-100">
+              <div className="flex gap-2 pt-2 border-t border/60">
                 <Button
                   onClick={handleSave}
                   disabled={saving}
-                  className="bg-blue-600 text-white hover:bg-blue-700 flex-1"
+                  className="bg-primary text-white hover:bg-primary/85 flex-1"
                   data-testid={`save-request-${req.request_id}`}
                 >
                   {saving ? (
@@ -903,10 +903,10 @@ function EditableRequestCard({
                 .filter(Boolean)
                 .map(([k, v], i) => (
                   <div key={i}>
-                    <span className="text-[10px] text-slate-400 uppercase block">
+                    <span className="text-[10px] text-muted-foreground uppercase block">
                       {k}
                     </span>
-                    <span className="text-slate-700 font-medium">{v}</span>
+                    <span className="text-card-foreground font-medium">{v}</span>
                   </div>
                 ))}
             </div>
@@ -924,7 +924,6 @@ export default function TransactionRequests() {
   const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-
   const [total, setTotal] = useState(0);
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -972,13 +971,26 @@ export default function TransactionRequests() {
   const [createReqCaptcha, setCreateReqCaptcha] = useState({ a: 0, b: 0 });
   const [createReqCaptchaAnswer, setCreateReqCaptchaAnswer] = useState("");
   const [showCreateReqCaptcha, setShowCreateReqCaptcha] = useState(false);
+  const handleImageChange = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length) {
+      setProofImages(prev => [...prev, ...files]);
+      setProofPreviews(prev => [...prev, ...files.map(f => URL.createObjectURL(f))]);
+    }
+  };
+  const isFilePdf = (file) => file?.type === 'application/pdf' || file?.name?.toLowerCase().endsWith('.pdf');
+  const isPdfUrl = (url) => url && url.toLowerCase().includes('.pdf');
+  const removeProofImage = (idx) => {
+    setProofImages(prev => prev.filter((_, i) => i !== idx));
+    setProofPreviews(prev => prev.filter((_, i) => i !== idx));
+  };
   // Data
   const [clients, setClients] = useState([]);
   const [treasuryAccounts, setTreasuryAccounts] = useState([]);
   const [psps, setPsps] = useState([]);
   const [vendors, setVendors] = useState([]);
-  const [clientTags, setClientTags] = useState([]);
-  const [formTags, setFormTags] = useState([]);
+ const [clientTags, setClientTags] = useState([]);
+  const [formTags, setFormTags] = useState([]); 
 
   const authHeaders = useCallback(() => {
     const token = localStorage.getItem("auth_token");
@@ -1094,7 +1106,7 @@ export default function TransactionRequests() {
       Object.entries(form).forEach(([k, v]) => {
         if (v) fd.append(k, v);
       });
-      proofImages.forEach((img) => fd.append("proof_images", img));
+      proofImages.forEach(img => fd.append("proof_images", img));
       if (formTags.length > 0) fd.append("client_tags", formTags.join(","));
       const headers = authHeaders();
       delete headers["Content-Type"];
@@ -1127,6 +1139,7 @@ export default function TransactionRequests() {
       setCreating(false);
     }
   };
+
   const openProcess = (req) => {
     const a = Math.floor(Math.random() * 10) + 1;
     const b = Math.floor(Math.random() * 10) + 1;
@@ -1240,9 +1253,8 @@ export default function TransactionRequests() {
       "Created By",
       "Description",
     ];
-
     const rows = requests.map((r) => [
-      formatDate(r.created_at),
+      formatDate(r.transaction_date || r.created_at),
       r.transaction_type,
       r.client_name,
       r.amount,
@@ -1269,25 +1281,6 @@ export default function TransactionRequests() {
     toast.success("Excel report downloaded");
   };
 
-  const handleImageChange = (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length) {
-      setProofImages((prev) => [...prev, ...files]);
-      setProofPreviews((prev) => [
-        ...prev,
-        ...files.map((f) => URL.createObjectURL(f)),
-      ]);
-    }
-  };
-  const isFilePdf = (file) =>
-    file?.type === "application/pdf" ||
-    file?.name?.toLowerCase().endsWith(".pdf");
-  const isPdfUrl = (url) => url && url.toLowerCase().includes(".pdf");
-  const removeProofImage = (idx) => {
-    setProofImages((prev) => prev.filter((_, i) => i !== idx));
-    setProofPreviews((prev) => prev.filter((_, i) => i !== idx));
-  };
-
   const downloadPDF = () => {
     if (!requests.length) {
       toast.error("No data to export");
@@ -1305,7 +1298,7 @@ export default function TransactionRequests() {
       "Created By",
     ];
     const rows = requests.map((r) => [
-      formatDate(r.created_at),
+      formatDate(r.transaction_date || r.created_at),
       r.transaction_type,
       r.client_name,
       `$${r.amount?.toLocaleString()}`,
@@ -1328,7 +1321,7 @@ export default function TransactionRequests() {
 
     const w = window.open("", "_blank");
     w.document
-      .write(`<html><head><title>TX Requests Report - Miles Capitals</title>
+      .write(`<html><head><title>TX Requests Report - Carlton</title>
       <style>
         body{font-family:Arial,sans-serif;padding:20px;}
         h1{color:#1F2833;border-bottom:2px solid #66FCF1;padding-bottom:10px;}
@@ -1353,7 +1346,7 @@ export default function TransactionRequests() {
       </div>
       <table><thead><tr>${headers.map((h) => `<th>${h}</th>`).join("")}</tr></thead>
       <tbody>${rows.map((row) => `<tr>${row.map((c) => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>
-      <div class="footer">Miles Capitals - Transaction Requests Report</div>
+      <div class="footer">Carlton - Transaction Requests Report</div>
       <script>window.print();</script></body></html>`);
     w.document.close();
     toast.success("PDF report opened for printing");
@@ -1364,12 +1357,11 @@ export default function TransactionRequests() {
       <div className="flex items-center justify-between">
         <div>
           <h1
-            className="text-4xl font-bold uppercase tracking-tight text-slate-800"
-            style={{ fontFamily: "Barlow Condensed" }}
+            className="text-3xl font-bold tracking-tight text-foreground"
           >
             Transaction Requests
           </h1>
-          <p className="text-slate-500">
+          <p className="text-muted-foreground">
             Create and manage transaction requests
           </p>
         </div>
@@ -1378,16 +1370,16 @@ export default function TransactionRequests() {
             <DropdownMenuTrigger asChild>
               <Button
                 variant="outline"
-                className="border-slate-200 text-slate-600"
+                className="border text-card-foreground"
                 data-testid="export-btn"
               >
                 <Download className="w-4 h-4 mr-2" /> Export
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-white border-slate-200">
+            <DropdownMenuContent className="bg-card border">
               <DropdownMenuItem
                 onClick={downloadExcel}
-                className="cursor-pointer hover:bg-slate-100"
+                className="cursor-pointer hover:bg-muted"
                 data-testid="export-excel"
               >
                 <FileSpreadsheet className="w-4 h-4 mr-2 text-green-600" />{" "}
@@ -1395,7 +1387,7 @@ export default function TransactionRequests() {
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={downloadPDF}
-                className="cursor-pointer hover:bg-slate-100"
+                className="cursor-pointer hover:bg-muted"
                 data-testid="export-pdf"
               >
                 <FileText className="w-4 h-4 mr-2 text-red-600" /> Download PDF
@@ -1404,7 +1396,7 @@ export default function TransactionRequests() {
           </DropdownMenu>
           <Button
             onClick={() => setCreateOpen(true)}
-            className="bg-blue-600 text-white hover:bg-blue-700"
+            className="bg-primary text-white hover:bg-primary/85"
             data-testid="create-request-btn"
           >
             <Plus className="w-4 h-4 mr-2" /> New Request
@@ -1414,7 +1406,7 @@ export default function TransactionRequests() {
 
       {/* Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="bg-yellow-50/50 border-yellow-200">
+        <Card className="bg-yellow-50 border-yellow-200">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs text-yellow-600 uppercase">Pending</p>
@@ -1436,13 +1428,13 @@ export default function TransactionRequests() {
             <CheckCircle className="w-8 h-8 text-green-500 opacity-50" />
           </CardContent>
         </Card>
-        <Card className="bg-blue-50 border-blue-200">
+        <Card className="bg-primary/10 border-primary/30">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs text-blue-600 uppercase">Total</p>
-              <p className="text-3xl font-bold text-blue-700">{total}</p>
+              <p className="text-xs text-primary uppercase">Total</p>
+              <p className="text-3xl font-bold text-primary">{total}</p>
             </div>
-            <FileText className="w-8 h-8 text-blue-500 opacity-50" />
+            <FileText className="w-8 h-8 text-primary/80 opacity-50" />
           </CardContent>
         </Card>
       </div>
@@ -1450,11 +1442,11 @@ export default function TransactionRequests() {
       {/* Filters */}
       <div className="flex flex-wrap gap-3 items-end">
         <div className="flex-1 min-w-[180px]">
-          <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">
+          <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider mb-1 block">
             Search
           </label>
           <div className="relative">
-            <Search className="w-4 h-4 absolute left-2.5 top-2 text-slate-400" />
+            <Search className="w-4 h-4 absolute left-2.5 top-2 text-muted-foreground" />
             <Input
               value={searchQuery}
               onChange={(e) => {
@@ -1462,13 +1454,13 @@ export default function TransactionRequests() {
                 setPage(1);
               }}
               placeholder="Client, reference, CRM ref..."
-              className="pl-8 h-8 text-sm border-slate-200"
+              className="pl-8 h-8 text-sm border"
               data-testid="filter-search"
             />
           </div>
         </div>
         <div className="min-w-[110px]">
-          <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">
+          <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider mb-1 block">
             Status
           </label>
           <select
@@ -1477,7 +1469,7 @@ export default function TransactionRequests() {
               setStatusFilter(e.target.value);
               setPage(1);
             }}
-            className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-800 h-8"
+            className="w-full px-2 py-1.5 text-sm border border rounded-md bg-card text-foreground h-8"
             data-testid="filter-status"
           >
             <option value="all">All</option>
@@ -1488,7 +1480,7 @@ export default function TransactionRequests() {
           </select>
         </div>
         <div className="min-w-[110px]">
-          <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">
+          <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider mb-1 block">
             Type
           </label>
           <select
@@ -1497,7 +1489,7 @@ export default function TransactionRequests() {
               setTypeFilter(e.target.value);
               setPage(1);
             }}
-            className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-md bg-white text-slate-800 h-8"
+            className="w-full px-2 py-1.5 text-sm border border rounded-md bg-card text-foreground h-8"
             data-testid="filter-type"
           >
             <option value="all">All</option>
@@ -1506,7 +1498,7 @@ export default function TransactionRequests() {
           </select>
         </div>
         <div className="min-w-[130px]">
-          <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">
+          <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider mb-1 block">
             From
           </label>
           <Input
@@ -1516,12 +1508,12 @@ export default function TransactionRequests() {
               setDateFrom(e.target.value);
               setPage(1);
             }}
-            className="h-8 text-sm border-slate-200"
+            className="h-8 text-sm border"
             data-testid="filter-date-from"
           />
         </div>
         <div className="min-w-[130px]">
-          <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1 block">
+          <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider mb-1 block">
             To
           </label>
           <Input
@@ -1531,7 +1523,7 @@ export default function TransactionRequests() {
               setDateTo(e.target.value);
               setPage(1);
             }}
-            className="h-8 text-sm border-slate-200"
+            className="h-8 text-sm border"
             data-testid="filter-date-to"
           />
         </div>
@@ -1551,7 +1543,7 @@ export default function TransactionRequests() {
               setDateTo("");
               setPage(1);
             }}
-            className="text-slate-400 hover:text-slate-600 h-8 px-2"
+            className="text-muted-foreground hover:text-card-foreground h-8 px-2"
             data-testid="clear-filters"
           >
             <X className="w-4 h-4 mr-1" /> Clear
@@ -1563,11 +1555,11 @@ export default function TransactionRequests() {
       <div className="space-y-3" data-testid="requests-list">
         {loading ? (
           <div className="flex justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
           </div>
         ) : requests.length === 0 ? (
-          <Card className="bg-white border-slate-200">
-            <CardContent className="p-8 text-center text-slate-400">
+          <Card className="bg-card border">
+            <CardContent className="p-8 text-center text-muted-foreground">
               No requests found
             </CardContent>
           </Card>
@@ -1590,7 +1582,6 @@ export default function TransactionRequests() {
         )}
       </div>
 
-      {/* Pagination */}
       <PaginationControls
         currentPage={page}
         totalPages={totalPages}
@@ -1609,11 +1600,11 @@ export default function TransactionRequests() {
 
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-card border text-foreground max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle
-              className="text-xl font-bold uppercase"
-              style={{ fontFamily: "Barlow Condensed" }}
+              className="text-lg font-bold text-foreground"
+              
             >
               New Transaction Request
             </DialogTitle>
@@ -1621,7 +1612,7 @@ export default function TransactionRequests() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs text-slate-500 uppercase">
+                <Label className="text-xs text-muted-foreground uppercase">
                   Type *
                 </Label>
                 <Select
@@ -1630,7 +1621,7 @@ export default function TransactionRequests() {
                     setForm({ ...form, transaction_type: v })
                   }
                 >
-                  <SelectTrigger className="bg-slate-50">
+                  <SelectTrigger className="bg-muted/50">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1640,7 +1631,7 @@ export default function TransactionRequests() {
                 </Select>
               </div>
               <div>
-                <Label className="text-xs text-slate-500 uppercase">
+                <Label className="text-xs text-muted-foreground uppercase">
                   Client *
                 </Label>
                 <ClientSearchPicker
@@ -1660,7 +1651,7 @@ export default function TransactionRequests() {
             {/* Currency Selection */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs text-slate-500 uppercase">
+                <Label className="text-xs text-muted-foreground uppercase">
                   Payment Currency
                 </Label>
                 <Select
@@ -1668,7 +1659,7 @@ export default function TransactionRequests() {
                   onValueChange={handleCreateBaseCurrencyChange}
                 >
                   <SelectTrigger
-                    className="bg-slate-50"
+                    className="bg-muted/50"
                     data-testid="create-base-currency"
                   >
                     <SelectValue />
@@ -1684,7 +1675,7 @@ export default function TransactionRequests() {
               </div>
               {form.base_currency === "USD" ? (
                 <div>
-                  <Label className="text-xs text-slate-500 uppercase">
+                  <Label className="text-xs text-muted-foreground uppercase">
                     Amount (USD) *
                   </Label>
                   <Input
@@ -1694,13 +1685,13 @@ export default function TransactionRequests() {
                     onChange={(e) =>
                       setForm({ ...form, amount: e.target.value })
                     }
-                    className="bg-slate-50 font-mono"
+                    className="bg-muted/50 font-mono"
                     placeholder="0.00 USD"
                   />
                 </div>
               ) : (
                 <div>
-                  <Label className="text-xs text-slate-500 uppercase">
+                  <Label className="text-xs text-muted-foreground uppercase">
                     Amount in {form.base_currency} *
                   </Label>
                   <Input
@@ -1710,7 +1701,7 @@ export default function TransactionRequests() {
                     onChange={(e) =>
                       handleCreateBaseAmountChange(e.target.value)
                     }
-                    className="bg-slate-50 font-mono"
+                    className="bg-muted/50 font-mono"
                     placeholder={`0.00 ${form.base_currency}`}
                   />
                 </div>
@@ -1720,7 +1711,7 @@ export default function TransactionRequests() {
             {form.base_currency !== "USD" && (
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs text-slate-500 uppercase">
+                  <Label className="text-xs text-muted-foreground uppercase">
                     Exchange Rate (1 {form.base_currency} = ? USD)
                   </Label>
                   <Input
@@ -1730,22 +1721,22 @@ export default function TransactionRequests() {
                     onChange={(e) =>
                       handleCreateExchangeRateChange(e.target.value)
                     }
-                    className="bg-slate-50 font-mono"
+                    className="bg-muted/50 font-mono"
                     placeholder="0.0000"
                   />
                 </div>
                 <div>
-                  <Label className="text-xs text-slate-500 uppercase">
+                  <Label className="text-xs text-muted-foreground uppercase">
                     Amount in USD (Auto)
                   </Label>
                   <Input
                     type="number"
                     value={form.amount}
                     readOnly
-                    className="bg-slate-100 font-mono text-slate-500"
+                    className="bg-muted font-mono text-muted-foreground"
                   />
                   {form.base_amount && form.exchange_rate && (
-                    <p className="text-xs text-blue-600 mt-1">
+                    <p className="text-xs text-primary mt-1">
                       {form.base_amount} {form.base_currency} x{" "}
                       {form.exchange_rate} = {form.amount} USD
                     </p>
@@ -1756,7 +1747,7 @@ export default function TransactionRequests() {
 
             {form.transaction_type === "deposit" && (
               <div>
-                <Label className="text-xs text-slate-500 uppercase">
+                <Label className="text-xs text-muted-foreground uppercase">
                   Destination Type
                 </Label>
                 <Select
@@ -1771,7 +1762,7 @@ export default function TransactionRequests() {
                     })
                   }
                 >
-                  <SelectTrigger className="bg-slate-50">
+                  <SelectTrigger className="bg-muted/50">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1788,7 +1779,7 @@ export default function TransactionRequests() {
             {form.transaction_type === "deposit" &&
               form.destination_type === "treasury" && (
                 <div>
-                  <Label className="text-xs text-slate-500 uppercase">
+                  <Label className="text-xs text-muted-foreground uppercase">
                     Treasury Account
                   </Label>
                   <Select
@@ -1797,7 +1788,7 @@ export default function TransactionRequests() {
                       setForm({ ...form, destination_account_id: v })
                     }
                   >
-                    <SelectTrigger className="bg-slate-50">
+                    <SelectTrigger className="bg-muted/50">
                       <SelectValue placeholder="Select treasury account" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1815,14 +1806,14 @@ export default function TransactionRequests() {
             {form.transaction_type === "deposit" &&
               form.destination_type === "psp" && (
                 <div>
-                  <Label className="text-xs text-slate-500 uppercase">
+                  <Label className="text-xs text-muted-foreground uppercase">
                     PSP
                   </Label>
                   <Select
                     value={form.psp_id}
                     onValueChange={(v) => setForm({ ...form, psp_id: v })}
                   >
-                    <SelectTrigger className="bg-slate-50">
+                    <SelectTrigger className="bg-muted/50">
                       <SelectValue placeholder="Select PSP" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1838,14 +1829,14 @@ export default function TransactionRequests() {
             {form.transaction_type === "deposit" &&
               form.destination_type === "vendor" && (
                 <div>
-                  <Label className="text-xs text-slate-500 uppercase">
+                  <Label className="text-xs text-muted-foreground uppercase">
                     Exchanger
                   </Label>
                   <Select
                     value={form.vendor_id}
                     onValueChange={(v) => setForm({ ...form, vendor_id: v })}
                   >
-                    <SelectTrigger className="bg-slate-50">
+                    <SelectTrigger className="bg-muted/50">
                       <SelectValue placeholder="Select exchanger" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1862,7 +1853,7 @@ export default function TransactionRequests() {
             {form.transaction_type === "withdrawal" && (
               <>
                 <div>
-                  <Label className="text-xs text-slate-500 uppercase">
+                  <Label className="text-xs text-muted-foreground uppercase">
                     Destination Type
                   </Label>
                   <Select
@@ -1871,7 +1862,7 @@ export default function TransactionRequests() {
                       setForm({ ...form, destination_type: v })
                     }
                   >
-                    <SelectTrigger className="bg-slate-50">
+                    <SelectTrigger className="bg-muted/50">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1881,8 +1872,8 @@ export default function TransactionRequests() {
                   </Select>
                 </div>
                 {form.destination_type === "bank" && (
-                  <div className="space-y-2 p-3 bg-slate-50 rounded border">
-                    <p className="text-xs text-slate-500 uppercase font-bold">
+                  <div className="space-y-2 p-3 bg-muted/50 rounded border">
+                    <p className="text-xs text-muted-foreground uppercase font-bold">
                       Bank Details
                     </p>
                     <Input
@@ -1891,7 +1882,7 @@ export default function TransactionRequests() {
                       onChange={(e) =>
                         setForm({ ...form, client_bank_name: e.target.value })
                       }
-                      className="bg-white"
+                      className="bg-card"
                     />
                     <Input
                       placeholder="Account Holder Name"
@@ -1902,7 +1893,7 @@ export default function TransactionRequests() {
                           client_bank_account_name: e.target.value,
                         })
                       }
-                      className="bg-white"
+                      className="bg-card"
                     />
                     <Input
                       placeholder="Account Number"
@@ -1913,10 +1904,10 @@ export default function TransactionRequests() {
                           client_bank_account_number: e.target.value,
                         })
                       }
-                      className="bg-white"
+                      className="bg-card"
                     />
                     <Input
-                      placeholder="SWIFT / IBAN"
+                      placeholder="IFSC / IBAN"
                       value={form.client_bank_swift_iban}
                       onChange={(e) =>
                         setForm({
@@ -1924,7 +1915,7 @@ export default function TransactionRequests() {
                           client_bank_swift_iban: e.target.value,
                         })
                       }
-                      className="bg-white"
+                      className="bg-card"
                     />
                     <Input
                       placeholder="Currency (e.g. INR)"
@@ -1935,13 +1926,13 @@ export default function TransactionRequests() {
                           client_bank_currency: e.target.value,
                         })
                       }
-                      className="bg-white"
+                      className="bg-card"
                     />
                   </div>
                 )}
                 {form.destination_type === "usdt" && (
-                  <div className="space-y-2 p-3 bg-slate-50 rounded border">
-                    <p className="text-xs text-slate-500 uppercase font-bold">
+                  <div className="space-y-2 p-3 bg-muted/50 rounded border">
+                    <p className="text-xs text-muted-foreground uppercase font-bold">
                       USDT Details
                     </p>
                     <Input
@@ -1953,7 +1944,7 @@ export default function TransactionRequests() {
                           client_usdt_address: e.target.value,
                         })
                       }
-                      className="bg-white"
+                      className="bg-card"
                     />
                     <Select
                       value={form.client_usdt_network}
@@ -1961,7 +1952,7 @@ export default function TransactionRequests() {
                         setForm({ ...form, client_usdt_network: v })
                       }
                     >
-                      <SelectTrigger className="bg-white">
+                      <SelectTrigger className="bg-card">
                         <SelectValue placeholder="Select Network" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1977,7 +1968,7 @@ export default function TransactionRequests() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs text-slate-500 uppercase">
+                <Label className="text-xs text-muted-foreground uppercase">
                   Reference
                 </Label>
                 <Input
@@ -1985,12 +1976,12 @@ export default function TransactionRequests() {
                   onChange={(e) =>
                     setForm({ ...form, reference: e.target.value })
                   }
-                  className="bg-slate-50 font-mono"
+                  className="bg-muted/50 font-mono"
                   placeholder="Optional"
                 />
               </div>
               <div>
-                <Label className="text-xs text-slate-500 uppercase">
+                <Label className="text-xs text-muted-foreground uppercase">
                   CRM Reference
                 </Label>
                 <Input
@@ -1998,13 +1989,13 @@ export default function TransactionRequests() {
                   onChange={(e) =>
                     setForm({ ...form, crm_reference: e.target.value })
                   }
-                  className="bg-slate-50 font-mono"
+                  className="bg-muted/50 font-mono"
                   placeholder="Unique"
                 />
               </div>
             </div>
             <div>
-              <Label className="text-xs text-slate-500 uppercase">
+              <Label className="text-xs text-muted-foreground uppercase">
                 Transaction Date
               </Label>
               <Input
@@ -2013,15 +2004,15 @@ export default function TransactionRequests() {
                 onChange={(e) =>
                   setForm({ ...form, transaction_date: e.target.value })
                 }
-                className="bg-slate-50"
+                className="bg-muted/50"
                 data-testid="txreq-transaction-date"
               />
             </div>
             <div>
-              <Label className="text-xs text-slate-500 uppercase">
+              <Label className="text-xs text-muted-foreground uppercase">
                 Client Tags
               </Label>
-              <div className="flex flex-wrap gap-1.5 min-h-[36px] p-2 bg-slate-50 border border-slate-200 rounded-sm">
+              <div className="flex flex-wrap gap-1.5 min-h-[36px] p-2 bg-muted/50 border border rounded-sm">
                 {formTags.map((tag) => {
                   const tagObj = clientTags.find((t) => t.name === tag);
                   return (
@@ -2036,7 +2027,7 @@ export default function TransactionRequests() {
                         onClick={() =>
                           setFormTags(formTags.filter((t) => t !== tag))
                         }
-                        className="ml-0.5 hover:bg-white/20 rounded-full w-3.5 h-3.5 flex items-center justify-center text-[9px]"
+                        className="ml-0.5 hover:bg-card/20 rounded-full w-3.5 h-3.5 flex items-center justify-center text-[9px]"
                       >
                         &times;
                       </button>
@@ -2049,7 +2040,7 @@ export default function TransactionRequests() {
                       setFormTags([...formTags, val]);
                   }}
                 >
-                  <SelectTrigger className="w-auto h-6 border-0 bg-transparent text-xs text-slate-400 p-0 px-1 shadow-none">
+                  <SelectTrigger className="w-auto h-6 border-0 bg-transparent text-xs text-muted-foreground p-0 px-1 shadow-none">
                     <span>+ Add tag</span>
                   </SelectTrigger>
                   <SelectContent>
@@ -2073,7 +2064,7 @@ export default function TransactionRequests() {
               </div>
             </div>
             <div>
-              <Label className="text-xs text-slate-500 uppercase">
+              <Label className="text-xs text-muted-foreground uppercase">
                 Description
               </Label>
               <Textarea
@@ -2081,26 +2072,15 @@ export default function TransactionRequests() {
                 onChange={(e) =>
                   setForm({ ...form, description: e.target.value })
                 }
-                className="bg-slate-50"
+                className="bg-muted/50"
                 rows={2}
               />
             </div>
-            {/* <div>
-              <Label className="text-xs text-slate-500 uppercase">
-                Proof of Payment
-              </Label>
-              <Input
-                type="file"
-                accept="image/*,.pdf"
-                onChange={(e) => setProofImage(e.target.files[0])}
-                className="bg-slate-50"
-              />
-            </div> */}
             <div className="space-y-2">
-              <Label className="text-slate-500 text-xs uppercase tracking-wider">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                 Proof of Payment (Image or PDF)
               </Label>
-              <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center hover:border-[#1FA21B]/50 transition-colors">
+              <div className="border-2 border-dashed border rounded-xl p-4 text-center hover:border-[#1FA21B]/50 transition-colors">
                 <input
                   type="file"
                   accept="image/*,application/pdf,.pdf"
@@ -2117,56 +2097,24 @@ export default function TransactionRequests() {
                         {proofPreviews.map((src, i) => (
                           <div key={i} className="relative group">
                             {isFilePdf(proofImages[i]) ? (
-                              <div
-                                className="w-full h-20 flex flex-col items-center justify-center rounded border border-red-200 bg-red-50 cursor-pointer"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  window.open(src, "_blank");
-                                }}
-                              >
+                              <div className="w-full h-20 flex flex-col items-center justify-center rounded border border-red-200 bg-red-50 cursor-pointer" onClick={(e) => { e.preventDefault(); window.open(src, "_blank"); }}>
                                 <FileText className="w-6 h-6 text-red-500 mb-1" />
-                                <span className="text-xs text-red-600 truncate w-full px-1 text-center">
-                                  {proofImages[i]?.name || "PDF"}
-                                </span>
+                                <span className="text-xs text-red-600 truncate w-full px-1 text-center">{proofImages[i]?.name || 'PDF'}</span>
                               </div>
                             ) : (
-                              <img
-                                src={src}
-                                alt={`Proof ${i + 1}`}
-                                className="w-full h-20 object-cover rounded border border-slate-200 cursor-pointer"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  window.open(src, "_blank");
-                                }}
-                              />
+                              <img src={src} alt={`Proof ${i+1}`} className="w-full h-20 object-cover rounded border border cursor-pointer" onClick={(e) => { e.preventDefault(); window.open(src, "_blank"); }} />
                             )}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                removeProofImage(i);
-                              }}
-                              className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full w-4 h-4 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              ×
-                            </button>
+                            <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeProofImage(i); }} className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full w-4 h-4 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">×</button>
                           </div>
                         ))}
                       </div>
-                      <p className="text-xs text-blue-600 text-center">
-                        {proofPreviews.length} file(s) — click to add more
-                      </p>
+                      <p className="text-xs text-primary text-center">{proofPreviews.length} file(s) — click to add more</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <Upload className="w-8 h-8 mx-auto text-slate-500" />
-                      <p className="text-sm text-slate-500">
-                        Click to upload proof of payment
-                      </p>
-                      <p className="text-xs text-slate-500/60">
-                        PNG, JPG, PDF up to 10MB · multiple allowed
-                      </p>
+                      <Upload className="w-8 h-8 mx-auto text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">Click to upload proof of payment</p>
+                      <p className="text-xs text-muted-foreground/60">PNG, JPG, PDF up to 10MB · multiple allowed</p>
                     </div>
                   )}
                 </label>
@@ -2175,7 +2123,7 @@ export default function TransactionRequests() {
             <Button
               onClick={handlePreCreate}
               disabled={creating}
-              className="w-full bg-blue-600 text-white hover:bg-blue-700"
+              className="w-full bg-primary text-white hover:bg-primary/85"
             >
               {creating ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -2186,7 +2134,7 @@ export default function TransactionRequests() {
             </Button>
             {showCreateReqCaptcha && (
               <div
-                className="p-3 bg-foreground/5 border  rounded-lg space-y-2 mt-2"
+                className="p-3 bg-amber-50/5 border border-amber-200 rounded-sm space-y-2 mt-2"
                 data-testid="create-req-captcha"
               >
                 <p className="text-sm text-amber-800 font-medium">
@@ -2198,7 +2146,7 @@ export default function TransactionRequests() {
                     type="number"
                     value={createReqCaptchaAnswer}
                     onChange={(e) => setCreateReqCaptchaAnswer(e.target.value)}
-                    className="bg-white border-amber-300 w-24 text-center font-mono"
+                    className="bg-card border-amber-300 w-24 text-center font-mono"
                     placeholder="?"
                     autoFocus
                     data-testid="create-req-captcha-input"
@@ -2224,20 +2172,20 @@ export default function TransactionRequests() {
         open={!!processDialog}
         onOpenChange={() => setProcessDialog(null)}
       >
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
+        <DialogContent className="bg-card border text-foreground max-w-md">
           <DialogHeader>
             <DialogTitle
-              className="text-xl font-bold uppercase"
-              style={{ fontFamily: "Barlow Condensed" }}
+              className="text-lg font-bold text-foreground"
+              
             >
               Process Request
             </DialogTitle>
           </DialogHeader>
           {processDialog && (
             <div className="space-y-4">
-              <div className="p-4 bg-slate-50 rounded space-y-2">
+              <div className="p-4 bg-muted/50 rounded space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Type</span>
+                  <span className="text-muted-foreground">Type</span>
                   <Badge
                     className={
                       processDialog.transaction_type === "deposit"
@@ -2249,20 +2197,28 @@ export default function TransactionRequests() {
                   </Badge>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Client</span>
+                  <span className="text-muted-foreground">Client</span>
                   <span>{processDialog.client_name}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Amount</span>
+                  <span className="text-muted-foreground">Amount</span>
                   <span className="font-mono font-bold">
                     ${processDialog.amount?.toLocaleString()}
                   </span>
                 </div>
                 {processDialog.crm_reference && (
                   <div className="flex justify-between">
-                    <span className="text-slate-500">CRM Ref</span>
+                    <span className="text-muted-foreground">CRM Ref</span>
                     <span className="font-mono text-purple-600">
                       {processDialog.crm_reference}
+                    </span>
+                  </div>
+                )}
+                {processDialog.transaction_date && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Transaction Date</span>
+                    <span className="text-foreground">
+                      {processDialog.transaction_date}
                     </span>
                   </div>
                 )}
@@ -2270,51 +2226,29 @@ export default function TransactionRequests() {
               {(() => {
                 const imgs = processDialog?.proof_images?.length
                   ? processDialog.proof_images
-                  : processDialog?.proof_image
-                    ? [processDialog.proof_image]
-                    : [];
+                  : processDialog?.proof_image ? [processDialog.proof_image] : [];
                 if (!imgs.length) return null;
                 return (
-                  <div className="pt-2 border-t border-slate-200">
-                    <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">
-                      Proof of Payment ({imgs.length})
-                    </p>
+                  <div className="pt-2 border-t border">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Proof of Payment ({imgs.length})</p>
                     <div className="grid grid-cols-3 gap-2">
                       {imgs.map((url, i) => {
-                        const src = url?.startsWith("http")
-                          ? url
-                          : `data:image/png;base64,${url}`;
+                        const src = url?.startsWith("http") ? url : `data:image/png;base64,${url}`;
                         if (isPdfUrl(url)) {
                           return (
-                            <a
-                              key={i}
-                              href={src}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="flex flex-col items-center justify-center h-16 rounded border border-red-200 bg-red-50 hover:bg-red-100 cursor-pointer"
-                            >
+                            <a key={i} href={src} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center h-16 rounded border border-red-200 bg-red-50 hover:bg-red-100 cursor-pointer">
                               <FileText className="w-5 h-5 text-red-500 mb-1" />
-                              <span className="text-xs text-red-600">
-                                PDF {i + 1}
-                              </span>
+                              <span className="text-xs text-red-600">PDF {i+1}</span>
                             </a>
                           );
                         }
-                        return (
-                          <img
-                            key={i}
-                            src={src}
-                            alt={`Proof ${i + 1}`}
-                            className="w-full h-16 object-cover rounded border border-slate-200 cursor-pointer hover:opacity-80"
-                            onClick={() => window.open(src, "_blank")}
-                          />
-                        );
+                        return <img key={i} src={src} alt={`Proof ${i+1}`} className="w-full h-16 object-cover rounded border border cursor-pointer hover:opacity-80" onClick={() => window.open(src, "_blank")} />;
                       })}
                     </div>
                   </div>
                 );
               })()}
-              <div className="p-4 bg-yellow-50/5 border border-yellow-200/5 rounded">
+              <div className="p-4 bg-yellow-50/5 border border-yellow-200 rounded">
                 <p className="text-sm font-medium text-yellow-800 mb-2">
                   Verify: What is {captcha.a} + {captcha.b}?
                 </p>
@@ -2323,12 +2257,12 @@ export default function TransactionRequests() {
                   value={captchaAnswer}
                   onChange={(e) => setCaptchaAnswer(e.target.value)}
                   placeholder="Enter answer"
-                  className="bg-white"
+                  className="bg-card"
                   autoFocus
                   data-testid="process-captcha"
                 />
               </div>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted-foreground">
                 This will create a real transaction in the main Transactions
                 page with "Pending" status.
               </p>

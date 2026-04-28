@@ -1,33 +1,23 @@
-import { useEffect, useState, useMemo } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
-import { Badge } from "../components/ui/badge";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "../components/ui/tabs";
+import { useEffect, useState, useMemo } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Badge } from '../components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../components/ui/select";
+} from '../components/ui/select';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "../components/ui/dropdown-menu";
+} from '../components/ui/dropdown-menu';
 import {
   Table,
   TableBody,
@@ -35,13 +25,13 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "../components/ui/table";
-import { ScrollArea } from "../components/ui/scroll-area";
-import { toast } from "sonner";
-import { getApiError } from "../lib/utils";
-import * as XLSX from "xlsx";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+} from '../components/ui/table';
+import { ScrollArea } from '../components/ui/scroll-area';
+import { toast } from 'sonner';
+import { getApiError } from '../lib/utils';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import {
   BarChart3,
   TrendingUp,
@@ -70,7 +60,7 @@ import {
   FileText,
   ChevronDown,
   Calculator,
-} from "lucide-react";
+} from 'lucide-react';
 import {
   AreaChart,
   Area,
@@ -84,36 +74,20 @@ import {
   Pie,
   Cell,
   Legend,
-} from "recharts";
+} from 'recharts';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
-const COLORS = [
-  "#3B82F6",
-  "#10B981",
-  "#F59E0B",
-  "#EF4444",
-  "#8B5CF6",
-  "#EC4899",
-  "#06B6D4",
-  "#84CC16",
-];
+const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-[#1F2833]/95 backdrop-blur-md border border-[#1F2833] rounded-xl p-3">
-        <p className="text-xs text-[#94A3B8] mb-1">{label}</p>
+      <div className="bg-card/95 backdrop-blur-md border border rounded-lg p-3">
+        <p className="text-xs text-muted-foreground mb-1">{label}</p>
         {payload.map((entry, index) => (
-          <p
-            key={index}
-            className="text-sm font-mono"
-            style={{ color: entry.color }}
-          >
-            {entry.name}:{" "}
-            {typeof entry.value === "number"
-              ? `$${entry.value.toLocaleString()}`
-              : entry.value}
+          <p key={index} className="text-sm font-mono" style={{ color: entry.color }}>
+            {entry.name}: {typeof entry.value === 'number' ? `$${entry.value.toLocaleString()}` : entry.value}
           </p>
         ))}
       </div>
@@ -123,11 +97,11 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function Reports() {
-  const [activeTab, setActiveTab] = useState("transactions");
+  const [activeTab, setActiveTab] = useState('transactions');
   const [loading, setLoading] = useState(true);
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  
   // Report data states
   const [transactionReport, setTransactionReport] = useState(null);
   const [vendorReport, setExchangerReport] = useState(null);
@@ -143,133 +117,104 @@ export default function Reports() {
   const [loansData, setLoansData] = useState([]);
   const [dealingPnLReport, setDealingPnLReport] = useState([]);
   const [dealingPnLSummary, setDealingPnLSummary] = useState(null);
-
+  
   // Detailed data for full reports
   const [allTransactions, setAllTransactions] = useState([]);
   const [allIncomeExpenses, setAllIncomeExpenses] = useState([]);
   const [allTreasuryTransactions, setAllTreasuryTransactions] = useState([]);
 
   const getAuthHeaders = () => {
-    const token = localStorage.getItem("auth_token");
-    return {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
+    const token = localStorage.getItem('auth_token');
+    return { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) };
   };
 
   // Export to Excel function
   const exportToExcel = (data, filename, columns) => {
-    const exportData = data.map((row) => {
+    const exportData = data.map(row => {
       const obj = {};
-      columns.forEach((col) => {
-        obj[col.label] = row[col.key] ?? "";
+      columns.forEach(col => {
+        obj[col.label] = row[col.key] ?? '';
       });
       return obj;
     });
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Report");
-    XLSX.writeFile(
-      wb,
-      `${filename}_${new Date().toISOString().split("T")[0]}.xlsx`,
-    );
-    toast.success("Excel file downloaded");
+    XLSX.utils.book_append_sheet(wb, ws, 'Report');
+    XLSX.writeFile(wb, `${filename}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    toast.success('Excel file downloaded');
   };
 
   // Export to PDF function
   const exportToPDF = (title, data, columns, summaryData = null) => {
     const doc = new jsPDF();
-
+    
     // Header
     doc.setFontSize(20);
     doc.setTextColor(11, 12, 16);
-    doc.text("MILES CAPITALS", 14, 20);
+    doc.text('CARLTON', 14, 20);
     doc.setFontSize(12);
     doc.setTextColor(100);
     doc.text(title, 14, 28);
     doc.setFontSize(10);
     doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 35);
     if (dateFrom || dateTo) {
-      doc.text(
-        `Period: ${dateFrom || "Start"} to ${dateTo || "Present"}`,
-        14,
-        41,
-      );
+      doc.text(`Period: ${dateFrom || 'Start'} to ${dateTo || 'Present'}`, 14, 41);
     }
-
+    
     let yPos = 50;
-
+    
     // Summary section if provided
     if (summaryData) {
       doc.setFontSize(12);
       doc.setTextColor(0);
-      doc.text("Summary", 14, yPos);
+      doc.text('Summary', 14, yPos);
       yPos += 8;
       doc.setFontSize(10);
-      summaryData.forEach((item) => {
+      summaryData.forEach(item => {
         doc.text(`${item.label}: ${item.value}`, 14, yPos);
         yPos += 6;
       });
       yPos += 10;
     }
-
+    
     // Data table
     if (data && data.length > 0) {
-      const tableData = data.map((row) =>
-        columns.map((col) => {
-          const val = row[col.key];
-          if (typeof val === "number") return val.toLocaleString();
-          return val ?? "";
-        }),
-      );
-
+      const tableData = data.map(row => columns.map(col => {
+        const val = row[col.key];
+        if (typeof val === 'number') return val.toLocaleString();
+        return val ?? '';
+      }));
+      
       autoTable(doc, {
-        head: [columns.map((c) => c.label)],
+        head: [columns.map(c => c.label)],
         body: tableData,
         startY: yPos,
-        theme: "striped",
-        headStyles: { fillColor: [11, 12, 16], textColor: [102, 252, 241] },
+        theme: 'striped',
+        headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255] },
         styles: { fontSize: 8 },
       });
     }
-
-    doc.save(
-      `${title.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.pdf`,
-    );
-    toast.success("PDF file downloaded");
+    
+    doc.save(`${title.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
+    toast.success('PDF file downloaded');
   };
 
   // Export dropdown component
   const ExportDropdown = ({ data, filename, columns, title, summaryData }) => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="border-[#1F2833] text-[#94A3B8] hover:bg-[#1F2833] hover:text-white"
-        >
-          <Download className="w-4 h-4 mr-2" /> Export{" "}
-          <ChevronDown className="w-3 h-3 ml-1" />
+        <Button variant="outline" size="sm" className="border text-card-foreground hover:bg-muted">
+          <Download className="w-4 h-4 mr-2" /> Export <ChevronDown className="w-3 h-3 ml-1" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="bg-[#1F2833] border-[#1F2833]">
-        <DropdownMenuItem
-          onClick={() => downloadCSV(data, filename, columns)}
-          className="cursor-pointer"
-        >
+      <DropdownMenuContent className="bg-card border">
+        <DropdownMenuItem onClick={() => downloadCSV(data, filename, columns)} className="cursor-pointer">
           <FileSpreadsheet className="w-4 h-4 mr-2 text-green-600" /> CSV
         </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => exportToExcel(data, filename, columns)}
-          className="cursor-pointer"
-        >
-          <FileSpreadsheet className="w-4 h-4 mr-2 text-blue-600" /> Excel
-          (.xlsx)
+        <DropdownMenuItem onClick={() => exportToExcel(data, filename, columns)} className="cursor-pointer">
+          <FileSpreadsheet className="w-4 h-4 mr-2 text-primary" /> Excel (.xlsx)
         </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => exportToPDF(title, data, columns, summaryData)}
-          className="cursor-pointer"
-        >
+        <DropdownMenuItem onClick={() => exportToPDF(title, data, columns, summaryData)} className="cursor-pointer">
           <FileText className="w-4 h-4 mr-2 text-red-600" /> PDF
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -278,24 +223,24 @@ export default function Reports() {
 
   const buildQueryParams = () => {
     const params = new URLSearchParams();
-    if (dateFrom) params.append("start_date", dateFrom);
-    if (dateTo) params.append("end_date", dateTo);
+    if (dateFrom) params.append('start_date', dateFrom);
+    if (dateTo) params.append('end_date', dateTo);
     return params.toString();
   };
 
   const fetchReports = async () => {
     setLoading(true);
     const queryStr = buildQueryParams();
-
+    
     try {
       const endpoints = {
-        transactions: `${API_URL}/api/reports/transactions-detailed${queryStr ? `?${queryStr}` : ""}`,
-        vendors: `${API_URL}/api/reports/vendor-summary${queryStr ? `?${queryStr}` : ""}`,
-        commissions: `${API_URL}/api/reports/vendor-commissions${queryStr ? `?${queryStr}` : ""}`,
+        transactions: `${API_URL}/api/reports/transactions-detailed${queryStr ? `?${queryStr}` : ''}`,
+        vendors: `${API_URL}/api/reports/vendor-summary${queryStr ? `?${queryStr}` : ''}`,
+        commissions: `${API_URL}/api/reports/vendor-commissions${queryStr ? `?${queryStr}` : ''}`,
         clients: `${API_URL}/api/reports/client-balances`,
-        treasury: `${API_URL}/api/reports/treasury-summary${queryStr ? `?${queryStr}` : ""}`,
-        psp: `${API_URL}/api/reports/psp-summary${queryStr ? `?${queryStr}` : ""}`,
-        financial: `${API_URL}/api/reports/financial-summary${queryStr ? `?${queryStr}` : ""}`,
+        treasury: `${API_URL}/api/reports/treasury-summary${queryStr ? `?${queryStr}` : ''}`,
+        psp: `${API_URL}/api/reports/psp-summary${queryStr ? `?${queryStr}` : ''}`,
+        financial: `${API_URL}/api/reports/financial-summary${queryStr ? `?${queryStr}` : ''}`,
         outstanding: `${API_URL}/api/debts/summary/overview`,
         debts: `${API_URL}/api/debts`,
         chart: `${API_URL}/api/reports/transactions-summary?days=30`,
@@ -304,92 +249,27 @@ export default function Reports() {
         dealingPnL: `${API_URL}/api/dealing-pnl?limit=30`,
         dealingPnLSummary: `${API_URL}/api/dealing-pnl/summary?days=30`,
         // Detailed data endpoints
-        allTransactions: `${API_URL}/api/transactions?page_size=500${queryStr ? `&${queryStr}` : ""}`,
+        allTransactions: `${API_URL}/api/transactions?page_size=500${queryStr ? `&${queryStr}` : ''}`,
         allIE: `${API_URL}/api/income-expenses?limit=500`,
       };
 
-      const [
-        txRes,
-        vendorRes,
-        commRes,
-        clientRes,
-        treasuryRes,
-        pspRes,
-        financialRes,
-        outstandingRes,
-        debtsRes,
-        chartRes,
-        loansRes,
-        loansDataRes,
-        dealingRes,
-        dealingSummaryRes,
-        allTxRes,
-        allIERes,
-      ] = await Promise.all([
-        fetch(endpoints.transactions, {
-          headers: getAuthHeaders(),
-          credentials: "include",
-        }),
-        fetch(endpoints.vendors, {
-          headers: getAuthHeaders(),
-          credentials: "include",
-        }),
-        fetch(endpoints.commissions, {
-          headers: getAuthHeaders(),
-          credentials: "include",
-        }),
-        fetch(endpoints.clients, {
-          headers: getAuthHeaders(),
-          credentials: "include",
-        }),
-        fetch(endpoints.treasury, {
-          headers: getAuthHeaders(),
-          credentials: "include",
-        }),
-        fetch(endpoints.psp, {
-          headers: getAuthHeaders(),
-          credentials: "include",
-        }),
-        fetch(endpoints.financial, {
-          headers: getAuthHeaders(),
-          credentials: "include",
-        }),
-        fetch(endpoints.outstanding, {
-          headers: getAuthHeaders(),
-          credentials: "include",
-        }),
-        fetch(endpoints.debts, {
-          headers: getAuthHeaders(),
-          credentials: "include",
-        }),
-        fetch(endpoints.chart, {
-          headers: getAuthHeaders(),
-          credentials: "include",
-        }),
-        fetch(endpoints.loans, {
-          headers: getAuthHeaders(),
-          credentials: "include",
-        }),
-        fetch(endpoints.loansData, {
-          headers: getAuthHeaders(),
-          credentials: "include",
-        }),
-        fetch(endpoints.dealingPnL, {
-          headers: getAuthHeaders(),
-          credentials: "include",
-        }),
-        fetch(endpoints.dealingPnLSummary, {
-          headers: getAuthHeaders(),
-          credentials: "include",
-        }),
-        fetch(endpoints.allTransactions, {
-          headers: getAuthHeaders(),
-          credentials: "include",
-        }),
-        fetch(endpoints.allIE, {
-          headers: getAuthHeaders(),
-          credentials: "include",
-        }),
+      const [txRes, vendorRes, commRes, clientRes, treasuryRes, pspRes, financialRes, outstandingRes, debtsRes, chartRes, loansRes, loansDataRes, dealingRes, dealingSummaryRes, allTxRes, allIERes] = await Promise.all([
+        fetch(endpoints.transactions, { headers: getAuthHeaders(), credentials: 'include' }),
+        fetch(endpoints.vendors, { headers: getAuthHeaders(), credentials: 'include' }),
+        fetch(endpoints.commissions, { headers: getAuthHeaders(), credentials: 'include' }),
+        fetch(endpoints.clients, { headers: getAuthHeaders(), credentials: 'include' }),
+        fetch(endpoints.treasury, { headers: getAuthHeaders(), credentials: 'include' }),
+        fetch(endpoints.psp, { headers: getAuthHeaders(), credentials: 'include' }),
+        fetch(endpoints.financial, { headers: getAuthHeaders(), credentials: 'include' }),
+        fetch(endpoints.outstanding, { headers: getAuthHeaders(), credentials: 'include' }),
+        fetch(endpoints.debts, { headers: getAuthHeaders(), credentials: 'include' }),
+        fetch(endpoints.chart, { headers: getAuthHeaders(), credentials: 'include' }),
+        fetch(endpoints.loans, { headers: getAuthHeaders(), credentials: 'include' }),
+        fetch(endpoints.loansData, { headers: getAuthHeaders(), credentials: 'include' }),
+        fetch(endpoints.dealingPnL, { headers: getAuthHeaders(), credentials: 'include' }),
+        fetch(endpoints.dealingPnLSummary, { headers: getAuthHeaders(), credentials: 'include' }),
+        fetch(endpoints.allTransactions, { headers: getAuthHeaders(), credentials: 'include' }),
+        fetch(endpoints.allIE, { headers: getAuthHeaders(), credentials: 'include' }),
       ]);
 
       if (txRes.ok) setTransactionReport(await txRes.json());
@@ -408,8 +288,7 @@ export default function Reports() {
         setLoansData(Array.isArray(ld) ? ld : ld.items || []);
       }
       if (dealingRes.ok) setDealingPnLReport(await dealingRes.json());
-      if (dealingSummaryRes.ok)
-        setDealingPnLSummary(await dealingSummaryRes.json());
+      if (dealingSummaryRes.ok) setDealingPnLSummary(await dealingSummaryRes.json());
       // Detailed data
       if (allTxRes.ok) {
         const txData = await allTxRes.json();
@@ -417,12 +296,11 @@ export default function Reports() {
       }
       if (allIERes.ok) {
         const ieData = await allIERes.json();
-        setAllIncomeExpenses(
-          Array.isArray(ieData) ? ieData : ieData.items || [],
-        );
+        setAllIncomeExpenses(Array.isArray(ieData) ? ieData : ieData.items || []);
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      console.error('Error fetching reports:', error);
+      toast.error(error?.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -433,89 +311,47 @@ export default function Reports() {
   }, []);
 
   const downloadCSV = (data, filename, headers) => {
-    const rows = data.map((row) =>
-      headers.map((h) => `"${row[h.key] ?? ""}"`).join(","),
-    );
-    const csvContent = [headers.map((h) => h.label).join(","), ...rows].join(
-      "\n",
-    );
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const rows = data.map(row => headers.map(h => `"${row[h.key] ?? ''}"`).join(','));
+    const csvContent = [headers.map(h => h.label).join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
+    const link = document.createElement('a');
     link.href = url;
-    link.download = `${filename}_${new Date().toISOString().split("T")[0]}.csv`;
+    link.download = `${filename}_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
     URL.revokeObjectURL(url);
     toast.success(`${filename} exported to CSV`);
   };
 
-  const StatCard = ({
-    title,
-    value,
-    subtitle,
-    icon: Icon,
-    color = "blue",
-    trend,
-  }) => (
-    <Card className="bg-foreground/10 border-[#1F2833]">
+  const StatCard = ({ title, value, subtitle, icon: Icon, color = 'blue', trend }) => (
+    <Card className="bg-card border shadow-sm">
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-xs text-[#94A3B8] uppercase tracking-wider mb-1">
-              {title}
-            </p>
-            <p className="text-3xl font-bold text-white font-mono">
-              {value}
-            </p>
-            {subtitle && (
-              <p className="text-xs text-[#94A3B8] mt-1">{subtitle}</p>
-            )}
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">{title}</p>
+            <p className="text-3xl font-bold text-foreground font-mono">{value}</p>
+            {subtitle && <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>}
             {trend !== undefined && (
-              <div
-                className={`flex items-center gap-1 mt-2 ${trend >= 0 ? "text-emerald-400" : "text-red-400"}`}
-              >
-                {trend >= 0 ? (
-                  <TrendingUp className="w-3 h-3" />
-                ) : (
-                  <TrendingDown className="w-3 h-3" />
-                )}
-                <span className="text-xs font-mono">
-                  {trend >= 0 ? "+" : ""}
-                  {trend.toFixed(1)}%
-                </span>
+              <div className={`flex items-center gap-1 mt-2 ${trend >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {trend >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                <span className="text-xs font-mono">{trend >= 0 ? '+' : ''}{trend.toFixed(1)}%</span>
               </div>
             )}
           </div>
-          <div
-            className={`p-2 rounded-xl ${
-              color === "blue"
-                ? "bg-blue-500/10"
-                : color === "green"
-                  ? "bg-emerald-500/10"
-                  : color === "yellow"
-                    ? "bg-amber-500/10"
-                    : color === "red"
-                      ? "bg-red-500/10"
-                      : color === "purple"
-                        ? "bg-purple-500/10"
-                        : "bg-cyan-500/10"
-            }`}
-          >
-            <Icon
-              className={`w-5 h-5 ${
-                color === "blue"
-                  ? "text-blue-400"
-                  : color === "green"
-                    ? "text-emerald-400"
-                    : color === "yellow"
-                      ? "text-amber-400"
-                      : color === "red"
-                        ? "text-red-400"
-                        : color === "purple"
-                          ? "text-purple-400"
-                          : "text-cyan-400"
-              }`}
-            />
+          <div className={`p-2 rounded-lg ${
+            color === 'blue' ? 'bg-primary/80/10' : 
+            color === 'green' ? 'bg-emerald-500/10' : 
+            color === 'yellow' ? 'bg-amber-500/10' : 
+            color === 'red' ? 'bg-red-500/10' :
+            color === 'purple' ? 'bg-purple-500/10' : 'bg-cyan-500/10'
+          }`}>
+            <Icon className={`w-5 h-5 ${
+              color === 'blue' ? 'text-primary' :
+              color === 'green' ? 'text-emerald-600' :
+              color === 'yellow' ? 'text-amber-600' :
+              color === 'red' ? 'text-red-600' :
+              color === 'purple' ? 'text-purple-600' : 'text-cyan-600'
+            }`} />
           </div>
         </div>
       </CardContent>
@@ -525,7 +361,7 @@ export default function Reports() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -535,21 +371,16 @@ export default function Reports() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1
-            className="text-4xl font-bold uppercase tracking-tight text-white"
-            style={{ fontFamily: "Barlow Condensed" }}
-          >
+          <h1 className="text-3xl font-bold text-foreground">
             Reports & Analytics
           </h1>
-          <p className="text-[#94A3B8]">
-            Comprehensive financial reports with base currency breakdown
-          </p>
+          <p className="text-muted-foreground">Comprehensive financial reports with base currency breakdown</p>
         </div>
         <div className="flex items-center gap-2">
           <Button
             onClick={fetchReports}
             variant="outline"
-            className="border-[#1F2833] text-[#94A3B8] hover:text-white hover:bg-[#1F2833]"
+            className="border text-muted-foreground hover:text-card-foreground hover:bg-muted"
             data-testid="refresh-reports-btn"
           >
             <RefreshCw className="w-4 h-4 mr-2" />
@@ -559,36 +390,32 @@ export default function Reports() {
       </div>
 
       {/* Date Filters */}
-      <Card className="bg-foreground/10 border-[#1F2833]">
+      <Card className="bg-card border shadow-sm">
         <CardContent className="p-4">
           <div className="flex flex-wrap items-end gap-4">
             <div className="space-y-1">
-              <Label className="text-xs text-[#94A3B8] uppercase">
-                From Date
-              </Label>
+              <Label className="text-xs text-muted-foreground uppercase">From Date</Label>
               <Input
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
-                className="w-40 bg-[#0F172A] border-[#1F2833] text-white"
+                className="w-40 bg-muted/50 border text-foreground"
                 data-testid="date-from"
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs text-[#94A3B8] uppercase">
-                To Date
-              </Label>
+              <Label className="text-xs text-muted-foreground uppercase">To Date</Label>
               <Input
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
-                className="w-40 bg-[#0F172A] border-[#1F2833] text-white"
+                className="w-40 bg-muted/50 border text-foreground"
                 data-testid="date-to"
               />
             </div>
             <Button
               onClick={fetchReports}
-              className="bg-[#1FA21B] hover:bg-[#178014] text-white"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
               data-testid="apply-filters-btn"
             >
               <Filter className="w-4 h-4 mr-2" />
@@ -596,12 +423,9 @@ export default function Reports() {
             </Button>
             {(dateFrom || dateTo) && (
               <Button
-                onClick={() => {
-                  setDateFrom("");
-                  setDateTo("");
-                }}
+                onClick={() => { setDateFrom(''); setDateTo(''); }}
                 variant="ghost"
-                className="text-[#94A3B8] hover:text-white"
+                className="text-muted-foreground hover:text-card-foreground"
               >
                 Clear
               </Button>
@@ -611,79 +435,45 @@ export default function Reports() {
       </Card>
 
       {/* Report Tabs */}
-      <Tabs
-        value={activeTab}
-        onValueChange={setActiveTab}
-        className="space-y-4"
-      >
-        <TabsList className="bg-foreground/10 border border-[#1F2833] flex-wrap h-auto p-1">
-          <TabsTrigger
-            value="transactions"
-            className="data-[state=active]:bg-[#1FA21B]/20 data-[state=active]:text-[#1FA21B] text-[#94A3B8]"
-          >
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="bg-muted border border flex-wrap h-auto p-1">
+          <TabsTrigger value="transactions" className="data-[state=active]:bg-card data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm">
             <ArrowLeftRight className="w-4 h-4 mr-2" />
             Transactions
           </TabsTrigger>
-          <TabsTrigger
-            value="exchangers"
-            className="data-[state=active]:bg-[#1FA21B]/20 data-[state=active]:text-[#1FA21B] text-[#94A3B8]"
-          >
+          <TabsTrigger value="exchangers" className="data-[state=active]:bg-card data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm">
             <Store className="w-4 h-4 mr-2" />
             Exchangers
           </TabsTrigger>
-          <TabsTrigger
-            value="commissions"
-            className="data-[state=active]:bg-[#1FA21B]/20 data-[state=active]:text-[#1FA21B] text-[#94A3B8]"
-          >
+          <TabsTrigger value="commissions" className="data-[state=active]:bg-card data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm">
             <Percent className="w-4 h-4 mr-2" />
             Commissions
           </TabsTrigger>
-          <TabsTrigger
-            value="clients"
-            className="data-[state=active]:bg-[#1FA21B]/20 data-[state=active]:text-[#1FA21B] text-[#94A3B8]"
-          >
+          <TabsTrigger value="clients" className="data-[state=active]:bg-card data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm">
             <Users className="w-4 h-4 mr-2" />
             Clients
           </TabsTrigger>
-          <TabsTrigger
-            value="treasury"
-            className="data-[state=active]:bg-[#1FA21B]/20 data-[state=active]:text-[#1FA21B] text-[#94A3B8]"
-          >
+          <TabsTrigger value="treasury" className="data-[state=active]:bg-card data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm">
             <Landmark className="w-4 h-4 mr-2" />
             Treasury
           </TabsTrigger>
-          <TabsTrigger
-            value="psp"
-            className="data-[state=active]:bg-[#1FA21B]/20 data-[state=active]:text-[#1FA21B] text-[#94A3B8]"
-          >
+          <TabsTrigger value="psp" className="data-[state=active]:bg-card data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm">
             <CreditCard className="w-4 h-4 mr-2" />
             PSP
           </TabsTrigger>
-          <TabsTrigger
-            value="financial"
-            className="data-[state=active]:bg-[#1FA21B]/20 data-[state=active]:text-[#1FA21B] text-[#94A3B8]"
-          >
+          <TabsTrigger value="financial" className="data-[state=active]:bg-card data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm">
             <Wallet className="w-4 h-4 mr-2" />
             Financial
           </TabsTrigger>
-          <TabsTrigger
-            value="outstanding"
-            className="data-[state=active]:bg-[#1FA21B]/20 data-[state=active]:text-[#1FA21B] text-[#94A3B8]"
-          >
+          <TabsTrigger value="outstanding" className="data-[state=active]:bg-card data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm">
             <Receipt className="w-4 h-4 mr-2" />
             O/S Accounts
           </TabsTrigger>
-          <TabsTrigger
-            value="loans"
-            className="data-[state=active]:bg-[#1FA21B]/20 data-[state=active]:text-[#1FA21B] text-[#94A3B8]"
-          >
+          <TabsTrigger value="loans" className="data-[state=active]:bg-card data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm">
             <Building2 className="w-4 h-4 mr-2" />
             Loans
           </TabsTrigger>
-          <TabsTrigger
-            value="dealing"
-            className="data-[state=active]:bg-[#1FA21B]/20 data-[state=active]:text-[#1FA21B] text-[#94A3B8]"
-          >
+          <TabsTrigger value="dealing" className="data-[state=active]:bg-card data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm">
             <Calculator className="w-4 h-4 mr-2" />
             Dealing P&L
           </TabsTrigger>
@@ -711,17 +501,9 @@ export default function Reports() {
                 <StatCard
                   title="Net Flow"
                   value={`$${Math.abs(transactionReport.summary?.net_flow_usd || 0).toLocaleString()}`}
-                  subtitle={
-                    transactionReport.summary?.net_flow_usd >= 0
-                      ? "Positive"
-                      : "Negative"
-                  }
+                  subtitle={transactionReport.summary?.net_flow_usd >= 0 ? 'Positive' : 'Negative'}
                   icon={DollarSign}
-                  color={
-                    transactionReport.summary?.net_flow_usd >= 0
-                      ? "green"
-                      : "red"
-                  }
+                  color={transactionReport.summary?.net_flow_usd >= 0 ? 'green' : 'red'}
                 />
                 <StatCard
                   title="Total Transactions"
@@ -732,10 +514,10 @@ export default function Reports() {
               </div>
 
               {/* Chart */}
-              <Card className="bg-foreground/10 border-[#1F2833]">
+              <Card className="bg-card border shadow-sm">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
-                    <BarChart3 className="w-5 h-5 text-blue-400" />
+                  <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-primary/60" />
                     Transaction Volume (Last 30 Days)
                   </CardTitle>
                 </CardHeader>
@@ -744,74 +526,20 @@ export default function Reports() {
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={chartData}>
                         <defs>
-                          <linearGradient
-                            id="depositGrad"
-                            x1="0"
-                            y1="0"
-                            x2="0"
-                            y2="1"
-                          >
-                            <stop
-                              offset="5%"
-                              stopColor="#10B981"
-                              stopOpacity={0.3}
-                            />
-                            <stop
-                              offset="95%"
-                              stopColor="#10B981"
-                              stopOpacity={0}
-                            />
+                          <linearGradient id="depositGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10B981" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
                           </linearGradient>
-                          <linearGradient
-                            id="withdrawalGrad"
-                            x1="0"
-                            y1="0"
-                            x2="0"
-                            y2="1"
-                          >
-                            <stop
-                              offset="5%"
-                              stopColor="#EF4444"
-                              stopOpacity={0.3}
-                            />
-                            <stop
-                              offset="95%"
-                              stopColor="#EF4444"
-                              stopOpacity={0}
-                            />
+                          <linearGradient id="withdrawalGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#EF4444" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#EF4444" stopOpacity={0}/>
                           </linearGradient>
                         </defs>
-                        <XAxis
-                          dataKey="date"
-                          stroke="#94A3B8"
-                          tick={{ fill: "#94A3B8", fontSize: 10 }}
-                          axisLine={{ stroke: "rgba(255,255,255,0.1)" }}
-                          tickLine={false}
-                        />
-                        <YAxis
-                          stroke="#94A3B8"
-                          tick={{ fill: "#94A3B8", fontSize: 10 }}
-                          axisLine={{ stroke: "rgba(255,255,255,0.1)" }}
-                          tickLine={false}
-                          tickFormatter={(v) => `$${v / 1000}k`}
-                        />
+                        <XAxis dataKey="date" stroke="#94A3B8" tick={{ fill: '#94A3B8', fontSize: 10 }} axisLine={{ stroke: '#e2e8f0' }} tickLine={false} />
+                        <YAxis stroke="#94A3B8" tick={{ fill: '#94A3B8', fontSize: 10 }} axisLine={{ stroke: '#e2e8f0' }} tickLine={false} tickFormatter={(v) => `$${v/1000}k`} />
                         <Tooltip content={<CustomTooltip />} />
-                        <Area
-                          type="monotone"
-                          dataKey="deposits"
-                          name="Deposits"
-                          stroke="#10B981"
-                          fillOpacity={1}
-                          fill="url(#depositGrad)"
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="withdrawals"
-                          name="Withdrawals"
-                          stroke="#EF4444"
-                          fillOpacity={1}
-                          fill="url(#withdrawalGrad)"
-                        />
+                        <Area type="monotone" dataKey="deposits" name="Deposits" stroke="#10B981" fillOpacity={1} fill="url(#depositGrad)" />
+                        <Area type="monotone" dataKey="withdrawals" name="Withdrawals" stroke="#EF4444" fillOpacity={1} fill="url(#withdrawalGrad)" />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
@@ -820,28 +548,22 @@ export default function Reports() {
 
               {/* Breakdown by Currency */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <Card className="bg-foreground/10 border-[#1F2833]">
+                <Card className="bg-card border shadow-sm">
                   <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                    <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+                    <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                       <ArrowDownRight className="w-5 h-5 text-emerald-400" />
                       Deposits by Currency
                     </CardTitle>
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="text-[#94A3B8] hover:text-white"
-                      onClick={() =>
-                        downloadCSV(
-                          transactionReport.deposits_by_currency || [],
-                          "deposits_by_currency",
-                          [
-                            { key: "currency", label: "Currency" },
-                            { key: "amount", label: "Amount (Base)" },
-                            { key: "usd_equivalent", label: "USD Equivalent" },
-                            { key: "count", label: "Count" },
-                          ],
-                        )
-                      }
+                      className="text-muted-foreground hover:text-card-foreground"
+                      onClick={() => downloadCSV(transactionReport.deposits_by_currency || [], 'deposits_by_currency', [
+                        { key: 'currency', label: 'Currency' },
+                        { key: 'amount', label: 'Amount (Base)' },
+                        { key: 'usd_equivalent', label: 'USD Equivalent' },
+                        { key: 'count', label: 'Count' }
+                      ])}
                     >
                       <Download className="w-4 h-4" />
                     </Button>
@@ -850,79 +572,37 @@ export default function Reports() {
                     <ScrollArea className="h-48">
                       <Table>
                         <TableHeader>
-                          <TableRow className="border-[#1F2833]">
-                            <TableHead className="text-[#94A3B8] text-xs">
-                              Currency
-                            </TableHead>
-                            <TableHead className="text-[#94A3B8] text-xs text-right">
-                              Amount
-                            </TableHead>
-                            <TableHead className="text-[#94A3B8] text-xs text-right">
-                              USD
-                            </TableHead>
-                            <TableHead className="text-[#94A3B8] text-xs text-right">
-                              Count
-                            </TableHead>
+                          <TableRow className="border">
+                            <TableHead className="text-muted-foreground text-xs">Currency</TableHead>
+                            <TableHead className="text-muted-foreground text-xs text-right">Amount</TableHead>
+                            <TableHead className="text-muted-foreground text-xs text-right">USD</TableHead>
+                            <TableHead className="text-muted-foreground text-xs text-right">Count</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {(transactionReport.deposits_by_currency || []).map(
-                            (item, i) => (
-                              <TableRow key={i} className="border-[#1F2833]">
-                                <TableCell className="text-white font-mono">
-                                  {item.currency}
-                                </TableCell>
-                                <TableCell className="text-emerald-400 font-mono text-right">
-                                  {item.amount?.toLocaleString()}
-                                </TableCell>
-                                <TableCell className="text-white font-mono text-right">
-                                  ${item.usd_equivalent?.toLocaleString()}
-                                </TableCell>
-                                <TableCell className="text-[#94A3B8] text-right">
-                                  {item.count}
-                                </TableCell>
-                              </TableRow>
-                            ),
-                          )}
+                          {(transactionReport.deposits_by_currency || []).map((item, i) => (
+                            <TableRow key={i} className="border">
+                              <TableCell className="text-foreground font-mono">{item.currency}</TableCell>
+                              <TableCell className="text-emerald-400 font-mono text-right">{item.amount?.toLocaleString()}</TableCell>
+                              <TableCell className="text-foreground font-mono text-right">${item.usd_equivalent?.toLocaleString()}</TableCell>
+                              <TableCell className="text-muted-foreground text-right">{item.count}</TableCell>
+                            </TableRow>
+                          ))}
                           {/* Total Row */}
-                          {transactionReport.deposits_by_currency?.length >
-                            0 && (
+                          {transactionReport.deposits_by_currency?.length > 0 && (
                             <TableRow className="border-t-2 border-emerald-500 bg-emerald-500/10">
-                              <TableCell className="text-emerald-400 font-bold">
-                                TOTAL
-                              </TableCell>
+                              <TableCell className="text-emerald-400 font-bold">TOTAL</TableCell>
+                              <TableCell className="text-emerald-400 font-mono text-right font-bold">-</TableCell>
                               <TableCell className="text-emerald-400 font-mono text-right font-bold">
-                                -
-                              </TableCell>
-                              <TableCell className="text-emerald-400 font-mono text-right font-bold">
-                                $
-                                {transactionReport.deposits_by_currency
-                                  .reduce(
-                                    (sum, item) =>
-                                      sum + (item.usd_equivalent || 0),
-                                    0,
-                                  )
-                                  .toLocaleString()}
+                                ${transactionReport.deposits_by_currency.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0).toLocaleString()}
                               </TableCell>
                               <TableCell className="text-emerald-400 text-right font-bold">
-                                {transactionReport.deposits_by_currency.reduce(
-                                  (sum, item) => sum + (item.count || 0),
-                                  0,
-                                )}
+                                {transactionReport.deposits_by_currency.reduce((sum, item) => sum + (item.count || 0), 0)}
                               </TableCell>
                             </TableRow>
                           )}
-                          {(!transactionReport.deposits_by_currency ||
-                            transactionReport.deposits_by_currency.length ===
-                              0) && (
-                            <TableRow>
-                              <TableCell
-                                colSpan={4}
-                                className="text-center text-[#94A3B8]"
-                              >
-                                No data
-                              </TableCell>
-                            </TableRow>
+                          {(!transactionReport.deposits_by_currency || transactionReport.deposits_by_currency.length === 0) && (
+                            <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No data</TableCell></TableRow>
                           )}
                         </TableBody>
                       </Table>
@@ -930,28 +610,22 @@ export default function Reports() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-foreground/10 border-[#1F2833]">
+                <Card className="bg-card border shadow-sm">
                   <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                    <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+                    <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                       <ArrowUpRight className="w-5 h-5 text-red-400" />
                       Withdrawals by Currency
                     </CardTitle>
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="text-[#94A3B8] hover:text-white"
-                      onClick={() =>
-                        downloadCSV(
-                          transactionReport.withdrawals_by_currency || [],
-                          "withdrawals_by_currency",
-                          [
-                            { key: "currency", label: "Currency" },
-                            { key: "amount", label: "Amount (Base)" },
-                            { key: "usd_equivalent", label: "USD Equivalent" },
-                            { key: "count", label: "Count" },
-                          ],
-                        )
-                      }
+                      className="text-muted-foreground hover:text-card-foreground"
+                      onClick={() => downloadCSV(transactionReport.withdrawals_by_currency || [], 'withdrawals_by_currency', [
+                        { key: 'currency', label: 'Currency' },
+                        { key: 'amount', label: 'Amount (Base)' },
+                        { key: 'usd_equivalent', label: 'USD Equivalent' },
+                        { key: 'count', label: 'Count' }
+                      ])}
                     >
                       <Download className="w-4 h-4" />
                     </Button>
@@ -960,79 +634,37 @@ export default function Reports() {
                     <ScrollArea className="h-48">
                       <Table>
                         <TableHeader>
-                          <TableRow className="border-[#1F2833]">
-                            <TableHead className="text-[#94A3B8] text-xs">
-                              Currency
-                            </TableHead>
-                            <TableHead className="text-[#94A3B8] text-xs text-right">
-                              Amount
-                            </TableHead>
-                            <TableHead className="text-[#94A3B8] text-xs text-right">
-                              USD
-                            </TableHead>
-                            <TableHead className="text-[#94A3B8] text-xs text-right">
-                              Count
-                            </TableHead>
+                          <TableRow className="border">
+                            <TableHead className="text-muted-foreground text-xs">Currency</TableHead>
+                            <TableHead className="text-muted-foreground text-xs text-right">Amount</TableHead>
+                            <TableHead className="text-muted-foreground text-xs text-right">USD</TableHead>
+                            <TableHead className="text-muted-foreground text-xs text-right">Count</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {(
-                            transactionReport.withdrawals_by_currency || []
-                          ).map((item, i) => (
-                            <TableRow key={i} className="border-[#1F2833]">
-                              <TableCell className="text-white font-mono">
-                                {item.currency}
-                              </TableCell>
-                              <TableCell className="text-red-400 font-mono text-right">
-                                {item.amount?.toLocaleString()}
-                              </TableCell>
-                              <TableCell className="text-white font-mono text-right">
-                                ${item.usd_equivalent?.toLocaleString()}
-                              </TableCell>
-                              <TableCell className="text-[#94A3B8] text-right">
-                                {item.count}
-                              </TableCell>
+                          {(transactionReport.withdrawals_by_currency || []).map((item, i) => (
+                            <TableRow key={i} className="border">
+                              <TableCell className="text-foreground font-mono">{item.currency}</TableCell>
+                              <TableCell className="text-red-400 font-mono text-right">{item.amount?.toLocaleString()}</TableCell>
+                              <TableCell className="text-foreground font-mono text-right">${item.usd_equivalent?.toLocaleString()}</TableCell>
+                              <TableCell className="text-muted-foreground text-right">{item.count}</TableCell>
                             </TableRow>
                           ))}
                           {/* Total Row */}
-                          {transactionReport.withdrawals_by_currency?.length >
-                            0 && (
+                          {transactionReport.withdrawals_by_currency?.length > 0 && (
                             <TableRow className="border-t-2 border-red-500 bg-red-500/10">
-                              <TableCell className="text-red-400 font-bold">
-                                TOTAL
-                              </TableCell>
+                              <TableCell className="text-red-400 font-bold">TOTAL</TableCell>
+                              <TableCell className="text-red-400 font-mono text-right font-bold">-</TableCell>
                               <TableCell className="text-red-400 font-mono text-right font-bold">
-                                -
-                              </TableCell>
-                              <TableCell className="text-red-400 font-mono text-right font-bold">
-                                $
-                                {transactionReport.withdrawals_by_currency
-                                  .reduce(
-                                    (sum, item) =>
-                                      sum + (item.usd_equivalent || 0),
-                                    0,
-                                  )
-                                  .toLocaleString()}
+                                ${transactionReport.withdrawals_by_currency.reduce((sum, item) => sum + (item.usd_equivalent || 0), 0).toLocaleString()}
                               </TableCell>
                               <TableCell className="text-red-400 text-right font-bold">
-                                {transactionReport.withdrawals_by_currency.reduce(
-                                  (sum, item) => sum + (item.count || 0),
-                                  0,
-                                )}
+                                {transactionReport.withdrawals_by_currency.reduce((sum, item) => sum + (item.count || 0), 0)}
                               </TableCell>
                             </TableRow>
                           )}
-                          {(!transactionReport.withdrawals_by_currency ||
-                            transactionReport.withdrawals_by_currency.length ===
-                              0) && (
-                            <TableRow>
-                              <TableCell
-                                colSpan={4}
-                                className="text-center text-[#94A3B8]"
-                              >
-                                No data
-                              </TableCell>
-                            </TableRow>
+                          {(!transactionReport.withdrawals_by_currency || transactionReport.withdrawals_by_currency.length === 0) && (
+                            <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No data</TableCell></TableRow>
                           )}
                         </TableBody>
                       </Table>
@@ -1042,9 +674,9 @@ export default function Reports() {
               </div>
 
               {/* Detailed Transactions Table */}
-              <Card className="bg-[#1F2833] border-[#1F2833]">
+              <Card className="bg-card border">
                 <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                  <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+                  <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                     <BarChart3 className="w-5 h-5 text-cyan-500" />
                     All Transactions (Detailed)
                   </CardTitle>
@@ -1053,29 +685,20 @@ export default function Reports() {
                     filename="all_transactions"
                     title="All Transactions Report"
                     columns={[
-                      { key: "reference", label: "Reference" },
-                      { key: "client_name", label: "Client" },
-                      { key: "transaction_type", label: "Type" },
-                      { key: "amount", label: "Amount" },
-                      { key: "currency", label: "Currency" },
-                      { key: "base_amount", label: "Payment Amount" },
-                      { key: "base_currency", label: "Payment Currency" },
-                      { key: "status", label: "Status" },
-                      { key: "created_at", label: "Date" },
+                      { key: 'reference', label: 'Reference' },
+                      { key: 'client_name', label: 'Client' },
+                      { key: 'transaction_type', label: 'Type' },
+                      { key: 'amount', label: 'Amount' },
+                      { key: 'currency', label: 'Currency' },
+                      { key: 'base_amount', label: 'Payment Amount' },
+                      { key: 'base_currency', label: 'Payment Currency' },
+                      { key: 'status', label: 'Status' },
+                      { key: 'created_at', label: 'Date' },
                     ]}
                     summaryData={[
-                      {
-                        label: "Total Deposits",
-                        value: `$${(transactionReport.summary?.total_deposits_usd || 0).toLocaleString()}`,
-                      },
-                      {
-                        label: "Total Withdrawals",
-                        value: `$${(transactionReport.summary?.total_withdrawals_usd || 0).toLocaleString()}`,
-                      },
-                      {
-                        label: "Net Flow",
-                        value: `$${(transactionReport.summary?.net_flow_usd || 0).toLocaleString()}`,
-                      },
+                      { label: 'Total Deposits', value: `$${(transactionReport.summary?.total_deposits_usd || 0).toLocaleString()}` },
+                      { label: 'Total Withdrawals', value: `$${(transactionReport.summary?.total_withdrawals_usd || 0).toLocaleString()}` },
+                      { label: 'Net Flow', value: `$${(transactionReport.summary?.net_flow_usd || 0).toLocaleString()}` },
                     ]}
                   />
                 </CardHeader>
@@ -1083,132 +706,56 @@ export default function Reports() {
                   <ScrollArea className="h-[400px]">
                     <Table>
                       <TableHeader>
-                        <TableRow className="border-[#1F2833]">
-                          <TableHead className="text-slate-500 text-xs">
-                            Reference
-                          </TableHead>
-                          <TableHead className="text-slate-500 text-xs">
-                            Client
-                          </TableHead>
-                          <TableHead className="text-slate-500 text-xs">
-                            Type
-                          </TableHead>
-                          <TableHead className="text-slate-500 text-xs text-right">
-                            Amount (USD)
-                          </TableHead>
-                          <TableHead className="text-slate-500 text-xs text-right">
-                            Payment
-                          </TableHead>
-                          <TableHead className="text-slate-500 text-xs">
-                            Status
-                          </TableHead>
-                          <TableHead className="text-slate-500 text-xs">
-                            Date
-                          </TableHead>
+                        <TableRow className="border">
+                          <TableHead className="text-muted-foreground text-xs">Reference</TableHead>
+                          <TableHead className="text-muted-foreground text-xs">Client</TableHead>
+                          <TableHead className="text-muted-foreground text-xs">Type</TableHead>
+                          <TableHead className="text-muted-foreground text-xs text-right">Amount (USD)</TableHead>
+                          <TableHead className="text-muted-foreground text-xs text-right">Payment</TableHead>
+                          <TableHead className="text-muted-foreground text-xs">Status</TableHead>
+                          <TableHead className="text-muted-foreground text-xs">Date</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {allTransactions.map((tx, i) => (
-                          <TableRow
-                            key={tx.transaction_id || i}
-                            className="border-[#1F2833]"
-                          >
-                            <TableCell className="font-mono text-xs text-white">
-                              {tx.reference}
-                            </TableCell>
-                            <TableCell className="text-[#94A3B8]">
-                              {tx.client_name}
-                            </TableCell>
+                          <TableRow key={tx.transaction_id || i} className="border">
+                            <TableCell className="font-mono text-xs text-foreground">{tx.reference}</TableCell>
+                            <TableCell className="text-card-foreground">{tx.client_name}</TableCell>
                             <TableCell>
-                              <Badge
-                                className={
-                                  tx.transaction_type === "deposit"
-                                    ? "bg-green-500"
-                                    : "bg-red-500"
-                                }
-                              >
+                              <Badge className={tx.transaction_type === 'deposit' ? 'bg-green-500' : 'bg-red-500'}>
                                 {tx.transaction_type}
                               </Badge>
                             </TableCell>
-                            <TableCell
-                              className={`font-mono text-right ${tx.transaction_type === "deposit" ? "text-green-500" : "text-red-500"}`}
-                            >
-                              {tx.transaction_type === "deposit" ? "+" : "-"}$
-                              {tx.amount?.toLocaleString()}
+                            <TableCell className={`font-mono text-right ${tx.transaction_type === 'deposit' ? 'text-green-500' : 'text-red-500'}`}>
+                              {tx.transaction_type === 'deposit' ? '+' : '-'}${tx.amount?.toLocaleString()}
                             </TableCell>
-                            <TableCell className="font-mono text-right text-slate-500">
-                              {tx.base_amount?.toLocaleString()}{" "}
-                              {tx.base_currency}
+                            <TableCell className="font-mono text-right text-muted-foreground">
+                              {tx.base_amount?.toLocaleString()} {tx.base_currency}
                             </TableCell>
                             <TableCell>
-                              <Badge
-                                variant="outline"
-                                className={
-                                  tx.status === "completed"
-                                    ? "text-green-600 border-green-600"
-                                    : tx.status === "pending"
-                                      ? "text-yellow-600 border-yellow-600"
-                                      : "text-[#94A3B8] border-[#1F2833]"
-                                }
-                              >
+                              <Badge variant="outline" className={
+                                tx.status === 'completed' ? 'text-green-600 border-green-600' :
+                                tx.status === 'pending' ? 'text-yellow-600 border-yellow-600' :
+                                'text-card-foreground border-slate-600'
+                              }>
                                 {tx.status}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-slate-500 text-xs">
-                              {tx.created_at?.split("T")[0]}
-                            </TableCell>
+                            <TableCell className="text-muted-foreground text-xs">{tx.created_at?.split('T')[0]}</TableCell>
                           </TableRow>
                         ))}
                         {/* Total Row */}
                         {allTransactions.length > 0 && (
-                          <TableRow className="border-t-2 border-blue-500 bg-blue-500/10 font-bold">
-                            <TableCell className="text-blue-600" colSpan={3}>
-                              TOTALS
-                            </TableCell>
+                          <TableRow className="border-t-2 border-primary bg-primary/80/10 font-bold">
+                            <TableCell className="text-primary" colSpan={3}>TOTALS</TableCell>
                             <TableCell className="text-right">
-                              <div className="text-green-500">
-                                +$
-                                {allTransactions
-                                  .filter(
-                                    (t) => t.transaction_type === "deposit",
-                                  )
-                                  .reduce((sum, t) => sum + (t.amount || 0), 0)
-                                  .toLocaleString()}
-                              </div>
-                              <div className="text-red-500">
-                                -$
-                                {allTransactions
-                                  .filter(
-                                    (t) => t.transaction_type === "withdrawal",
-                                  )
-                                  .reduce((sum, t) => sum + (t.amount || 0), 0)
-                                  .toLocaleString()}
-                              </div>
+                              <div className="text-green-500">+${allTransactions.filter(t => t.transaction_type === 'deposit').reduce((sum, t) => sum + (t.amount || 0), 0).toLocaleString()}</div>
+                              <div className="text-red-500">-${allTransactions.filter(t => t.transaction_type === 'withdrawal').reduce((sum, t) => sum + (t.amount || 0), 0).toLocaleString()}</div>
                             </TableCell>
-                            <TableCell className="text-right text-blue-600">
-                              Net: $
-                              {(
-                                allTransactions
-                                  .filter(
-                                    (t) => t.transaction_type === "deposit",
-                                  )
-                                  .reduce(
-                                    (sum, t) => sum + (t.amount || 0),
-                                    0,
-                                  ) -
-                                allTransactions
-                                  .filter(
-                                    (t) => t.transaction_type === "withdrawal",
-                                  )
-                                  .reduce((sum, t) => sum + (t.amount || 0), 0)
-                              ).toLocaleString()}
+                            <TableCell className="text-right text-primary">
+                              Net: ${(allTransactions.filter(t => t.transaction_type === 'deposit').reduce((sum, t) => sum + (t.amount || 0), 0) - allTransactions.filter(t => t.transaction_type === 'withdrawal').reduce((sum, t) => sum + (t.amount || 0), 0)).toLocaleString()}
                             </TableCell>
-                            <TableCell
-                              colSpan={2}
-                              className="text-blue-600 text-right"
-                            >
-                              {allTransactions.length} transactions
-                            </TableCell>
+                            <TableCell colSpan={2} className="text-primary text-right">{allTransactions.length} transactions</TableCell>
                           </TableRow>
                         )}
                       </TableBody>
@@ -1226,76 +773,34 @@ export default function Reports() {
             <>
               {/* Summary cards by currency */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard
-                  title="Total Exchangers"
-                  value={vendorReport.grand_totals?.total_exchangers || 0}
-                  icon={Store}
-                  color="purple"
-                />
-                {Object.entries(
-                  vendorReport.grand_totals_by_currency || {},
-                ).map(([curr, d]) => (
-                  <StatCard
-                    key={curr}
-                    title={`Net Settlement (${curr})`}
-                    value={`${curr} ${d.net_settlement?.toLocaleString()}`}
+                <StatCard title="Total Exchangers" value={vendorReport.grand_totals?.total_exchangers || 0} icon={Store} color="purple" />
+                {Object.entries(vendorReport.grand_totals_by_currency || {}).map(([curr, d]) => (
+                  <StatCard key={curr} title={`Net Settlement (${curr})`} value={`${curr} ${d.net_settlement?.toLocaleString()}`}
                     subtitle={`In: ${d.money_in?.toLocaleString()} / Out: ${d.money_out?.toLocaleString()}`}
-                    icon={DollarSign}
-                    color={d.net_settlement >= 0 ? "green" : "red"}
-                  />
+                    icon={DollarSign} color={d.net_settlement >= 0 ? 'green' : 'red'} />
                 ))}
               </div>
 
-              <Card className="bg-foreground/10 border-[#1F2833]">
+              <Card className="bg-card border shadow-sm">
                 <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                  <CardTitle className="text-lg font-semibold text-white">
-                    Exchanger Settlement Summary (Base Currency)
-                  </CardTitle>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-[#94A3B8] hover:text-white"
+                  <CardTitle className="text-lg font-semibold text-foreground">Exchanger Settlement Summary (Base Currency)</CardTitle>
+                  <Button size="sm" variant="ghost" className="text-muted-foreground hover:text-card-foreground"
                     onClick={() => {
                       const rows = [];
-                      (vendorReport.vendors || []).forEach((v) => {
-                        (v.currency_rows || []).forEach((r) => {
-                          rows.push({
-                            vendor: v.vendor_name,
-                            currency: r.currency,
-                            money_in: r.money_in,
-                            money_out: r.money_out,
-                            deposits: r.deposits,
-                            withdrawals: r.withdrawals,
-                            tx_comm: r.tx_commission,
-                            ie_in: r.ie_in,
-                            ie_out: r.ie_out,
-                            ie_comm: r.ie_commission,
-                            loan_in: r.loan_in,
-                            loan_out: r.loan_out,
-                            loan_comm: r.loan_commission,
-                            total_comm: r.total_commission,
-                            net: r.net_settlement,
-                          });
+                      (vendorReport.vendors || []).forEach(v => {
+                        (v.currency_rows || []).forEach(r => {
+                          rows.push({ vendor: v.vendor_name, currency: r.currency, money_in: r.money_in, money_out: r.money_out, deposits: r.deposits, withdrawals: r.withdrawals, tx_comm: r.tx_commission, ie_in: r.ie_in, ie_out: r.ie_out, ie_comm: r.ie_commission, loan_in: r.loan_in, loan_out: r.loan_out, loan_comm: r.loan_commission, total_comm: r.total_commission, net: r.net_settlement });
                         });
                       });
-                      downloadCSV(rows, "vendor_settlement_base_currency", [
-                        { key: "vendor", label: "Exchanger" },
-                        { key: "currency", label: "Currency" },
-                        { key: "money_in", label: "Money In" },
-                        { key: "money_out", label: "Money Out" },
-                        { key: "deposits", label: "Deposits" },
-                        { key: "withdrawals", label: "Withdrawals" },
-                        { key: "tx_comm", label: "Tx Comm" },
-                        { key: "ie_in", label: "I&E In" },
-                        { key: "ie_out", label: "I&E Out" },
-                        { key: "ie_comm", label: "I&E Comm" },
-                        { key: "loan_in", label: "Loan In" },
-                        { key: "loan_out", label: "Loan Out" },
-                        { key: "total_comm", label: "Total Comm" },
-                        { key: "net", label: "Net Settlement" },
+                      downloadCSV(rows, 'vendor_settlement_base_currency', [
+                        { key: 'vendor', label: 'Exchanger' }, { key: 'currency', label: 'Currency' },
+                        { key: 'money_in', label: 'Money In' }, { key: 'money_out', label: 'Money Out' },
+                        { key: 'deposits', label: 'Deposits' }, { key: 'withdrawals', label: 'Withdrawals' },
+                        { key: 'tx_comm', label: 'Tx Comm' }, { key: 'ie_in', label: 'I&E In' }, { key: 'ie_out', label: 'I&E Out' },
+                        { key: 'ie_comm', label: 'I&E Comm' }, { key: 'loan_in', label: 'Loan In' }, { key: 'loan_out', label: 'Loan Out' },
+                        { key: 'total_comm', label: 'Total Comm' }, { key: 'net', label: 'Net Settlement' }
                       ]);
-                    }}
-                  >
+                    }}>
                     <Download className="w-4 h-4 mr-2" /> Export CSV
                   </Button>
                 </CardHeader>
@@ -1303,144 +808,61 @@ export default function Reports() {
                   <ScrollArea className="h-96">
                     <Table>
                       <TableHeader>
-                        <TableRow className="border-[#1F2833]">
-                          <TableHead className="text-[#94A3B8] text-xs">
-                            Exchanger
-                          </TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs">
-                            Currency
-                          </TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs text-right">
-                            Money In
-                          </TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs text-right">
-                            Money Out
-                          </TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs text-right">
-                            Commission
-                          </TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs text-right">
-                            Net Settlement
-                          </TableHead>
+                        <TableRow className="border">
+                          <TableHead className="text-muted-foreground text-xs">Exchanger</TableHead>
+                          <TableHead className="text-muted-foreground text-xs">Currency</TableHead>
+                          <TableHead className="text-muted-foreground text-xs text-right">Money In</TableHead>
+                          <TableHead className="text-muted-foreground text-xs text-right">Money Out</TableHead>
+                          <TableHead className="text-muted-foreground text-xs text-right">Commission</TableHead>
+                          <TableHead className="text-muted-foreground text-xs text-right">Net Settlement</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {(vendorReport.vendors || []).flatMap((vendor, vi) =>
                           (vendor.currency_rows || []).map((row, ri) => (
-                            <TableRow
-                              key={`${vi}-${ri}`}
-                              className="border-[#1F2833]"
-                            >
+                            <TableRow key={`${vi}-${ri}`} className="border">
                               {ri === 0 ? (
-                                <TableCell
-                                  rowSpan={vendor.currency_rows.length}
-                                >
+                                <TableCell rowSpan={vendor.currency_rows.length}>
                                   <div>
-                                    <p className="text-white font-medium">
-                                      {vendor.vendor_name}
-                                    </p>
-                                    <p className="text-xs text-[#94A3B8]">
-                                      In: {vendor.deposit_commission_rate}% /
-                                      Out: {vendor.withdrawal_commission_rate}%
-                                    </p>
+                                    <p className="text-foreground font-medium">{vendor.vendor_name}</p>
+                                    <p className="text-xs text-muted-foreground">In: {vendor.deposit_commission_rate}% / Out: {vendor.withdrawal_commission_rate}%</p>
                                   </div>
                                 </TableCell>
                               ) : null}
                               <TableCell>
-                                <Badge
-                                  variant="outline"
-                                  className="text-xs border-white/20 text-[#94A3B8]"
-                                >
-                                  {row.currency}
-                                </Badge>
+                                <Badge variant="outline" className="text-xs border text-muted-foreground">{row.currency}</Badge>
                               </TableCell>
                               <TableCell className="text-emerald-400 font-mono text-right">
                                 <div>{row.money_in?.toLocaleString()}</div>
-                                <div className="text-[10px] text-slate-500">
-                                  Dep: {row.deposits?.toLocaleString()}
-                                  {row.ie_in > 0
-                                    ? ` + IE: ${row.ie_in?.toLocaleString()}`
-                                    : ""}
-                                  {row.loan_in > 0
-                                    ? ` + Ln: ${row.loan_in?.toLocaleString()}`
-                                    : ""}
-                                </div>
+                                <div className="text-[10px] text-muted-foreground">Dep: {row.deposits?.toLocaleString()}{row.ie_in > 0 ? ` + IE: ${row.ie_in?.toLocaleString()}` : ''}{row.loan_in > 0 ? ` + Ln: ${row.loan_in?.toLocaleString()}` : ''}</div>
                               </TableCell>
                               <TableCell className="text-red-400 font-mono text-right">
                                 <div>{row.money_out?.toLocaleString()}</div>
-                                <div className="text-[10px] text-slate-500">
-                                  Wdr: {row.withdrawals?.toLocaleString()}
-                                  {row.ie_out > 0
-                                    ? ` + IE: ${row.ie_out?.toLocaleString()}`
-                                    : ""}
-                                  {row.loan_out > 0
-                                    ? ` + Ln: ${row.loan_out?.toLocaleString()}`
-                                    : ""}
-                                </div>
+                                <div className="text-[10px] text-muted-foreground">Wdr: {row.withdrawals?.toLocaleString()}{row.ie_out > 0 ? ` + IE: ${row.ie_out?.toLocaleString()}` : ''}{row.loan_out > 0 ? ` + Ln: ${row.loan_out?.toLocaleString()}` : ''}</div>
                               </TableCell>
                               <TableCell className="text-amber-400 font-mono text-right">
-                                <div>
-                                  {row.total_commission?.toLocaleString()}
-                                </div>
-                                <div className="text-[10px] text-slate-500">
-                                  Tx: {row.tx_commission?.toLocaleString()}
-                                  {row.ie_commission > 0
-                                    ? ` + IE: ${row.ie_commission?.toLocaleString()}`
-                                    : ""}
-                                  {row.loan_commission > 0
-                                    ? ` + Ln: ${row.loan_commission?.toLocaleString()}`
-                                    : ""}
-                                </div>
+                                <div>{row.total_commission?.toLocaleString()}</div>
+                                <div className="text-[10px] text-muted-foreground">Tx: {row.tx_commission?.toLocaleString()}{row.ie_commission > 0 ? ` + IE: ${row.ie_commission?.toLocaleString()}` : ''}{row.loan_commission > 0 ? ` + Ln: ${row.loan_commission?.toLocaleString()}` : ''}</div>
                               </TableCell>
-                              <TableCell
-                                className={`font-mono text-right font-bold ${row.net_settlement >= 0 ? "text-blue-400" : "text-red-400"}`}
-                              >
-                                {row.net_settlement?.toLocaleString()}{" "}
-                                {row.currency}
+                              <TableCell className={`font-mono text-right font-bold ${row.net_settlement >= 0 ? 'text-primary/60' : 'text-red-400'}`}>
+                                {row.net_settlement?.toLocaleString()} {row.currency}
                               </TableCell>
                             </TableRow>
-                          )),
+                          ))
                         )}
                         {/* Grand Total rows per currency */}
-                        {Object.entries(
-                          vendorReport.grand_totals_by_currency || {},
-                        ).map(([curr, d]) => (
-                          <TableRow
-                            key={`total-${curr}`}
-                            className="border-t-2 border-purple-500 bg-purple-500/10 font-bold"
-                          >
-                            <TableCell className="text-purple-400 font-bold">
-                              TOTAL
-                            </TableCell>
-                            <TableCell>
-                              <Badge className="bg-purple-500/20 text-purple-300 text-xs">
-                                {curr}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-emerald-400 font-mono text-right font-bold">
-                              {d.money_in?.toLocaleString()}
-                            </TableCell>
-                            <TableCell className="text-red-400 font-mono text-right font-bold">
-                              {d.money_out?.toLocaleString()}
-                            </TableCell>
-                            <TableCell className="text-amber-400 font-mono text-right font-bold">
-                              {d.total_commission?.toLocaleString()}
-                            </TableCell>
-                            <TableCell className="text-blue-400 font-mono text-right font-bold">
-                              {d.net_settlement?.toLocaleString()} {curr}
-                            </TableCell>
+                        {Object.entries(vendorReport.grand_totals_by_currency || {}).map(([curr, d]) => (
+                          <TableRow key={`total-${curr}`} className="border-t-2 border-purple-500 bg-purple-500/10 font-bold">
+                            <TableCell className="text-purple-400 font-bold">TOTAL</TableCell>
+                            <TableCell><Badge className="bg-purple-500/20 text-purple-300 text-xs">{curr}</Badge></TableCell>
+                            <TableCell className="text-emerald-400 font-mono text-right font-bold">{d.money_in?.toLocaleString()}</TableCell>
+                            <TableCell className="text-red-400 font-mono text-right font-bold">{d.money_out?.toLocaleString()}</TableCell>
+                            <TableCell className="text-amber-400 font-mono text-right font-bold">{d.total_commission?.toLocaleString()}</TableCell>
+                            <TableCell className="text-primary/60 font-mono text-right font-bold">{d.net_settlement?.toLocaleString()} {curr}</TableCell>
                           </TableRow>
                         ))}
-                        {(!vendorReport.vendors ||
-                          vendorReport.vendors.length === 0) && (
-                          <TableRow>
-                            <TableCell
-                              colSpan={6}
-                              className="text-center text-[#94A3B8] py-8"
-                            >
-                              No vendor data
-                            </TableCell>
-                          </TableRow>
+                        {(!vendorReport.vendors || vendorReport.vendors.length === 0) && (
+                          <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No vendor data</TableCell></TableRow>
                         )}
                       </TableBody>
                     </Table>
@@ -1476,37 +898,20 @@ export default function Reports() {
                 />
               </div>
 
-              <Card className="bg-foreground/10 border-[#1F2833]">
+              <Card className="bg-card border shadow-sm">
                 <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                  <CardTitle className="text-lg font-semibold text-white">
-                    Commission by Exchanger
-                  </CardTitle>
+                  <CardTitle className="text-lg font-semibold text-foreground">Commission by Exchanger</CardTitle>
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="text-[#94A3B8] hover:text-white"
-                    onClick={() =>
-                      downloadCSV(
-                        commissionReport.vendors || [],
-                        "vendor_commissions",
-                        [
-                          { key: "vendor_name", label: "Exchanger" },
-                          {
-                            key: "total_commission_usd",
-                            label: "Total Commission (USD)",
-                          },
-                          {
-                            key: "deposit_commissions",
-                            label: "Money In Commissions",
-                          },
-                          {
-                            key: "withdrawal_commissions",
-                            label: "Money Out Commissions",
-                          },
-                          { key: "transaction_count", label: "Transactions" },
-                        ],
-                      )
-                    }
+                    className="text-muted-foreground hover:text-card-foreground"
+                    onClick={() => downloadCSV(commissionReport.vendors || [], 'vendor_commissions', [
+                      { key: 'vendor_name', label: 'Exchanger' },
+                      { key: 'total_commission_usd', label: 'Total Commission (USD)' },
+                      { key: 'deposit_commissions', label: 'Money In Commissions' },
+                      { key: 'withdrawal_commissions', label: 'Money Out Commissions' },
+                      { key: 'transaction_count', label: 'Transactions' }
+                    ])}
                   >
                     <Download className="w-4 h-4 mr-2" />
                     Export CSV
@@ -1516,55 +921,26 @@ export default function Reports() {
                   <ScrollArea className="h-64">
                     <Table>
                       <TableHeader>
-                        <TableRow className="border-[#1F2833]">
-                          <TableHead className="text-[#94A3B8] text-xs">
-                            Exchanger
-                          </TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs text-right">
-                            Total Commission
-                          </TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs text-right">
-                            From Deposits
-                          </TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs text-right">
-                            From Withdrawals
-                          </TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs text-right">
-                            Transactions
-                          </TableHead>
+                        <TableRow className="border">
+                          <TableHead className="text-muted-foreground text-xs">Exchanger</TableHead>
+                          <TableHead className="text-muted-foreground text-xs text-right">Total Commission</TableHead>
+                          <TableHead className="text-muted-foreground text-xs text-right">From Deposits</TableHead>
+                          <TableHead className="text-muted-foreground text-xs text-right">From Withdrawals</TableHead>
+                          <TableHead className="text-muted-foreground text-xs text-right">Transactions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {(commissionReport.vendors || []).map((v, i) => (
-                          <TableRow key={i} className="border-[#1F2833]">
-                            <TableCell className="text-white font-medium">
-                              {v.vendor_name}
-                            </TableCell>
-                            <TableCell className="text-amber-400 font-mono text-right font-bold">
-                              ${(v.total_commission_usd || 0).toLocaleString()}
-                            </TableCell>
-                            <TableCell className="text-emerald-400 font-mono text-right">
-                              ${(v.deposit_commissions || 0).toLocaleString()}
-                            </TableCell>
-                            <TableCell className="text-red-400 font-mono text-right">
-                              $
-                              {(v.withdrawal_commissions || 0).toLocaleString()}
-                            </TableCell>
-                            <TableCell className="text-[#94A3B8] text-right">
-                              {v.transaction_count}
-                            </TableCell>
+                          <TableRow key={i} className="border">
+                            <TableCell className="text-foreground font-medium">{v.vendor_name}</TableCell>
+                            <TableCell className="text-amber-400 font-mono text-right font-bold">${(v.total_commission_usd || 0).toLocaleString()}</TableCell>
+                            <TableCell className="text-emerald-400 font-mono text-right">${(v.deposit_commissions || 0).toLocaleString()}</TableCell>
+                            <TableCell className="text-red-400 font-mono text-right">${(v.withdrawal_commissions || 0).toLocaleString()}</TableCell>
+                            <TableCell className="text-muted-foreground text-right">{v.transaction_count}</TableCell>
                           </TableRow>
                         ))}
-                        {(!commissionReport.vendors ||
-                          commissionReport.vendors.length === 0) && (
-                          <TableRow>
-                            <TableCell
-                              colSpan={5}
-                              className="text-center text-[#94A3B8] py-8"
-                            >
-                              No commission data
-                            </TableCell>
-                          </TableRow>
+                        {(!commissionReport.vendors || commissionReport.vendors.length === 0) && (
+                          <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">No commission data</TableCell></TableRow>
                         )}
                       </TableBody>
                     </Table>
@@ -1573,52 +949,34 @@ export default function Reports() {
               </Card>
 
               {/* Commission by Currency */}
-              <Card className="bg-foreground/10 border-[#1F2833]">
+              <Card className="bg-card border shadow-sm">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg font-semibold text-white">
-                    Commission by Currency (All Exchangers)
-                  </CardTitle>
+                  <CardTitle className="text-lg font-semibold text-foreground">Commission by Currency (All Exchangers)</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {(commissionReport.vendors || [])
-                      .flatMap((v) =>
-                        Object.entries(v.commission_by_currency || {}).map(
-                          ([curr, data]) => ({
-                            currency: curr,
-                            base: data.base,
-                            usd: data.usd,
-                          }),
-                        ),
-                      )
-                      .reduce((acc, item) => {
-                        const existing = acc.find(
-                          (x) => x.currency === item.currency,
-                        );
-                        if (existing) {
-                          existing.base += item.base;
-                          existing.usd += item.usd;
-                        } else {
-                          acc.push({ ...item });
-                        }
-                        return acc;
-                      }, [])
-                      .map((item, i) => (
-                        <div
-                          key={i}
-                          className="p-3 bg-[#0F172A] rounded-xl border border-[#1F2833]"
-                        >
-                          <p className="text-xs text-[#94A3B8] uppercase mb-1">
-                            {item.currency}
-                          </p>
-                          <p className="text-lg font-mono text-amber-400">
-                            {item.base?.toLocaleString()}
-                          </p>
-                          <p className="text-xs text-[#94A3B8]">
-                            ≈ ${item.usd?.toLocaleString()} USD
-                          </p>
-                        </div>
-                      ))}
+                    {(commissionReport.vendors || []).flatMap(v =>
+                      Object.entries(v.commission_by_currency || {}).map(([curr, data]) => ({
+                        currency: curr,
+                        base: data.base,
+                        usd: data.usd
+                      }))
+                    ).reduce((acc, item) => {
+                      const existing = acc.find(x => x.currency === item.currency);
+                      if (existing) {
+                        existing.base += item.base;
+                        existing.usd += item.usd;
+                      } else {
+                        acc.push({ ...item });
+                      }
+                      return acc;
+                    }, []).map((item, i) => (
+                      <div key={i} className="p-3 bg-muted/50 rounded-lg border border">
+                        <p className="text-xs text-muted-foreground uppercase mb-1">{item.currency}</p>
+                        <p className="text-lg font-mono text-amber-400">{item.base?.toLocaleString()}</p>
+                        <p className="text-xs text-muted-foreground">≈ ${item.usd?.toLocaleString()} USD</p>
+                      </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
@@ -1654,45 +1012,27 @@ export default function Reports() {
                   title="Net Client Balance"
                   value={`$${(clientReport.summary?.total_net_balance || 0).toLocaleString()}`}
                   icon={Wallet}
-                  color={
-                    clientReport.summary?.total_net_balance >= 0
-                      ? "green"
-                      : "red"
-                  }
+                  color={clientReport.summary?.total_net_balance >= 0 ? 'green' : 'red'}
                 />
               </div>
 
-              <Card className="bg-foreground/10 border-[#1F2833]">
+              <Card className="bg-card border shadow-sm">
                 <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                  <CardTitle className="text-lg font-semibold text-white">
-                    Client Balance Report
-                  </CardTitle>
+                  <CardTitle className="text-lg font-semibold text-foreground">Client Balance Report</CardTitle>
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="text-[#94A3B8] hover:text-white"
-                    onClick={() =>
-                      downloadCSV(
-                        clientReport.clients || [],
-                        "client_balances",
-                        [
-                          { key: "client_id", label: "Client ID" },
-                          { key: "name", label: "Name" },
-                          { key: "email", label: "Email" },
-                          { key: "country", label: "Country" },
-                          {
-                            key: "total_deposits_usd",
-                            label: "Deposits (USD)",
-                          },
-                          {
-                            key: "total_withdrawals_usd",
-                            label: "Withdrawals (USD)",
-                          },
-                          { key: "net_balance", label: "Net Balance (USD)" },
-                          { key: "transaction_count", label: "Transactions" },
-                        ],
-                      )
-                    }
+                    className="text-muted-foreground hover:text-card-foreground"
+                    onClick={() => downloadCSV(clientReport.clients || [], 'client_balances', [
+                      { key: 'client_id', label: 'Client ID' },
+                      { key: 'name', label: 'Name' },
+                      { key: 'email', label: 'Email' },
+                      { key: 'country', label: 'Country' },
+                      { key: 'total_deposits_usd', label: 'Deposits (USD)' },
+                      { key: 'total_withdrawals_usd', label: 'Withdrawals (USD)' },
+                      { key: 'net_balance', label: 'Net Balance (USD)' },
+                      { key: 'transaction_count', label: 'Transactions' }
+                    ])}
                   >
                     <Download className="w-4 h-4 mr-2" />
                     Export CSV
@@ -1702,77 +1042,35 @@ export default function Reports() {
                   <ScrollArea className="h-96">
                     <Table>
                       <TableHeader>
-                        <TableRow className="border-[#1F2833]">
-                          <TableHead className="text-[#94A3B8] text-xs">
-                            Client
-                          </TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs">
-                            Country
-                          </TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs text-right">
-                            Deposits
-                          </TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs text-right">
-                            Withdrawals
-                          </TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs text-right">
-                            Net Balance
-                          </TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs text-right">
-                            Txns
-                          </TableHead>
+                        <TableRow className="border">
+                          <TableHead className="text-muted-foreground text-xs">Client</TableHead>
+                          <TableHead className="text-muted-foreground text-xs">Country</TableHead>
+                          <TableHead className="text-muted-foreground text-xs text-right">Deposits</TableHead>
+                          <TableHead className="text-muted-foreground text-xs text-right">Withdrawals</TableHead>
+                          <TableHead className="text-muted-foreground text-xs text-right">Net Balance</TableHead>
+                          <TableHead className="text-muted-foreground text-xs text-right">Txns</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {(clientReport.clients || [])
-                          .slice(0, 100)
-                          .map((client, i) => (
-                            <TableRow key={i} className="border-[#1F2833]">
-                              <TableCell>
-                                <div>
-                                  <p className="text-white font-medium">
-                                    {client.name || "Unknown"}
-                                  </p>
-                                  <p className="text-xs text-[#94A3B8] font-mono">
-                                    {client.email}
-                                  </p>
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-[#94A3B8]">
-                                {client.country || "-"}
-                              </TableCell>
-                              <TableCell className="text-emerald-400 font-mono text-right">
-                                $
-                                {(
-                                  client.total_deposits_usd || 0
-                                ).toLocaleString()}
-                              </TableCell>
-                              <TableCell className="text-red-400 font-mono text-right">
-                                $
-                                {(
-                                  client.total_withdrawals_usd || 0
-                                ).toLocaleString()}
-                              </TableCell>
-                              <TableCell
-                                className={`font-mono text-right font-bold ${(client.net_balance || 0) >= 0 ? "text-blue-400" : "text-red-400"}`}
-                              >
-                                ${(client.net_balance || 0).toLocaleString()}
-                              </TableCell>
-                              <TableCell className="text-[#94A3B8] text-right">
-                                {client.transaction_count || 0}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        {(!clientReport.clients ||
-                          clientReport.clients.length === 0) && (
-                          <TableRow>
-                            <TableCell
-                              colSpan={6}
-                              className="text-center text-[#94A3B8] py-8"
-                            >
-                              No client data
+                        {(clientReport.clients || []).slice(0, 100).map((client, i) => (
+                          <TableRow key={i} className="border">
+                            <TableCell>
+                              <div>
+                                <p className="text-foreground font-medium">{client.name || 'Unknown'}</p>
+                                <p className="text-xs text-muted-foreground font-mono">{client.email}</p>
+                              </div>
                             </TableCell>
+                            <TableCell className="text-muted-foreground">{client.country || '-'}</TableCell>
+                            <TableCell className="text-emerald-400 font-mono text-right">${(client.total_deposits_usd || 0).toLocaleString()}</TableCell>
+                            <TableCell className="text-red-400 font-mono text-right">${(client.total_withdrawals_usd || 0).toLocaleString()}</TableCell>
+                            <TableCell className={`font-mono text-right font-bold ${(client.net_balance || 0) >= 0 ? 'text-primary/60' : 'text-red-400'}`}>
+                              ${(client.net_balance || 0).toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-right">{client.transaction_count || 0}</TableCell>
                           </TableRow>
+                        ))}
+                        {(!clientReport.clients || clientReport.clients.length === 0) && (
+                          <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No client data</TableCell></TableRow>
                         )}
                       </TableBody>
                     </Table>
@@ -1809,60 +1107,39 @@ export default function Reports() {
               </div>
 
               {/* Balance by Currency */}
-              <Card className="bg-foreground/10 border-[#1F2833]">
+              <Card className="bg-card border shadow-sm">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg font-semibold text-white">
-                    Balance by Currency
-                  </CardTitle>
+                  <CardTitle className="text-lg font-semibold text-foreground">Balance by Currency</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {(treasuryReport.balance_by_currency || []).map(
-                      (item, i) => (
-                        <div
-                          key={i}
-                          className="p-3 bg-[#0F172A] rounded-xl border border-[#1F2833]"
-                        >
-                          <p className="text-xs text-[#94A3B8] uppercase mb-1">
-                            {item.currency}
-                          </p>
-                          <p className="text-lg font-mono text-white">
-                            {item.total?.toLocaleString()}
-                          </p>
-                          <p className="text-xs text-[#94A3B8]">
-                            {item.account_count} accounts
-                          </p>
-                        </div>
-                      ),
-                    )}
+                    {(treasuryReport.balance_by_currency || []).map((item, i) => (
+                      <div key={i} className="p-3 bg-muted/50 rounded-lg border border">
+                        <p className="text-xs text-muted-foreground uppercase mb-1">{item.currency}</p>
+                        <p className="text-lg font-mono text-foreground">{item.total?.toLocaleString()}</p>
+                        <p className="text-xs text-muted-foreground">{item.account_count} accounts</p>
+                      </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-foreground/10 border-[#1F2833]">
+              <Card className="bg-card border shadow-sm">
                 <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                  <CardTitle className="text-lg font-semibold text-white">
-                    Treasury Accounts
-                  </CardTitle>
+                  <CardTitle className="text-lg font-semibold text-foreground">Treasury Accounts</CardTitle>
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="text-[#94A3B8] hover:text-white"
-                    onClick={() =>
-                      downloadCSV(
-                        treasuryReport.accounts || [],
-                        "treasury_accounts",
-                        [
-                          { key: "account_name", label: "Account Name" },
-                          { key: "account_type", label: "Type" },
-                          { key: "bank_name", label: "Bank" },
-                          { key: "currency", label: "Currency" },
-                          { key: "balance", label: "Balance" },
-                          { key: "balance_usd", label: "Balance (USD)" },
-                          { key: "status", label: "Status" },
-                        ],
-                      )
-                    }
+                    className="text-muted-foreground hover:text-card-foreground"
+                    onClick={() => downloadCSV(treasuryReport.accounts || [], 'treasury_accounts', [
+                      { key: 'account_name', label: 'Account Name' },
+                      { key: 'account_type', label: 'Type' },
+                      { key: 'bank_name', label: 'Bank' },
+                      { key: 'currency', label: 'Currency' },
+                      { key: 'balance', label: 'Balance' },
+                      { key: 'balance_usd', label: 'Balance (USD)' },
+                      { key: 'status', label: 'Status' }
+                    ])}
                   >
                     <Download className="w-4 h-4 mr-2" />
                     Export CSV
@@ -1872,60 +1149,30 @@ export default function Reports() {
                   <ScrollArea className="h-64">
                     <Table>
                       <TableHeader>
-                        <TableRow className="border-[#1F2833]">
-                          <TableHead className="text-[#94A3B8] text-xs">
-                            Account
-                          </TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs">
-                            Type
-                          </TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs">
-                            Currency
-                          </TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs text-right">
-                            Balance
-                          </TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs text-right">
-                            USD Equiv.
-                          </TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs">
-                            Status
-                          </TableHead>
+                        <TableRow className="border">
+                          <TableHead className="text-muted-foreground text-xs">Account</TableHead>
+                          <TableHead className="text-muted-foreground text-xs">Type</TableHead>
+                          <TableHead className="text-muted-foreground text-xs">Currency</TableHead>
+                          <TableHead className="text-muted-foreground text-xs text-right">Balance</TableHead>
+                          <TableHead className="text-muted-foreground text-xs text-right">USD Equiv.</TableHead>
+                          <TableHead className="text-muted-foreground text-xs">Status</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {(treasuryReport.accounts || []).map((acc, i) => (
-                          <TableRow key={i} className="border-[#1F2833]">
+                          <TableRow key={i} className="border">
                             <TableCell>
                               <div>
-                                <p className="text-white font-medium">
-                                  {acc.account_name}
-                                </p>
-                                <p className="text-xs text-[#94A3B8]">
-                                  {acc.bank_name || "-"}
-                                </p>
+                                <p className="text-foreground font-medium">{acc.account_name}</p>
+                                <p className="text-xs text-muted-foreground">{acc.bank_name || '-'}</p>
                               </div>
                             </TableCell>
-                            <TableCell className="text-[#94A3B8] capitalize">
-                              {acc.account_type?.replace("_", " ")}
-                            </TableCell>
-                            <TableCell className="text-white font-mono">
-                              {acc.currency}
-                            </TableCell>
-                            <TableCell className="text-white font-mono text-right">
-                              {acc.balance?.toLocaleString()}
-                            </TableCell>
-                            <TableCell className="text-blue-400 font-mono text-right">
-                              ${acc.balance_usd?.toLocaleString()}
-                            </TableCell>
+                            <TableCell className="text-muted-foreground capitalize">{acc.account_type?.replace('_', ' ')}</TableCell>
+                            <TableCell className="text-foreground font-mono">{acc.currency}</TableCell>
+                            <TableCell className="text-foreground font-mono text-right">{acc.balance?.toLocaleString()}</TableCell>
+                            <TableCell className="text-primary/60 font-mono text-right">${acc.balance_usd?.toLocaleString()}</TableCell>
                             <TableCell>
-                              <Badge
-                                className={
-                                  acc.status === "active"
-                                    ? "bg-emerald-500/20 text-emerald-400"
-                                    : "bg-gray-500/20 text-gray-400"
-                                }
-                              >
+                              <Badge className={acc.status === 'active' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gray-500/20 text-muted-foreground'}>
                                 {acc.status}
                               </Badge>
                             </TableCell>
@@ -1933,23 +1180,13 @@ export default function Reports() {
                         ))}
                         {/* Total Row */}
                         {treasuryReport.accounts?.length > 0 && (
-                          <TableRow className="border-t-2 border-blue-500 bg-blue-500/10 font-bold">
-                            <TableCell className="text-blue-600 font-bold">
-                              TOTAL ({treasuryReport.accounts.length} accounts)
-                            </TableCell>
+                          <TableRow className="border-t-2 border-primary bg-primary/80/10 font-bold">
+                            <TableCell className="text-primary font-bold">TOTAL ({treasuryReport.accounts.length} accounts)</TableCell>
                             <TableCell></TableCell>
                             <TableCell></TableCell>
-                            <TableCell className="text-white font-mono text-right font-bold">
-                              -
-                            </TableCell>
-                            <TableCell className="text-blue-400 font-mono text-right font-bold">
-                              $
-                              {treasuryReport.accounts
-                                .reduce(
-                                  (sum, acc) => sum + (acc.balance_usd || 0),
-                                  0,
-                                )
-                                .toLocaleString()}
+                            <TableCell className="text-foreground font-mono text-right font-bold">-</TableCell>
+                            <TableCell className="text-primary/60 font-mono text-right font-bold">
+                              ${treasuryReport.accounts.reduce((sum, acc) => sum + (acc.balance_usd || 0), 0).toLocaleString()}
                             </TableCell>
                             <TableCell></TableCell>
                           </TableRow>
@@ -1994,13 +1231,13 @@ export default function Reports() {
                 />
               </div>
 
-          <Card className="bg-foreground/10 border-[#1F2833]">
+              <Card className="bg-card border shadow-sm">
                 <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                  <CardTitle className="text-lg font-semibold text-white">PSP Summary</CardTitle>
+                  <CardTitle className="text-lg font-semibold text-foreground">PSP Summary</CardTitle>
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="text-[#94A3B8] hover:text-white"
+                    className="text-muted-foreground hover:text-card-foreground"
                     onClick={() => downloadCSV(pspReport.psps || [], 'psp_summary', [
                       { key: 'psp_name', label: 'PSP Name' },
                       { key: 'payment_currency', label: 'Payment Currency' },
@@ -2022,16 +1259,16 @@ export default function Reports() {
                   <ScrollArea className="h-64">
                     <Table>
                       <TableHeader>
-                        <TableRow className="border-[#1F2833]">
-                          <TableHead className="text-[#94A3B8] text-xs">PSP</TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs">Pay Currency</TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs text-right">Rate</TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs text-right">Volume</TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs text-right">Commission</TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs text-right">Extra Charges</TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs text-right">Net</TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs text-right">Settled</TableHead>
-                          <TableHead className="text-[#94A3B8] text-xs text-right">Pending</TableHead>
+                        <TableRow className="border">
+                          <TableHead className="text-muted-foreground text-xs">PSP</TableHead>
+                          <TableHead className="text-muted-foreground text-xs">Pay Currency</TableHead>
+                          <TableHead className="text-muted-foreground text-xs text-right">Rate</TableHead>
+                          <TableHead className="text-muted-foreground text-xs text-right">Volume</TableHead>
+                          <TableHead className="text-muted-foreground text-xs text-right">Commission</TableHead>
+                          <TableHead className="text-muted-foreground text-xs text-right">Extra Charges</TableHead>
+                          <TableHead className="text-muted-foreground text-xs text-right">Net</TableHead>
+                          <TableHead className="text-muted-foreground text-xs text-right">Settled</TableHead>
+                          <TableHead className="text-muted-foreground text-xs text-right">Pending</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -2043,33 +1280,33 @@ export default function Reports() {
                           const baseExtra = rate ? (psp.total_extra_charges || 0) / rate : null;
                           const baseNet = rate ? psp.total_net / rate : null;
                           return (
-                          <TableRow key={i} className="border-[#1F2833]">
-                            <TableCell className="text-white font-medium">{psp.psp_name}</TableCell>
-                            <TableCell className="text-[#94A3B8] text-xs">{hasPay || 'USD'}</TableCell>
-                            <TableCell className="text-[#94A3B8] text-right">{psp.commission_rate}%</TableCell>
+                          <TableRow key={i} className="border">
+                            <TableCell className="text-foreground font-medium">{psp.psp_name}</TableCell>
+                            <TableCell className="text-card-foreground text-xs">{hasPay || 'USD'}</TableCell>
+                            <TableCell className="text-muted-foreground text-right">{psp.commission_rate}%</TableCell>
                             <TableCell className="text-right">
-                              <span className="text-white font-mono">${(psp.total_volume || 0).toLocaleString()}</span>
-                              {hasPay && baseVol && <p className="text-[10px] text-blue-500">{baseVol.toLocaleString()} {hasPay}</p>}
+                              <span className="text-foreground font-mono">${(psp.total_volume || 0).toLocaleString()}</span>
+                              {hasPay && baseVol && <p className="text-[10px] text-primary/80">{baseVol.toLocaleString()} {hasPay}</p>}
                             </TableCell>
                             <TableCell className="text-right">
                               <span className="text-amber-400 font-mono">${(psp.total_commission || 0).toLocaleString()}</span>
-                              {hasPay && baseComm != null && <p className="text-[10px] text-blue-500">{baseComm.toLocaleString(undefined, {maximumFractionDigits: 2})} {hasPay}</p>}
+                              {hasPay && baseComm != null && <p className="text-[10px] text-primary/80">{baseComm.toLocaleString(undefined, {maximumFractionDigits: 2})} {hasPay}</p>}
                             </TableCell>
                             <TableCell className="text-right">
                               <span className="text-orange-400 font-mono">{(psp.total_extra_charges || 0) > 0 ? `$${psp.total_extra_charges.toLocaleString()}` : '-'}</span>
-                              {hasPay && baseExtra != null && baseExtra > 0 && <p className="text-[10px] text-blue-500">{baseExtra.toLocaleString(undefined, {maximumFractionDigits: 2})} {hasPay}</p>}
+                              {hasPay && baseExtra != null && baseExtra > 0 && <p className="text-[10px] text-primary/80">{baseExtra.toLocaleString(undefined, {maximumFractionDigits: 2})} {hasPay}</p>}
                             </TableCell>
                             <TableCell className="text-right">
                               <span className="text-emerald-400 font-mono">${(psp.total_net || 0).toLocaleString()}</span>
-                              {hasPay && baseNet != null && <p className="text-[10px] text-blue-500">{baseNet.toLocaleString(undefined, {maximumFractionDigits: 2})} {hasPay}</p>}
+                              {hasPay && baseNet != null && <p className="text-[10px] text-primary/80">{baseNet.toLocaleString(undefined, {maximumFractionDigits: 2})} {hasPay}</p>}
                             </TableCell>
-                            <TableCell className="text-[#94A3B8] text-right">{psp.settled_count || 0}</TableCell>
+                            <TableCell className="text-muted-foreground text-right">{psp.settled_count || 0}</TableCell>
                             <TableCell className="text-amber-400 text-right">{psp.pending_count || 0}</TableCell>
                           </TableRow>
                           );
                         })}
                         {(!pspReport.psps || pspReport.psps.length === 0) && (
-                          <TableRow><TableCell colSpan={9} className="text-center text-[#94A3B8] py-8">No PSP data</TableCell></TableRow>
+                          <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">No PSP data</TableCell></TableRow>
                         )}
                       </TableBody>
                     </Table>
@@ -2100,11 +1337,9 @@ export default function Reports() {
                 <StatCard
                   title="Net P&L"
                   value={`$${Math.abs(financialReport.net_profit_loss || 0).toLocaleString()}`}
-                  subtitle={
-                    financialReport.net_profit_loss >= 0 ? "Profit" : "Loss"
-                  }
+                  subtitle={financialReport.net_profit_loss >= 0 ? 'Profit' : 'Loss'}
                   icon={DollarSign}
-                  color={financialReport.net_profit_loss >= 0 ? "green" : "red"}
+                  color={financialReport.net_profit_loss >= 0 ? 'green' : 'red'}
                 />
                 <StatCard
                   title="Treasury Balance"
@@ -2117,17 +1352,16 @@ export default function Reports() {
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* Income by Category */}
-                <Card className="bg-foreground/10 border-[#1F2833]">
+                <Card className="bg-card border shadow-sm">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+                    <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                       <TrendingUp className="w-5 h-5 text-emerald-400" />
                       Income by Category
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="h-64">
-                      {(financialReport.income?.by_category || []).length >
-                      0 ? (
+                      {(financialReport.income?.by_category || []).length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
                           <RechartsPieChart>
                             <Pie
@@ -2139,50 +1373,34 @@ export default function Reports() {
                               paddingAngle={5}
                               dataKey="amount"
                               nameKey="category"
-                              label={({ category, amount }) =>
-                                `${category}: $${amount.toLocaleString()}`
-                              }
-                              labelLine={{ stroke: "#94A3B8" }}
+                              label={({ category, amount }) => `${category}: $${amount.toLocaleString()}`}
+                              labelLine={{ stroke: '#94A3B8' }}
                             >
-                              {(financialReport.income?.by_category || []).map(
-                                (entry, index) => (
-                                  <Cell
-                                    key={`cell-${index}`}
-                                    fill={COLORS[index % COLORS.length]}
-                                  />
-                                ),
-                              )}
+                              {(financialReport.income?.by_category || []).map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                              ))}
                             </Pie>
-                            <Tooltip
-                              contentStyle={{
-                                background: "#1E293B",
-                                border: "1px solid rgba(255,255,255,0.1)",
-                              }}
-                              itemStyle={{ color: "#fff" }}
-                            />
+                            <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0' }} itemStyle={{ color: '#1e293b' }} />
                           </RechartsPieChart>
                         </ResponsiveContainer>
                       ) : (
-                        <div className="flex items-center justify-center h-full text-[#94A3B8]">
-                          No income data
-                        </div>
+                        <div className="flex items-center justify-center h-full text-muted-foreground">No income data</div>
                       )}
                     </div>
                   </CardContent>
                 </Card>
 
                 {/* Expenses by Category */}
-                <Card className="bg-foreground/10 border-[#1F2833]">
+                <Card className="bg-card border shadow-sm">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+                    <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                       <TrendingDown className="w-5 h-5 text-red-400" />
                       Expenses by Category
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="h-64">
-                      {(financialReport.expenses?.by_category || []).length >
-                      0 ? (
+                      {(financialReport.expenses?.by_category || []).length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
                           <RechartsPieChart>
                             <Pie
@@ -2194,33 +1412,18 @@ export default function Reports() {
                               paddingAngle={5}
                               dataKey="amount"
                               nameKey="category"
-                              label={({ category, amount }) =>
-                                `${category}: $${amount.toLocaleString()}`
-                              }
-                              labelLine={{ stroke: "#94A3B8" }}
+                              label={({ category, amount }) => `${category}: $${amount.toLocaleString()}`}
+                              labelLine={{ stroke: '#94A3B8' }}
                             >
-                              {(
-                                financialReport.expenses?.by_category || []
-                              ).map((entry, index) => (
-                                <Cell
-                                  key={`cell-${index}`}
-                                  fill={COLORS[(index + 3) % COLORS.length]}
-                                />
+                              {(financialReport.expenses?.by_category || []).map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[(index + 3) % COLORS.length]} />
                               ))}
                             </Pie>
-                            <Tooltip
-                              contentStyle={{
-                                background: "#1E293B",
-                                border: "1px solid rgba(255,255,255,0.1)",
-                              }}
-                              itemStyle={{ color: "#fff" }}
-                            />
+                            <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0' }} itemStyle={{ color: '#1e293b' }} />
                           </RechartsPieChart>
                         </ResponsiveContainer>
                       ) : (
-                        <div className="flex items-center justify-center h-full text-[#94A3B8]">
-                          No expense data
-                        </div>
+                        <div className="flex items-center justify-center h-full text-muted-foreground">No expense data</div>
                       )}
                     </div>
                   </CardContent>
@@ -2229,83 +1432,51 @@ export default function Reports() {
 
               {/* Loans & Exchanger Commission Summary */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <Card className="bg-foreground/10 border-[#1F2833]">
+                <Card className="bg-card border shadow-sm">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+                    <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                       <Banknote className="w-5 h-5 text-purple-400" />
                       Loan Summary
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-xl">
-                        <span className="text-[#94A3B8]">Total Disbursed</span>
-                        <span className="text-white font-mono">
-                          $
-                          {(
-                            financialReport.loans?.total_disbursed || 0
-                          ).toLocaleString()}
-                        </span>
+                      <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                        <span className="text-muted-foreground">Total Disbursed</span>
+                        <span className="text-foreground font-mono">${(financialReport.loans?.total_disbursed || 0).toLocaleString()}</span>
                       </div>
-                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-xl">
-                        <span className="text-[#94A3B8]">
-                          Outstanding Balance
-                        </span>
-                        <span className="text-amber-400 font-mono">
-                          $
-                          {(
-                            financialReport.loans?.total_outstanding || 0
-                          ).toLocaleString()}
-                        </span>
+                      <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                        <span className="text-muted-foreground">Outstanding Balance</span>
+                        <span className="text-amber-400 font-mono">${(financialReport.loans?.total_outstanding || 0).toLocaleString()}</span>
                       </div>
-                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-xl">
-                        <span className="text-[#94A3B8]">Total Repaid</span>
-                        <span className="text-emerald-400 font-mono">
-                          $
-                          {(
-                            financialReport.loans?.total_repaid || 0
-                          ).toLocaleString()}
-                        </span>
+                      <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                        <span className="text-muted-foreground">Total Repaid</span>
+                        <span className="text-emerald-400 font-mono">${(financialReport.loans?.total_repaid || 0).toLocaleString()}</span>
                       </div>
-                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-xl">
-                        <span className="text-[#94A3B8]">Active Loans</span>
-                        <span className="text-white font-mono">
-                          {financialReport.loans?.active_loans || 0}
-                        </span>
+                      <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                        <span className="text-muted-foreground">Active Loans</span>
+                        <span className="text-foreground font-mono">{financialReport.loans?.active_loans || 0}</span>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-foreground/10 border-[#1F2833]">
+                <Card className="bg-card border shadow-sm">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+                    <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                       <Percent className="w-5 h-5 text-amber-400" />
                       Exchanger Commission Summary
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-xl">
-                        <span className="text-[#94A3B8]">
-                          Total Commission Paid
-                        </span>
-                        <span className="text-amber-400 font-mono font-bold">
-                          $
-                          {(
-                            financialReport.vendor_commissions?.total_paid || 0
-                          ).toLocaleString()}
-                        </span>
+                      <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                        <span className="text-muted-foreground">Total Commission Paid</span>
+                        <span className="text-amber-400 font-mono font-bold">${(financialReport.vendor_commissions?.total_paid || 0).toLocaleString()}</span>
                       </div>
-                      <div className="p-3 bg-[#0F172A] rounded-xl">
-                        <p className="text-xs text-[#94A3B8] mb-2">
-                          This represents the total vendor commission deducted
-                          from settlements.
-                        </p>
-                        <p className="text-xs text-[#94A3B8]">
-                          Formula: Net Settlement = Deposits - Withdrawals -
-                          Commission
-                        </p>
+                      <div className="p-3 bg-muted/50 rounded-lg">
+                        <p className="text-xs text-muted-foreground mb-2">This represents the total vendor commission deducted from settlements.</p>
+                        <p className="text-xs text-muted-foreground">Formula: Net Settlement = Deposits - Withdrawals - Commission</p>
                       </div>
                     </div>
                   </CardContent>
@@ -2313,9 +1484,9 @@ export default function Reports() {
               </div>
 
               {/* Detailed Income & Expenses Table */}
-              <Card className="bg-[#1F2833] border-[#1F2833]">
+              <Card className="bg-card border">
                 <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                  <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+                  <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                     <Wallet className="w-5 h-5 text-purple-500" />
                     All Income & Expenses (Detailed)
                   </CardTitle>
@@ -2324,29 +1495,20 @@ export default function Reports() {
                     filename="income_expenses_detailed"
                     title="Income & Expenses Report"
                     columns={[
-                      { key: "entry_type", label: "Type" },
-                      { key: "category", label: "Category" },
-                      { key: "amount", label: "Amount" },
-                      { key: "currency", label: "Currency" },
-                      { key: "amount_usd", label: "Amount (USD)" },
-                      { key: "treasury_account_name", label: "Account" },
-                      { key: "description", label: "Description" },
-                      { key: "date", label: "Date" },
-                      { key: "status", label: "Status" },
+                      { key: 'entry_type', label: 'Type' },
+                      { key: 'category', label: 'Category' },
+                      { key: 'amount', label: 'Amount' },
+                      { key: 'currency', label: 'Currency' },
+                      { key: 'amount_usd', label: 'Amount (USD)' },
+                      { key: 'treasury_account_name', label: 'Account' },
+                      { key: 'description', label: 'Description' },
+                      { key: 'date', label: 'Date' },
+                      { key: 'status', label: 'Status' },
                     ]}
                     summaryData={[
-                      {
-                        label: "Total Income",
-                        value: `$${(financialReport.income?.total || 0).toLocaleString()}`,
-                      },
-                      {
-                        label: "Total Expenses",
-                        value: `$${(financialReport.expenses?.total || 0).toLocaleString()}`,
-                      },
-                      {
-                        label: "Net P&L",
-                        value: `$${(financialReport.net_profit_loss || 0).toLocaleString()}`,
-                      },
+                      { label: 'Total Income', value: `$${(financialReport.income?.total || 0).toLocaleString()}` },
+                      { label: 'Total Expenses', value: `$${(financialReport.expenses?.total || 0).toLocaleString()}` },
+                      { label: 'Net P&L', value: `$${(financialReport.net_profit_loss || 0).toLocaleString()}` },
                     ]}
                   />
                 </CardHeader>
@@ -2354,79 +1516,37 @@ export default function Reports() {
                   <ScrollArea className="h-[400px]">
                     <Table>
                       <TableHeader>
-                        <TableRow className="border-[#1F2833]">
-                          <TableHead className="text-slate-500 text-xs">
-                            Type
-                          </TableHead>
-                          <TableHead className="text-slate-500 text-xs">
-                            Category
-                          </TableHead>
-                          <TableHead className="text-slate-500 text-xs text-right">
-                            Amount
-                          </TableHead>
-                          <TableHead className="text-slate-500 text-xs">
-                            Account
-                          </TableHead>
-                          <TableHead className="text-slate-500 text-xs">
-                            Description
-                          </TableHead>
-                          <TableHead className="text-slate-500 text-xs">
-                            Date
-                          </TableHead>
-                          <TableHead className="text-slate-500 text-xs">
-                            Status
-                          </TableHead>
+                        <TableRow className="border">
+                          <TableHead className="text-muted-foreground text-xs">Type</TableHead>
+                          <TableHead className="text-muted-foreground text-xs">Category</TableHead>
+                          <TableHead className="text-muted-foreground text-xs text-right">Amount</TableHead>
+                          <TableHead className="text-muted-foreground text-xs">Account</TableHead>
+                          <TableHead className="text-muted-foreground text-xs">Description</TableHead>
+                          <TableHead className="text-muted-foreground text-xs">Date</TableHead>
+                          <TableHead className="text-muted-foreground text-xs">Status</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {allIncomeExpenses.map((entry, i) => (
-                          <TableRow
-                            key={entry.entry_id || i}
-                            className="border-[#1F2833]"
-                          >
+                          <TableRow key={entry.entry_id || i} className="border">
                             <TableCell>
-                              <Badge
-                                className={
-                                  entry.entry_type === "income"
-                                    ? "bg-green-500"
-                                    : "bg-red-500"
-                                }
-                              >
+                              <Badge className={entry.entry_type === 'income' ? 'bg-green-500' : 'bg-red-500'}>
                                 {entry.entry_type}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-[#94A3B8] capitalize">
-                              {entry.category?.replace(/_/g, " ") ||
-                                entry.ie_category_name ||
-                                "-"}
+                            <TableCell className="text-card-foreground capitalize">{entry.category?.replace(/_/g, ' ') || entry.ie_category_name || '-'}</TableCell>
+                            <TableCell className={`font-mono text-right ${entry.entry_type === 'income' ? 'text-green-500' : 'text-red-500'}`}>
+                              {entry.entry_type === 'income' ? '+' : '-'}${entry.amount_usd?.toLocaleString() || entry.amount?.toLocaleString()}
                             </TableCell>
-                            <TableCell
-                              className={`font-mono text-right ${entry.entry_type === "income" ? "text-green-500" : "text-red-500"}`}
-                            >
-                              {entry.entry_type === "income" ? "+" : "-"}$
-                              {entry.amount_usd?.toLocaleString() ||
-                                entry.amount?.toLocaleString()}
-                            </TableCell>
-                            <TableCell className="text-slate-500">
-                              {entry.treasury_account_name || "-"}
-                            </TableCell>
-                            <TableCell className="text-slate-500 text-xs max-w-[200px] truncate">
-                              {entry.description || "-"}
-                            </TableCell>
-                            <TableCell className="text-slate-500 text-xs">
-                              {entry.date?.split("T")[0]}
-                            </TableCell>
+                            <TableCell className="text-muted-foreground">{entry.treasury_account_name || '-'}</TableCell>
+                            <TableCell className="text-muted-foreground text-xs max-w-[200px] truncate">{entry.description || '-'}</TableCell>
+                            <TableCell className="text-muted-foreground text-xs">{entry.date?.split('T')[0]}</TableCell>
                             <TableCell>
-                              <Badge
-                                variant="outline"
-                                className={
-                                  entry.status === "completed"
-                                    ? "text-green-600 border-green-600"
-                                    : entry.status === "pending"
-                                      ? "text-yellow-600 border-yellow-600"
-                                      : "text-[#94A3B8] border-[#1F2833]"
-                                }
-                              >
+                              <Badge variant="outline" className={
+                                entry.status === 'completed' ? 'text-green-600 border-green-600' :
+                                entry.status === 'pending' ? 'text-yellow-600 border-yellow-600' :
+                                'text-card-foreground border-slate-600'
+                              }>
                                 {entry.status}
                               </Badge>
                             </TableCell>
@@ -2435,58 +1555,15 @@ export default function Reports() {
                         {/* Total Row */}
                         {allIncomeExpenses.length > 0 && (
                           <TableRow className="border-t-2 border-purple-500 bg-purple-500/10 font-bold">
-                            <TableCell className="text-purple-600" colSpan={2}>
-                              TOTALS
-                            </TableCell>
+                            <TableCell className="text-purple-600" colSpan={2}>TOTALS</TableCell>
                             <TableCell className="text-right">
-                              <div className="text-green-500">
-                                +$
-                                {allIncomeExpenses
-                                  .filter((e) => e.entry_type === "income")
-                                  .reduce(
-                                    (sum, e) =>
-                                      sum + (e.amount_usd || e.amount || 0),
-                                    0,
-                                  )
-                                  .toLocaleString()}
-                              </div>
-                              <div className="text-red-500">
-                                -$
-                                {allIncomeExpenses
-                                  .filter((e) => e.entry_type === "expense")
-                                  .reduce(
-                                    (sum, e) =>
-                                      sum + (e.amount_usd || e.amount || 0),
-                                    0,
-                                  )
-                                  .toLocaleString()}
-                              </div>
+                              <div className="text-green-500">+${allIncomeExpenses.filter(e => e.entry_type === 'income').reduce((sum, e) => sum + (e.amount_usd || e.amount || 0), 0).toLocaleString()}</div>
+                              <div className="text-red-500">-${allIncomeExpenses.filter(e => e.entry_type === 'expense').reduce((sum, e) => sum + (e.amount_usd || e.amount || 0), 0).toLocaleString()}</div>
                             </TableCell>
                             <TableCell className="text-purple-600 font-bold">
-                              Net: $
-                              {(
-                                allIncomeExpenses
-                                  .filter((e) => e.entry_type === "income")
-                                  .reduce(
-                                    (sum, e) =>
-                                      sum + (e.amount_usd || e.amount || 0),
-                                    0,
-                                  ) -
-                                allIncomeExpenses
-                                  .filter((e) => e.entry_type === "expense")
-                                  .reduce(
-                                    (sum, e) =>
-                                      sum + (e.amount_usd || e.amount || 0),
-                                    0,
-                                  )
-                              ).toLocaleString()}
+                              Net: ${(allIncomeExpenses.filter(e => e.entry_type === 'income').reduce((sum, e) => sum + (e.amount_usd || e.amount || 0), 0) - allIncomeExpenses.filter(e => e.entry_type === 'expense').reduce((sum, e) => sum + (e.amount_usd || e.amount || 0), 0)).toLocaleString()}
                             </TableCell>
-                            <TableCell
-                              colSpan={3}
-                              className="text-purple-600 text-right"
-                            >
-                              {allIncomeExpenses.length} entries
-                            </TableCell>
+                            <TableCell colSpan={3} className="text-purple-600 text-right">{allIncomeExpenses.length} entries</TableCell>
                           </TableRow>
                         )}
                       </TableBody>
@@ -2518,13 +1595,9 @@ export default function Reports() {
                 <StatCard
                   title="Net Position"
                   value={`$${Math.abs(outstandingReport.net_position || 0).toLocaleString()}`}
-                  subtitle={
-                    outstandingReport.net_position >= 0
-                      ? "Net Receivable"
-                      : "Net Payable"
-                  }
+                  subtitle={outstandingReport.net_position >= 0 ? 'Net Receivable' : 'Net Payable'}
                   icon={DollarSign}
-                  color={outstandingReport.net_position >= 0 ? "green" : "red"}
+                  color={outstandingReport.net_position >= 0 ? 'green' : 'red'}
                 />
                 <StatCard
                   title="Total Overdue"
@@ -2537,63 +1610,34 @@ export default function Reports() {
 
               {/* Aging Summary */}
               {outstandingReport.aging && (
-                <Card className="bg-foreground/10 border-[#1F2833]">
+                <Card className="bg-card border shadow-sm">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+                    <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                       <Clock className="w-5 h-5 text-amber-400" />
                       Aging Summary (Outstanding Amounts)
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-5 gap-4">
-                      <div className="p-4 bg-[#0F172A] rounded-xl text-center">
-                        <p className="text-xs text-[#94A3B8] mb-2">Current</p>
-                        <p className="text-2xl font-mono text-emerald-400 font-bold">
-                          $
-                          {(
-                            outstandingReport.aging.current || 0
-                          ).toLocaleString()}
-                        </p>
+                      <div className="p-4 bg-muted/50 rounded-lg text-center">
+                        <p className="text-xs text-muted-foreground mb-2">Current</p>
+                        <p className="text-2xl font-mono text-emerald-400 font-bold">${(outstandingReport.aging.current || 0).toLocaleString()}</p>
                       </div>
-                      <div className="p-4 bg-[#0F172A] rounded-xl text-center">
-                        <p className="text-xs text-[#94A3B8] mb-2">1-30 Days</p>
-                        <p className="text-2xl font-mono text-amber-400 font-bold">
-                          $
-                          {(
-                            outstandingReport.aging.days_1_30 || 0
-                          ).toLocaleString()}
-                        </p>
+                      <div className="p-4 bg-muted/50 rounded-lg text-center">
+                        <p className="text-xs text-muted-foreground mb-2">1-30 Days</p>
+                        <p className="text-2xl font-mono text-amber-400 font-bold">${(outstandingReport.aging.days_1_30 || 0).toLocaleString()}</p>
                       </div>
-                      <div className="p-4 bg-[#0F172A] rounded-xl text-center">
-                        <p className="text-xs text-[#94A3B8] mb-2">
-                          31-60 Days
-                        </p>
-                        <p className="text-2xl font-mono text-orange-400 font-bold">
-                          $
-                          {(
-                            outstandingReport.aging.days_31_60 || 0
-                          ).toLocaleString()}
-                        </p>
+                      <div className="p-4 bg-muted/50 rounded-lg text-center">
+                        <p className="text-xs text-muted-foreground mb-2">31-60 Days</p>
+                        <p className="text-2xl font-mono text-orange-400 font-bold">${(outstandingReport.aging.days_31_60 || 0).toLocaleString()}</p>
                       </div>
-                      <div className="p-4 bg-[#0F172A] rounded-xl text-center">
-                        <p className="text-xs text-[#94A3B8] mb-2">
-                          61-90 Days
-                        </p>
-                        <p className="text-2xl font-mono text-red-400 font-bold">
-                          $
-                          {(
-                            outstandingReport.aging.days_61_90 || 0
-                          ).toLocaleString()}
-                        </p>
+                      <div className="p-4 bg-muted/50 rounded-lg text-center">
+                        <p className="text-xs text-muted-foreground mb-2">61-90 Days</p>
+                        <p className="text-2xl font-mono text-red-400 font-bold">${(outstandingReport.aging.days_61_90 || 0).toLocaleString()}</p>
                       </div>
-                      <div className="p-4 bg-[#0F172A] rounded-xl text-center">
-                        <p className="text-xs text-[#94A3B8] mb-2">90+ Days</p>
-                        <p className="text-2xl font-mono text-red-500 font-bold">
-                          $
-                          {(
-                            outstandingReport.aging.days_over_90 || 0
-                          ).toLocaleString()}
-                        </p>
+                      <div className="p-4 bg-muted/50 rounded-lg text-center">
+                        <p className="text-xs text-muted-foreground mb-2">90+ Days</p>
+                        <p className="text-2xl font-mono text-red-500 font-bold">${(outstandingReport.aging.days_over_90 || 0).toLocaleString()}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -2603,45 +1647,39 @@ export default function Reports() {
               {/* Receivables & Payables Breakdown */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* Receivables Details */}
-                <Card className="bg-foreground/10 border-[#1F2833]">
+                <Card className="bg-card border shadow-sm">
                   <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                    <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+                    <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                       <ArrowDownRight className="w-5 h-5 text-emerald-400" />
                       Receivables (Debtors)
                     </CardTitle>
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="text-[#94A3B8] hover:text-white"
-                      onClick={() =>
-                        downloadCSV(
-                          debtsData
-                            .filter((d) => d.debt_type === "receivable")
-                            .map((d) => ({
-                              party_name: d.party_name,
-                              party_type: d.party_type,
-                              amount: d.amount,
-                              currency: d.currency,
-                              total_paid: d.total_paid || 0,
-                              outstanding:
-                                d.outstanding_balance ||
-                                d.amount - (d.total_paid || 0),
-                              due_date: d.due_date?.split("T")[0],
-                              status: d.calculated_status || d.status,
-                            })),
-                          "receivables_report",
-                          [
-                            { key: "party_name", label: "Party" },
-                            { key: "party_type", label: "Type" },
-                            { key: "amount", label: "Amount" },
-                            { key: "currency", label: "Currency" },
-                            { key: "total_paid", label: "Paid" },
-                            { key: "outstanding", label: "Outstanding" },
-                            { key: "due_date", label: "Due Date" },
-                            { key: "status", label: "Status" },
-                          ],
-                        )
-                      }
+                      className="text-muted-foreground hover:text-card-foreground"
+                      onClick={() => downloadCSV(
+                        debtsData.filter(d => d.debt_type === 'receivable').map(d => ({
+                          party_name: d.party_name,
+                          party_type: d.party_type,
+                          amount: d.amount,
+                          currency: d.currency,
+                          total_paid: d.total_paid || 0,
+                          outstanding: d.outstanding_balance || (d.amount - (d.total_paid || 0)),
+                          due_date: d.due_date?.split('T')[0],
+                          status: d.calculated_status || d.status
+                        })),
+                        'receivables_report',
+                        [
+                          { key: 'party_name', label: 'Party' },
+                          { key: 'party_type', label: 'Type' },
+                          { key: 'amount', label: 'Amount' },
+                          { key: 'currency', label: 'Currency' },
+                          { key: 'total_paid', label: 'Paid' },
+                          { key: 'outstanding', label: 'Outstanding' },
+                          { key: 'due_date', label: 'Due Date' },
+                          { key: 'status', label: 'Status' }
+                        ]
+                      )}
                     >
                       <Download className="w-4 h-4 mr-2" />
                       CSV
@@ -2649,115 +1687,57 @@ export default function Reports() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3 mb-4">
-                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-xl">
-                        <span className="text-[#94A3B8]">Total Amount</span>
-                        <span className="text-white font-mono">
-                          $
-                          {(
-                            outstandingReport.receivables?.total_amount || 0
-                          ).toLocaleString()}
-                        </span>
+                      <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                        <span className="text-muted-foreground">Total Amount</span>
+                        <span className="text-foreground font-mono">${(outstandingReport.receivables?.total_amount || 0).toLocaleString()}</span>
                       </div>
-                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-xl">
-                        <span className="text-[#94A3B8]">Total Collected</span>
-                        <span className="text-emerald-400 font-mono">
-                          $
-                          {(
-                            outstandingReport.receivables?.total_paid || 0
-                          ).toLocaleString()}
-                        </span>
+                      <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                        <span className="text-muted-foreground">Total Collected</span>
+                        <span className="text-emerald-400 font-mono">${(outstandingReport.receivables?.total_paid || 0).toLocaleString()}</span>
                       </div>
-                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-xl">
-                        <span className="text-[#94A3B8]">Outstanding</span>
-                        <span className="text-white font-mono font-bold">
-                          $
-                          {(
-                            outstandingReport.receivables?.outstanding || 0
-                          ).toLocaleString()}
-                        </span>
+                      <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                        <span className="text-muted-foreground">Outstanding</span>
+                        <span className="text-foreground font-mono font-bold">${(outstandingReport.receivables?.outstanding || 0).toLocaleString()}</span>
                       </div>
-                      <div className="flex justify-between items-center p-3 bg-amber-500/10 rounded-xl">
+                      <div className="flex justify-between items-center p-3 bg-amber-500/10 rounded-lg">
                         <span className="text-amber-400">Overdue</span>
-                        <span className="text-amber-400 font-mono">
-                          $
-                          {(
-                            outstandingReport.receivables?.overdue_amount || 0
-                          ).toLocaleString()}
-                        </span>
+                        <span className="text-amber-400 font-mono">${(outstandingReport.receivables?.overdue_amount || 0).toLocaleString()}</span>
                       </div>
-                      <div className="flex justify-between items-center p-3 bg-purple-500/10 rounded-xl">
-                        <span className="text-purple-400">
-                          Accrued Interest
-                        </span>
-                        <span className="text-purple-400 font-mono">
-                          $
-                          {(
-                            outstandingReport.receivables?.accrued_interest || 0
-                          ).toLocaleString()}
-                        </span>
+                      <div className="flex justify-between items-center p-3 bg-purple-500/10 rounded-lg">
+                        <span className="text-purple-400">Accrued Interest</span>
+                        <span className="text-purple-400 font-mono">${(outstandingReport.receivables?.accrued_interest || 0).toLocaleString()}</span>
                       </div>
                     </div>
                     <ScrollArea className="h-48">
                       <Table>
                         <TableHeader>
-                          <TableRow className="border-[#1F2833]">
-                            <TableHead className="text-[#94A3B8] text-xs">
-                              Party
-                            </TableHead>
-                            <TableHead className="text-[#94A3B8] text-xs text-right">
-                              Outstanding
-                            </TableHead>
-                            <TableHead className="text-[#94A3B8] text-xs">
-                              Status
-                            </TableHead>
+                          <TableRow className="border">
+                            <TableHead className="text-muted-foreground text-xs">Party</TableHead>
+                            <TableHead className="text-muted-foreground text-xs text-right">Outstanding</TableHead>
+                            <TableHead className="text-muted-foreground text-xs">Status</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {debtsData
-                            .filter((d) => d.debt_type === "receivable")
-                            .slice(0, 10)
-                            .map((debt, i) => (
-                              <TableRow key={i} className="border-[#1F2833]">
-                                <TableCell className="text-white text-sm">
-                                  {debt.party_name}
-                                </TableCell>
-                                <TableCell className="text-emerald-400 font-mono text-right text-sm">
-                                  $
-                                  {(
-                                    debt.outstanding_balance ||
-                                    debt.amount - (debt.total_paid || 0)
-                                  ).toLocaleString()}
-                                </TableCell>
-                                <TableCell>
-                                  <Badge
-                                    variant="outline"
-                                    className={`text-xs ${
-                                      debt.calculated_status === "overdue"
-                                        ? "bg-red-500/20 text-red-400"
-                                        : debt.calculated_status ===
-                                            "fully_paid"
-                                          ? "bg-emerald-500/20 text-emerald-400"
-                                          : debt.calculated_status ===
-                                              "partially_paid"
-                                            ? "bg-blue-500/20 text-blue-400"
-                                            : "bg-amber-500/20 text-amber-400"
-                                    }`}
-                                  >
-                                    {debt.calculated_status?.replace("_", " ")}
-                                  </Badge>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          {debtsData.filter((d) => d.debt_type === "receivable")
-                            .length === 0 && (
-                            <TableRow>
-                              <TableCell
-                                colSpan={3}
-                                className="text-center text-[#94A3B8]"
-                              >
-                                No receivables
+                          {debtsData.filter(d => d.debt_type === 'receivable').slice(0, 10).map((debt, i) => (
+                            <TableRow key={i} className="border">
+                              <TableCell className="text-foreground text-sm">{debt.party_name}</TableCell>
+                              <TableCell className="text-emerald-400 font-mono text-right text-sm">
+                                ${(debt.outstanding_balance || (debt.amount - (debt.total_paid || 0))).toLocaleString()}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className={`text-xs ${
+                                  debt.calculated_status === 'overdue' ? 'bg-red-500/20 text-red-400' :
+                                  debt.calculated_status === 'fully_paid' ? 'bg-emerald-500/20 text-emerald-400' :
+                                  debt.calculated_status === 'partially_paid' ? 'bg-primary/80/20 text-primary/60' :
+                                  'bg-amber-500/20 text-amber-400'
+                                }`}>
+                                  {debt.calculated_status?.replace('_', ' ')}
+                                </Badge>
                               </TableCell>
                             </TableRow>
+                          ))}
+                          {debtsData.filter(d => d.debt_type === 'receivable').length === 0 && (
+                            <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">No receivables</TableCell></TableRow>
                           )}
                         </TableBody>
                       </Table>
@@ -2766,45 +1746,39 @@ export default function Reports() {
                 </Card>
 
                 {/* Payables Details */}
-                <Card className="bg-foreground/10 border-[#1F2833]">
+                <Card className="bg-card border shadow-sm">
                   <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                    <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+                    <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                       <ArrowUpRight className="w-5 h-5 text-red-400" />
                       Payables (Creditors)
                     </CardTitle>
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="text-[#94A3B8] hover:text-white"
-                      onClick={() =>
-                        downloadCSV(
-                          debtsData
-                            .filter((d) => d.debt_type === "payable")
-                            .map((d) => ({
-                              party_name: d.party_name,
-                              party_type: d.party_type,
-                              amount: d.amount,
-                              currency: d.currency,
-                              total_paid: d.total_paid || 0,
-                              outstanding:
-                                d.outstanding_balance ||
-                                d.amount - (d.total_paid || 0),
-                              due_date: d.due_date?.split("T")[0],
-                              status: d.calculated_status || d.status,
-                            })),
-                          "payables_report",
-                          [
-                            { key: "party_name", label: "Party" },
-                            { key: "party_type", label: "Type" },
-                            { key: "amount", label: "Amount" },
-                            { key: "currency", label: "Currency" },
-                            { key: "total_paid", label: "Paid" },
-                            { key: "outstanding", label: "Outstanding" },
-                            { key: "due_date", label: "Due Date" },
-                            { key: "status", label: "Status" },
-                          ],
-                        )
-                      }
+                      className="text-muted-foreground hover:text-card-foreground"
+                      onClick={() => downloadCSV(
+                        debtsData.filter(d => d.debt_type === 'payable').map(d => ({
+                          party_name: d.party_name,
+                          party_type: d.party_type,
+                          amount: d.amount,
+                          currency: d.currency,
+                          total_paid: d.total_paid || 0,
+                          outstanding: d.outstanding_balance || (d.amount - (d.total_paid || 0)),
+                          due_date: d.due_date?.split('T')[0],
+                          status: d.calculated_status || d.status
+                        })),
+                        'payables_report',
+                        [
+                          { key: 'party_name', label: 'Party' },
+                          { key: 'party_type', label: 'Type' },
+                          { key: 'amount', label: 'Amount' },
+                          { key: 'currency', label: 'Currency' },
+                          { key: 'total_paid', label: 'Paid' },
+                          { key: 'outstanding', label: 'Outstanding' },
+                          { key: 'due_date', label: 'Due Date' },
+                          { key: 'status', label: 'Status' }
+                        ]
+                      )}
                     >
                       <Download className="w-4 h-4 mr-2" />
                       CSV
@@ -2812,115 +1786,57 @@ export default function Reports() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3 mb-4">
-                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-xl">
-                        <span className="text-[#94A3B8]">Total Amount</span>
-                        <span className="text-white font-mono">
-                          $
-                          {(
-                            outstandingReport.payables?.total_amount || 0
-                          ).toLocaleString()}
-                        </span>
+                      <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                        <span className="text-muted-foreground">Total Amount</span>
+                        <span className="text-foreground font-mono">${(outstandingReport.payables?.total_amount || 0).toLocaleString()}</span>
                       </div>
-                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-xl">
-                        <span className="text-[#94A3B8]">Total Paid</span>
-                        <span className="text-emerald-400 font-mono">
-                          $
-                          {(
-                            outstandingReport.payables?.total_paid || 0
-                          ).toLocaleString()}
-                        </span>
+                      <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                        <span className="text-muted-foreground">Total Paid</span>
+                        <span className="text-emerald-400 font-mono">${(outstandingReport.payables?.total_paid || 0).toLocaleString()}</span>
                       </div>
-                      <div className="flex justify-between items-center p-3 bg-[#0F172A] rounded-xl">
-                        <span className="text-[#94A3B8]">Outstanding</span>
-                        <span className="text-white font-mono font-bold">
-                          $
-                          {(
-                            outstandingReport.payables?.outstanding || 0
-                          ).toLocaleString()}
-                        </span>
+                      <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                        <span className="text-muted-foreground">Outstanding</span>
+                        <span className="text-foreground font-mono font-bold">${(outstandingReport.payables?.outstanding || 0).toLocaleString()}</span>
                       </div>
-                      <div className="flex justify-between items-center p-3 bg-amber-500/10 rounded-xl">
+                      <div className="flex justify-between items-center p-3 bg-amber-500/10 rounded-lg">
                         <span className="text-amber-400">Overdue</span>
-                        <span className="text-amber-400 font-mono">
-                          $
-                          {(
-                            outstandingReport.payables?.overdue_amount || 0
-                          ).toLocaleString()}
-                        </span>
+                        <span className="text-amber-400 font-mono">${(outstandingReport.payables?.overdue_amount || 0).toLocaleString()}</span>
                       </div>
-                      <div className="flex justify-between items-center p-3 bg-purple-500/10 rounded-xl">
-                        <span className="text-purple-400">
-                          Accrued Interest
-                        </span>
-                        <span className="text-purple-400 font-mono">
-                          $
-                          {(
-                            outstandingReport.payables?.accrued_interest || 0
-                          ).toLocaleString()}
-                        </span>
+                      <div className="flex justify-between items-center p-3 bg-purple-500/10 rounded-lg">
+                        <span className="text-purple-400">Accrued Interest</span>
+                        <span className="text-purple-400 font-mono">${(outstandingReport.payables?.accrued_interest || 0).toLocaleString()}</span>
                       </div>
                     </div>
                     <ScrollArea className="h-48">
                       <Table>
                         <TableHeader>
-                          <TableRow className="border-[#1F2833]">
-                            <TableHead className="text-[#94A3B8] text-xs">
-                              Party
-                            </TableHead>
-                            <TableHead className="text-[#94A3B8] text-xs text-right">
-                              Outstanding
-                            </TableHead>
-                            <TableHead className="text-[#94A3B8] text-xs">
-                              Status
-                            </TableHead>
+                          <TableRow className="border">
+                            <TableHead className="text-muted-foreground text-xs">Party</TableHead>
+                            <TableHead className="text-muted-foreground text-xs text-right">Outstanding</TableHead>
+                            <TableHead className="text-muted-foreground text-xs">Status</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {debtsData
-                            .filter((d) => d.debt_type === "payable")
-                            .slice(0, 10)
-                            .map((debt, i) => (
-                              <TableRow key={i} className="border-[#1F2833]">
-                                <TableCell className="text-white text-sm">
-                                  {debt.party_name}
-                                </TableCell>
-                                <TableCell className="text-red-400 font-mono text-right text-sm">
-                                  $
-                                  {(
-                                    debt.outstanding_balance ||
-                                    debt.amount - (debt.total_paid || 0)
-                                  ).toLocaleString()}
-                                </TableCell>
-                                <TableCell>
-                                  <Badge
-                                    variant="outline"
-                                    className={`text-xs ${
-                                      debt.calculated_status === "overdue"
-                                        ? "bg-red-500/20 text-red-400"
-                                        : debt.calculated_status ===
-                                            "fully_paid"
-                                          ? "bg-emerald-500/20 text-emerald-400"
-                                          : debt.calculated_status ===
-                                              "partially_paid"
-                                            ? "bg-blue-500/20 text-blue-400"
-                                            : "bg-amber-500/20 text-amber-400"
-                                    }`}
-                                  >
-                                    {debt.calculated_status?.replace("_", " ")}
-                                  </Badge>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          {debtsData.filter((d) => d.debt_type === "payable")
-                            .length === 0 && (
-                            <TableRow>
-                              <TableCell
-                                colSpan={3}
-                                className="text-center text-[#94A3B8]"
-                              >
-                                No payables
+                          {debtsData.filter(d => d.debt_type === 'payable').slice(0, 10).map((debt, i) => (
+                            <TableRow key={i} className="border">
+                              <TableCell className="text-foreground text-sm">{debt.party_name}</TableCell>
+                              <TableCell className="text-red-400 font-mono text-right text-sm">
+                                ${(debt.outstanding_balance || (debt.amount - (debt.total_paid || 0))).toLocaleString()}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className={`text-xs ${
+                                  debt.calculated_status === 'overdue' ? 'bg-red-500/20 text-red-400' :
+                                  debt.calculated_status === 'fully_paid' ? 'bg-emerald-500/20 text-emerald-400' :
+                                  debt.calculated_status === 'partially_paid' ? 'bg-primary/80/20 text-primary/60' :
+                                  'bg-amber-500/20 text-amber-400'
+                                }`}>
+                                  {debt.calculated_status?.replace('_', ' ')}
+                                </Badge>
                               </TableCell>
                             </TableRow>
+                          ))}
+                          {debtsData.filter(d => d.debt_type === 'payable').length === 0 && (
+                            <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">No payables</TableCell></TableRow>
                           )}
                         </TableBody>
                       </Table>
@@ -2938,94 +1854,70 @@ export default function Reports() {
             <>
               {/* Summary Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card className="bg-[#1F2833] border-[#1F2833]">
+                <Card className="bg-card border">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-xs text-slate-500 uppercase tracking-wider">
-                          Total Disbursed
-                        </p>
-                        <p className="text-2xl font-bold text-white">
-                          ${loansReport.total_disbursed_usd?.toLocaleString()}
-                        </p>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider">Total Disbursed</p>
+                        <p className="text-3xl font-bold text-foreground">${loansReport.total_disbursed_usd?.toLocaleString()}</p>
                       </div>
-                      <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
-                        <Banknote className="w-5 h-5 text-blue-500" />
+                      <div className="w-10 h-10 rounded-full bg-primary/80/20 flex items-center justify-center">
+                        <Banknote className="w-5 h-5 text-primary/80" />
                       </div>
                     </div>
-                    <p className="text-xs text-slate-400 mt-2">
-                      {loansReport.total_loans} total loans
-                    </p>
+                    <p className="text-xs text-muted-foreground mt-2">{loansReport.total_loans} total loans</p>
                   </CardContent>
                 </Card>
-                <Card className="bg-[#1F2833] border-[#1F2833]">
+                <Card className="bg-card border">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-xs text-slate-500 uppercase tracking-wider">
-                          Outstanding
-                        </p>
-                        <p className="text-2xl font-bold text-red-500">
-                          ${loansReport.total_outstanding_usd?.toLocaleString()}
-                        </p>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider">Outstanding</p>
+                        <p className="text-2xl font-bold text-red-500">${loansReport.total_outstanding_usd?.toLocaleString()}</p>
                       </div>
                       <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
                         <AlertTriangle className="w-5 h-5 text-red-500" />
                       </div>
                     </div>
-                    <p className="text-xs text-slate-400 mt-2">
-                      {loansReport.status_breakdown?.active || 0} active loans
-                    </p>
+                    <p className="text-xs text-muted-foreground mt-2">{loansReport.status_breakdown?.active || 0} active loans</p>
                   </CardContent>
                 </Card>
-                <Card className="bg-[#1F2833] border-[#1F2833]">
+                <Card className="bg-card border">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-xs text-slate-500 uppercase tracking-wider">
-                          Total Repaid
-                        </p>
-                        <p className="text-2xl font-bold text-green-500">
-                          ${loansReport.total_repaid_usd?.toLocaleString()}
-                        </p>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider">Total Repaid</p>
+                        <p className="text-2xl font-bold text-green-500">${loansReport.total_repaid_usd?.toLocaleString()}</p>
                       </div>
                       <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
                         <TrendingUp className="w-5 h-5 text-green-500" />
                       </div>
                     </div>
-                    <p className="text-xs text-slate-400 mt-2">
-                      {loansReport.status_breakdown?.fully_paid || 0} fully paid
-                    </p>
+                    <p className="text-xs text-muted-foreground mt-2">{loansReport.status_breakdown?.fully_paid || 0} fully paid</p>
                   </CardContent>
                 </Card>
-                <Card className="bg-[#1F2833] border-[#1F2833]">
+                <Card className="bg-card border">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-xs text-slate-500 uppercase tracking-wider">
-                          Overdue
-                        </p>
-                        <p className="text-2xl font-bold text-orange-500">
-                          {loansReport.status_breakdown?.overdue || 0}
-                        </p>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider">Overdue</p>
+                        <p className="text-2xl font-bold text-orange-500">{loansReport.status_breakdown?.overdue || 0}</p>
                       </div>
                       <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
                         <Clock className="w-5 h-5 text-orange-500" />
                       </div>
                     </div>
-                    <p className="text-xs text-slate-400 mt-2">
-                      Need attention
-                    </p>
+                    <p className="text-xs text-muted-foreground mt-2">Need attention</p>
                   </CardContent>
                 </Card>
               </div>
 
               {/* Loans by Borrower */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <Card className="bg-[#1F2833] border-[#1F2833]">
+                <Card className="bg-card border">
                   <CardHeader>
-                    <CardTitle className="text-white flex items-center gap-2">
-                      <Building2 className="w-5 h-5 text-blue-500" />
+                    <CardTitle className="text-foreground flex items-center gap-2">
+                      <Building2 className="w-5 h-5 text-primary/80" />
                       Loans by Borrower
                     </CardTitle>
                   </CardHeader>
@@ -3033,44 +1925,22 @@ export default function Reports() {
                     <ScrollArea className="h-[300px]">
                       <Table>
                         <TableHeader>
-                          <TableRow className="border-[#1F2833]">
-                            <TableHead className="text-slate-500">
-                              Borrower
-                            </TableHead>
-                            <TableHead className="text-slate-500 text-right">
-                              Disbursed
-                            </TableHead>
-                            <TableHead className="text-slate-500 text-right">
-                              Outstanding
-                            </TableHead>
-                            <TableHead className="text-slate-500 text-right">
-                              Count
-                            </TableHead>
+                          <TableRow className="border">
+                            <TableHead className="text-muted-foreground">Borrower</TableHead>
+                            <TableHead className="text-muted-foreground text-right">Disbursed</TableHead>
+                            <TableHead className="text-muted-foreground text-right">Outstanding</TableHead>
+                            <TableHead className="text-muted-foreground text-right">Count</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {loansReport.by_borrower &&
-                            Object.entries(loansReport.by_borrower).map(
-                              ([borrower, data]) => (
-                                <TableRow
-                                  key={borrower}
-                                  className="border-[#1F2833]"
-                                >
-                                  <TableCell className="font-medium text-white">
-                                    {borrower}
-                                  </TableCell>
-                                  <TableCell className="text-right text-[#94A3B8]">
-                                    ${data.disbursed?.toLocaleString()}
-                                  </TableCell>
-                                  <TableCell className="text-right text-red-500">
-                                    ${data.outstanding?.toLocaleString()}
-                                  </TableCell>
-                                  <TableCell className="text-right text-slate-500">
-                                    {data.count}
-                                  </TableCell>
-                                </TableRow>
-                              ),
-                            )}
+                          {loansReport.by_borrower && Object.entries(loansReport.by_borrower).map(([borrower, data]) => (
+                            <TableRow key={borrower} className="border">
+                              <TableCell className="font-medium text-foreground">{borrower}</TableCell>
+                              <TableCell className="text-right text-card-foreground">${data.disbursed?.toLocaleString()}</TableCell>
+                              <TableCell className="text-right text-red-500">${data.outstanding?.toLocaleString()}</TableCell>
+                              <TableCell className="text-right text-muted-foreground">{data.count}</TableCell>
+                            </TableRow>
+                          ))}
                         </TableBody>
                       </Table>
                     </ScrollArea>
@@ -3078,9 +1948,9 @@ export default function Reports() {
                 </Card>
 
                 {/* Loan Status Pie Chart */}
-                <Card className="bg-[#1F2833] border-[#1F2833]">
+                <Card className="bg-card border">
                   <CardHeader>
-                    <CardTitle className="text-white flex items-center gap-2">
+                    <CardTitle className="text-foreground flex items-center gap-2">
                       <PieChart className="w-5 h-5 text-purple-500" />
                       Loan Status Distribution
                     </CardTitle>
@@ -3090,26 +1960,11 @@ export default function Reports() {
                       <RechartsPieChart>
                         <Pie
                           data={[
-                            {
-                              name: "Active",
-                              value: loansReport.status_breakdown?.active || 0,
-                            },
-                            {
-                              name: "Partially Paid",
-                              value:
-                                loansReport.status_breakdown?.partially_paid ||
-                                0,
-                            },
-                            {
-                              name: "Fully Paid",
-                              value:
-                                loansReport.status_breakdown?.fully_paid || 0,
-                            },
-                            {
-                              name: "Overdue",
-                              value: loansReport.status_breakdown?.overdue || 0,
-                            },
-                          ].filter((d) => d.value > 0)}
+                            { name: 'Active', value: loansReport.status_breakdown?.active || 0 },
+                            { name: 'Partially Paid', value: loansReport.status_breakdown?.partially_paid || 0 },
+                            { name: 'Fully Paid', value: loansReport.status_breakdown?.fully_paid || 0 },
+                            { name: 'Overdue', value: loansReport.status_breakdown?.overdue || 0 },
+                          ].filter(d => d.value > 0)}
                           cx="50%"
                           cy="50%"
                           innerRadius={60}
@@ -3118,33 +1973,13 @@ export default function Reports() {
                           dataKey="value"
                         >
                           {[
-                            {
-                              name: "Active",
-                              value: loansReport.status_breakdown?.active || 0,
-                            },
-                            {
-                              name: "Partially Paid",
-                              value:
-                                loansReport.status_breakdown?.partially_paid ||
-                                0,
-                            },
-                            {
-                              name: "Fully Paid",
-                              value:
-                                loansReport.status_breakdown?.fully_paid || 0,
-                            },
-                            {
-                              name: "Overdue",
-                              value: loansReport.status_breakdown?.overdue || 0,
-                            },
-                          ]
-                            .filter((d) => d.value > 0)
-                            .map((entry, index) => (
-                              <Cell
-                                key={`cell-${index}`}
-                                fill={COLORS[index % COLORS.length]}
-                              />
-                            ))}
+                            { name: 'Active', value: loansReport.status_breakdown?.active || 0 },
+                            { name: 'Partially Paid', value: loansReport.status_breakdown?.partially_paid || 0 },
+                            { name: 'Fully Paid', value: loansReport.status_breakdown?.fully_paid || 0 },
+                            { name: 'Overdue', value: loansReport.status_breakdown?.overdue || 0 },
+                          ].filter(d => d.value > 0).map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
                         </Pie>
                         <Tooltip content={<CustomTooltip />} />
                         <Legend />
@@ -3155,30 +1990,28 @@ export default function Reports() {
               </div>
 
               {/* All Loans Table */}
-              <Card className="bg-[#1F2833] border-[#1F2833]">
+              <Card className="bg-card border">
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-white flex items-center gap-2">
+                    <CardTitle className="text-foreground flex items-center gap-2">
                       <BarChart3 className="w-5 h-5 text-cyan-500" />
                       All Loans
                     </CardTitle>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() =>
-                        downloadCSV(loansData, "loans_report", [
-                          { key: "loan_id", label: "Loan ID" },
-                          { key: "borrower_name", label: "Borrower" },
-                          { key: "amount", label: "Amount" },
-                          { key: "currency", label: "Currency" },
-                          { key: "interest_rate", label: "Interest Rate" },
-                          { key: "total_repaid", label: "Repaid" },
-                          { key: "status", label: "Status" },
-                          { key: "loan_date", label: "Loan Date" },
-                          { key: "due_date", label: "Due Date" },
-                        ])
-                      }
-                      className="border-[#1F2833] text-[#94A3B8] hover:bg-[#1F2833]"
+                      onClick={() => downloadCSV(loansData, 'loans_report', [
+                        { key: 'loan_id', label: 'Loan ID' },
+                        { key: 'borrower_name', label: 'Borrower' },
+                        { key: 'amount', label: 'Amount' },
+                        { key: 'currency', label: 'Currency' },
+                        { key: 'interest_rate', label: 'Interest Rate' },
+                        { key: 'total_repaid', label: 'Repaid' },
+                        { key: 'status', label: 'Status' },
+                        { key: 'loan_date', label: 'Loan Date' },
+                        { key: 'due_date', label: 'Due Date' },
+                      ])}
+                      className="border text-card-foreground hover:bg-muted"
                     >
                       <Download className="w-4 h-4 mr-2" /> Export CSV
                     </Button>
@@ -3188,82 +2021,40 @@ export default function Reports() {
                   <ScrollArea className="h-[400px]">
                     <Table>
                       <TableHeader>
-                        <TableRow className="border-[#1F2833]">
-                          <TableHead className="text-slate-500">
-                            Loan ID
-                          </TableHead>
-                          <TableHead className="text-slate-500">
-                            Borrower
-                          </TableHead>
-                          <TableHead className="text-slate-500 text-right">
-                            Amount
-                          </TableHead>
-                          <TableHead className="text-slate-500 text-right">
-                            Interest
-                          </TableHead>
-                          <TableHead className="text-slate-500 text-right">
-                            Repaid
-                          </TableHead>
-                          <TableHead className="text-slate-500 text-right">
-                            Outstanding
-                          </TableHead>
-                          <TableHead className="text-slate-500">
-                            Status
-                          </TableHead>
-                          <TableHead className="text-slate-500">
-                            Due Date
-                          </TableHead>
+                        <TableRow className="border">
+                          <TableHead className="text-muted-foreground">Loan ID</TableHead>
+                          <TableHead className="text-muted-foreground">Borrower</TableHead>
+                          <TableHead className="text-muted-foreground text-right">Amount</TableHead>
+                          <TableHead className="text-muted-foreground text-right">Interest</TableHead>
+                          <TableHead className="text-muted-foreground text-right">Repaid</TableHead>
+                          <TableHead className="text-muted-foreground text-right">Outstanding</TableHead>
+                          <TableHead className="text-muted-foreground">Status</TableHead>
+                          <TableHead className="text-muted-foreground">Due Date</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {loansData.map((loan) => {
-                          const totalDue =
-                            loan.amount + (loan.total_interest || 0);
-                          const outstanding =
-                            totalDue - (loan.total_repaid || 0);
+                          const totalDue = loan.amount + (loan.total_interest || 0);
+                          const outstanding = totalDue - (loan.total_repaid || 0);
                           return (
-                            <TableRow
-                              key={loan.loan_id}
-                              className="border-[#1F2833]"
-                            >
-                              <TableCell className="font-mono text-xs text-[#94A3B8]">
-                                {loan.loan_id?.slice(0, 12)}
-                              </TableCell>
-                              <TableCell className="font-medium text-white">
-                                {loan.borrower_name}
-                              </TableCell>
-                              <TableCell className="text-right text-[#94A3B8]">
-                                {loan.amount?.toLocaleString()} {loan.currency}
-                              </TableCell>
-                              <TableCell className="text-right text-slate-500">
-                                {loan.interest_rate}%
-                              </TableCell>
-                              <TableCell className="text-right text-green-600">
-                                {loan.total_repaid?.toLocaleString() || 0}{" "}
-                                {loan.currency}
-                              </TableCell>
-                              <TableCell className="text-right text-red-500">
-                                {Math.max(0, outstanding)?.toLocaleString()}{" "}
-                                {loan.currency}
-                              </TableCell>
+                            <TableRow key={loan.loan_id} className="border">
+                              <TableCell className="font-mono text-xs text-card-foreground">{loan.loan_id?.slice(0, 12)}</TableCell>
+                              <TableCell className="font-medium text-foreground">{loan.borrower_name}</TableCell>
+                              <TableCell className="text-right text-card-foreground">{loan.amount?.toLocaleString()} {loan.currency}</TableCell>
+                              <TableCell className="text-right text-muted-foreground">{loan.interest_rate}%</TableCell>
+                              <TableCell className="text-right text-green-600">{loan.total_repaid?.toLocaleString() || 0} {loan.currency}</TableCell>
+                              <TableCell className="text-right text-red-500">{Math.max(0, outstanding)?.toLocaleString()} {loan.currency}</TableCell>
                               <TableCell>
-                                <Badge
-                                  className={
-                                    loan.status === "active"
-                                      ? "bg-blue-500"
-                                      : loan.status === "fully_paid"
-                                        ? "bg-green-500"
-                                        : loan.status === "partially_paid"
-                                          ? "bg-yellow-500"
-                                          : "bg-red-500"
-                                  }
-                                >
-                                  {loan.status?.replace("_", " ")}
+                                <Badge className={
+                                  loan.status === 'active' ? 'bg-primary/80' :
+                                  loan.status === 'fully_paid' ? 'bg-green-500' :
+                                  loan.status === 'partially_paid' ? 'bg-yellow-500' :
+                                  'bg-red-500'
+                                }>
+                                  {loan.status?.replace('_', ' ')}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="text-slate-500">
-                                {loan.due_date?.split("T")[0] || "-"}
-                              </TableCell>
+                              <TableCell className="text-muted-foreground">{loan.due_date?.split('T')[0] || '-'}</TableCell>
                             </TableRow>
                           );
                         })}
@@ -3283,11 +2074,9 @@ export default function Reports() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
                   title="Total Dealing P&L (30d)"
-                  value={`${dealingPnLSummary.total_dealing_pnl >= 0 ? "+" : ""}$${dealingPnLSummary.total_dealing_pnl?.toLocaleString()}`}
+                  value={`${dealingPnLSummary.total_dealing_pnl >= 0 ? '+' : ''}$${dealingPnLSummary.total_dealing_pnl?.toLocaleString()}`}
                   icon={Calculator}
-                  color={
-                    dealingPnLSummary.total_dealing_pnl >= 0 ? "green" : "red"
-                  }
+                  color={dealingPnLSummary.total_dealing_pnl >= 0 ? 'green' : 'red'}
                 />
                 <StatCard
                   title="Profitable Days"
@@ -3312,20 +2101,15 @@ export default function Reports() {
               {/* Best/Worst Days */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {dealingPnLSummary.best_day && (
-                  <Card className="bg-[#1F2833] border-[#1F2833]">
+                  <Card className="bg-card border">
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-xs text-slate-500 uppercase tracking-wider">
-                            Best Day
-                          </p>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wider">Best Day</p>
                           <p className="text-2xl font-bold font-mono text-green-500">
-                            +${dealingPnLSummary.best_day.pnl?.toLocaleString()}{" "}
-                            USD
+                            +${dealingPnLSummary.best_day.pnl?.toLocaleString()} USD
                           </p>
-                          <p className="text-sm text-slate-400">
-                            {dealingPnLSummary.best_day.date}
-                          </p>
+                          <p className="text-sm text-muted-foreground">{dealingPnLSummary.best_day.date}</p>
                         </div>
                         <TrendingUp className="w-8 h-8 text-green-500" />
                       </div>
@@ -3333,20 +2117,15 @@ export default function Reports() {
                   </Card>
                 )}
                 {dealingPnLSummary.worst_day && (
-                  <Card className="bg-[#1F2833] border-[#1F2833]">
+                  <Card className="bg-card border">
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-xs text-slate-500 uppercase tracking-wider">
-                            Worst Day
-                          </p>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wider">Worst Day</p>
                           <p className="text-2xl font-bold font-mono text-red-500">
-                            ${dealingPnLSummary.worst_day.pnl?.toLocaleString()}{" "}
-                            USD
+                            ${dealingPnLSummary.worst_day.pnl?.toLocaleString()} USD
                           </p>
-                          <p className="text-sm text-slate-400">
-                            {dealingPnLSummary.worst_day.date}
-                          </p>
+                          <p className="text-sm text-muted-foreground">{dealingPnLSummary.worst_day.date}</p>
                         </div>
                         <TrendingDown className="w-8 h-8 text-red-500" />
                       </div>
@@ -3358,33 +2137,21 @@ export default function Reports() {
               {/* Export Button */}
               <div className="flex justify-end">
                 <Button
-                  onClick={() =>
-                    exportToExcel(
-                      dealingPnLReport.map((r) => ({
-                        Date: r.date,
-                        "MT5 Booked": r.mt5_booked_pnl,
-                        "MT5 Floating": r.mt5_floating_pnl,
-                        "MT5 Floating Change": r.mt5_floating_change,
-                        "Broker MT5 P&L": r.broker_mt5_pnl,
-                        "LP Booked Total": r.total_lp_booked,
-                        "LP Floating Total": r.total_lp_floating,
-                        "Broker LP P&L": r.broker_lp_pnl,
-                        "Total Dealing P&L": r.total_dealing_pnl,
-                      })),
-                      "dealing_pnl_report",
-                      [
-                        "Date",
-                        "MT5 Booked",
-                        "MT5 Floating",
-                        "MT5 Floating Change",
-                        "Broker MT5 P&L",
-                        "LP Booked Total",
-                        "LP Floating Total",
-                        "Broker LP P&L",
-                        "Total Dealing P&L",
-                      ],
-                    )
-                  }
+                  onClick={() => exportToExcel(
+                    dealingPnLReport.map(r => ({
+                      Date: r.date,
+                      'MT5 Booked': r.mt5_booked_pnl,
+                      'MT5 Floating': r.mt5_floating_pnl,
+                      'MT5 Floating Change': r.mt5_floating_change,
+                      'Broker MT5 P&L': r.broker_mt5_pnl,
+                      'LP Booked Total': r.total_lp_booked,
+                      'LP Floating Total': r.total_lp_floating,
+                      'Broker LP P&L': r.broker_lp_pnl,
+                      'Total Dealing P&L': r.total_dealing_pnl,
+                    })),
+                    'dealing_pnl_report',
+                    ['Date', 'MT5 Booked', 'MT5 Floating', 'MT5 Floating Change', 'Broker MT5 P&L', 'LP Booked Total', 'LP Floating Total', 'Broker LP P&L', 'Total Dealing P&L']
+                  )}
                   className="bg-green-500 text-white hover:bg-green-600"
                   data-testid="export-dealing-pnl-btn"
                 >
@@ -3394,105 +2161,56 @@ export default function Reports() {
               </div>
 
               {/* Dealing P&L Table */}
-              <Card className="bg-[#1F2833] border-[#1F2833]">
-                <CardHeader className="pb-2 border-b border-[#1F2833]">
-                  <CardTitle className="text-lg font-bold text-white">
-                    Dealing P&L Records
-                  </CardTitle>
+              <Card className="bg-card border">
+                <CardHeader className="pb-2 border-b border">
+                  <CardTitle className="text-lg font-bold text-foreground">Dealing P&L Records</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
                   <ScrollArea className="h-[500px]">
                     <Table>
-                      <TableHeader className="sticky top-0 bg-[#1F2833] z-10">
-                        <TableRow className="border-[#1F2833]">
-                          <TableHead className="text-slate-500 font-bold text-xs uppercase">
-                            Date
-                          </TableHead>
-                          <TableHead className="text-slate-500 font-bold text-xs uppercase text-right">
-                            MT5 Booked
-                          </TableHead>
-                          <TableHead className="text-slate-500 font-bold text-xs uppercase text-right">
-                            MT5 Floating
-                          </TableHead>
-                          <TableHead className="text-slate-500 font-bold text-xs uppercase text-right">
-                            MT5 P&L
-                          </TableHead>
-                          <TableHead className="text-slate-500 font-bold text-xs uppercase text-right">
-                            LP Booked
-                          </TableHead>
-                          <TableHead className="text-slate-500 font-bold text-xs uppercase text-right">
-                            LP Floating
-                          </TableHead>
-                          <TableHead className="text-slate-500 font-bold text-xs uppercase text-right">
-                            LP P&L
-                          </TableHead>
-                          <TableHead className="text-slate-500 font-bold text-xs uppercase text-right">
-                            Total P&L
-                          </TableHead>
+                      <TableHeader className="sticky top-0 bg-card z-10">
+                        <TableRow className="border">
+                          <TableHead className="text-muted-foreground font-bold text-xs uppercase">Date</TableHead>
+                          <TableHead className="text-muted-foreground font-bold text-xs uppercase text-right">MT5 Booked</TableHead>
+                          <TableHead className="text-muted-foreground font-bold text-xs uppercase text-right">MT5 Floating</TableHead>
+                          <TableHead className="text-muted-foreground font-bold text-xs uppercase text-right">MT5 P&L</TableHead>
+                          <TableHead className="text-muted-foreground font-bold text-xs uppercase text-right">LP Booked</TableHead>
+                          <TableHead className="text-muted-foreground font-bold text-xs uppercase text-right">LP Floating</TableHead>
+                          <TableHead className="text-muted-foreground font-bold text-xs uppercase text-right">LP P&L</TableHead>
+                          <TableHead className="text-muted-foreground font-bold text-xs uppercase text-right">Total P&L</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {dealingPnLReport.length === 0 ? (
                           <TableRow>
-                            <TableCell
-                              colSpan={8}
-                              className="text-center py-8 text-slate-500"
-                            >
+                            <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                               No dealing P&L records found
                             </TableCell>
                           </TableRow>
                         ) : (
                           dealingPnLReport.map((record) => (
-                            <TableRow
-                              key={record.date}
-                              className="border-[#1F2833] hover:bg-[#0F172A]"
-                            >
-                              <TableCell className="font-medium text-white">
-                                {record.date}
+                            <TableRow key={record.date} className="border hover:bg-muted/50">
+                              <TableCell className="font-medium text-foreground">{record.date}</TableCell>
+                              <TableCell className={`text-right font-mono ${record.mt5_booked_pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                {record.mt5_booked_pnl >= 0 ? '+' : ''}{record.mt5_booked_pnl?.toLocaleString()}
                               </TableCell>
-                              <TableCell
-                                className={`text-right font-mono ${record.mt5_booked_pnl >= 0 ? "text-green-500" : "text-red-500"}`}
-                              >
-                                {record.mt5_booked_pnl >= 0 ? "+" : ""}
-                                {record.mt5_booked_pnl?.toLocaleString()}
-                              </TableCell>
-                              <TableCell
-                                className={`text-right font-mono ${record.mt5_floating_pnl >= 0 ? "text-green-500" : "text-red-500"}`}
-                              >
+                              <TableCell className={`text-right font-mono ${record.mt5_floating_pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                                 {record.mt5_floating_pnl?.toLocaleString()}
                               </TableCell>
-                              <TableCell
-                                className={`text-right font-mono font-bold ${record.broker_mt5_pnl >= 0 ? "text-green-600" : "text-red-600"}`}
-                              >
-                                {record.broker_mt5_pnl >= 0 ? "+" : ""}
-                                {record.broker_mt5_pnl?.toLocaleString()}
+                              <TableCell className={`text-right font-mono font-bold ${record.broker_mt5_pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {record.broker_mt5_pnl >= 0 ? '+' : ''}{record.broker_mt5_pnl?.toLocaleString()}
                               </TableCell>
-                              <TableCell
-                                className={`text-right font-mono ${(record.total_lp_booked || 0) >= 0 ? "text-green-500" : "text-red-500"}`}
-                              >
-                                {(record.total_lp_booked || 0) >= 0 ? "+" : ""}
-                                {(
-                                  record.total_lp_booked || 0
-                                )?.toLocaleString()}
+                              <TableCell className={`text-right font-mono ${(record.total_lp_booked || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                {(record.total_lp_booked || 0) >= 0 ? '+' : ''}{(record.total_lp_booked || 0)?.toLocaleString()}
                               </TableCell>
-                              <TableCell
-                                className={`text-right font-mono ${(record.total_lp_floating || 0) >= 0 ? "text-green-500" : "text-red-500"}`}
-                              >
-                                {(
-                                  record.total_lp_floating || 0
-                                )?.toLocaleString()}
+                              <TableCell className={`text-right font-mono ${(record.total_lp_floating || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                {(record.total_lp_floating || 0)?.toLocaleString()}
                               </TableCell>
-                              <TableCell
-                                className={`text-right font-mono font-bold ${record.broker_lp_pnl >= 0 ? "text-green-600" : "text-red-600"}`}
-                              >
-                                {record.broker_lp_pnl >= 0 ? "+" : ""}
-                                {record.broker_lp_pnl?.toLocaleString()}
+                              <TableCell className={`text-right font-mono font-bold ${record.broker_lp_pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {record.broker_lp_pnl >= 0 ? '+' : ''}{record.broker_lp_pnl?.toLocaleString()}
                               </TableCell>
-                              <TableCell
-                                className={`text-right font-mono font-bold text-lg ${record.total_dealing_pnl >= 0 ? "text-green-400 bg-green-500/10" : "text-red-400 bg-red-500/10"}`}
-                              >
-                                {record.total_dealing_pnl >= 0 ? "+" : ""}
-                                {record.total_dealing_pnl?.toLocaleString()}
+                              <TableCell className={`text-right font-mono font-bold text-lg ${record.total_dealing_pnl >= 0 ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50'}`}>
+                                {record.total_dealing_pnl >= 0 ? '+' : ''}{record.total_dealing_pnl?.toLocaleString()}
                               </TableCell>
                             </TableRow>
                           ))

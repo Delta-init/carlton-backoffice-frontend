@@ -9,11 +9,7 @@ import {
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
-
-import PaginationControls from "../components/PaginationControls";
-
 import { Badge } from "../components/ui/badge";
-
 import {
   Table,
   TableBody,
@@ -92,8 +88,8 @@ import {
   FileText,
   Edit,
   Pencil,
-    Tag,
-    Trash2,
+  Tag,
+  Trash2,
 } from "lucide-react";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -114,6 +110,8 @@ const statusOptions = [
   { value: "rejected", label: "Rejected" },
   { value: "cancelled", label: "Cancelled" },
 ];
+
+import PaginationControls from "../components/PaginationControls";
 
 function ClientServerSearch({
   clients: preloadedClients,
@@ -178,7 +176,7 @@ function ClientServerSearch({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between bg-slate-50 border-slate-200 text-slate-800 hover:bg-slate-50 hover:text-slate-800"
+          className="w-full justify-between bg-muted/50 border text-foreground hover:bg-muted/50 hover:text-foreground"
           data-testid="select-client"
         >
           {selected
@@ -188,7 +186,7 @@ function ClientServerSearch({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-[--radix-popover-trigger-width] p-0 bg-white border-slate-200"
+        className="w-[--radix-popover-trigger-width] p-0 bg-card border"
         align="start"
       >
         <div className="flex items-center border-b px-3">
@@ -198,16 +196,16 @@ function ClientServerSearch({
             placeholder="Search by name, email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex h-10 w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground text-slate-800"
+            className="flex h-10 w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground text-foreground"
             data-testid="client-search-input"
           />
           {searching && (
-            <div className="h-4 w-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+            <div className="h-4 w-4 border-2 border border-t-slate-600 rounded-full animate-spin" />
           )}
         </div>
         <div className="max-h-60 overflow-y-auto p-1">
           {searchResults.length === 0 ? (
-            <div className="text-slate-500 text-sm py-4 text-center">
+            <div className="text-muted-foreground text-sm py-4 text-center">
               {searching
                 ? "Searching..."
                 : searchTerm.length >= 2
@@ -218,7 +216,7 @@ function ClientServerSearch({
             searchResults.map((client) => (
               <div
                 key={client.client_id}
-                className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-slate-800 hover:bg-slate-100"
+                className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-foreground hover:bg-muted"
                 onClick={() => {
                   onChange(client.client_id, client);
                   setSelectedClient(client);
@@ -226,13 +224,13 @@ function ClientServerSearch({
                 data-testid={`client-option-${client.client_id}`}
               >
                 <Check
-                  className={`mr-2 h-4 w-4 ${value === client.client_id ? "opacity-100 text-blue-600" : "opacity-0"}`}
+                  className={`mr-2 h-4 w-4 ${value === client.client_id ? "opacity-100 text-primary" : "opacity-0"}`}
                 />
                 <div>
                   <span className="font-medium">
                     {client.first_name} {client.last_name}
                   </span>
-                  <span className="text-slate-500 text-xs ml-2">
+                  <span className="text-muted-foreground text-xs ml-2">
                     {client.email}
                   </span>
                 </div>
@@ -262,28 +260,6 @@ export default function Transactions() {
   const [dateTo, setDateTo] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [viewTransaction, setViewTransaction] = useState(null);
-  const [bulkOpen, setBulkOpen] = useState(false);
-  const [bulkFile, setBulkFile] = useState(null);
-  const [bulkValidation, setBulkValidation] = useState(null);
-  const [bulkLoading, setBulkLoading] = useState(false);
-  const [bulkCreating, setBulkCreating] = useState(false);
-  const [proofImages, setProofImages] = useState([]);
-  const [proofPreviews, setProofPreviews] = useState([]);
-  const [clientBankAccounts, setClientBankAccounts] = useState([]);
-  const [selectedBankAccount, setSelectedBankAccount] = useState("new");
-  const [clientSearchOpen, setClientSearchOpen] = useState(false);
-  const [createCaptcha, setCreateCaptcha] = useState({ a: 0, b: 0 });
-  const [createCaptchaAnswer, setCreateCaptchaAnswer] = useState("");
-  const [showCreateCaptcha, setShowCreateCaptcha] = useState(false);
-
-
-  // Client Tags
-  const [clientTags, setClientTags] = useState([]);
-  const [tagFilter, setTagFilter] = useState("all");
-  const [tagManageOpen, setTagManageOpen] = useState(false);
-  const [newTagName, setNewTagName] = useState("");
-  const [newTagColor, setNewTagColor] = useState("#3B82F6");
-
   const [destEditTx, setDestEditTx] = useState(null);
   const [destForm, setDestForm] = useState({
     destination_type: "",
@@ -293,11 +269,6 @@ export default function Transactions() {
     crm_reference: "",
   });
   const [destSaving, setDestSaving] = useState(false);
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
   const [fieldEditTx, setFieldEditTx] = useState(null);
   const [fieldEditForm, setFieldEditForm] = useState({
     crm_reference: "",
@@ -312,6 +283,33 @@ export default function Transactions() {
   const [tagEditTx, setTagEditTx] = useState(null);
   const [tagEditTags, setTagEditTags] = useState([]);
   const [tagEditSaving, setTagEditSaving] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkFile, setBulkFile] = useState(null);
+  const [bulkValidation, setBulkValidation] = useState(null);
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkCreating, setBulkCreating] = useState(false);
+  const [proofImages, setProofImages] = useState([]);
+  const [proofPreviews, setProofPreviews] = useState([]);
+  const [clientBankAccounts, setClientBankAccounts] = useState([]);
+  const [selectedBankAccount, setSelectedBankAccount] = useState("new");
+  const [clientSearchOpen, setClientSearchOpen] = useState(false);
+  const [createCaptcha, setCreateCaptcha] = useState({ a: 0, b: 0 });
+  const [createCaptchaAnswer, setCreateCaptchaAnswer] = useState("");
+  const [showCreateCaptcha, setShowCreateCaptcha] = useState(false);
+
+  // Client Tags
+  const [clientTags, setClientTags] = useState([]);
+  const [tagFilter, setTagFilter] = useState("all");
+  const [tagManageOpen, setTagManageOpen] = useState(false);
+  const [newTagName, setNewTagName] = useState("");
+  const [newTagColor, setNewTagColor] = useState("#3B82F6");
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+
   const [formData, setFormData] = useState({
     client_id: "",
     transaction_type: "deposit",
@@ -327,9 +325,9 @@ export default function Transactions() {
     commission_paid_by: "client",
     description: "",
     reference: "",
+    transaction_date: new Date().toISOString().split("T")[0],
     transaction_mode: "bank",
     collecting_person_name: "",
-    transaction_date: new Date().toISOString().split("T")[0],
     collecting_person_number: "",
     // Client bank details (for withdrawal to bank)
     client_bank_name: "",
@@ -340,7 +338,7 @@ export default function Transactions() {
     // Client USDT details (for withdrawal to USDT)
     client_usdt_address: "",
     client_usdt_network: "",
-      // Client tags
+    // Client tags
     client_tags: [],
   });
 
@@ -373,7 +371,6 @@ export default function Transactions() {
       if (tagFilter && tagFilter !== "all")
         params.append("client_tag", tagFilter);
 
-
       const response = await fetch(
         `${API_URL}/api/transactions?${params.toString()}`,
         {
@@ -395,9 +392,9 @@ export default function Transactions() {
           setTotalPages(data.total_pages || 1);
         }
       }
-    } catch (err) {
-      console.error("Error fetching transactions:", err);
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
+      toast.error(error?.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -455,14 +452,12 @@ export default function Transactions() {
       });
       if (response.ok) {
         const data = await response.json();
-        // Handle paginated response format
         setExchangers(data.items || (Array.isArray(data) ? data : []));
       }
     } catch (error) {
       console.error("Error fetching vendors:", error);
     }
   };
-
 
   const fetchClientTags = async () => {
     try {
@@ -560,18 +555,10 @@ export default function Transactions() {
     }
   };
 
-  useEffect(() => {
-    fetchTransactions();
-    fetchClients();
-    fetchTreasuryAccounts();
-    fetchPsps();
-    fetchExchangers();
-  }, [typeFilter, statusFilter]);
-
   // Initial load of form dropdowns (once)
   useEffect(() => {
-    fetchFormDropdowns();
     fetchTransactions();
+    fetchFormDropdowns();
     fetchTreasuryAccounts();
     fetchPsps();
     fetchExchangers();
@@ -582,7 +569,15 @@ export default function Transactions() {
     setCurrentPage(1);
     fetchTransactions(1);
     fetchClientTags();
-  }, [typeFilter, statusFilter, destinationFilter, dateFrom, dateTo, pageSize,tagFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [
+    typeFilter,
+    statusFilter,
+    destinationFilter,
+    dateFrom,
+    dateTo,
+    pageSize,
+    tagFilter,
+  ]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Re-fetch transactions with debounce for text inputs (search, email)
   useEffect(() => {
@@ -592,8 +587,6 @@ export default function Transactions() {
     }, 400);
     return () => clearTimeout(timer);
   }, [searchTerm, emailFilter]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Auto-refresh: when user returns to tab or every 30s
 
   // Fetch client bank accounts when client changes and destination is bank or vendor
   useEffect(() => {
@@ -609,15 +602,19 @@ export default function Transactions() {
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
     if (files.length) {
-      setProofImages(prev => [...prev, ...files]);
-      setProofPreviews(prev => [...prev, ...files.map(f => URL.createObjectURL(f))]);
+      setProofImages((prev) => [...prev, ...files]);
+      setProofPreviews((prev) => [
+        ...prev,
+        ...files.map((f) => URL.createObjectURL(f)),
+      ]);
     }
   };
   const removeProofImage = (idx) => {
-    setProofImages(prev => prev.filter((_, i) => i !== idx));
-    setProofPreviews(prev => prev.filter((_, i) => i !== idx));
+    setProofImages((prev) => prev.filter((_, i) => i !== idx));
+    setProofPreviews((prev) => prev.filter((_, i) => i !== idx));
   };
 
+  // Show captcha before actual submission
   const handlePreSubmit = (e) => {
     e.preventDefault();
     if (!formData.client_id || !formData.amount) {
@@ -743,8 +740,7 @@ export default function Transactions() {
       if (formData.crm_reference) {
         formDataToSend.append("crm_reference", formData.crm_reference);
       }
-
-       if (formData.client_tags && formData.client_tags.length > 0) {
+      if (formData.client_tags && formData.client_tags.length > 0) {
         formDataToSend.append("client_tags", formData.client_tags.join(","));
       }
       // Transaction mode and collecting person
@@ -764,7 +760,7 @@ export default function Transactions() {
             formData.collecting_person_number,
           );
       }
-      proofImages.forEach(img => formDataToSend.append("proof_images", img));
+      proofImages.forEach((img) => formDataToSend.append("proof_images", img));
 
       const response = await fetch(`${API_URL}/api/transactions`, {
         method: "POST",
@@ -781,9 +777,9 @@ export default function Transactions() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      console.error("Transaction creation error:", err);
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      console.error("Transaction creation error:", error);
+      toast.error(error?.message || "Something went wrong. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -1035,8 +1031,8 @@ export default function Transactions() {
       } else {
         toast.error(await getApiError(res));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (e) {
+      toast.error(e?.message || "Something went wrong. Please try again.");
     } finally {
       setBulkLoading(false);
     }
@@ -1118,6 +1114,7 @@ export default function Transactions() {
     });
   };
 
+  // Download functions
   const getDestinationDisplay = (tx) => {
     if (tx.destination_type === "treasury" || tx.destination_type === "usdt")
       return tx.destination_account_name || tx.destination_type?.toUpperCase();
@@ -1223,7 +1220,7 @@ export default function Transactions() {
       const ws = XLSX.utils.json_to_sheet(rows, { header: headers });
 
       // Style header row
-      const headerStyle = { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "1FA21B" } }, alignment: { horizontal: "center" } };
+      const headerStyle = { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "1F2833" } }, alignment: { horizontal: "center" } };
       headers.forEach((_, i) => {
         const cellRef = XLSX.utils.encode_cell({ r: 0, c: i });
         if (ws[cellRef]) ws[cellRef].s = headerStyle;
@@ -1278,17 +1275,17 @@ export default function Transactions() {
       printWindow.document.write(`
         <html>
         <head>
-          <title>Transactions Report - Carlton Fx</title>
+          <title>Transactions Report - Carlton</title>
           <style>
             body { font-family: Arial, sans-serif; padding: 20px; }
-            h1 { color: #141414; border-bottom: 2px solid #1FA21B; padding-bottom: 10px; }
+            h1 { color: #1F2833; border-bottom: 2px solid #66FCF1; padding-bottom: 10px; }
             .summary { display: flex; gap: 30px; margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; }
             .summary-item label { font-size: 12px; color: #666; display: block; }
             .summary-item span { font-size: 18px; font-weight: bold; }
             .deposits { color: #22c55e; }
             .withdrawals { color: #ef4444; }
             table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th { background: #141414; color: white; padding: 10px; text-align: left; font-size: 11px; }
+            th { background: #1F2833; color: white; padding: 10px; text-align: left; font-size: 11px; }
             td { padding: 8px 10px; border-bottom: 1px solid #eee; font-size: 11px; }
             tr:hover { background: #f5f5f5; }
             .footer { margin-top: 30px; font-size: 11px; color: #999; text-align: center; }
@@ -1316,8 +1313,8 @@ export default function Transactions() {
             <thead><tr>${headers.map((h) => `<th>${h}</th>`).join("")}</tr></thead>
             <tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join("")}</tr>`).join("")}</tbody>
           </table>
-          <div class="footer">Carlton Fx - Back Office System</div>
-          <button class="no-print" onclick="window.print()" style="margin-top:20px;padding:10px 20px;background:#141414;color:white;border:none;cursor:pointer;border-radius:4px;">Print / Save as PDF</button>
+          <div class="footer">Carlton - Back Office System</div>
+          <button class="no-print" onclick="window.print()" style="margin-top:20px;padding:10px 20px;background:#1F2833;color:white;border:none;cursor:pointer;border-radius:4px;">Print / Save as PDF</button>
         </body>
         </html>
       `);
@@ -1331,16 +1328,15 @@ export default function Transactions() {
   };
 
   return (
-    <div className="space-y-6 bg-background animate-fade-in" data-testid="transactions-page">
+    <div className="space-y-6 animate-fade-in" data-testid="transactions-page">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1
-            className="text-4xl font-bold uppercase tracking-tight text-slate-800"
-            style={{ fontFamily: "Barlow Condensed" }}
+            className="text-3xl font-bold tracking-tight text-foreground"
           >
             Transactions Summary
           </h1>
-          <p className="text-slate-500">
+          <p className="text-muted-foreground">
             Transaction ledger and financial operations
           </p>
         </div>
@@ -1350,7 +1346,7 @@ export default function Transactions() {
             <DropdownMenuTrigger asChild>
               <Button
                 variant="outline"
-                className="border-slate-200 text-slate-600 hover:bg-slate-100"
+                className="border text-card-foreground hover:bg-muted"
                 data-testid="download-report-btn"
               >
                 <Download className="w-4 h-4 mr-2" />
@@ -1359,25 +1355,25 @@ export default function Transactions() {
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="bg-white border-slate-200"
+              className="bg-card border"
             >
               <DropdownMenuItem
                 onClick={downloadCSV}
-                className="cursor-pointer hover:bg-slate-100"
+                className="cursor-pointer hover:bg-muted"
               >
                 <FileText className="w-4 h-4 mr-2 text-green-600" />
                 <span>Download CSV</span>
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={downloadExcel}
-                className="cursor-pointer hover:bg-slate-100"
+                className="cursor-pointer hover:bg-muted"
               >
                 <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-600" />
                 <span>Download Excel</span>
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={downloadPDF}
-                className="cursor-pointer hover:bg-slate-100"
+                className="cursor-pointer hover:bg-muted"
               >
                 <FileText className="w-4 h-4 mr-2 text-red-500" />
                 <span>Print / PDF</span>
@@ -1391,12 +1387,13 @@ export default function Transactions() {
               setBulkFile(null);
               setBulkValidation(null);
             }}
-            className="bg-blue-600 text-white hover:bg-blue-700 font-bold uppercase tracking-wider rounded-sm"
+            className="bg-primary text-white hover:bg-primary/85 font-bold uppercase tracking-wider rounded-sm"
             data-testid="bulk-upload-btn"
           >
             <FileUp className="w-4 h-4 mr-2" />
             Bulk Upload
           </Button>
+
           <Dialog
             open={isDialogOpen}
             onOpenChange={(open) => {
@@ -1406,25 +1403,24 @@ export default function Transactions() {
           >
             <DialogTrigger asChild>
               <Button
-                className="bg-[#1FA21B] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-xl glow-cyan"
+                className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan"
                 data-testid="add-transaction-btn"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 New Transaction
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogContent className="bg-card border text-foreground max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle
-                  className="text-2xl font-bold uppercase tracking-tight"
-                  style={{ fontFamily: "Barlow Condensed" }}
+                  className="text-lg font-bold text-foreground"
                 >
                   Create Transaction
                 </DialogTitle>
               </DialogHeader>
               <form onSubmit={handlePreSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                     Client *
                   </Label>
                   <ClientServerSearch
@@ -1446,7 +1442,7 @@ export default function Transactions() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                    <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                       Type *
                     </Label>
                     <Select
@@ -1456,17 +1452,17 @@ export default function Transactions() {
                       }
                     >
                       <SelectTrigger
-                        className="bg-slate-50 border-slate-200 text-slate-800"
+                        className="bg-muted/50 border text-foreground"
                         data-testid="select-tx-type"
                       >
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-white border-slate-200">
+                      <SelectContent className="bg-card border">
                         {transactionTypes.map((type) => (
                           <SelectItem
                             key={type.value}
                             value={type.value}
-                            className="text-slate-800 hover:bg-slate-100"
+                            className="text-foreground hover:bg-muted"
                           >
                             {type.label}
                           </SelectItem>
@@ -1475,7 +1471,7 @@ export default function Transactions() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                    <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                       Payment Currency
                     </Label>
                     <Select
@@ -1490,17 +1486,17 @@ export default function Transactions() {
                       }}
                     >
                       <SelectTrigger
-                        className="bg-slate-50 border-slate-200 text-slate-800"
+                        className="bg-muted/50 border text-foreground"
                         data-testid="select-base-currency"
                       >
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-white border-slate-200">
+                      <SelectContent className="bg-card border">
                         {currencies.map((cur) => (
                           <SelectItem
                             key={cur}
                             value={cur}
-                            className="text-slate-800 hover:bg-slate-100"
+                            className="text-foreground hover:bg-muted"
                           >
                             {cur}
                           </SelectItem>
@@ -1514,7 +1510,7 @@ export default function Transactions() {
                   <>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                        <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                           Amount in {formData.base_currency} *
                         </Label>
                         <Input
@@ -1535,14 +1531,14 @@ export default function Transactions() {
                               amount: usdAmount,
                             });
                           }}
-                          className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
+                          className="bg-muted/50 border text-foreground focus:border-[#66FCF1] font-mono"
                           placeholder={`0.00 ${formData.base_currency}`}
                           data-testid="tx-base-amount"
                           required
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                        <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                           Exchange Rate (1 {formData.base_currency} = ? USD) *
                         </Label>
                         <Input
@@ -1563,7 +1559,7 @@ export default function Transactions() {
                               amount: usdAmount,
                             });
                           }}
-                          className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
+                          className="bg-muted/50 border text-foreground focus:border-[#66FCF1] font-mono"
                           placeholder="0.0000"
                           data-testid="tx-exchange-rate"
                           required
@@ -1574,7 +1570,7 @@ export default function Transactions() {
                 )}
 
                 <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                     {formData.base_currency !== "USD"
                       ? "Amount in USD (Auto-calculated)"
                       : "Amount in USD *"}
@@ -1586,7 +1582,7 @@ export default function Transactions() {
                     onChange={(e) =>
                       setFormData({ ...formData, amount: e.target.value })
                     }
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
+                    className="bg-muted/50 border text-foreground focus:border-[#66FCF1] font-mono"
                     placeholder="0.00 USD"
                     data-testid="tx-amount"
                     readOnly={formData.base_currency !== "USD"}
@@ -1595,7 +1591,7 @@ export default function Transactions() {
                   {formData.base_currency !== "USD" &&
                     formData.base_amount &&
                     formData.exchange_rate && (
-                      <p className="text-xs text-blue-600">
+                      <p className="text-xs text-primary">
                         {formData.base_amount} {formData.base_currency} ×{" "}
                         {formData.exchange_rate} = {formData.amount} USD
                       </p>
@@ -1604,7 +1600,7 @@ export default function Transactions() {
 
                 {/* Destination Type Selection */}
                 <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                     Destination Type *
                   </Label>
                   <Select
@@ -1620,39 +1616,39 @@ export default function Transactions() {
                     }
                   >
                     <SelectTrigger
-                      className="bg-slate-50 border-slate-200 text-slate-800"
+                      className="bg-muted/50 border text-foreground"
                       data-testid="select-dest-type"
                     >
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-white border-slate-200">
+                    <SelectContent className="bg-card border">
                       <SelectItem
                         value="treasury"
-                        className="text-slate-800 hover:bg-slate-100"
+                        className="text-foreground hover:bg-muted"
                       >
                         Treasury / Bank Account
                       </SelectItem>
                       <SelectItem
                         value="bank"
-                        className="text-slate-800 hover:bg-slate-100"
+                        className="text-foreground hover:bg-muted"
                       >
                         Client Bank (Withdrawal)
                       </SelectItem>
                       <SelectItem
                         value="usdt"
-                        className="text-slate-800 hover:bg-slate-100"
+                        className="text-foreground hover:bg-muted"
                       >
                         USDT
                       </SelectItem>
                       <SelectItem
                         value="psp"
-                        className="text-slate-800 hover:bg-slate-100"
+                        className="text-foreground hover:bg-muted"
                       >
                         Payment Service Provider (PSP)
                       </SelectItem>
                       <SelectItem
                         value="vendor"
-                        className="text-slate-800 hover:bg-slate-100"
+                        className="text-foreground hover:bg-muted"
                       >
                         Exchanger
                       </SelectItem>
@@ -1663,7 +1659,7 @@ export default function Transactions() {
                 {/* Treasury Destination (for deposits or non-bank transactions) */}
                 {formData.destination_type === "treasury" && (
                   <div className="space-y-2">
-                    <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                    <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                       Destination (Bank/Treasury) *
                     </Label>
                     <Select
@@ -1676,19 +1672,19 @@ export default function Transactions() {
                       }
                     >
                       <SelectTrigger
-                        className="bg-slate-50 border-slate-200 text-slate-800"
+                        className="bg-muted/50 border text-foreground"
                         data-testid="select-destination"
                       >
                         <SelectValue placeholder="Select destination account" />
                       </SelectTrigger>
-                      <SelectContent className="bg-white border-slate-200">
+                      <SelectContent className="bg-card border">
                         {treasuryAccounts
                           .filter((a) => a.account_type !== "usdt")
                           .map((account) => (
                             <SelectItem
                               key={account.account_id}
                               value={account.account_id}
-                              className="text-slate-800 hover:bg-slate-100"
+                              className="text-foreground hover:bg-muted"
                             >
                               {account.account_name} - {account.bank_name} (
                               {account.currency})
@@ -1702,8 +1698,8 @@ export default function Transactions() {
                 {/* Client Bank Details (for withdrawal to bank - not for cash) */}
                 {formData.destination_type === "bank" &&
                   formData.transaction_mode !== "cash" && (
-                    <div className="space-y-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
-                      <div className="flex items-center gap-2 text-blue-600 mb-2">
+                    <div className="space-y-4 p-4 bg-muted/50 rounded-sm border border">
+                      <div className="flex items-center gap-2 text-primary mb-2">
                         <Building2 className="w-4 h-4" />
                         <span className="text-xs uppercase tracking-wider font-bold">
                           Client Bank Details
@@ -1713,7 +1709,7 @@ export default function Transactions() {
                       {/* Saved Bank Accounts Dropdown */}
                       {clientBankAccounts.length > 0 && (
                         <div className="space-y-2">
-                          <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                          <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                             Saved Bank Accounts
                           </Label>
                           <Select
@@ -1749,13 +1745,13 @@ export default function Transactions() {
                               }
                             }}
                           >
-                            <SelectTrigger className="bg-white border-slate-200 text-slate-800">
+                            <SelectTrigger className="bg-card border text-foreground">
                               <SelectValue placeholder="Select saved bank or add new" />
                             </SelectTrigger>
-                            <SelectContent className="bg-white border-slate-200">
+                            <SelectContent className="bg-card border">
                               <SelectItem
                                 value="new"
-                                className="text-blue-600 hover:bg-slate-100"
+                                className="text-primary hover:bg-muted"
                               >
                                 + Add New Bank Account
                               </SelectItem>
@@ -1763,7 +1759,7 @@ export default function Transactions() {
                                 <SelectItem
                                   key={bank.bank_account_id}
                                   value={bank.bank_account_id}
-                                  className="text-slate-800 hover:bg-slate-100"
+                                  className="text-foreground hover:bg-muted"
                                 >
                                   {bank.bank_name} - {bank.account_number} (
                                   {bank.currency})
@@ -1776,7 +1772,7 @@ export default function Transactions() {
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                          <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                             Bank Name *
                           </Label>
                           <Input
@@ -1787,13 +1783,13 @@ export default function Transactions() {
                                 client_bank_name: e.target.value,
                               })
                             }
-                            className="bg-white border-slate-200 text-slate-800 focus:border-[#1FA21B]"
+                            className="bg-card border text-foreground focus:border-[#66FCF1]"
                             placeholder="e.g., Chase Bank"
                             required
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                          <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                             Account Name *
                           </Label>
                           <Input
@@ -1804,13 +1800,13 @@ export default function Transactions() {
                                 client_bank_account_name: e.target.value,
                               })
                             }
-                            className="bg-white border-slate-200 text-slate-800 focus:border-[#1FA21B]"
+                            className="bg-card border text-foreground focus:border-[#66FCF1]"
                             placeholder="Account holder name"
                             required
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                          <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                             Account Number *
                           </Label>
                           <Input
@@ -1821,13 +1817,13 @@ export default function Transactions() {
                                 client_bank_account_number: e.target.value,
                               })
                             }
-                            className="bg-white border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
+                            className="bg-card border text-foreground focus:border-[#66FCF1] font-mono"
                             placeholder="Account number"
                             required
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                          <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                             SWIFT / IBAN
                           </Label>
                           <Input
@@ -1838,13 +1834,13 @@ export default function Transactions() {
                                 client_bank_swift_iban: e.target.value,
                               })
                             }
-                            className="bg-white border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
+                            className="bg-card border text-foreground focus:border-[#66FCF1] font-mono"
                             placeholder="SWIFT or IBAN code"
                           />
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                        <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                           Currency *
                         </Label>
                         <Select
@@ -1856,15 +1852,15 @@ export default function Transactions() {
                             })
                           }
                         >
-                          <SelectTrigger className="bg-white border-slate-200 text-slate-800">
+                          <SelectTrigger className="bg-card border text-foreground">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="bg-white border-slate-200">
+                          <SelectContent className="bg-card border">
                             {currencies.map((cur) => (
                               <SelectItem
                                 key={cur}
                                 value={cur}
-                                className="text-slate-800 hover:bg-slate-100"
+                                className="text-foreground hover:bg-muted"
                               >
                                 {cur}
                               </SelectItem>
@@ -1873,7 +1869,7 @@ export default function Transactions() {
                         </Select>
                       </div>
                       {selectedBankAccount === "new" && (
-                        <p className="text-xs text-blue-600">
+                        <p className="text-xs text-primary">
                           This bank account will be saved to the client's
                           profile for future use.
                         </p>
@@ -1887,7 +1883,7 @@ export default function Transactions() {
                     {/* For deposits - select USDT treasury account */}
                     {formData.transaction_type === "deposit" && (
                       <div className="space-y-2">
-                        <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                        <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                           USDT Treasury Account *
                         </Label>
                         <Select
@@ -1900,19 +1896,19 @@ export default function Transactions() {
                           }
                         >
                           <SelectTrigger
-                            className="bg-slate-50 border-slate-200 text-slate-800"
+                            className="bg-muted/50 border text-foreground"
                             data-testid="select-usdt-treasury"
                           >
                             <SelectValue placeholder="Select USDT wallet" />
                           </SelectTrigger>
-                          <SelectContent className="bg-white border-slate-200">
+                          <SelectContent className="bg-card border">
                             {treasuryAccounts
                               .filter((a) => a.account_type === "usdt")
                               .map((account) => (
                                 <SelectItem
                                   key={account.account_id}
                                   value={account.account_id}
-                                  className="text-slate-800 hover:bg-slate-100"
+                                  className="text-foreground hover:bg-muted"
                                 >
                                   {account.account_name} (
                                   {account.usdt_network || "USDT"})
@@ -1925,15 +1921,15 @@ export default function Transactions() {
 
                     {/* For withdrawals - enter client USDT address */}
                     {formData.transaction_type === "withdrawal" && (
-                      <div className="space-y-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
-                        <div className="flex items-center gap-2 text-blue-600 mb-2">
+                      <div className="space-y-4 p-4 bg-muted/50 rounded-sm border border">
+                        <div className="flex items-center gap-2 text-primary mb-2">
                           <Wallet className="w-4 h-4" />
                           <span className="text-xs uppercase tracking-wider font-bold">
                             Client USDT Details
                           </span>
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                          <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                             USDT Address *
                           </Label>
                           <Input
@@ -1944,13 +1940,13 @@ export default function Transactions() {
                                 client_usdt_address: e.target.value,
                               })
                             }
-                            className="bg-white border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
+                            className="bg-card border text-foreground focus:border-[#66FCF1] font-mono"
                             placeholder="Enter USDT wallet address"
                             required
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                          <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                             Network *
                           </Label>
                           <Select
@@ -1962,25 +1958,25 @@ export default function Transactions() {
                               })
                             }
                           >
-                            <SelectTrigger className="bg-white border-slate-200 text-slate-800">
+                            <SelectTrigger className="bg-card border text-foreground">
                               <SelectValue placeholder="Select network" />
                             </SelectTrigger>
-                            <SelectContent className="bg-white border-slate-200">
+                            <SelectContent className="bg-card border">
                               <SelectItem
                                 value="TRC20"
-                                className="text-slate-800 hover:bg-slate-100"
+                                className="text-foreground hover:bg-muted"
                               >
                                 TRC20 (Tron)
                               </SelectItem>
                               <SelectItem
                                 value="ERC20"
-                                className="text-slate-800 hover:bg-slate-100"
+                                className="text-foreground hover:bg-muted"
                               >
                                 ERC20 (Ethereum)
                               </SelectItem>
                               <SelectItem
                                 value="BEP20"
-                                className="text-slate-800 hover:bg-slate-100"
+                                className="text-foreground hover:bg-muted"
                               >
                                 BEP20 (BSC)
                               </SelectItem>
@@ -1996,7 +1992,7 @@ export default function Transactions() {
                 {formData.destination_type === "vendor" && (
                   <div className="space-y-6">
                     <div className="space-y-2">
-                      <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                      <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                         Select Exchanger *
                       </Label>
                       <Select
@@ -2006,19 +2002,19 @@ export default function Transactions() {
                         }
                       >
                         <SelectTrigger
-                          className="bg-slate-50 border-slate-200 text-slate-800"
+                          className="bg-muted/50 border text-foreground"
                           data-testid="select-vendor"
                         >
                           <SelectValue placeholder="Select vendor" />
                         </SelectTrigger>
-                        <SelectContent className="bg-white border-slate-200">
+                        <SelectContent className="bg-card border">
                           {vendors
                             .filter((v) => v.status === "active")
                             .map((vendor) => (
                               <SelectItem
                                 key={vendor.vendor_id}
                                 value={vendor.vendor_id}
-                                className="text-slate-800 hover:bg-slate-100"
+                                className="text-foreground hover:bg-muted"
                               >
                                 {vendor.vendor_name}
                               </SelectItem>
@@ -2029,7 +2025,7 @@ export default function Transactions() {
 
                     {/* Transaction Mode - Bank or Cash */}
                     <div className="space-y-2">
-                      <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                      <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                         Transaction Mode *
                       </Label>
                       <Select
@@ -2044,16 +2040,16 @@ export default function Transactions() {
                         }
                       >
                         <SelectTrigger
-                          className="bg-slate-50 border-slate-200 text-slate-800"
+                          className="bg-muted/50 border text-foreground"
                           data-testid="select-tx-mode"
                         >
                           <SelectValue placeholder="Select mode" />
                         </SelectTrigger>
-                        <SelectContent className="bg-white border-slate-200">
-                          <SelectItem value="bank" className="text-slate-800">
+                        <SelectContent className="bg-card border">
+                          <SelectItem value="bank" className="text-foreground">
                             Bank Transfer
                           </SelectItem>
-                          <SelectItem value="cash" className="text-slate-800">
+                          <SelectItem value="cash" className="text-foreground">
                             Cash
                           </SelectItem>
                         </SelectContent>
@@ -2062,7 +2058,7 @@ export default function Transactions() {
 
                     {/* Cash collecting person details */}
                     {formData.transaction_mode === "cash" && (
-                      <div className="grid grid-cols-2 gap-4 p-3 bg-amber-50/5 border border-amber-200 rounded-xl">
+                      <div className="grid grid-cols-2 gap-4 p-3 bg-amber-50 border border-amber-200 rounded-sm">
                         <div className="space-y-1">
                           <Label className="text-amber-700 text-xs uppercase">
                             Collecting Person Name
@@ -2075,7 +2071,7 @@ export default function Transactions() {
                                 collecting_person_name: e.target.value,
                               })
                             }
-                            className="bg-white border-amber-200 text-slate-800"
+                            className="bg-card border-amber-200 text-foreground"
                             placeholder="Full name"
                             data-testid="collecting-person-name"
                           />
@@ -2092,7 +2088,7 @@ export default function Transactions() {
                                 collecting_person_number: e.target.value,
                               })
                             }
-                            className="bg-white border-amber-200 text-slate-800"
+                            className="bg-card border-amber-200 text-foreground"
                             placeholder="Phone number"
                             data-testid="collecting-person-number"
                           />
@@ -2103,8 +2099,8 @@ export default function Transactions() {
                     {/* For withdrawals via vendor - enter client bank details (only for bank mode) */}
                     {formData.transaction_type === "withdrawal" &&
                       formData.transaction_mode !== "cash" && (
-                        <div className="space-y-4 p-4 bg-slate-50 rounded-xl border border-slate-200 mt-2">
-                          <div className="flex items-center gap-2 text-blue-600 mb-2">
+                        <div className="space-y-4 p-4 bg-muted/50 rounded-sm border border mt-2">
+                          <div className="flex items-center gap-2 text-primary mb-2">
                             <Building2 className="w-4 h-4" />
                             <span className="text-xs uppercase tracking-wider font-bold">
                               Client Bank Details (Destination)
@@ -2114,7 +2110,7 @@ export default function Transactions() {
                           {/* Select from saved client banks */}
                           {clientBankAccounts.length > 0 && (
                             <div className="space-y-2">
-                              <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                              <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                                 Select Saved Bank Account
                               </Label>
                               <Select
@@ -2149,13 +2145,13 @@ export default function Transactions() {
                                   }
                                 }}
                               >
-                                <SelectTrigger className="bg-white border-slate-200 text-slate-800">
+                                <SelectTrigger className="bg-card border text-foreground">
                                   <SelectValue placeholder="Select saved bank or enter new" />
                                 </SelectTrigger>
-                                <SelectContent className="bg-white border-slate-200">
+                                <SelectContent className="bg-card border">
                                   <SelectItem
                                     value="new"
-                                    className="text-slate-800 hover:bg-slate-100"
+                                    className="text-foreground hover:bg-muted"
                                   >
                                     + Enter New Bank Details
                                   </SelectItem>
@@ -2163,7 +2159,7 @@ export default function Transactions() {
                                     <SelectItem
                                       key={bank.bank_account_id}
                                       value={bank.bank_account_id}
-                                      className="text-slate-800 hover:bg-slate-100"
+                                      className="text-foreground hover:bg-muted"
                                     >
                                       {bank.bank_name} - {bank.account_number} (
                                       {bank.currency})
@@ -2176,7 +2172,7 @@ export default function Transactions() {
 
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                              <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                              <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                                 Bank Name *
                               </Label>
                               <Input
@@ -2187,13 +2183,13 @@ export default function Transactions() {
                                     client_bank_name: e.target.value,
                                   })
                                 }
-                                className="bg-white border-slate-200 text-slate-800 focus:border-[#1FA21B]"
+                                className="bg-card border text-foreground focus:border-[#66FCF1]"
                                 placeholder="Bank name"
                                 required
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                              <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                                 Account Name *
                               </Label>
                               <Input
@@ -2204,7 +2200,7 @@ export default function Transactions() {
                                     client_bank_account_name: e.target.value,
                                   })
                                 }
-                                className="bg-white border-slate-200 text-slate-800 focus:border-[#1FA21B]"
+                                className="bg-card border text-foreground focus:border-[#66FCF1]"
                                 placeholder="Account holder name"
                                 required
                               />
@@ -2212,7 +2208,7 @@ export default function Transactions() {
                           </div>
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                              <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                              <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                                 Account Number *
                               </Label>
                               <Input
@@ -2223,13 +2219,13 @@ export default function Transactions() {
                                     client_bank_account_number: e.target.value,
                                   })
                                 }
-                                className="bg-white border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
+                                className="bg-card border text-foreground focus:border-[#66FCF1] font-mono"
                                 placeholder="Account number / IBAN"
                                 required
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                              <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                                 SWIFT/BIC Code
                               </Label>
                               <Input
@@ -2240,13 +2236,13 @@ export default function Transactions() {
                                     client_bank_swift_iban: e.target.value,
                                   })
                                 }
-                                className="bg-white border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
+                                className="bg-card border text-foreground focus:border-[#66FCF1] font-mono"
                                 placeholder="SWIFT code (optional)"
                               />
                             </div>
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                            <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                               Currency *
                             </Label>
                             <Select
@@ -2258,37 +2254,37 @@ export default function Transactions() {
                                 })
                               }
                             >
-                              <SelectTrigger className="bg-white border-slate-200 text-slate-800">
+                              <SelectTrigger className="bg-card border text-foreground">
                                 <SelectValue placeholder="Select currency" />
                               </SelectTrigger>
-                              <SelectContent className="bg-white border-slate-200">
+                              <SelectContent className="bg-card border">
                                 <SelectItem
                                   value="USD"
-                                  className="text-slate-800 hover:bg-slate-100"
+                                  className="text-foreground hover:bg-muted"
                                 >
                                   USD - US Dollar
                                 </SelectItem>
                                 <SelectItem
                                   value="EUR"
-                                  className="text-slate-800 hover:bg-slate-100"
+                                  className="text-foreground hover:bg-muted"
                                 >
                                   EUR - Euro
                                 </SelectItem>
                                 <SelectItem
                                   value="GBP"
-                                  className="text-slate-800 hover:bg-slate-100"
+                                  className="text-foreground hover:bg-muted"
                                 >
                                   GBP - British Pound
                                 </SelectItem>
                                 <SelectItem
                                   value="AED"
-                                  className="text-slate-800 hover:bg-slate-100"
+                                  className="text-foreground hover:bg-muted"
                                 >
                                   AED - UAE Dirham
                                 </SelectItem>
                                 <SelectItem
                                   value="INR"
-                                  className="text-slate-800 hover:bg-slate-100"
+                                  className="text-foreground hover:bg-muted"
                                 >
                                   INR - Indian Rupee
                                 </SelectItem>
@@ -2304,7 +2300,7 @@ export default function Transactions() {
                 {formData.destination_type === "psp" && (
                   <>
                     <div className="space-y-2">
-                      <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                      <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                         Select PSP *
                       </Label>
                       <Select
@@ -2314,19 +2310,19 @@ export default function Transactions() {
                         }
                       >
                         <SelectTrigger
-                          className="bg-slate-50 border-slate-200 text-slate-800"
+                          className="bg-muted/50 border text-foreground"
                           data-testid="select-psp"
                         >
                           <SelectValue placeholder="Select PSP" />
                         </SelectTrigger>
-                        <SelectContent className="bg-white border-slate-200">
+                        <SelectContent className="bg-card border">
                           {psps
                             .filter((p) => p.status === "active")
                             .map((psp) => (
                               <SelectItem
                                 key={psp.psp_id}
                                 value={psp.psp_id}
-                                className="text-slate-800 hover:bg-slate-100"
+                                className="text-foreground hover:bg-muted"
                               >
                                 {psp.psp_name} ({psp.commission_rate}%
                                 commission, T+{psp.settlement_days})
@@ -2337,7 +2333,7 @@ export default function Transactions() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                      <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                         Commission Paid By *
                       </Label>
                       <Select
@@ -2350,21 +2346,21 @@ export default function Transactions() {
                         }
                       >
                         <SelectTrigger
-                          className="bg-slate-50 border-slate-200 text-slate-800"
+                          className="bg-muted/50 border text-foreground"
                           data-testid="select-commission-paid-by"
                         >
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="bg-white border-slate-200">
+                        <SelectContent className="bg-card border">
                           <SelectItem
                             value="client"
-                            className="text-slate-800 hover:bg-slate-100"
+                            className="text-foreground hover:bg-muted"
                           >
                             Client (deducted from deposit)
                           </SelectItem>
                           <SelectItem
                             value="broker"
-                            className="text-slate-800 hover:bg-slate-100"
+                            className="text-foreground hover:bg-muted"
                           >
                             Broker (absorbs commission)
                           </SelectItem>
@@ -2374,7 +2370,7 @@ export default function Transactions() {
 
                     {/* Commission Preview */}
                     {formData.psp_id && formData.amount && (
-                      <div className="p-3 bg-slate-50 rounded-sm border border-slate-200">
+                      <div className="p-3 bg-muted/50 rounded-sm border border">
                         {(() => {
                           const selectedPsp = psps.find(
                             (p) => p.psp_id === formData.psp_id,
@@ -2410,15 +2406,15 @@ export default function Transactions() {
                           return (
                             <div className="space-y-2 text-sm">
                               <div className="flex justify-between">
-                                <span className="text-slate-500">
+                                <span className="text-muted-foreground">
                                   Gross Amount
                                 </span>
                                 <div className="text-right">
-                                  <span className="text-slate-800 font-mono">
+                                  <span className="text-foreground font-mono">
                                     ${grossAmount.toLocaleString()}
                                   </span>
                                   {hasPayCurrency && (
-                                    <p className="text-[10px] text-blue-500 font-mono">
+                                    <p className="text-[10px] text-primary/80 font-mono">
                                       {parseFloat(baseGross).toLocaleString()}{" "}
                                       {formData.base_currency}
                                     </p>
@@ -2426,7 +2422,7 @@ export default function Transactions() {
                                 </div>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-slate-500">
+                                <span className="text-muted-foreground">
                                   PSP Commission ({selectedPsp.commission_rate}
                                   %)
                                 </span>
@@ -2441,8 +2437,8 @@ export default function Transactions() {
                                   )}
                                 </div>
                               </div>
-                              <div className="flex justify-between pt-2 border-t border-slate-200">
-                                <span className="text-slate-500">
+                              <div className="flex justify-between pt-2 border-t border">
+                                <span className="text-muted-foreground">
                                   {formData.commission_paid_by === "client"
                                     ? "Client Receives"
                                     : "Client Receives (Broker pays commission)"}
@@ -2460,10 +2456,10 @@ export default function Transactions() {
                                 </div>
                               </div>
                               <div className="flex justify-between text-xs">
-                                <span className="text-slate-500">
+                                <span className="text-muted-foreground">
                                   Expected Settlement
                                 </span>
-                                <span className="text-blue-600">
+                                <span className="text-primary">
                                   T+{selectedPsp.settlement_days} days
                                 </span>
                               </div>
@@ -2476,7 +2472,7 @@ export default function Transactions() {
                 )}
 
                 <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                     Transaction Date
                   </Label>
                   <Input
@@ -2488,13 +2484,13 @@ export default function Transactions() {
                         transaction_date: e.target.value,
                       })
                     }
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1]"
+                    className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
                     data-testid="tx-transaction-date"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                     Reference (Optional)
                   </Label>
                   <Input
@@ -2502,14 +2498,14 @@ export default function Transactions() {
                     onChange={(e) =>
                       setFormData({ ...formData, reference: e.target.value })
                     }
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
+                    className="bg-muted/50 border text-foreground focus:border-[#66FCF1] font-mono"
                     placeholder="Auto-generated if empty"
                     data-testid="tx-reference"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                     CRM Reference (Optional, Unique)
                   </Label>
                   <Input
@@ -2520,18 +2516,17 @@ export default function Transactions() {
                         crm_reference: e.target.value,
                       })
                     }
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#66FCF1] font-mono"
+                    className="bg-muted/50 border text-foreground focus:border-[#66FCF1] font-mono"
                     placeholder="Enter CRM reference number"
                     data-testid="tx-crm-reference"
                   />
                 </div>
 
-
-   <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                     Client Tags
                   </Label>
-                  <div className="flex flex-wrap gap-1.5 min-h-[36px] p-2 bg-slate-50 border border-slate-200 rounded-sm">
+                  <div className="flex flex-wrap gap-1.5 min-h-[36px] p-2 bg-muted/50 border border rounded-sm">
                     {formData.client_tags?.map((tag) => {
                       const tagObj = clientTags.find((t) => t.name === tag);
                       return (
@@ -2553,7 +2548,7 @@ export default function Transactions() {
                                 ),
                               })
                             }
-                            className="ml-0.5 hover:bg-white/20 rounded-full w-3.5 h-3.5 flex items-center justify-center text-[9px]"
+                            className="ml-0.5 hover:bg-card/20 rounded-full w-3.5 h-3.5 flex items-center justify-center text-[9px]"
                           >
                             &times;
                           </button>
@@ -2570,7 +2565,7 @@ export default function Transactions() {
                       }}
                     >
                       <SelectTrigger
-                        className="w-auto h-6 border-0 bg-transparent text-xs text-slate-400 p-0 px-1 shadow-none"
+                        className="w-auto h-6 border-0 bg-transparent text-xs text-muted-foreground p-0 px-1 shadow-none"
                         data-testid="tx-tag-select"
                       >
                         <span>+ Add tag</span>
@@ -2597,7 +2592,7 @@ export default function Transactions() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                     Description
                   </Label>
                   <Textarea
@@ -2605,17 +2600,17 @@ export default function Transactions() {
                     onChange={(e) =>
                       setFormData({ ...formData, description: e.target.value })
                     }
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B]"
+                    className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
                     rows={2}
                     data-testid="tx-description"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                     Proof of Payment (Screenshot)
                   </Label>
-                  <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center hover:border-[#1FA21B]/50 transition-colors">
+                  <div className="border-2 border-dashed border rounded-sm p-4 text-center hover:border-[#66FCF1]/50 transition-colors">
                     <input
                       type="file"
                       accept="image/*"
@@ -2625,26 +2620,49 @@ export default function Transactions() {
                       id="proof-upload"
                       data-testid="proof-upload"
                     />
-                    <label htmlFor="proof-upload" className="cursor-pointer block">
+                    <label
+                      htmlFor="proof-upload"
+                      className="cursor-pointer block"
+                    >
                       {proofPreviews.length > 0 ? (
                         <div className="space-y-2">
                           <div className="grid grid-cols-3 gap-2">
                             {proofPreviews.map((src, i) => (
                               <div key={i} className="relative group">
-                                <img src={src} alt={`Proof ${i+1}`} className="w-full h-20 object-cover rounded border border-slate-200 cursor-pointer" onClick={(e) => { e.preventDefault(); window.open(src, "_blank"); }} />
-                                <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeProofImage(i); }} className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full w-4 h-4 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">×</button>
+                                <img
+                                  src={src}
+                                  alt={`Proof ${i + 1}`}
+                                  className="w-full h-20 object-cover rounded border border cursor-pointer"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    window.open(src, "_blank");
+                                  }}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    removeProofImage(i);
+                                  }}
+                                  className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full w-4 h-4 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  ×
+                                </button>
                               </div>
                             ))}
                           </div>
-                          <p className="text-xs text-blue-600 text-center">{proofPreviews.length} image(s) — click to add more</p>
+                          <p className="text-xs text-primary text-center">
+                            {proofPreviews.length} image(s) — click to add more
+                          </p>
                         </div>
                       ) : (
                         <div className="space-y-2">
-                          <Upload className="w-8 h-8 mx-auto text-slate-500" />
-                          <p className="text-sm text-slate-500">
+                          <Upload className="w-8 h-8 mx-auto text-muted-foreground" />
+                          <p className="text-sm text-muted-foreground">
                             Click to upload proof of payment
                           </p>
-                          <p className="text-xs text-slate-500/60">
+                          <p className="text-xs text-muted-foreground/60">
                             PNG, JPG up to 5MB · multiple allowed
                           </p>
                         </div>
@@ -2661,14 +2679,14 @@ export default function Transactions() {
                       setIsDialogOpen(false);
                       resetForm();
                     }}
-                    className="border-slate-200 text-slate-500 hover:bg-slate-100"
+                    className="border text-muted-foreground hover:bg-muted"
                   >
                     Cancel
                   </Button>
                   <Button
                     type="submit"
                     disabled={submitting}
-                    className="bg-[#1FA21B] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider disabled:opacity-50"
+                    className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider disabled:opacity-50"
                     data-testid="save-tx-btn"
                   >
                     {submitting ? (
@@ -2681,10 +2699,11 @@ export default function Transactions() {
                     )}
                   </Button>
                 </div>
+
                 {/* Captcha Verification */}
                 {showCreateCaptcha && (
                   <div
-                    className="p-3 bg-amber-50/5 border border-amber-200 rounded-sm space-y-2"
+                    className="p-3 bg-amber-50 border border-amber-200 rounded-sm space-y-2"
                     data-testid="create-tx-captcha"
                   >
                     <p className="text-sm text-amber-800 font-medium">
@@ -2696,7 +2715,7 @@ export default function Transactions() {
                         type="number"
                         value={createCaptchaAnswer}
                         onChange={(e) => setCreateCaptchaAnswer(e.target.value)}
-                        className="bg-white border-amber-300 w-24 text-center font-mono"
+                        className="bg-card border-amber-300 w-24 text-center font-mono"
                         placeholder="?"
                         autoFocus
                         data-testid="create-tx-captcha-input"
@@ -2723,36 +2742,36 @@ export default function Transactions() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Search by client, reference or CRM ref..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 bg-white border-slate-200 text-slate-800 placeholder:text-slate-800/30 focus:border-[#1FA21B]"
+            className="pl-10 bg-card border text-foreground placeholder:text-foreground/30 focus:border-[#66FCF1]"
             data-testid="search-transactions"
           />
         </div>
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Filter by client email..."
             value={emailFilter}
             onChange={(e) => setEmailFilter(e.target.value?.trim())}
-            className="pl-10 bg-white border-slate-200 text-slate-800 placeholder:text-slate-800/30 focus:border-[#66FCF1]"
+            className="pl-10 bg-card border text-foreground placeholder:text-foreground/30 focus:border-[#66FCF1]"
             data-testid="filter-client-email"
           />
         </div>
         <Select value={typeFilter} onValueChange={setTypeFilter}>
           <SelectTrigger
-            className="w-full sm:w-40 bg-white border-slate-200 text-slate-800"
+            className="w-full sm:w-40 bg-card border text-foreground"
             data-testid="filter-tx-type"
           >
             <SelectValue placeholder="Type" />
           </SelectTrigger>
-          <SelectContent className="bg-white border-slate-200">
+          <SelectContent className="bg-card border">
             <SelectItem
               value="all"
-              className="text-slate-800 hover:bg-slate-100"
+              className="text-foreground hover:bg-muted"
             >
               All Types
             </SelectItem>
@@ -2760,7 +2779,7 @@ export default function Transactions() {
               <SelectItem
                 key={type.value}
                 value={type.value}
-                className="text-slate-800 hover:bg-slate-100"
+                className="text-foreground hover:bg-muted"
               >
                 {type.label}
               </SelectItem>
@@ -2769,16 +2788,16 @@ export default function Transactions() {
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger
-            className="w-full sm:w-40 bg-white border-slate-200 text-slate-800"
+            className="w-full sm:w-40 bg-card border text-foreground"
             data-testid="filter-tx-status"
           >
-            <Filter className="w-4 h-4 mr-2 text-slate-500" />
+            <Filter className="w-4 h-4 mr-2 text-muted-foreground" />
             <SelectValue placeholder="Status" />
           </SelectTrigger>
-          <SelectContent className="bg-white border-slate-200">
+          <SelectContent className="bg-card border">
             <SelectItem
               value="all"
-              className="text-slate-800 hover:bg-slate-100"
+              className="text-foreground hover:bg-muted"
             >
               All Status
             </SelectItem>
@@ -2786,7 +2805,7 @@ export default function Transactions() {
               <SelectItem
                 key={option.value}
                 value={option.value}
-                className="text-slate-800 hover:bg-slate-100"
+                className="text-foreground hover:bg-muted"
               >
                 {option.label}
               </SelectItem>
@@ -2795,115 +2814,116 @@ export default function Transactions() {
         </Select>
         <Select value={destinationFilter} onValueChange={setDestinationFilter}>
           <SelectTrigger
-            className="w-full sm:w-44 bg-white border-slate-200 text-slate-800"
+            className="w-full sm:w-44 bg-card border text-foreground"
             data-testid="filter-tx-destination"
           >
             <SelectValue placeholder="Destination" />
           </SelectTrigger>
-          <SelectContent className="bg-white border-slate-200">
+          <SelectContent className="bg-card border">
             <SelectItem
               value="all"
-              className="text-slate-800 hover:bg-slate-100"
+              className="text-foreground hover:bg-muted"
             >
               All Destinations
             </SelectItem>
             <SelectItem
               value="treasury"
-              className="text-slate-800 hover:bg-slate-100"
+              className="text-foreground hover:bg-muted"
             >
               Treasury
             </SelectItem>
             <SelectItem
               value="psp"
-              className="text-slate-800 hover:bg-slate-100"
+              className="text-foreground hover:bg-muted"
             >
               PSP
             </SelectItem>
             <SelectItem
               value="vendor"
-              className="text-slate-800 hover:bg-slate-100"
+              className="text-foreground hover:bg-muted"
             >
               Exchanger
             </SelectItem>
             <SelectItem
               value="bank"
-              className="text-slate-800 hover:bg-slate-100"
+              className="text-foreground hover:bg-muted"
             >
               Bank
             </SelectItem>
             <SelectItem
               value="usdt"
-              className="text-slate-800 hover:bg-slate-100"
+              className="text-foreground hover:bg-muted"
             >
               USDT
             </SelectItem>
           </SelectContent>
         </Select>
-         <Select value={tagFilter} onValueChange={setTagFilter}>
-                  <SelectTrigger
-                    className="w-full sm:w-40 bg-white border-slate-200 text-slate-800"
-                    data-testid="filter-tx-tag"
-                  >
-                    <SelectValue placeholder="Tag" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border-slate-200">
-                    <SelectItem
-                      value="all"
-                      className="text-slate-800 hover:bg-slate-100"
-                    >
-                      All Tags
-                    </SelectItem>
-                    {clientTags.map((tag) => (
-                      <SelectItem
-                        key={tag.tag_id}
-                        value={tag.name}
-                        className="text-slate-800 hover:bg-slate-100"
-                      >
-                        <span className="flex items-center gap-2">
-                          <span
-                            className="w-2 h-2 rounded-full inline-block"
-                            style={{ backgroundColor: tag.color }}
-                          />{" "}
-                          {tag.name}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setTagManageOpen(true)}
-                  className="border-slate-200 text-slate-600 hover:bg-slate-50 text-xs"
-                  data-testid="manage-tags-btn"
-                >
-                  <Tag className="w-3.5 h-3.5 mr-1" /> Manage Tags
-                </Button>
+
+        <Select value={tagFilter} onValueChange={setTagFilter}>
+          <SelectTrigger
+            className="w-full sm:w-40 bg-card border text-foreground"
+            data-testid="filter-tx-tag"
+          >
+            <SelectValue placeholder="Tag" />
+          </SelectTrigger>
+          <SelectContent className="bg-card border">
+            <SelectItem
+              value="all"
+              className="text-foreground hover:bg-muted"
+            >
+              All Tags
+            </SelectItem>
+            {clientTags.map((tag) => (
+              <SelectItem
+                key={tag.tag_id}
+                value={tag.name}
+                className="text-foreground hover:bg-muted"
+              >
+                <span className="flex items-center gap-2">
+                  <span
+                    className="w-2 h-2 rounded-full inline-block"
+                    style={{ backgroundColor: tag.color }}
+                  />{" "}
+                  {tag.name}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setTagManageOpen(true)}
+          className="border text-card-foreground hover:bg-muted/50 text-xs"
+          data-testid="manage-tags-btn"
+        >
+          <Tag className="w-3.5 h-3.5 mr-1" /> Manage Tags
+        </Button>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1">
-            <span className="text-xs text-slate-500">From:</span>
+            <span className="text-xs text-muted-foreground">From:</span>
             <Input
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="w-[140px] bg-white border-slate-200 text-slate-800"
+              className="w-[140px] bg-card border text-foreground"
               data-testid="filter-date-from"
             />
           </div>
           <div className="flex items-center gap-1">
-            <span className="text-xs text-slate-500">To:</span>
+            <span className="text-xs text-muted-foreground">To:</span>
             <Input
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="w-[140px] bg-white border-slate-200 text-slate-800"
+              className="w-[140px] bg-card border text-foreground"
               data-testid="filter-date-to"
             />
           </div>
           {(dateFrom ||
             dateTo ||
             destinationFilter !== "all" ||
-             tagFilter !== "all" ||
+            tagFilter !== "all" ||
             emailFilter) && (
             <Button
               variant="ghost"
@@ -2915,7 +2935,7 @@ export default function Transactions() {
                 setEmailFilter("");
                 setTagFilter("all");
               }}
-              className="text-slate-500 hover:text-red-500"
+              className="text-muted-foreground hover:text-red-500"
             >
               Clear
             </Button>
@@ -2924,47 +2944,46 @@ export default function Transactions() {
       </div>
 
       {/* Table */}
-      <Card className="bg-white border-slate-200">
+      <Card className="bg-card border">
         <CardContent className="p-0">
           <ScrollArea className="h-[600px]">
             <Table>
               <TableHeader>
-                <TableRow className="border-slate-200 hover:bg-transparent">
-                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                <TableRow className="border hover:bg-transparent">
+                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                     Reference
                   </TableHead>
-                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                     Date
                   </TableHead>
-
-                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                     CRM Ref
                   </TableHead>
-                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                     Client
                   </TableHead>
-                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                     Email
                   </TableHead>
-                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                     Type
                   </TableHead>
-                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                     Amount (USD)
                   </TableHead>
-                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                     Payment Currency
                   </TableHead>
-                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                     Destination
                   </TableHead>
-                       <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                     Tags
                   </TableHead>
-                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                     Status
                   </TableHead>
-                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">
+                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">
                     Actions
                   </TableHead>
                 </TableRow>
@@ -2972,7 +2991,7 @@ export default function Transactions() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                     <TableCell colSpan={12}  className="text-center py-8">
+                    <TableCell colSpan={12} className="text-center py-8">
                       <div className="w-6 h-6 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
@@ -2980,7 +2999,7 @@ export default function Transactions() {
                   <TableRow>
                     <TableCell
                       colSpan={12}
-                      className="text-center py-8 text-slate-500"
+                      className="text-center py-8 text-muted-foreground"
                     >
                       No transactions found
                     </TableCell>
@@ -2989,16 +3008,16 @@ export default function Transactions() {
                   filteredTransactions.map((tx) => (
                     <TableRow
                       key={tx.transaction_id}
-                      className="border-slate-200 hover:bg-slate-100"
+                      className="border hover:bg-muted"
                     >
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-slate-800">
+                          <span className="font-mono text-foreground">
                             {tx.reference}
                           </span>
                           {tx.proof_image && (
                             <span title="Client Proof">
-                              <ImageIcon className="w-4 h-4 text-slate-500" />
+                              <ImageIcon className="w-4 h-4 text-muted-foreground" />
                             </span>
                           )}
                           {tx.accountant_proof_image && (
@@ -3006,7 +3025,7 @@ export default function Transactions() {
                               title="Accountant Approval Proof"
                               className="flex items-center"
                             >
-                              <ImageIcon className="w-4 h-4 text-blue-600" />
+                              <ImageIcon className="w-4 h-4 text-primary" />
                             </span>
                           )}
                           {tx.vendor_proof_image && (
@@ -3019,16 +3038,16 @@ export default function Transactions() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-slate-500 text-xs whitespace-nowrap">
+                      <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
                         {formatDate(tx.transaction_date || tx.created_at)}
                       </TableCell>
                       <TableCell className="font-mono text-xs text-purple-600">
                         {tx.crm_reference || "-"}
                       </TableCell>
-                      <TableCell className="text-slate-800">
+                      <TableCell className="text-foreground">
                         {tx.client_name || getClientName(tx.client_id)}
                       </TableCell>
-                      <TableCell className="text-slate-600 text-sm">
+                      <TableCell className="text-card-foreground text-sm">
                         {tx.client_email || "-"}
                       </TableCell>
                       <TableCell>{getTypeBadge(tx.transaction_type)}</TableCell>
@@ -3040,7 +3059,7 @@ export default function Transactions() {
                           : "-"}
                         ${tx.amount?.toLocaleString()} {tx.currency}
                       </TableCell>
-                      <TableCell className="text-slate-600">
+                      <TableCell className="text-card-foreground">
                         {tx.base_currency &&
                         tx.base_currency !== "USD" &&
                         tx.base_amount ? (
@@ -3049,15 +3068,15 @@ export default function Transactions() {
                               {tx.base_amount?.toLocaleString()}{" "}
                               {tx.base_currency}
                             </span>
-                            <span className="text-xs text-slate-400">
+                            <span className="text-xs text-muted-foreground">
                               @ {tx.exchange_rate || "-"}
                             </span>
                           </div>
                         ) : (
-                          <span className="text-slate-400">USD</span>
+                          <span className="text-muted-foreground">USD</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-slate-500">
+                      <TableCell className="text-muted-foreground">
                         {tx.destination_type === "vendor" && tx.vendor_name ? (
                           <span className="text-orange-500">
                             {tx.vendor_name}
@@ -3082,11 +3101,31 @@ export default function Transactions() {
                           </span>
                         ) : tx.destination_account_name ? (
                           <span>{tx.destination_account_name}</span>
+                        ) : tx.client_bank_name ? (
+                          <span>
+                            {tx.client_bank_name}
+                            <br />
+                            <span className="text-xs text-muted-foreground">
+                              {tx.client_bank_account_name}
+                            </span>
+                          </span>
+                        ) : tx.client_usdt_address ? (
+                          <span className="text-xs font-mono">
+                            {tx.client_usdt_address.slice(0, 10)}...
+                            <br />
+                            <span className="text-xs text-muted-foreground">
+                              {tx.client_usdt_network || "USDT"}
+                            </span>
+                          </span>
+                        ) : tx.destination_type ? (
+                          <span className="text-xs capitalize text-muted-foreground">
+                            {tx.destination_type}
+                          </span>
                         ) : (
                           "-"
                         )}
                       </TableCell>
-                       <TableCell>
+                      <TableCell>
                         <div className="flex items-center gap-1">
                           <div className="flex flex-wrap gap-0.5 flex-1 min-w-0">
                             {(tx.client_tags || []).length > 0 ? (
@@ -3108,15 +3147,16 @@ export default function Transactions() {
                                 );
                               })
                             ) : (
-                              <span className="text-xs text-slate-400">-</span>
+                              <span className="text-xs text-muted-foreground">-</span>
                             )}
                           </div>
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => openTagEdit(tx)}
-                            className="text-slate-400 hover:text-blue-600 hover:bg-blue-50 h-6 w-6 p-0 shrink-0"
+                            className="text-muted-foreground hover:text-primary hover:bg-primary/10 h-6 w-6 p-0 shrink-0"
                             title="Edit Tags"
+                            data-testid={`tx-tag-edit-${tx.transaction_id}`}
                           >
                             <Pencil className="w-3 h-3" />
                           </Button>
@@ -3129,7 +3169,7 @@ export default function Transactions() {
                             variant="ghost"
                             size="sm"
                             onClick={() => setViewTransaction(tx)}
-                            className="text-slate-500 hover:text-slate-800 hover:bg-slate-100 h-7 w-7 p-0"
+                            className="text-muted-foreground hover:text-foreground hover:bg-muted h-7 w-7 p-0"
                             data-testid={`tx-view-${tx.transaction_id}`}
                           >
                             <Eye className="w-4 h-4" />
@@ -3150,7 +3190,7 @@ export default function Transactions() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => openDestEdit(tx)}
-                                className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 h-7 w-7 p-0"
+                                className="text-primary/80 hover:text-primary hover:bg-primary/10 h-7 w-7 p-0"
                                 title="Edit Destination"
                                 data-testid={`tx-dest-edit-${tx.transaction_id}`}
                               >
@@ -3169,7 +3209,6 @@ export default function Transactions() {
         </CardContent>
       </Card>
 
-      {/* Pagination */}
       <PaginationControls
         currentPage={currentPage}
         totalPages={totalPages}
@@ -3182,24 +3221,19 @@ export default function Transactions() {
         onPageSizeChange={(s) => {
           setPageSize(s);
           setCurrentPage(1);
-          // pageSize in useEffect deps triggers re-fetch with the new value
+          // pageSize in useEffect deps triggers the re-fetch with the new value
         }}
       />
-
-      <div className="text-center text-sm text-slate-500">
-        Showing {transactions.length} of {totalItems} transactions
-      </div>
 
       {/* View Transaction Dialog */}
       <Dialog
         open={!!viewTransaction}
         onOpenChange={() => setViewTransaction(null)}
       >
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-card border text-foreground max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle
-              className="text-2xl font-bold uppercase tracking-tight"
-              style={{ fontFamily: "Barlow Condensed" }}
+              className="text-lg font-bold text-foreground"
             >
               Transaction Details
             </DialogTitle>
@@ -3208,32 +3242,32 @@ export default function Transactions() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Reference
                   </p>
-                  <p className="text-slate-800 font-mono text-lg">
+                  <p className="text-foreground font-mono text-lg">
                     {viewTransaction.reference}
                   </p>
                 </div>
                 {getStatusBadge(viewTransaction.status)}
               </div>
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-200">
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border">
                 <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Client
                   </p>
-                  <p className="text-slate-800">
+                  <p className="text-foreground">
                     {viewTransaction.client_name}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Type
                   </p>
                   {getTypeBadge(viewTransaction.transaction_type)}
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Amount
                   </p>
                   <p
@@ -3250,17 +3284,17 @@ export default function Transactions() {
                   {viewTransaction.base_currency &&
                     viewTransaction.base_currency !== "USD" &&
                     viewTransaction.base_amount && (
-                      <p className="text-sm text-slate-500 font-mono mt-1">
+                      <p className="text-sm text-muted-foreground font-mono mt-1">
                         {viewTransaction.base_amount?.toLocaleString()}{" "}
                         {viewTransaction.base_currency}
                       </p>
                     )}
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Created
                   </p>
-                  <p className="text-slate-800 text-sm">
+                  <p className="text-foreground text-sm">
                     {formatDate(
                       viewTransaction.transaction_date ||
                         viewTransaction.created_at,
@@ -3269,14 +3303,14 @@ export default function Transactions() {
                 </div>
               </div>
               {viewTransaction.destination_account_name && (
-                <div className="pt-4 border-t border-slate-200">
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                <div className="pt-4 border-t border">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Destination
                   </p>
-                  <p className="text-slate-800">
+                  <p className="text-foreground">
                     {viewTransaction.destination_account_name}
                   </p>
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-muted-foreground">
                     {viewTransaction.destination_bank_name}
                   </p>
                 </div>
@@ -3284,41 +3318,41 @@ export default function Transactions() {
               {/* Client Bank Details */}
               {viewTransaction.client_bank_name && (
                 <div
-                  className="pt-4 border-t border-slate-200"
+                  className="pt-4 border-t border"
                   data-testid="tx-bank-details"
                 >
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
                     Client Bank Details
                   </p>
-                  <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-sm border border-slate-200">
+                  <div className="grid grid-cols-2 gap-3 p-3 bg-muted/50 rounded-sm border border">
                     <div>
-                      <p className="text-xs text-slate-500">Bank Name</p>
-                      <p className="text-slate-800 text-sm font-medium">
+                      <p className="text-xs text-muted-foreground">Bank Name</p>
+                      <p className="text-foreground text-sm font-medium">
                         {viewTransaction.client_bank_name}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500">Account Holder</p>
-                      <p className="text-slate-800 text-sm font-medium">
+                      <p className="text-xs text-muted-foreground">Account Holder</p>
+                      <p className="text-foreground text-sm font-medium">
                         {viewTransaction.client_bank_account_name}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500">Account Number</p>
-                      <p className="text-slate-800 text-sm font-mono">
+                      <p className="text-xs text-muted-foreground">Account Number</p>
+                      <p className="text-foreground text-sm font-mono">
                         {viewTransaction.client_bank_account_number}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500">SWIFT / IBAN</p>
-                      <p className="text-slate-800 text-sm font-mono">
+                      <p className="text-xs text-muted-foreground">SWIFT / IBAN</p>
+                      <p className="text-foreground text-sm font-mono">
                         {viewTransaction.client_bank_swift_iban || "-"}
                       </p>
                     </div>
                     {viewTransaction.client_bank_currency && (
                       <div>
-                        <p className="text-xs text-slate-500">Currency</p>
-                        <p className="text-slate-800 text-sm font-medium">
+                        <p className="text-xs text-muted-foreground">Currency</p>
+                        <p className="text-foreground text-sm font-medium">
                           {viewTransaction.client_bank_currency}
                         </p>
                       </div>
@@ -3329,23 +3363,23 @@ export default function Transactions() {
               {/* USDT Details */}
               {viewTransaction.client_usdt_address && (
                 <div
-                  className="pt-4 border-t border-slate-200"
+                  className="pt-4 border-t border"
                   data-testid="tx-usdt-details"
                 >
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
                     USDT Details
                   </p>
-                  <div className="grid grid-cols-1 gap-3 p-3 bg-slate-50 rounded-sm border border-slate-200">
+                  <div className="grid grid-cols-1 gap-3 p-3 bg-muted/50 rounded-sm border border">
                     <div>
-                      <p className="text-xs text-slate-500">Wallet Address</p>
-                      <p className="text-slate-800 text-sm font-mono break-all">
+                      <p className="text-xs text-muted-foreground">Wallet Address</p>
+                      <p className="text-foreground text-sm font-mono break-all">
                         {viewTransaction.client_usdt_address}
                       </p>
                     </div>
                     {viewTransaction.client_usdt_network && (
                       <div>
-                        <p className="text-xs text-slate-500">Network</p>
-                        <p className="text-slate-800 text-sm font-medium">
+                        <p className="text-xs text-muted-foreground">Network</p>
+                        <p className="text-foreground text-sm font-medium">
                           {viewTransaction.client_usdt_network}
                         </p>
                       </div>
@@ -3356,21 +3390,21 @@ export default function Transactions() {
               {/* Broker Commission */}
               {viewTransaction.broker_commission_amount > 0 && (
                 <div
-                  className="pt-4 border-t border-slate-200"
+                  className="pt-4 border-t border"
                   data-testid="broker-commission-detail"
                 >
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
                     Broker Commission
                   </p>
-                  <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="grid grid-cols-2 gap-3 p-3 bg-muted/50 rounded-sm border border">
                     <div>
-                      <p className="text-xs text-slate-500">Rate</p>
-                      <p className="text-slate-800 font-mono">
+                      <p className="text-xs text-muted-foreground">Rate</p>
+                      <p className="text-foreground font-mono">
                         {viewTransaction.broker_commission_rate}%
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500">Amount (USD)</p>
+                      <p className="text-xs text-muted-foreground">Amount (USD)</p>
                       <p className="text-yellow-400 font-mono">
                         $
                         {viewTransaction.broker_commission_amount?.toLocaleString()}
@@ -3379,7 +3413,7 @@ export default function Transactions() {
                     {viewTransaction.broker_commission_base_currency !==
                       "USD" && (
                       <div className="col-span-2">
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-muted-foreground">
                           Amount (
                           {viewTransaction.broker_commission_base_currency})
                         </p>
@@ -3393,11 +3427,11 @@ export default function Transactions() {
                 </div>
               )}
               {viewTransaction.description && (
-                <div className="pt-4 border-t border-slate-200">
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                <div className="pt-4 border-t border">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Description
                   </p>
-                  <p className="text-slate-800">
+                  <p className="text-foreground">
                     {viewTransaction.description}
                   </p>
                 </div>
@@ -3405,17 +3439,21 @@ export default function Transactions() {
               {(() => {
                 const imgs = viewTransaction.proof_images?.length
                   ? viewTransaction.proof_images
-                  : viewTransaction.proof_image ? [viewTransaction.proof_image] : [];
+                  : viewTransaction.proof_image
+                    ? [viewTransaction.proof_image]
+                    : [];
                 if (!imgs.length) return null;
                 return (
-                  <div className="pt-4 border-t border-slate-200">
-                    <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">
+                  <div className="pt-4 border-t border">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
                       Client Proof of Payment ({imgs.length})
                     </p>
                     <div className="grid grid-cols-2 gap-2">
                       {imgs.map((url, i) => {
-                        const src = url?.startsWith("http") ? url : `data:image/png;base64,${url}`;
-                         if (url?.toLowerCase().includes('.pdf')) {
+                        const src = url?.startsWith("http")
+                          ? url
+                          : `data:image/png;base64,${url}`;
+                        if (url?.toLowerCase().includes('.pdf')) {
                           return (
                             <a key={i} href={src} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center p-4 rounded border border-red-200 bg-red-50 hover:bg-red-100 cursor-pointer">
                               <FileText className="w-8 h-8 text-red-500 mb-1" />
@@ -3424,9 +3462,13 @@ export default function Transactions() {
                           );
                         }
                         return (
-                          <img key={i} src={src} alt={`Proof ${i+1}`}
-                            className="w-full rounded border border-slate-200 cursor-pointer hover:opacity-80"
-                            onClick={() => window.open(src, "_blank")} />
+                          <img
+                            key={i}
+                            src={src}
+                            alt={`Proof ${i + 1}`}
+                            className="w-full rounded border border cursor-pointer hover:opacity-80"
+                            onClick={() => window.open(src, "_blank")}
+                          />
                         );
                       })}
                     </div>
@@ -3435,12 +3477,12 @@ export default function Transactions() {
               })()}
               {/* Accountant Approval Proof - Thumbnail Preview */}
               {viewTransaction.accountant_proof_image && (
-                <div className="pt-4 border-t border-slate-200">
-                  <p className="text-xs text-blue-600 uppercase tracking-wider mb-2 flex items-center gap-2">
+                <div className="pt-4 border-t border">
+                  <p className="text-xs text-primary uppercase tracking-wider mb-2 flex items-center gap-2">
                     <ImageIcon className="w-4 h-4" />
                     Accountant Approval Proof
                   </p>
-                {viewTransaction.accountant_proof_image?.toLowerCase().includes('.pdf') ? (
+                  {viewTransaction.accountant_proof_image?.toLowerCase().includes('.pdf') ? (
                     <a href={viewTransaction.accountant_proof_image} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center p-6 rounded border border-red-200 bg-red-50 hover:bg-red-100 cursor-pointer">
                       <FileText className="w-10 h-10 text-red-500 mb-2" />
                       <span className="text-sm text-red-600">View PDF</span>
@@ -3456,8 +3498,8 @@ export default function Transactions() {
                           : `data:image/png;base64,${viewTransaction.accountant_proof_image}`
                       }
                       alt="Accountant approval proof"
-                      className="w-full max-h-48 object-contain rounded border border-[#66FCF1]/30 bg-slate-50 cursor-pointer hover:border-[#66FCF1]"
-                      onClick={() =>
+                      className="w-full max-h-48 object-contain rounded border border-[#66FCF1]/30 bg-muted/50 cursor-pointer hover:border-[#66FCF1]"
+                       onClick={() =>
                         window.open(
                           viewTransaction.accountant_proof_image?.startsWith(
                             "http",
@@ -3469,15 +3511,11 @@ export default function Transactions() {
                       }
                       data-testid="accountant-proof-thumbnail"
                     />
-                    {/* <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded">
-                      <span className="text-slate-800 text-sm">
-                        Click to view full size
-                      </span>
-                    </div> */}
+                    
                   </div>
                   )}
                   {viewTransaction.proof_uploaded_at && (
-                    <p className="text-xs text-slate-500 mt-2">
+                    <p className="text-xs text-muted-foreground mt-2">
                       Uploaded: {formatDate(viewTransaction.proof_uploaded_at)}{" "}
                       by {viewTransaction.proof_uploaded_by_name}
                     </p>
@@ -3486,12 +3524,12 @@ export default function Transactions() {
               )}
               {/* Exchanger Proof - For Withdrawals */}
               {viewTransaction.vendor_proof_image && (
-                <div className="pt-4 border-t border-slate-200">
+                <div className="pt-4 border-t border">
                   <p className="text-xs text-orange-400 uppercase tracking-wider mb-2 flex items-center gap-2">
                     <ImageIcon className="w-4 h-4" />
                     Exchanger Payment Proof
                   </p>
-                   {viewTransaction.vendor_proof_image?.toLowerCase().includes('.pdf') ? (
+                  {viewTransaction.vendor_proof_image?.toLowerCase().includes('.pdf') ? (
                     <a href={viewTransaction.vendor_proof_image} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center p-6 rounded border border-red-200 bg-red-50 hover:bg-red-100 cursor-pointer">
                       <FileText className="w-10 h-10 text-red-500 mb-2" />
                       <span className="text-sm text-red-600">View PDF</span>
@@ -3505,7 +3543,7 @@ export default function Transactions() {
                           : `data:image/png;base64,${viewTransaction.vendor_proof_image}`
                       }
                       alt="Exchanger payment proof"
-                      className="w-full max-h-48 object-contain rounded border border-orange-400/30 bg-slate-50 cursor-pointer hover:border-orange-400"
+                      className="w-full max-h-48 object-contain rounded border border-orange-400/30 bg-muted/50 cursor-pointer hover:border-orange-400"
                       onClick={() =>
                         window.open(
                           viewTransaction.vendor_proof_image?.startsWith("http")
@@ -3517,14 +3555,14 @@ export default function Transactions() {
                       data-testid="vendor-proof-thumbnail"
                     />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded">
-                      <span className="text-slate-800 text-sm">
+                      <span className="text-foreground text-sm">
                         Click to view full size
                       </span>
                     </div>
                   </div>
                   )}
                   {viewTransaction.vendor_proof_uploaded_at && (
-                    <p className="text-xs text-slate-500 mt-2">
+                    <p className="text-xs text-muted-foreground mt-2">
                       Uploaded:{" "}
                       {formatDate(viewTransaction.vendor_proof_uploaded_at)} by{" "}
                       {viewTransaction.vendor_proof_uploaded_by_name}
@@ -3533,21 +3571,21 @@ export default function Transactions() {
                 </div>
               )}
               {viewTransaction.rejection_reason && (
-                <div className="pt-4 border-t border-slate-200">
+                <div className="pt-4 border-t border">
                   <p className="text-xs text-red-400 uppercase tracking-wider mb-1">
                     Rejection Reason
                   </p>
-                  <p className="text-slate-800">
+                  <p className="text-foreground">
                     {viewTransaction.rejection_reason}
                   </p>
                 </div>
               )}
               {viewTransaction.processed_at && (
-                <div className="pt-4 border-t border-slate-200">
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                <div className="pt-4 border-t border">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Processed
                   </p>
-                  <p className="text-slate-800 text-sm">
+                  <p className="text-foreground text-sm">
                     {formatDate(viewTransaction.processed_at)} by{" "}
                     {viewTransaction.processed_by_name}
                   </p>
@@ -3557,26 +3595,27 @@ export default function Transactions() {
           )}
         </DialogContent>
       </Dialog>
+
       {/* Edit Destination Dialog */}
       <Dialog open={!!destEditTx} onOpenChange={() => setDestEditTx(null)}>
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-card border text-foreground max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle
-              className="text-xl font-bold uppercase"
-              style={{ fontFamily: "Barlow Condensed" }}
+              className="text-lg font-bold text-foreground"
+              
             >
               Edit Destination
             </DialogTitle>
           </DialogHeader>
           {destEditTx && (
             <div className="space-y-4">
-              <div className="p-3 bg-slate-50 rounded border space-y-1 text-sm">
+              <div className="p-3 bg-muted/50 rounded border space-y-1 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Reference</span>
+                  <span className="text-muted-foreground">Reference</span>
                   <span className="font-mono">{destEditTx.reference}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Type</span>
+                  <span className="text-muted-foreground">Type</span>
                   <Badge
                     className={
                       destEditTx.transaction_type === "deposit"
@@ -3588,11 +3627,11 @@ export default function Transactions() {
                   </Badge>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Client</span>
+                  <span className="text-muted-foreground">Client</span>
                   <span>{destEditTx.client_name}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Amount</span>
+                  <span className="text-muted-foreground">Amount</span>
                   <span className="font-mono font-bold">
                     ${destEditTx.amount?.toLocaleString()}
                   </span>
@@ -3600,7 +3639,7 @@ export default function Transactions() {
                 {destEditTx.base_amount &&
                   destEditTx.base_currency !== "USD" && (
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Base Amount</span>
+                      <span className="text-muted-foreground">Base Amount</span>
                       <span className="font-mono">
                         {destEditTx.base_amount?.toLocaleString()}{" "}
                         {destEditTx.base_currency}
@@ -3610,7 +3649,7 @@ export default function Transactions() {
               </div>
 
               <div>
-                <Label className="text-xs text-slate-500 uppercase">
+                <Label className="text-xs text-muted-foreground uppercase">
                   Destination Type
                 </Label>
                 <Select
@@ -3624,7 +3663,7 @@ export default function Transactions() {
                   }
                 >
                   <SelectTrigger
-                    className="bg-slate-50"
+                    className="bg-muted/50"
                     data-testid="dest-edit-type"
                   >
                     <SelectValue placeholder="Select destination" />
@@ -3641,7 +3680,7 @@ export default function Transactions() {
 
               {destForm.destination_type === "vendor" && (
                 <div>
-                  <Label className="text-xs text-slate-500 uppercase">
+                  <Label className="text-xs text-muted-foreground uppercase">
                     Select Exchanger *
                   </Label>
                   <Select
@@ -3651,7 +3690,7 @@ export default function Transactions() {
                     }
                   >
                     <SelectTrigger
-                      className="bg-slate-50"
+                      className="bg-muted/50"
                       data-testid="dest-edit-vendor"
                     >
                       <SelectValue placeholder="Select exchanger" />
@@ -3679,7 +3718,7 @@ export default function Transactions() {
 
               {destForm.destination_type === "treasury" && (
                 <div>
-                  <Label className="text-xs text-slate-500 uppercase">
+                  <Label className="text-xs text-muted-foreground uppercase">
                     Treasury Account
                   </Label>
                   <Select
@@ -3688,7 +3727,7 @@ export default function Transactions() {
                       setDestForm({ ...destForm, destination_account_id: v })
                     }
                   >
-                    <SelectTrigger className="bg-slate-50">
+                    <SelectTrigger className="bg-muted/50">
                       <SelectValue placeholder="Select account" />
                     </SelectTrigger>
                     <SelectContent>
@@ -3703,7 +3742,7 @@ export default function Transactions() {
               )}
 
               <div>
-                <Label className="text-xs text-slate-500 uppercase">
+                <Label className="text-xs text-muted-foreground uppercase">
                   CRM Reference
                 </Label>
                 <Input
@@ -3711,13 +3750,13 @@ export default function Transactions() {
                   onChange={(e) =>
                     setDestForm({ ...destForm, crm_reference: e.target.value })
                   }
-                  className="bg-slate-50 font-mono"
+                  className="bg-muted/50 font-mono"
                   placeholder="CRM reference"
                 />
               </div>
 
               <div>
-                <Label className="text-xs text-slate-500 uppercase">
+                <Label className="text-xs text-muted-foreground uppercase">
                   Description
                 </Label>
                 <Textarea
@@ -3725,7 +3764,7 @@ export default function Transactions() {
                   onChange={(e) =>
                     setDestForm({ ...destForm, description: e.target.value })
                   }
-                  className="bg-slate-50"
+                  className="bg-muted/50"
                   rows={2}
                 />
               </div>
@@ -3733,7 +3772,7 @@ export default function Transactions() {
               <Button
                 onClick={handleSaveDest}
                 disabled={destSaving}
-                className="w-full bg-blue-600 text-white hover:bg-blue-700"
+                className="w-full bg-primary text-white hover:bg-primary/85"
                 data-testid="dest-edit-save"
               >
                 {destSaving ? "Saving..." : "Save Destination"}
@@ -3742,28 +3781,29 @@ export default function Transactions() {
           )}
         </DialogContent>
       </Dialog>
+
       {/* Edit Fields Dialog (CRM Reference, Amount, Reference, Payment Currency) */}
       <Dialog open={!!fieldEditTx} onOpenChange={() => setFieldEditTx(null)}>
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-card border text-foreground max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle
-              className="text-xl font-bold uppercase"
-              style={{ fontFamily: "Barlow Condensed" }}
+              className="text-lg font-bold text-foreground"
+              
             >
               Edit Transaction
             </DialogTitle>
           </DialogHeader>
           {fieldEditTx && (
             <div className="space-y-4">
-              <div className="p-3 bg-slate-50 rounded border space-y-1 text-sm">
+              <div className="p-3 bg-muted/50 rounded border space-y-1 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Transaction</span>
+                  <span className="text-muted-foreground">Transaction</span>
                   <span className="font-mono">
                     {fieldEditTx.transaction_id}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Type</span>
+                  <span className="text-muted-foreground">Type</span>
                   <Badge
                     className={
                       fieldEditTx.transaction_type === "deposit"
@@ -3775,13 +3815,13 @@ export default function Transactions() {
                   </Badge>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Client</span>
+                  <span className="text-muted-foreground">Client</span>
                   <span>{fieldEditTx.client_name}</span>
                 </div>
               </div>
 
               <div>
-                <Label className="text-xs text-slate-500 uppercase">
+                <Label className="text-xs text-muted-foreground uppercase">
                   CRM Reference
                 </Label>
                 <Input
@@ -3792,13 +3832,13 @@ export default function Transactions() {
                       crm_reference: e.target.value,
                     })
                   }
-                  className="bg-slate-50 font-mono"
+                  className="bg-muted/50 font-mono"
                   placeholder="CRM Reference"
                   data-testid="field-edit-crm"
                 />
               </div>
               <div>
-                <Label className="text-xs text-slate-500 uppercase">
+                <Label className="text-xs text-muted-foreground uppercase">
                   Reference
                 </Label>
                 <Input
@@ -3809,13 +3849,13 @@ export default function Transactions() {
                       reference: e.target.value,
                     })
                   }
-                  className="bg-slate-50 font-mono"
+                  className="bg-muted/50 font-mono"
                   placeholder="Reference"
                   data-testid="field-edit-reference"
                 />
               </div>
               <div>
-                <Label className="text-xs text-slate-500 uppercase">
+                <Label className="text-xs text-muted-foreground uppercase">
                   Transaction Date
                 </Label>
                 <Input
@@ -3827,18 +3867,18 @@ export default function Transactions() {
                       transaction_date: e.target.value,
                     })
                   }
-                  className="bg-slate-50"
+                  className="bg-muted/50"
                   data-testid="field-edit-date"
                 />
               </div>
 
               {/* Payment Currency Section */}
-              <div className="p-3 bg-blue-50 rounded border border-blue-200 space-y-3">
-                <p className="text-xs text-blue-600 uppercase font-bold">
+              <div className="p-3 bg-primary/10 rounded border border-primary/30 space-y-3">
+                <p className="text-xs text-primary uppercase font-bold">
                   Payment Currency
                 </p>
                 <div>
-                  <Label className="text-xs text-slate-500 uppercase">
+                  <Label className="text-xs text-muted-foreground uppercase">
                     Currency
                   </Label>
                   <Select
@@ -3848,7 +3888,7 @@ export default function Transactions() {
                     }
                   >
                     <SelectTrigger
-                      className="bg-white border-slate-200"
+                      className="bg-card border"
                       data-testid="field-edit-base-currency"
                     >
                       <SelectValue />
@@ -3874,7 +3914,7 @@ export default function Transactions() {
                 {fieldEditForm.base_currency !== "USD" ? (
                   <>
                     <div>
-                      <Label className="text-xs text-slate-500 uppercase">
+                      <Label className="text-xs text-muted-foreground uppercase">
                         Amount in {fieldEditForm.base_currency}
                       </Label>
                       <Input
@@ -3884,13 +3924,13 @@ export default function Transactions() {
                         onChange={(e) =>
                           handleFieldEditBaseAmountChange(e.target.value)
                         }
-                        className="bg-white font-mono"
+                        className="bg-card font-mono"
                         placeholder={`0.00 ${fieldEditForm.base_currency}`}
                         data-testid="field-edit-base-amount"
                       />
                     </div>
                     <div>
-                      <Label className="text-xs text-slate-500 uppercase">
+                      <Label className="text-xs text-muted-foreground uppercase">
                         Exchange Rate (1 {fieldEditForm.base_currency} = ? USD)
                       </Label>
                       <Input
@@ -3900,24 +3940,24 @@ export default function Transactions() {
                         onChange={(e) =>
                           handleFieldEditExchangeRateChange(e.target.value)
                         }
-                        className="bg-white font-mono"
+                        className="bg-card font-mono"
                         placeholder="0.0000"
                         data-testid="field-edit-exchange-rate"
                       />
                     </div>
                     <div>
-                      <Label className="text-xs text-slate-500 uppercase">
+                      <Label className="text-xs text-muted-foreground uppercase">
                         Amount in USD (Auto)
                       </Label>
                       <Input
                         type="number"
                         value={fieldEditForm.amount}
                         readOnly
-                        className="bg-slate-100 font-mono text-slate-500"
+                        className="bg-muted font-mono text-muted-foreground"
                       />
                       {fieldEditForm.base_amount &&
                         fieldEditForm.exchange_rate && (
-                          <p className="text-xs text-blue-600 mt-1">
+                          <p className="text-xs text-primary mt-1">
                             {fieldEditForm.base_amount}{" "}
                             {fieldEditForm.base_currency} x{" "}
                             {fieldEditForm.exchange_rate} ={" "}
@@ -3928,7 +3968,7 @@ export default function Transactions() {
                   </>
                 ) : (
                   <div>
-                    <Label className="text-xs text-slate-500 uppercase">
+                    <Label className="text-xs text-muted-foreground uppercase">
                       Amount (USD)
                     </Label>
                     <Input
@@ -3941,7 +3981,7 @@ export default function Transactions() {
                           amount: e.target.value,
                         })
                       }
-                      className="bg-white font-mono"
+                      className="bg-card font-mono"
                       placeholder="0.00"
                       data-testid="field-edit-amount"
                     />
@@ -3961,6 +4001,7 @@ export default function Transactions() {
           )}
         </DialogContent>
       </Dialog>
+
       {/* Bulk Upload Dialog */}
       <Dialog
         open={bulkOpen}
@@ -3972,11 +4013,10 @@ export default function Transactions() {
           }
         }}
       >
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="bg-card border text-foreground max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle
-              className="text-2xl font-bold uppercase tracking-tight"
-              style={{ fontFamily: "Barlow Condensed" }}
+              className="text-lg font-bold text-foreground"
             >
               Bulk Upload Transactions
             </DialogTitle>
@@ -3984,11 +4024,11 @@ export default function Transactions() {
 
           <div className="space-y-4 overflow-y-auto flex-1 pr-1">
             {/* Step 1: Download Template */}
-            <div className="p-4 bg-blue-50 rounded border border-blue-200 space-y-2">
-              <p className="text-sm font-bold text-blue-700 uppercase">
+            <div className="p-4 bg-primary/10 rounded border border-primary/30 space-y-2">
+              <p className="text-sm font-bold text-primary uppercase">
                 Step 1: Download Template
               </p>
-              <p className="text-xs text-blue-600">
+              <p className="text-xs text-primary">
                 Download the template, fill in your transactions, then upload.
               </p>
               <div className="flex gap-2">
@@ -3996,7 +4036,7 @@ export default function Transactions() {
                   size="sm"
                   variant="outline"
                   onClick={() => handleDownloadTemplate("csv")}
-                  className="text-blue-700 border-blue-300"
+                  className="text-primary border-primary/50"
                   data-testid="download-csv-template"
                 >
                   <Download className="w-3 h-3 mr-1" /> CSV Template
@@ -4005,7 +4045,7 @@ export default function Transactions() {
                   size="sm"
                   variant="outline"
                   onClick={() => handleDownloadTemplate("xlsx")}
-                  className="text-blue-700 border-blue-300"
+                  className="text-primary border-primary/50"
                   data-testid="download-xlsx-template"
                 >
                   <Download className="w-3 h-3 mr-1" /> Excel Template
@@ -4014,8 +4054,8 @@ export default function Transactions() {
             </div>
 
             {/* Step 2: Upload File */}
-            <div className="p-4 bg-slate-50 rounded border space-y-2">
-              <p className="text-sm font-bold text-slate-700 uppercase">
+            <div className="p-4 bg-muted/50 rounded border space-y-2">
+              <p className="text-sm font-bold text-card-foreground uppercase">
                 Step 2: Upload File
               </p>
               <div className="flex gap-2 items-center">
@@ -4043,9 +4083,9 @@ export default function Transactions() {
                 </Button>
               </div>
               {bulkFile && (
-                <p className="text-xs text-slate-500">{bulkFile.name}</p>
+                <p className="text-xs text-muted-foreground">{bulkFile.name}</p>
               )}
-              <p className="text-[10px] text-slate-400">
+              <p className="text-[10px] text-muted-foreground">
                 Supported formats: .csv, .xlsx — Apple Numbers users: File &gt;
                 Export To &gt; CSV
               </p>
@@ -4054,7 +4094,7 @@ export default function Transactions() {
             {/* Step 3: Validation Results */}
             {bulkValidation && (
               <div className="space-y-3">
-                <div className="flex items-center gap-4 p-3 rounded border bg-slate-50">
+                <div className="flex items-center gap-4 p-3 rounded border bg-muted/50">
                   <div className="text-sm">
                     <span className="font-bold">
                       {bulkValidation.total_rows}
@@ -4091,7 +4131,7 @@ export default function Transactions() {
                 <div className="border rounded overflow-auto max-h-[300px]">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-slate-100">
+                      <TableRow className="bg-muted">
                         <TableHead className="text-xs w-12">Row</TableHead>
                         <TableHead className="text-xs">Status</TableHead>
                         <TableHead className="text-xs">Client</TableHead>
@@ -4108,7 +4148,7 @@ export default function Transactions() {
                       {bulkValidation.rows.map((r, i) => (
                         <TableRow
                           key={i}
-                          className={r.valid ? "bg-white" : "bg-red-50"}
+                          className={r.valid ? "bg-card" : "bg-red-50"}
                         >
                           <TableCell className="text-xs font-mono">
                             {r.row_number}
@@ -4181,13 +4221,12 @@ export default function Transactions() {
         </DialogContent>
       </Dialog>
 
-
       {/* Manage Tags Dialog */}
       <Dialog open={tagManageOpen} onOpenChange={setTagManageOpen}>
-        <DialogContent className="sm:max-w-md bg-white border border-slate-200">
+        <DialogContent className="sm:max-w-md bg-card border border">
           <DialogHeader>
-            <DialogTitle className="text-slate-800 flex items-center gap-2">
-              <Tag className="w-5 h-5 text-blue-500" /> Manage Client Tags
+            <DialogTitle className="text-foreground flex items-center gap-2">
+              <Tag className="w-5 h-5 text-primary/80" /> Manage Client Tags
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
@@ -4196,7 +4235,7 @@ export default function Transactions() {
                 placeholder="New tag name..."
                 value={newTagName}
                 onChange={(e) => setNewTagName(e.target.value)}
-                className="flex-1 bg-slate-50 border-slate-200 text-slate-800"
+                className="flex-1 bg-muted/50 border text-foreground"
                 data-testid="new-tag-name"
                 onKeyDown={(e) => e.key === "Enter" && handleCreateTag()}
               />
@@ -4204,13 +4243,13 @@ export default function Transactions() {
                 type="color"
                 value={newTagColor}
                 onChange={(e) => setNewTagColor(e.target.value)}
-                className="w-9 h-9 rounded cursor-pointer border border-slate-200"
+                className="w-9 h-9 rounded cursor-pointer border border"
                 data-testid="new-tag-color"
               />
               <Button
                 onClick={handleCreateTag}
                 size="sm"
-                className="bg-blue-600 text-white hover:bg-blue-700"
+                className="bg-primary text-white hover:bg-primary/85"
                 data-testid="create-tag-btn"
               >
                 <Plus className="w-4 h-4" />
@@ -4218,21 +4257,21 @@ export default function Transactions() {
             </div>
             <div className="space-y-1.5 max-h-[300px] overflow-y-auto">
               {clientTags.length === 0 ? (
-                <p className="text-sm text-slate-400 text-center py-4">
+                <p className="text-sm text-muted-foreground text-center py-4">
                   No tags yet. Create one above.
                 </p>
               ) : (
                 clientTags.map((tag) => (
                   <div
                     key={tag.tag_id}
-                    className="flex items-center justify-between p-2 rounded-sm hover:bg-slate-50 border border-slate-100"
+                    className="flex items-center justify-between p-2 rounded-sm hover:bg-muted/50 border border/60"
                   >
                     <div className="flex items-center gap-2">
                       <span
                         className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: tag.color }}
                       />
-                      <span className="text-sm text-slate-700 font-medium">
+                      <span className="text-sm text-card-foreground font-medium">
                         {tag.name}
                       </span>
                     </div>
@@ -4282,7 +4321,7 @@ export default function Transactions() {
                       onClick={() =>
                         setTagEditTags(tagEditTags.filter((t) => t !== tag))
                       }
-                      className="hover:bg-white/20 rounded-full w-4 h-4 flex items-center justify-center text-[10px]"
+                      className="hover:bg-card/20 rounded-full w-4 h-4 flex items-center justify-center text-[10px]"
                     >
                       &times;
                     </button>
@@ -4290,7 +4329,7 @@ export default function Transactions() {
                 );
               })}
               {tagEditTags.length === 0 && (
-                <span className="text-sm text-slate-400">No tags assigned</span>
+                <span className="text-sm text-muted-foreground">No tags assigned</span>
               )}
             </div>
             <Select
@@ -4299,7 +4338,10 @@ export default function Transactions() {
                   setTagEditTags([...tagEditTags, val]);
               }}
             >
-              <SelectTrigger className="h-9 text-sm">
+              <SelectTrigger
+                className="h-9 text-sm"
+                data-testid="tag-edit-select"
+              >
                 <SelectValue placeholder="Add a tag..." />
               </SelectTrigger>
               <SelectContent>
@@ -4329,6 +4371,7 @@ export default function Transactions() {
                 variant="outline"
                 size="sm"
                 onClick={() => setTagEditTx(null)}
+                data-testid="tag-edit-cancel"
               >
                 Cancel
               </Button>
@@ -4336,6 +4379,7 @@ export default function Transactions() {
                 size="sm"
                 onClick={handleSaveTagEdit}
                 disabled={tagEditSaving}
+                data-testid="tag-edit-save"
               >
                 {tagEditSaving ? "Saving..." : "Save Tags"}
               </Button>

@@ -168,8 +168,9 @@ export default function Exchangers() {
           setTotalItems(Array.isArray(data) ? data.length : 0);
         }
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      console.error('Error fetching vendors:', error);
+      toast.error('Failed to load vendors');
     } finally {
       setLoading(false);
     }
@@ -265,8 +266,9 @@ export default function Exchangers() {
         fetchExchangerTransactions(vendor.vendor_id),
         fetchExchangerSettlements(vendor.vendor_id)
       ]);
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      console.error('Error loading exchanger data:', error);
+      toast.error('Error loading exchanger data');
     } finally {
       setDetailLoading(false);
     }
@@ -280,10 +282,10 @@ export default function Exchangers() {
       if (response.ok) {
         setStatementData(await response.json());
       } else {
-        toast.error(await getApiError(response));
+        toast.error('Failed to load settlement statement');
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error('Error loading statement');
     } finally {
       setStatementLoading(false);
     }
@@ -382,8 +384,8 @@ export default function Exchangers() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || 'Something went wrong. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -403,8 +405,8 @@ export default function Exchangers() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || 'Something went wrong. Please try again.');
     }
   };
 
@@ -523,8 +525,8 @@ export default function Exchangers() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || 'Something went wrong. Please try again.');
     }
   };
 
@@ -563,7 +565,7 @@ export default function Exchangers() {
     const styles = {
       active: 'status-approved',
       inactive: 'status-rejected',
-      archived: 'bg-slate-100 text-slate-500 border border-slate-200',
+      archived: 'bg-muted text-muted-foreground border border',
       pending: 'status-pending',
       approved: 'status-approved',
       completed: 'status-approved',
@@ -591,23 +593,23 @@ export default function Exchangers() {
       <div className="space-y-6 animate-fade-in" data-testid="exchanger-detail-page">
         {/* Back button + Header */}
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => { setViewExchanger(null); setPendingTransactions([]); setSettlements([]); }} className="text-slate-500 hover:text-slate-800 h-8 w-8 p-0" data-testid="back-to-exchangers">
+          <Button variant="ghost" size="sm" onClick={() => { setViewExchanger(null); setPendingTransactions([]); setSettlements([]); }} className="text-muted-foreground hover:text-foreground h-8 w-8 p-0" data-testid="back-to-exchangers">
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <Store className="w-6 h-6 text-blue-600" />
-          <h1 className="text-4xl font-bold uppercase tracking-tight text-slate-800" style={{ fontFamily: 'Barlow Condensed' }}>
+          <Store className="w-6 h-6 text-primary" />
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
             {viewExchanger?.vendor_name}
           </h1>
-          {detailLoading && <RefreshCw className="w-4 h-4 animate-spin text-blue-500" />}
+          {detailLoading && <RefreshCw className="w-4 h-4 animate-spin text-primary/80" />}
         </div>
 
         {/* Archived banner */}
         {viewExchanger.status === 'archived' && (
-          <div className="flex items-center gap-3 p-3 bg-slate-100 border border-slate-200 rounded-sm text-slate-500 text-sm">
+          <div className="flex items-center gap-3 p-3 bg-muted border border rounded-sm text-muted-foreground text-sm">
             <Archive className="w-4 h-4 shrink-0" />
             <span>This exchanger is <strong>archived</strong> — excluded from reports and daily emails. New transactions are blocked.</span>
             {isAccountantOrAdmin && (
-              <Button size="sm" variant="outline" className="ml-auto text-blue-600 border-blue-200 hover:bg-blue-50" onClick={() => handleUnarchive(viewExchanger)}>
+              <Button size="sm" variant="outline" className="ml-auto text-primary border-primary/30 hover:bg-primary/10" onClick={() => handleUnarchive(viewExchanger)}>
                 <ArchiveRestore className="w-3.5 h-3.5 mr-1" /> Restore
               </Button>
             )}
@@ -615,36 +617,36 @@ export default function Exchangers() {
         )}
 
         {/* Exchanger Info */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 p-4 bg-slate-50 rounded-sm">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 p-4 bg-muted/50 rounded-sm">
           <div>
-            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Money In (Bank)</p>
-            <p className="text-xl font-mono text-slate-800">{viewExchanger.deposit_commission || 0}%</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Money In (Bank)</p>
+            <p className="text-xl font-mono text-foreground">{viewExchanger.deposit_commission || 0}%</p>
           </div>
           <div>
-            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Money In (Cash)</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Money In (Cash)</p>
             <p className="text-xl font-mono text-amber-600">{viewExchanger.deposit_commission_cash || 0}%</p>
           </div>
           <div>
-            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Money Out (Bank)</p>
-            <p className="text-xl font-mono text-slate-800">{viewExchanger.withdrawal_commission || 0}%</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Money Out (Bank)</p>
+            <p className="text-xl font-mono text-foreground">{viewExchanger.withdrawal_commission || 0}%</p>
           </div>
           <div>
-            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Money Out (Cash)</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Money Out (Cash)</p>
             <p className="text-xl font-mono text-amber-600">{viewExchanger.withdrawal_commission_cash || 0}%</p>
           </div>
           <div>
-            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Dealing Currency</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Dealing Currency</p>
             {viewExchanger.dealing_currency ? (
               <Badge className="bg-indigo-100 text-indigo-700 border border-indigo-200 text-sm font-mono flex items-center gap-1 w-fit mt-1">
                 <Coins className="w-3.5 h-3.5" />{viewExchanger.dealing_currency}
               </Badge>
             ) : (
-              <p className="text-sm text-slate-400">All currencies</p>
+              <p className="text-sm text-muted-foreground">All currencies</p>
             )}
           </div>
         </div>
-              <div className="p-4 bg-slate-50 rounded-sm border-l-4 border-l-[#1FA21B]">
-                <p className="text-xs text-blue-600 uppercase tracking-wider mb-3">Settlement Balance (Money In - Money Out - Commission)</p>
+              <div className="p-4 bg-muted/50 rounded-sm border-l-4 border-l-[#66FCF1]">
+                <p className="text-xs text-primary uppercase tracking-wider mb-3">Settlement Balance (Money In - Money Out - Commission)</p>
                 {viewExchanger.settlement_by_currency && viewExchanger.settlement_by_currency.length > 0 ? (
                   <div className="space-y-3">
                     {viewExchanger.settlement_by_currency.map((item, idx) => (
@@ -653,20 +655,20 @@ export default function Exchangers() {
                           <div className="flex items-center gap-2">
                             <Badge className={`${
                               item.currency === 'USD' ? 'bg-green-500/20 text-green-400' :
-                              item.currency === 'EUR' ? 'bg-blue-500/20 text-blue-400' :
+                              item.currency === 'EUR' ? 'bg-primary/80/20 text-primary/60' :
                               item.currency === 'AED' ? 'bg-purple-500/20 text-purple-400' :
                               item.currency === 'GBP' ? 'bg-yellow-500/20 text-yellow-400' :
                               item.currency === 'INR' ? 'bg-orange-500/20 text-orange-400' :
-                              'bg-gray-500/20 text-gray-400'
+                              'bg-gray-500/20 text-muted-foreground'
                             }`}>
                               {item.currency}
                             </Badge>
                           </div>
-                          <span className={`text-2xl font-bold font-mono ${item.amount >= 0 ? 'text-blue-600' : 'text-red-400'}`}>
+                          <span className={`text-2xl font-bold font-mono ${item.amount >= 0 ? 'text-primary' : 'text-red-400'}`}>
                             {item.amount >= 0 ? '+' : ''}{item.amount?.toLocaleString()}
                           </span>
                         </div>
-                        <div className="flex justify-between text-xs text-slate-500 pl-2">
+                        <div className="flex justify-between text-xs text-muted-foreground pl-2">
                           <span className="text-green-400">+{item.deposit_amount?.toLocaleString()} deposits ({item.deposit_count})</span>
                           <span className="text-red-400">-{item.withdrawal_amount?.toLocaleString()} withdrawals ({item.withdrawal_count})</span>
                         </div>
@@ -679,7 +681,7 @@ export default function Exchangers() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-slate-500">No pending settlement</p>
+                  <p className="text-muted-foreground">No pending settlement</p>
                 )}
               </div>
 
@@ -697,17 +699,17 @@ export default function Exchangers() {
 
               {/* Tabs */}
               <Tabs defaultValue="transactions" className="w-full">
-                <TabsList className="bg-slate-50 border border-slate-200">
-                  <TabsTrigger value="transactions" className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10]">
+                <TabsList className="bg-muted/50 border border">
+                  <TabsTrigger value="transactions" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
                     Transactions ({pendingTransactions.length})
                   </TabsTrigger>
-                  <TabsTrigger value="history" className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10]">
+                  <TabsTrigger value="history" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
                     Settlement History
                   </TabsTrigger>
-                  <TabsTrigger value="ie" className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10]">
+                  <TabsTrigger value="ie" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
                     Income/Expenses ({vendorIeEntries.length})
                   </TabsTrigger>
-                  <TabsTrigger value="loans" className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10]">
+                  <TabsTrigger value="loans" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
                     Loan Transactions ({vendorLoanTxs.length})
                   </TabsTrigger>
                 </TabsList>
@@ -715,22 +717,22 @@ export default function Exchangers() {
                 <TabsContent value="transactions" className="mt-4">
                   <ScrollArea className="h-[500px]">
                     {pendingTransactions.length === 0 ? (
-                      <div className="text-center py-8 text-slate-500">
+                      <div className="text-center py-8 text-muted-foreground">
                         No transactions
                       </div>
                     ) : (
                       <Table>
                         <TableHeader>
-                          <TableRow className="border-slate-200 hover:bg-transparent">
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reference</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Type</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Client</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Amount</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Currency</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Commission</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Mode</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Settled</TableHead>
+                          <TableRow className="border hover:bg-transparent">
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Reference</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Type</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Client</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Amount</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Currency</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Commission</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Mode</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Status</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Settled</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -738,38 +740,38 @@ export default function Exchangers() {
                             const displayCurrency = tx.base_currency || tx.currency || 'USD';
                             const displayAmount = tx.base_amount || tx.amount;
                             return (
-                            <TableRow key={tx.transaction_id} className="border-slate-200 hover:bg-slate-100">
-                              <TableCell className="font-mono text-slate-800">
+                            <TableRow key={tx.transaction_id} className="border hover:bg-muted">
+                              <TableCell className="font-mono text-foreground">
                               <div className="flex items-center gap-1">
                                 {tx.reference}
                                 {(tx.proof_images?.length || tx.proof_image) && (
-                                  <button onClick={() => { const imgs = tx.proof_images?.length ? tx.proof_images : [tx.proof_image]; setProofGallery({ images: imgs, label: tx.reference }); }} className="text-blue-500 hover:text-blue-700" title="View proof images">
+                                  <button onClick={() => { const imgs = tx.proof_images?.length ? tx.proof_images : [tx.proof_image]; setProofGallery({ images: imgs, label: tx.reference }); }} className="text-primary/80 hover:text-primary" title="View proof images">
                                     <ImageIcon className="w-3 h-3" />
                                   </button>
                                 )}
                               </div>
-                              </TableCell>
+                            </TableCell>
                               <TableCell>
                                 <span className={`flex items-center gap-1 ${tx.transaction_type === 'deposit' ? 'text-green-400' : 'text-red-400'}`}>
                                   {tx.transaction_type === 'deposit' ? <ArrowDownRight className="w-3 h-3" /> : <ArrowUpRight className="w-3 h-3" />}
                                   {tx.transaction_type}
                                 </span>
                               </TableCell>
-                              <TableCell className="text-slate-800">{tx.client_name}</TableCell>
-                              <TableCell className="font-mono text-slate-800">
+                              <TableCell className="text-foreground">{tx.client_name}</TableCell>
+                              <TableCell className="font-mono text-foreground">
                                 {displayAmount?.toLocaleString()}
                                 {tx.base_currency && tx.base_currency !== tx.currency && (
-                                  <span className="text-xs text-slate-500 block">(${tx.amount?.toLocaleString()} USD)</span>
+                                  <span className="text-xs text-muted-foreground block">(${tx.amount?.toLocaleString()} USD)</span>
                                 )}
                               </TableCell>
                               <TableCell>
                                 <Badge className={`${
                                   displayCurrency === 'USD' ? 'bg-green-500/20 text-green-400' :
-                                  displayCurrency === 'EUR' ? 'bg-blue-500/20 text-blue-400' :
+                                  displayCurrency === 'EUR' ? 'bg-primary/80/20 text-primary/60' :
                                   displayCurrency === 'AED' ? 'bg-purple-500/20 text-purple-400' :
                                   displayCurrency === 'GBP' ? 'bg-yellow-500/20 text-yellow-400' :
                                   displayCurrency === 'INR' ? 'bg-orange-500/20 text-orange-400' :
-                                  'bg-gray-500/20 text-gray-400'
+                                  'bg-gray-500/20 text-muted-foreground'
                                 }`}>
                                   {displayCurrency}
                                 </Badge>
@@ -780,17 +782,17 @@ export default function Exchangers() {
                                     <span>{tx.vendor_commission_base_amount?.toLocaleString()} {tx.vendor_commission_base_currency || tx.base_currency || 'USD'}</span>
                                   </div>
                                 ) : (
-                                  <span className="text-slate-500 text-xs">-</span>
+                                  <span className="text-muted-foreground text-xs">-</span>
                                 )}
                               </TableCell>
                               <TableCell>
-                                <Badge className={tx.transaction_mode === 'cash' ? 'bg-amber-100 text-amber-700 text-[10px]' : 'bg-blue-100 text-blue-700 text-[10px]'}>
+                                <Badge className={tx.transaction_mode === 'cash' ? 'bg-amber-100 text-amber-700 text-[10px]' : 'bg-primary/15 text-primary text-[10px]'}>
                                   {tx.transaction_mode === 'cash' ? 'Cash' : 'Bank'}
                                 </Badge>
                                 {tx.transaction_mode === 'cash' && tx.collecting_person_name && (
-                                  <div className="text-[10px] text-slate-600 mt-0.5 space-y-0.5">
+                                  <div className="text-[10px] text-card-foreground mt-0.5 space-y-0.5">
                                     <p className="font-medium">{tx.collecting_person_name}</p>
-                                    {tx.collecting_person_number && <p className="text-slate-500">{tx.collecting_person_number}</p>}
+                                    {tx.collecting_person_number && <p className="text-muted-foreground">{tx.collecting_person_number}</p>}
                                   </div>
                                 )}
                               </TableCell>
@@ -813,32 +815,32 @@ export default function Exchangers() {
                 <TabsContent value="history" className="mt-4">
                   <ScrollArea className="h-[500px]">
                     {settlements.length === 0 ? (
-                      <div className="text-center py-8 text-slate-500">
+                      <div className="text-center py-8 text-muted-foreground">
                         No settlement history
                       </div>
                     ) : (
                       <Table>
                         <TableHeader>
-                          <TableRow className="border-slate-200 hover:bg-transparent">
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">ID</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Type</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Gross</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Deductions</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Settled</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Date</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
+                          <TableRow className="border hover:bg-transparent">
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">ID</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Type</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Gross</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Deductions</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Settled</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Date</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {settlements.map((settlement) => (
-                            <TableRow key={settlement.settlement_id} className="border-slate-200 hover:bg-slate-100">
-                              <TableCell className="font-mono text-slate-800 text-xs">{settlement.settlement_id}</TableCell>
+                            <TableRow key={settlement.settlement_id} className="border hover:bg-muted">
+                              <TableCell className="font-mono text-foreground text-xs">{settlement.settlement_id}</TableCell>
                               <TableCell>
-                                <Badge className={settlement.settlement_type === 'bank' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'}>
+                                <Badge className={settlement.settlement_type === 'bank' ? 'bg-primary/80/20 text-primary/60' : 'bg-purple-500/20 text-purple-400'}>
                                   {settlement.settlement_type}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="font-mono text-slate-800">
+                              <TableCell className="font-mono text-foreground">
                                 {settlement.source_currency && settlement.source_currency !== 'USD'
                                   ? `${settlement.source_currency} ${settlement.gross_amount?.toLocaleString()}`
                                   : `$${settlement.gross_amount?.toLocaleString()}`}
@@ -858,13 +860,13 @@ export default function Exchangers() {
                                   <span>${settlement.settlement_amount?.toLocaleString()}</span>
                                 )}
                               </TableCell>
-                              <TableCell className="text-slate-500">{formatDate(settlement.settled_at)}</TableCell>
+                              <TableCell className="text-muted-foreground">{formatDate(settlement.settled_at)}</TableCell>
                               <TableCell className="text-right">
                                 <Button
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => openStatement(settlement.settlement_id)}
-                                  className="text-blue-600 hover:bg-blue-100 h-7 px-2"
+                                  className="text-primary hover:bg-primary/15 h-7 px-2"
                                   data-testid={`view-statement-${settlement.settlement_id}`}
                                 >
                                   <FileText className="w-3.5 h-3.5 mr-1" />
@@ -882,58 +884,58 @@ export default function Exchangers() {
                 <TabsContent value="ie" className="mt-4">
                   <ScrollArea className="h-[500px]">
                     {vendorIeEntries.length === 0 ? (
-                      <div className="text-center py-8 text-slate-500">
+                      <div className="text-center py-8 text-muted-foreground">
                         <p>No income/expense entries for this exchanger</p>
                       </div>
                     ) : (
                       <Table>
                         <TableHeader>
-                          <TableRow className="border-slate-200">
-                            <TableHead className="text-slate-500 text-xs uppercase">Reference</TableHead>
-                            <TableHead className="text-slate-500 text-xs uppercase">Type</TableHead>
-                            <TableHead className="text-slate-500 text-xs uppercase">Category</TableHead>
-                            <TableHead className="text-slate-500 text-xs uppercase">Amount</TableHead>
-                            <TableHead className="text-slate-500 text-xs uppercase">Currency</TableHead>
-                            <TableHead className="text-slate-500 text-xs uppercase">Commission</TableHead>
-                            <TableHead className="text-slate-500 text-xs uppercase">Mode</TableHead>
-                            <TableHead className="text-slate-500 text-xs uppercase">Status</TableHead>
-                            <TableHead className="text-slate-500 text-xs uppercase">Date</TableHead>
+                          <TableRow className="border">
+                            <TableHead className="text-muted-foreground text-xs uppercase">Reference</TableHead>
+                            <TableHead className="text-muted-foreground text-xs uppercase">Type</TableHead>
+                            <TableHead className="text-muted-foreground text-xs uppercase">Category</TableHead>
+                            <TableHead className="text-muted-foreground text-xs uppercase">Amount</TableHead>
+                            <TableHead className="text-muted-foreground text-xs uppercase">Currency</TableHead>
+                            <TableHead className="text-muted-foreground text-xs uppercase">Commission</TableHead>
+                            <TableHead className="text-muted-foreground text-xs uppercase">Mode</TableHead>
+                            <TableHead className="text-muted-foreground text-xs uppercase">Status</TableHead>
+                            <TableHead className="text-muted-foreground text-xs uppercase">Date</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {vendorIeEntries.map((entry) => {
                             const isIncome = entry.entry_type === 'income';
                             return (
-                              <TableRow key={entry.entry_id} className="border-slate-200 hover:bg-slate-50">
-                                <TableCell className="font-mono text-xs text-slate-800">{entry.entry_id?.slice(-10)?.toUpperCase()}</TableCell>
+                              <TableRow key={entry.entry_id} className="border hover:bg-muted/50">
+                                <TableCell className="font-mono text-xs text-foreground">{entry.entry_id?.slice(-10)?.toUpperCase()}</TableCell>
                                 <TableCell>
                                   <span className={`flex items-center gap-1 text-xs ${isIncome ? 'text-green-600' : 'text-red-500'}`}>
                                     {isIncome ? <ArrowDownRight className="w-3 h-3" /> : <ArrowUpRight className="w-3 h-3" />}
                                     {isIncome ? 'Income' : 'Expense'}
                                   </span>
                                 </TableCell>
-                                <TableCell className="text-slate-600 text-xs capitalize">{entry.category?.replace('_', ' ') || '-'}</TableCell>
+                                <TableCell className="text-card-foreground text-xs capitalize">{entry.category?.replace('_', ' ') || '-'}</TableCell>
                                 <TableCell className={`font-mono text-xs ${isIncome ? 'text-green-600' : 'text-red-500'}`}>
                                   {isIncome ? '+' : '-'}{entry.amount?.toLocaleString()}
                                 </TableCell>
                                 <TableCell>
-                                  <Badge className="text-[10px] bg-slate-100 text-slate-600">{entry.currency || 'USD'}</Badge>
+                                  <Badge className="text-[10px] bg-muted text-card-foreground">{entry.currency || 'USD'}</Badge>
                                 </TableCell>
                                 <TableCell>
                                   {entry.vendor_commission_base_amount ? (
                                     <span className="font-mono text-xs text-yellow-600">
                                       {entry.vendor_commission_base_amount?.toLocaleString()} {entry.vendor_commission_base_currency || entry.base_currency || entry.currency}
                                     </span>
-                                  ) : <span className="text-slate-400 text-xs">-</span>}
+                                  ) : <span className="text-muted-foreground text-xs">-</span>}
                                 </TableCell>
                                 <TableCell>
-                                  <Badge className={entry.transaction_mode === 'cash' ? 'bg-amber-100 text-amber-700 text-[10px]' : 'bg-blue-100 text-blue-700 text-[10px]'}>
+                                  <Badge className={entry.transaction_mode === 'cash' ? 'bg-amber-100 text-amber-700 text-[10px]' : 'bg-primary/15 text-primary text-[10px]'}>
                                     {entry.transaction_mode === 'cash' ? 'Cash' : 'Bank'}
                                   </Badge>
                                   {entry.transaction_mode === 'cash' && entry.collecting_person_name && (
-                                    <div className="text-[10px] text-slate-600 mt-0.5 space-y-0.5">
+                                    <div className="text-[10px] text-card-foreground mt-0.5 space-y-0.5">
                                       <p className="font-medium">{entry.collecting_person_name}</p>
-                                      {entry.collecting_person_number && <p className="text-slate-500">{entry.collecting_person_number}</p>}
+                                      {entry.collecting_person_number && <p className="text-muted-foreground">{entry.collecting_person_number}</p>}
                                     </div>
                                   )}
                                 </TableCell>
@@ -941,9 +943,9 @@ export default function Exchangers() {
                                   {entry.status === 'pending_vendor' && <Badge className="bg-amber-100 text-amber-700 text-[10px]">Pending</Badge>}
                                   {entry.status === 'completed' && <Badge className="bg-green-100 text-green-700 text-[10px]">Completed</Badge>}
                                   {entry.status === 'rejected' && <Badge className="bg-red-100 text-red-700 text-[10px]">Rejected</Badge>}
-                                  {entry.status === 'active' && <Badge className="bg-blue-100 text-blue-700 text-[10px]">Active</Badge>}
+                                  {entry.status === 'active' && <Badge className="bg-primary/15 text-primary text-[10px]">Active</Badge>}
                                 </TableCell>
-                                <TableCell className="text-slate-500 text-xs">
+                                <TableCell className="text-muted-foreground text-xs">
                                   {entry.date ? new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}
                                 </TableCell>
                               </TableRow>
@@ -959,20 +961,20 @@ export default function Exchangers() {
                 <TabsContent value="loans" className="mt-4">
                   <ScrollArea className="h-[500px]">
                     {vendorLoanTxs.length === 0 ? (
-                      <div className="text-center py-8 text-slate-500">
+                      <div className="text-center py-8 text-muted-foreground">
                         No loan transactions involving this exchanger
                       </div>
                     ) : (
                       <Table>
                         <TableHeader>
-                          <TableRow className="border-slate-200 hover:bg-transparent">
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Reference</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Type</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Borrower</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Amount</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Currency</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Status</TableHead>
-                            <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">Date</TableHead>
+                          <TableRow className="border hover:bg-transparent">
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Reference</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Type</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Borrower</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Amount</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Currency</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Status</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Date</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -980,15 +982,15 @@ export default function Exchangers() {
                             const isDisbursement = tx.transaction_type === 'disbursement';
                             const isVendorSource = tx.source_vendor_id === viewExchanger?.vendor_id;
                             return (
-                              <TableRow key={tx.transaction_id} className="border-slate-200 hover:bg-slate-100">
-                                <TableCell className="font-mono text-slate-800 text-xs">{tx.transaction_id?.slice(-12).toUpperCase()}</TableCell>
+                              <TableRow key={tx.transaction_id} className="border hover:bg-muted">
+                                <TableCell className="font-mono text-foreground text-xs">{tx.transaction_id?.slice(-12).toUpperCase()}</TableCell>
                                 <TableCell>
                                   <span className={`flex items-center gap-1 ${isVendorSource ? 'text-red-400' : 'text-green-400'}`}>
                                     {isVendorSource ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
                                     <span className="text-xs font-medium">{isVendorSource ? 'OUT (Disbursement)' : 'IN (Repayment)'}</span>
                                   </span>
                                 </TableCell>
-                                <TableCell className="text-slate-800 text-sm">{tx.borrower_name || '-'}</TableCell>
+                                <TableCell className="text-foreground text-sm">{tx.borrower_name || '-'}</TableCell>
                                 <TableCell className={`font-mono ${isVendorSource ? 'text-red-400' : 'text-green-400'}`}>
                                   {isVendorSource ? '-' : '+'}{tx.amount?.toLocaleString()}
                                 </TableCell>
@@ -1000,12 +1002,12 @@ export default function Exchangers() {
                                     tx.status === 'pending_vendor' ? 'bg-amber-100 text-amber-700 text-[10px]' :
                                     tx.status === 'completed' ? 'bg-green-100 text-green-700 text-[10px]' :
                                     tx.status === 'rejected' ? 'bg-red-100 text-red-700 text-[10px]' :
-                                    'bg-slate-100 text-slate-600 text-[10px]'
+                                    'bg-muted text-card-foreground text-[10px]'
                                   }>
                                     {tx.status === 'pending_vendor' ? 'Pending' : tx.status}
                                   </Badge>
                                 </TableCell>
-                                <TableCell className="text-slate-500 text-xs">
+                                <TableCell className="text-muted-foreground text-xs">
                                   {tx.created_at ? new Date(tx.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}
                                 </TableCell>
                               </TableRow>
@@ -1022,35 +1024,35 @@ export default function Exchangers() {
     <div className="space-y-6 animate-fade-in" data-testid="vendors-page">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-bold uppercase tracking-tight text-slate-800" style={{ fontFamily: 'Barlow Condensed' }}>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
             Exchangers
           </h1>
-          <p className="text-slate-500">Manage exchangers, commissions, and settlements</p>
+          <p className="text-muted-foreground">Manage exchangers, commissions, and settlements</p>
         </div>
         {isAccountantOrAdmin && (
           <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
               <Button
-                className="bg-[#1FA21B] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan"
+                className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan"
                 data-testid="add-vendor-btn"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Add Exchanger
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogContent className="bg-card border text-foreground max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
+                <DialogTitle className="text-lg font-bold text-foreground">
                   {selectedExchanger ? 'Edit Exchanger' : 'Add New Exchanger'}
                 </DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Exchanger Name *</Label>
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">Exchanger Name *</Label>
                   <Input
                     value={formData.vendor_name}
                     onChange={(e) => setFormData({ ...formData, vendor_name: e.target.value })}
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B]"
+                    className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
                     placeholder="e.g., MoneyExchange Pro"
                     data-testid="vendor-name"
                     required
@@ -1060,24 +1062,24 @@ export default function Exchangers() {
                 {!selectedExchanger && (
                   <>
                     <div className="space-y-2">
-                      <Label className="text-slate-500 text-xs uppercase tracking-wider">Email (Login) *</Label>
+                      <Label className="text-muted-foreground text-xs uppercase tracking-wider">Email (Login) *</Label>
                       <Input
                         type="email"
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B]"
+                        className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
                         placeholder="vendor@example.com"
                         data-testid="vendor-email"
                         required
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-slate-500 text-xs uppercase tracking-wider">Password *</Label>
+                      <Label className="text-muted-foreground text-xs uppercase tracking-wider">Password *</Label>
                       <Input
                         type="password"
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B]"
+                        className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
                         placeholder="Min 6 characters"
                         data-testid="vendor-password"
                         required
@@ -1087,70 +1089,70 @@ export default function Exchangers() {
                 )}
                 
                 <div className="space-y-3">
-                  <p className="text-slate-500 text-xs uppercase tracking-wider font-semibold">Commission Rates (%)</p>
+                  <p className="text-muted-foreground text-xs uppercase tracking-wider font-semibold">Commission Rates (%)</p>
                   <div className="grid grid-cols-3 gap-2 items-center">
                     <div></div>
-                    <Label className="text-center text-xs text-blue-600 uppercase">Bank</Label>
+                    <Label className="text-center text-xs text-primary uppercase">Bank</Label>
                     <Label className="text-center text-xs text-amber-600 uppercase">Cash</Label>
                   </div>
                   <div className="grid grid-cols-3 gap-2 items-center">
-                    <Label className="text-slate-500 text-xs uppercase">Money In</Label>
-                    <Input type="number" step="0.01" value={formData.deposit_commission} onChange={(e) => setFormData({ ...formData, deposit_commission: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 font-mono" placeholder="0" data-testid="vendor-deposit-commission" />
-                    <Input type="number" step="0.01" value={formData.deposit_commission_cash} onChange={(e) => setFormData({ ...formData, deposit_commission_cash: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 font-mono" placeholder="0" data-testid="vendor-deposit-commission-cash" />
+                    <Label className="text-muted-foreground text-xs uppercase">Money In</Label>
+                    <Input type="number" step="0.01" value={formData.deposit_commission} onChange={(e) => setFormData({ ...formData, deposit_commission: e.target.value })} className="bg-muted/50 border text-foreground font-mono" placeholder="0" data-testid="vendor-deposit-commission" />
+                    <Input type="number" step="0.01" value={formData.deposit_commission_cash} onChange={(e) => setFormData({ ...formData, deposit_commission_cash: e.target.value })} className="bg-muted/50 border text-foreground font-mono" placeholder="0" data-testid="vendor-deposit-commission-cash" />
                   </div>
                   <div className="grid grid-cols-3 gap-2 items-center">
-                    <Label className="text-slate-500 text-xs uppercase">Money Out</Label>
-                    <Input type="number" step="0.01" value={formData.withdrawal_commission} onChange={(e) => setFormData({ ...formData, withdrawal_commission: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 font-mono" placeholder="0" data-testid="vendor-withdrawal-commission" />
-                    <Input type="number" step="0.01" value={formData.withdrawal_commission_cash} onChange={(e) => setFormData({ ...formData, withdrawal_commission_cash: e.target.value })} className="bg-slate-50 border-slate-200 text-slate-800 font-mono" placeholder="0" data-testid="vendor-withdrawal-commission-cash" />
+                    <Label className="text-muted-foreground text-xs uppercase">Money Out</Label>
+                    <Input type="number" step="0.01" value={formData.withdrawal_commission} onChange={(e) => setFormData({ ...formData, withdrawal_commission: e.target.value })} className="bg-muted/50 border text-foreground font-mono" placeholder="0" data-testid="vendor-withdrawal-commission" />
+                    <Input type="number" step="0.01" value={formData.withdrawal_commission_cash} onChange={(e) => setFormData({ ...formData, withdrawal_commission_cash: e.target.value })} className="bg-muted/50 border text-foreground font-mono" placeholder="0" data-testid="vendor-withdrawal-commission-cash" />
                   </div>
                 </div>
                 
                 {/* Dealing Currency */}
                 <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider flex items-center gap-1">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider flex items-center gap-1">
                     <Coins className="w-3.5 h-3.5 text-indigo-500" /> Dealing Currency
                   </Label>
                   <Select
                     value={formData.dealing_currency || '__none__'}
                     onValueChange={(v) => setFormData({ ...formData, dealing_currency: v === '__none__' ? '' : v })}
                   >
-                    <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="vendor-dealing-currency">
+                    <SelectTrigger className="bg-muted/50 border text-foreground" data-testid="vendor-dealing-currency">
                       <SelectValue placeholder="No restriction (all currencies)" />
                     </SelectTrigger>
-                    <SelectContent className="bg-white border-slate-200">
-                      <SelectItem value="__none__" className="text-slate-500 hover:bg-slate-100">No restriction (all currencies)</SelectItem>
+                    <SelectContent className="bg-card border">
+                      <SelectItem value="__none__" className="text-muted-foreground hover:bg-muted">No restriction (all currencies)</SelectItem>
                       {CURRENCIES.map(c => (
-                        <SelectItem key={c} value={c} className="text-slate-800 hover:bg-slate-100">{c}</SelectItem>
+                        <SelectItem key={c} value={c} className="text-foreground hover:bg-muted">{c}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-slate-400">If set, only transactions in this currency will be allowed for this exchanger.</p>
+                  <p className="text-xs text-muted-foreground">If set, only transactions in this currency will be allowed for this exchanger.</p>
                 </div>
 
                 {selectedExchanger && (
                   <div className="space-y-2">
-                    <Label className="text-slate-500 text-xs uppercase tracking-wider">Status</Label>
+                    <Label className="text-muted-foreground text-xs uppercase tracking-wider">Status</Label>
                     <Select
                       value={formData.status}
                       onValueChange={(value) => setFormData({ ...formData, status: value })}
                     >
-                      <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800" data-testid="vendor-status">
+                      <SelectTrigger className="bg-muted/50 border text-foreground" data-testid="vendor-status">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-white border-slate-200">
-                        <SelectItem value="active" className="text-slate-800 hover:bg-slate-100">Active</SelectItem>
-                        <SelectItem value="inactive" className="text-slate-800 hover:bg-slate-100">Inactive</SelectItem>
+                      <SelectContent className="bg-card border">
+                        <SelectItem value="active" className="text-foreground hover:bg-muted">Active</SelectItem>
+                        <SelectItem value="inactive" className="text-foreground hover:bg-muted">Inactive</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 )}
 
                 <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Description</Label>
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">Description</Label>
                   <Textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B]"
+                    className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
                     rows={2}
                     data-testid="vendor-description"
                   />
@@ -1161,14 +1163,14 @@ export default function Exchangers() {
                     type="button"
                     variant="outline"
                     onClick={() => { setIsDialogOpen(false); resetForm(); }}
-                    className="border-slate-200 text-slate-500 hover:bg-slate-100"
+                    className="border text-muted-foreground hover:bg-muted"
                   >
                     Cancel
                   </Button>
                   <Button
                     type="submit"
                     disabled={submitting}
-                    className="bg-[#1FA21B] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider disabled:opacity-50"
+                    className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider disabled:opacity-50"
                     data-testid="save-vendor-btn"
                   >
                     {submitting ? (
@@ -1186,26 +1188,26 @@ export default function Exchangers() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-white border-slate-200">
+        <Card className="bg-card border">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Total Exchangers</p>
-                <p className="text-3xl font-bold font-mono text-slate-800">{vendors.length}</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Total Exchangers</p>
+                <p className="text-3xl font-bold font-mono text-foreground">{vendors.length}</p>
               </div>
-              <div className="p-3 bg-blue-100 rounded-sm">
-                <Store className="w-6 h-6 text-blue-600" />
+              <div className="p-3 bg-primary/15 rounded-sm">
+                <Store className="w-6 h-6 text-primary" />
               </div>
             </div>
           </CardContent>
         </Card>
         
-        <Card className="bg-white border-slate-200">
+        <Card className="bg-card border">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Net Settlement</p>
-                <p className="text-3xl font-bold font-mono text-blue-600">${totalPendingAmount.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Net Settlement</p>
+                <p className="text-3xl font-bold font-mono text-primary">${totalPendingAmount.toLocaleString()}</p>
               </div>
               <div className="p-3 bg-yellow-500/10 rounded-sm">
                 <DollarSign className="w-6 h-6 text-yellow-500" />
@@ -1214,14 +1216,14 @@ export default function Exchangers() {
           </CardContent>
         </Card>
         
-        <Card className="bg-white border-slate-200">
+        <Card className="bg-card border">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Active Exchangers</p>
-                <p className="text-3xl font-bold font-mono text-slate-800">{vendors.filter(v => v.status === 'active').length}</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Active Exchangers</p>
+                <p className="text-3xl font-bold font-mono text-foreground">{vendors.filter(v => v.status === 'active').length}</p>
                 {vendors.filter(v => v.status === 'archived').length > 0 && (
-                  <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
+                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                     <Archive className="w-3 h-3" />{vendors.filter(v => v.status === 'archived').length} archived
                   </p>
                 )}
@@ -1237,7 +1239,7 @@ export default function Exchangers() {
       {/* Search and Filters */}
       <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
         <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             type="text"
             placeholder="Search exchangers..."
@@ -1246,11 +1248,11 @@ export default function Exchangers() {
               setSearchTerm(e.target.value);
               setCurrentPage(1);
             }}
-            className="pl-10 bg-white border-slate-200"
+            className="pl-10 bg-card border"
             data-testid="vendor-search"
           />
         </div>
-        <div className="text-sm text-slate-500">
+        <div className="text-sm text-muted-foreground">
           Showing {vendors.length} of {totalItems} exchangers
         </div>
       </div>
@@ -1259,44 +1261,44 @@ export default function Exchangers() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {loading ? (
           <div className="col-span-full flex justify-center py-12">
-            <div className="w-8 h-8 border-2 border-[#1FA21B] border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : vendors.length === 0 ? (
           <div className="col-span-full text-center py-12">
-            <Store className="w-12 h-12 text-slate-500 mx-auto mb-4" />
-            <p className="text-slate-500">No vendors found</p>
-            {isAccountantOrAdmin && <p className="text-sm text-slate-500/60 mt-2">Click "Add Exchanger" to create one</p>}
+            <Store className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">No vendors found</p>
+            {isAccountantOrAdmin && <p className="text-sm text-muted-foreground/60 mt-2">Click "Add Exchanger" to create one</p>}
           </div>
         ) : (
           vendors.map((vendor) => (
             <Card
               key={vendor.vendor_id}
-              className={`bg-white border-slate-200 card-hover cursor-pointer ${vendor.status === 'archived' ? 'opacity-60 grayscale-[30%]' : ''}`}
+              className={`bg-card border card-hover cursor-pointer ${vendor.status === 'archived' ? 'opacity-60 grayscale-[30%]' : ''}`}
               onClick={() => openExchangerView(vendor)}
             >
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 rounded-sm">
-                      <Store className="w-5 h-5 text-blue-600" />
+                    <div className="p-2 bg-primary/15 rounded-sm">
+                      <Store className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                      <CardTitle className="text-lg text-slate-800">{vendor.vendor_name}</CardTitle>
-                      <p className="text-xs text-slate-500">{vendor.email}</p>
+                      <CardTitle className="text-lg text-foreground">{vendor.vendor_name}</CardTitle>
+                      <p className="text-xs text-muted-foreground">{vendor.email}</p>
                     </div>
                   </div>
                   {isAccountantOrAdmin && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-800 hover:bg-slate-100" data-testid={`vendor-actions-${vendor.vendor_id}`}>
+                        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-muted" data-testid={`vendor-actions-${vendor.vendor_id}`}>
                           <MoreVertical className="w-4 h-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-white border-slate-200">
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openExchangerView(vendor); }} className="text-slate-800 hover:bg-slate-100 cursor-pointer">
+                      <DropdownMenuContent align="end" className="bg-card border">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openExchangerView(vendor); }} className="text-foreground hover:bg-muted cursor-pointer">
                           <Eye className="w-4 h-4 mr-2" /> View Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(vendor); }} className="text-slate-800 hover:bg-slate-100 cursor-pointer">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(vendor); }} className="text-foreground hover:bg-muted cursor-pointer">
                           <Edit className="w-4 h-4 mr-2" /> Edit
                         </DropdownMenuItem>
                         {vendor.status !== 'archived' ? (
@@ -1304,7 +1306,7 @@ export default function Exchangers() {
                             <Archive className="w-4 h-4 mr-2" /> Archive
                           </DropdownMenuItem>
                         ) : (
-                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleUnarchive(vendor); }} className="text-blue-600 hover:bg-blue-50 cursor-pointer">
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleUnarchive(vendor); }} className="text-primary hover:bg-primary/10 cursor-pointer">
                             <ArchiveRestore className="w-4 h-4 mr-2" /> Restore
                           </DropdownMenuItem>
                         )}
@@ -1320,51 +1322,51 @@ export default function Exchangers() {
                 <div className="space-y-2">
                   <div className="grid grid-cols-3 gap-1 text-xs">
                     <div></div>
-                    <span className="text-center text-blue-600 font-semibold">Bank</span>
+                    <span className="text-center text-primary font-semibold">Bank</span>
                     <span className="text-center text-amber-600 font-semibold">Cash</span>
                   </div>
                   <div className="grid grid-cols-3 gap-1 items-center">
-                    <span className="text-slate-500 text-sm flex items-center gap-1">
+                    <span className="text-muted-foreground text-sm flex items-center gap-1">
                       <ArrowDownRight className="w-3 h-3 text-green-400" /> In
                     </span>
-                    <span className="text-slate-800 font-mono text-center">{vendor.deposit_commission || 0}%</span>
-                    <span className="text-slate-800 font-mono text-center">{vendor.deposit_commission_cash || 0}%</span>
+                    <span className="text-foreground font-mono text-center">{vendor.deposit_commission || 0}%</span>
+                    <span className="text-foreground font-mono text-center">{vendor.deposit_commission_cash || 0}%</span>
                   </div>
                   <div className="grid grid-cols-3 gap-1 items-center">
-                    <span className="text-slate-500 text-sm flex items-center gap-1">
+                    <span className="text-muted-foreground text-sm flex items-center gap-1">
                       <ArrowUpRight className="w-3 h-3 text-red-400" /> Out
                     </span>
-                    <span className="text-slate-800 font-mono text-center">{vendor.withdrawal_commission || 0}%</span>
-                    <span className="text-slate-800 font-mono text-center">{vendor.withdrawal_commission_cash || 0}%</span>
+                    <span className="text-foreground font-mono text-center">{vendor.withdrawal_commission || 0}%</span>
+                    <span className="text-foreground font-mono text-center">{vendor.withdrawal_commission_cash || 0}%</span>
                   </div>
-                  <div className="pt-2 border-t border-slate-200">
-                    <span className="text-slate-500 text-xs uppercase tracking-wider">Net Settlement</span>
+                  <div className="pt-2 border-t border">
+                    <span className="text-muted-foreground text-xs uppercase tracking-wider">Net Settlement</span>
                     {vendor.settlement_by_currency && vendor.settlement_by_currency.length > 0 ? (
                       <div className="mt-1 space-y-1">
                         {vendor.settlement_by_currency.map((item, idx) => (
                           <div key={idx} className="flex justify-between items-center">
                             <Badge className={`text-xs ${
                               item.currency === 'USD' ? 'bg-green-500/20 text-green-400' :
-                              item.currency === 'EUR' ? 'bg-blue-500/20 text-blue-400' :
+                              item.currency === 'EUR' ? 'bg-primary/80/20 text-primary/60' :
                               item.currency === 'AED' ? 'bg-purple-500/20 text-purple-400' :
                               item.currency === 'GBP' ? 'bg-yellow-500/20 text-yellow-400' :
                               item.currency === 'INR' ? 'bg-orange-500/20 text-orange-400' :
-                              'bg-gray-500/20 text-gray-400'
+                              'bg-gray-500/20 text-muted-foreground'
                             }`}>
                               {item.currency}
                             </Badge>
-                            <span className={`font-mono ${item.amount >= 0 ? 'text-blue-600' : 'text-red-400'}`}>
+                            <span className={`font-mono ${item.amount >= 0 ? 'text-primary' : 'text-red-400'}`}>
                               {item.amount >= 0 ? '+' : ''}{item.amount?.toLocaleString()}
                             </span>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-slate-500 text-sm mt-1">No pending settlement</p>
+                      <p className="text-muted-foreground text-sm mt-1">No pending settlement</p>
                     )}
                   </div>
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-200">
-                    <span className="text-slate-500 text-sm">Status</span>
+                  <div className="flex items-center justify-between pt-2 border-t border">
+                    <span className="text-muted-foreground text-sm">Status</span>
                     <div className="flex items-center gap-2">
                       {vendor.dealing_currency && (
                         <Badge className="bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs flex items-center gap-1">
@@ -1375,7 +1377,7 @@ export default function Exchangers() {
                     </div>
                   </div>
                   {vendor.status === 'archived' && (
-                    <div className="flex items-center gap-1.5 pt-1 text-xs text-slate-400">
+                    <div className="flex items-center gap-1.5 pt-1 text-xs text-muted-foreground">
                       <Archive className="w-3 h-3" />
                       <span>Archived — excluded from reports &amp; emails</span>
                     </div>
@@ -1438,26 +1440,26 @@ export default function Exchangers() {
 
       {/* Settle Exchanger Dialog */}
       <Dialog open={settleDialogOpen} onOpenChange={() => resetSettleDialog()}>
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-card border text-foreground max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold uppercase tracking-tight" style={{ fontFamily: 'Barlow Condensed' }}>
+            <DialogTitle className="text-lg font-bold text-foreground">
               Settle Exchanger Balance
             </DialogTitle>
           </DialogHeader>
           {viewExchanger && (
             <div className="space-y-4">
               {/* Settlement Mode Toggle */}
-              <div className="flex border border-slate-200 rounded-sm overflow-hidden">
+              <div className="flex border border rounded-sm overflow-hidden">
                 <button
                   onClick={() => setSettlementMode('full')}
-                  className={`flex-1 py-2 px-3 text-sm font-medium transition-colors ${settlementMode === 'full' ? 'bg-blue-500 text-white' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
+                  className={`flex-1 py-2 px-3 text-sm font-medium transition-colors ${settlementMode === 'full' ? 'bg-primary/80 text-white' : 'bg-muted/50 text-muted-foreground hover:bg-muted'}`}
                   data-testid="settle-mode-full"
                 >
                   Settle All
                 </button>
                 <button
                   onClick={() => setSettlementMode('custom')}
-                  className={`flex-1 py-2 px-3 text-sm font-medium transition-colors ${settlementMode === 'custom' ? 'bg-blue-500 text-white' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
+                  className={`flex-1 py-2 px-3 text-sm font-medium transition-colors ${settlementMode === 'custom' ? 'bg-primary/80 text-white' : 'bg-muted/50 text-muted-foreground hover:bg-muted'}`}
                   data-testid="settle-mode-custom"
                 >
                   Custom Amount
@@ -1465,33 +1467,33 @@ export default function Exchangers() {
               </div>
 
               {/* Exchanger Info */}
-              <div className="p-4 bg-slate-50 rounded-sm space-y-3">
+              <div className="p-4 bg-muted/50 rounded-sm space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Exchanger</span>
-                  <span className="text-slate-800">{viewExchanger.vendor_name}</span>
+                  <span className="text-muted-foreground">Exchanger</span>
+                  <span className="text-foreground">{viewExchanger.vendor_name}</span>
                 </div>
 
                 {settlementMode === 'full' ? (
                   <>
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Transactions to Settle</span>
-                      <span className="text-slate-800">{pendingTransactions.filter(t => (t.status === 'approved' || t.status === 'completed') && !t.settled).length}</span>
+                      <span className="text-muted-foreground">Transactions to Settle</span>
+                      <span className="text-foreground">{pendingTransactions.filter(t => (t.status === 'approved' || t.status === 'completed') && !t.settled).length}</span>
                     </div>
 
                     {viewExchanger?.settlement_by_currency?.map((item, idx) => (
-                      <div key={idx} className="border-t border-slate-200 pt-2 space-y-1">
+                      <div key={idx} className="border-t border pt-2 space-y-1">
                         <div className="flex justify-between items-center">
                           <Badge className={`text-xs ${
                             item.currency === 'USD' ? 'bg-green-500/20 text-green-400' :
-                            item.currency === 'EUR' ? 'bg-blue-500/20 text-blue-400' :
+                            item.currency === 'EUR' ? 'bg-primary/80/20 text-primary/60' :
                             item.currency === 'AED' ? 'bg-purple-500/20 text-purple-400' :
                             item.currency === 'GBP' ? 'bg-yellow-500/20 text-yellow-400' :
                             item.currency === 'INR' ? 'bg-orange-500/20 text-orange-400' :
-                            'bg-gray-500/20 text-gray-400'
+                            'bg-gray-500/20 text-muted-foreground'
                           }`}>
                             {item.currency}
                           </Badge>
-                          <span className="text-slate-800 font-mono font-bold">
+                          <span className="text-foreground font-mono font-bold">
                             {item.amount?.toLocaleString()} {item.currency}
                           </span>
                         </div>
@@ -1499,42 +1501,42 @@ export default function Exchangers() {
                           <div className="flex justify-between text-green-500"><span>Money In (Dep + I&E + Loan)</span><span>+{item.total_in?.toLocaleString()}</span></div>
                           <div className="flex justify-between text-red-400"><span>Money Out (Wdr + I&E + Loan)</span><span>-{item.total_out?.toLocaleString()}</span></div>
                           <div className="flex justify-between text-yellow-400"><span>Commission</span><span>-{item.commission_earned_base?.toLocaleString()}</span></div>
-                        {(item.custom_settled > 0) && <div className="flex justify-between text-blue-400"><span>Custom Settled</span><span>-{item.custom_settled?.toLocaleString()}</span></div>}
+                        {(item.custom_settled > 0) && <div className="flex justify-between text-primary/60"><span>Custom Settled</span><span>-{item.custom_settled?.toLocaleString()}</span></div>}
                         </div>
                       </div>
                     ))}
                   </>
                 ) : (
                   /* Custom Amount Mode */
-                  <div className="border-t border-slate-200 pt-3 space-y-3">
+                  <div className="border-t border pt-3 space-y-3">
                     <div className="space-y-2">
-                      <Label className="text-slate-500 text-xs uppercase tracking-wider">Settlement Currency *</Label>
+                      <Label className="text-muted-foreground text-xs uppercase tracking-wider">Settlement Currency *</Label>
                       <Select value={customCurrency} onValueChange={setCustomCurrency}>
-                        <SelectTrigger className="bg-white border-slate-200 text-slate-800" data-testid="custom-currency">
+                        <SelectTrigger className="bg-card border text-foreground" data-testid="custom-currency">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="bg-white border-slate-200">
+                        <SelectContent className="bg-card border">
                           {['USD', 'AED', 'EUR', 'GBP', 'INR', 'USDT', 'SAR', 'BHD', 'OMR', 'QAR', 'KWD'].map(c => (
-                            <SelectItem key={c} value={c} className="text-slate-800 hover:bg-slate-100">{c}</SelectItem>
+                            <SelectItem key={c} value={c} className="text-foreground hover:bg-muted">{c}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-slate-500 text-xs uppercase tracking-wider">Settlement Amount *</Label>
+                      <Label className="text-muted-foreground text-xs uppercase tracking-wider">Settlement Amount *</Label>
                       <Input
                         type="number"
                         step="0.01"
                         value={customAmount}
                         onChange={(e) => setCustomAmount(e.target.value)}
-                        className="bg-white border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono text-lg"
+                        className="bg-card border text-foreground focus:border-[#66FCF1] font-mono text-lg"
                         placeholder={`0.00 ${customCurrency}`}
                         data-testid="custom-amount"
                       />
                     </div>
                     {viewExchanger?.settlement_by_currency?.length > 0 && (
-                      <div className="text-xs text-slate-400 space-y-0.5">
-                        <p className="font-medium text-slate-500">Outstanding Balances:</p>
+                      <div className="text-xs text-muted-foreground space-y-0.5">
+                        <p className="font-medium text-muted-foreground">Outstanding Balances:</p>
                         {viewExchanger.settlement_by_currency.map((item, idx) => (
                           <div key={idx} className="flex justify-between">
                             <span>{item.currency}</span>
@@ -1549,16 +1551,16 @@ export default function Exchangers() {
 
               {/* Settlement Type */}
               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">Settlement Type *</Label>
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Settlement Type *</Label>
                 <Select value={settlementType} onValueChange={setSettlementType}>
-                  <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800">
+                  <SelectTrigger className="bg-muted/50 border text-foreground">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border-slate-200">
-                    <SelectItem value="bank" className="text-slate-800 hover:bg-slate-100">
+                  <SelectContent className="bg-card border">
+                    <SelectItem value="bank" className="text-foreground hover:bg-muted">
                       <span className="flex items-center gap-2"><Building2 className="w-4 h-4" /> Bank Transfer</span>
                     </SelectItem>
-                    <SelectItem value="cash" className="text-slate-800 hover:bg-slate-100">
+                    <SelectItem value="cash" className="text-foreground hover:bg-muted">
                       <span className="flex items-center gap-2"><Banknote className="w-4 h-4" /> Cash</span>
                     </SelectItem>
                   </SelectContent>
@@ -1566,31 +1568,31 @@ export default function Exchangers() {
               </div>
 
               {/* Direct Transfer Toggle */}
-              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-sm border border-slate-200">
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-sm border border">
                 <div>
-                  <p className="text-sm font-medium text-slate-800">Direct Transfer</p>
-                  <p className="text-xs text-slate-400">Record payment without linking to a treasury account</p>
+                  <p className="text-sm font-medium text-foreground">Direct Transfer</p>
+                  <p className="text-xs text-muted-foreground">Record payment without linking to a treasury account</p>
                 </div>
                 <button
                   onClick={() => { setIsDirectTransfer(!isDirectTransfer); if (!isDirectTransfer) setSettlementDestination(''); }}
-                  className={`w-10 h-5 rounded-full transition-colors relative ${isDirectTransfer ? 'bg-blue-500' : 'bg-slate-300'}`}
+                  className={`w-10 h-5 rounded-full transition-colors relative ${isDirectTransfer ? 'bg-primary/80' : 'bg-slate-300'}`}
                   data-testid="direct-transfer-toggle"
                 >
-                  <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform shadow ${isDirectTransfer ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                  <span className={`absolute top-0.5 w-4 h-4 bg-card rounded-full transition-transform shadow ${isDirectTransfer ? 'translate-x-5' : 'translate-x-0.5'}`} />
                 </button>
               </div>
 
               {/* Settlement Destination (hidden if Direct Transfer) */}
               {!isDirectTransfer && (
                 <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Settlement Destination *</Label>
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">Settlement Destination *</Label>
                   <Select value={settlementDestination} onValueChange={setSettlementDestination}>
-                    <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800">
+                    <SelectTrigger className="bg-muted/50 border text-foreground">
                       <SelectValue placeholder="Select treasury account" />
                     </SelectTrigger>
-                    <SelectContent className="bg-white border-slate-200">
+                    <SelectContent className="bg-card border">
                       {treasuryAccounts.map((account) => (
-                        <SelectItem key={account.account_id} value={account.account_id} className="text-slate-800 hover:bg-slate-100">
+                        <SelectItem key={account.account_id} value={account.account_id} className="text-foreground hover:bg-muted">
                           {account.account_name} - {account.bank_name} ({account.currency})
                         </SelectItem>
                       ))}
@@ -1602,7 +1604,7 @@ export default function Exchangers() {
               {/* Additional Charges */}
               {(settlementDestination || isDirectTransfer) && (
                 <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                     Additional Charges (Optional)
                   </Label>
                   <Input
@@ -1610,7 +1612,7 @@ export default function Exchangers() {
                     step="0.01"
                     value={settlementCharges}
                     onChange={(e) => setSettlementCharges(e.target.value)}
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
+                    className="bg-muted/50 border text-foreground focus:border-[#66FCF1] font-mono"
                     placeholder="0.00"
                     data-testid="settlement-charges"
                   />
@@ -1619,11 +1621,11 @@ export default function Exchangers() {
 
               {settlementCharges && parseFloat(settlementCharges) > 0 && (
                 <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">Charges Description</Label>
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">Charges Description</Label>
                   <Input
                     value={settlementChargesDescription}
                     onChange={(e) => setSettlementChargesDescription(e.target.value)}
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B]"
+                    className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
                     placeholder="e.g., Bank transfer fee, Processing fee"
                     data-testid="settlement-charges-desc"
                   />
@@ -1642,44 +1644,44 @@ export default function Exchangers() {
                 const finalAmountDest = isSameCurrency ? (netSettlementBase - additionalChargesDest) : null;
 
                 return (
-                  <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 space-y-3">
-                    <p className="text-xs text-blue-600 uppercase tracking-wider flex items-center gap-1">
+                  <div className="p-3 bg-muted/50 rounded-sm border border space-y-3">
+                    <p className="text-xs text-primary uppercase tracking-wider flex items-center gap-1">
                       <Receipt className="w-3 h-3" /> Settlement Preview
                     </p>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between items-center">
-                        <span className="text-slate-500">Net Settlement</span>
-                        <span className="text-slate-800 font-mono">{netSettlementBase.toLocaleString()} {baseCurrency}</span>
+                        <span className="text-muted-foreground">Net Settlement</span>
+                        <span className="text-foreground font-mono">{netSettlementBase.toLocaleString()} {baseCurrency}</span>
                       </div>
                       {additionalChargesDest > 0 && (
                         <div className="flex justify-between">
-                          <span className="text-slate-500">Additional Charges</span>
+                          <span className="text-muted-foreground">Additional Charges</span>
                           <span className="text-red-400 font-mono">-{additionalChargesDest.toLocaleString()} {destCurrency}</span>
                         </div>
                       )}
                       {isSameCurrency ? (
-                        <div className="flex justify-between pt-2 border-t border-slate-200">
-                          <span className="text-blue-600 font-semibold">Final Amount to Pay</span>
-                          <span className="text-blue-600 font-mono font-bold">{finalAmountDest?.toLocaleString()} {destCurrency}</span>
+                        <div className="flex justify-between pt-2 border-t border">
+                          <span className="text-primary font-semibold">Final Amount to Pay</span>
+                          <span className="text-primary font-mono font-bold">{finalAmountDest?.toLocaleString()} {destCurrency}</span>
                         </div>
                       ) : (
-                        <div className="pt-3 border-t border-slate-200 space-y-2">
+                        <div className="pt-3 border-t border space-y-2">
                           <p className="text-xs text-yellow-500">Destination: {destCurrency} (different from {baseCurrency})</p>
                           <div className="space-y-1">
-                            <Label className="text-slate-500 text-xs">Final Settlement Amount in {destCurrency} *</Label>
+                            <Label className="text-muted-foreground text-xs">Final Settlement Amount in {destCurrency} *</Label>
                             <Input
                               type="number"
                               step="0.01"
                               value={settlementAmountInDestCurrency}
                               onChange={(e) => setSettlementAmountInDestCurrency(e.target.value)}
-                              className="bg-white border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
+                              className="bg-card border text-foreground focus:border-[#66FCF1] font-mono"
                               placeholder={`Enter final amount in ${destCurrency}`}
                               data-testid="settlement-dest-amount"
                             />
                           </div>
                           {settlementAmountInDestCurrency && (
                             <div className="flex justify-between pt-2">
-                              <span className="text-blue-600 font-semibold">Amount to Transfer</span>
+                              <span className="text-primary font-semibold">Amount to Transfer</span>
                               <span className="text-green-500 font-mono text-lg">{parseFloat(settlementAmountInDestCurrency).toLocaleString()} {destCurrency}</span>
                             </div>
                           )}
@@ -1696,22 +1698,22 @@ export default function Exchangers() {
                 const destCurrencyCustom = destAccountCustom?.currency || customCurrency;
                 if (destCurrencyCustom === customCurrency) return null;
                 return (
-                  <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 space-y-2">
+                  <div className="p-3 bg-muted/50 rounded-sm border border space-y-2">
                     <p className="text-xs text-yellow-500 font-medium">Destination: {destCurrencyCustom} (different from {customCurrency})</p>
                     <div className="space-y-1">
-                      <Label className="text-slate-500 text-xs">Final Settlement Amount in {destCurrencyCustom} *</Label>
+                      <Label className="text-muted-foreground text-xs">Final Settlement Amount in {destCurrencyCustom} *</Label>
                       <Input
                         type="number"
                         step="0.01"
                         value={settlementAmountInDestCurrency}
                         onChange={(e) => setSettlementAmountInDestCurrency(e.target.value)}
-                        className="bg-white border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
+                        className="bg-card border text-foreground focus:border-[#66FCF1] font-mono"
                         placeholder={`Enter final amount in ${destCurrencyCustom}`}
                       />
                     </div>
                     {settlementAmountInDestCurrency && parseFloat(settlementAmountInDestCurrency) > 0 && (
                       <div className="flex justify-between pt-1">
-                        <span className="text-blue-600 font-semibold text-sm">Amount to Transfer</span>
+                        <span className="text-primary font-semibold text-sm">Amount to Transfer</span>
                         <span className="text-green-500 font-mono text-lg">{parseFloat(settlementAmountInDestCurrency).toLocaleString()} {destCurrencyCustom}</span>
                       </div>
                     )}
@@ -1721,23 +1723,23 @@ export default function Exchangers() {
 
               {/* Custom mode preview — amount/charges/net summary */}
               {settlementMode === 'custom' && customAmount && parseFloat(customAmount) > 0 && (
-                <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 space-y-2">
-                  <p className="text-xs text-blue-600 uppercase tracking-wider flex items-center gap-1">
+                <div className="p-3 bg-muted/50 rounded-sm border border space-y-2">
+                  <p className="text-xs text-primary uppercase tracking-wider flex items-center gap-1">
                     <Receipt className="w-3 h-3" /> Custom Settlement Preview
                   </p>
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Amount</span>
-                    <span className="text-slate-800 font-mono font-bold">{parseFloat(customAmount).toLocaleString()} {customCurrency}</span>
+                    <span className="text-muted-foreground">Amount</span>
+                    <span className="text-foreground font-mono font-bold">{parseFloat(customAmount).toLocaleString()} {customCurrency}</span>
                   </div>
                   {parseFloat(settlementCharges) > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-500">Charges</span>
+                      <span className="text-muted-foreground">Charges</span>
                       <span className="text-red-400 font-mono">-{parseFloat(settlementCharges).toLocaleString()}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-sm pt-2 border-t border-slate-200">
-                    <span className="text-blue-600 font-semibold">Net Settlement</span>
-                    <span className="text-blue-600 font-mono font-bold">{(parseFloat(customAmount) - (parseFloat(settlementCharges) || 0)).toLocaleString()} {customCurrency}</span>
+                  <div className="flex justify-between text-sm pt-2 border-t border">
+                    <span className="text-primary font-semibold">Net Settlement</span>
+                    <span className="text-primary font-mono font-bold">{(parseFloat(customAmount) - (parseFloat(settlementCharges) || 0)).toLocaleString()} {customCurrency}</span>
                   </div>
                   {isDirectTransfer && (
                     <p className="text-xs text-amber-500 flex items-center gap-1 pt-1">Direct transfer — no treasury account linked</p>
@@ -1747,11 +1749,11 @@ export default function Exchangers() {
 
               {/* Notes */}
               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">Notes (Optional)</Label>
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Notes (Optional)</Label>
                 <Input
                   value={settlementNotes}
                   onChange={(e) => setSettlementNotes(e.target.value)}
-                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B]"
+                  className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
                   placeholder="Settlement reference or notes"
                   data-testid="settlement-notes"
                 />
@@ -1762,13 +1764,13 @@ export default function Exchangers() {
                   type="button"
                   variant="outline"
                   onClick={resetSettleDialog}
-                  className="border-slate-200 text-slate-500 hover:bg-slate-100"
+                  className="border text-muted-foreground hover:bg-muted"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleSettleExchanger}
-                  className="bg-green-500 text-slate-800 hover:bg-green-600 font-bold uppercase tracking-wider"
+                  className="bg-green-500 text-foreground hover:bg-green-600 font-bold uppercase tracking-wider"
                   data-testid="confirm-settle-vendor-btn"
                 >
                   <CheckCircle2 className="w-4 h-4 mr-2" />
@@ -1782,7 +1784,7 @@ export default function Exchangers() {
 
       {/* Settlement Statement Dialog */}
       <Dialog open={statementOpen} onOpenChange={setStatementOpen}>
-        <DialogContent className="max-w-3xl bg-white text-[#1a1a1a] border-0 p-0 max-h-[90vh] overflow-hidden">
+        <DialogContent className="max-w-3xl bg-card text-[#1a1a1a] border-0 p-0 max-h-[90vh] overflow-hidden">
           {statementLoading ? (
             <div className="flex justify-center items-center py-20">
               <div className="w-8 h-8 border-2 border-[#0B3D91] border-t-transparent rounded-full animate-spin" />
@@ -1803,7 +1805,7 @@ export default function Exchangers() {
             const loanOut = loanEntries.filter(l => l.source_vendor_id);
             return (
               <>
-                <div className="flex items-center justify-between px-6 pt-4 pb-2 border-b border-gray-200">
+                <div className="flex items-center justify-between px-6 pt-4 pb-2 border-b border">
                   <h2 className="font-bold text-[#0B3D91] text-lg">Settlement Statement</h2>
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={printStatement} className="text-[#0B3D91] border-[#0B3D91] hover:bg-[#0B3D91]/10" data-testid="print-statement-btn">
@@ -1819,7 +1821,7 @@ export default function Exchangers() {
                     {/* Header */}
                     <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '3px solid #0B3D91', paddingBottom: '16px', marginBottom: '20px' }}>
                       <div>
-                        <div className="logo" style={{ fontSize: '22px', fontWeight: 800, color: '#0B3D91' }}>MILES CAPITALS</div>
+                        <div className="logo" style={{ fontSize: '22px', fontWeight: 800, color: '#0B3D91' }}>Carlton</div>
                         <div className="subtitle" style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>Foreign Exchange Brokerage</div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
@@ -1995,31 +1997,31 @@ export default function Exchangers() {
 
                     {/* Footer */}
                     <div className="footer" style={{ marginTop: '40px', paddingTop: '16px', borderTop: '1px solid #ddd', fontSize: '10px', color: '#888', textAlign: 'center' }}>
-                      This is a system-generated statement from Miles Capitals Back Office. Generated on {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}.
+                      This is a system-generated statement from Carlton Back Office. Generated on {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}.
                     </div>
                   </div>
                 </ScrollArea>
               </>
             );
           })() : (
-            <div className="py-10 text-center text-gray-400">No data available</div>
+            <div className="py-10 text-center text-muted-foreground">No data available</div>
           )}
         </DialogContent>
       </Dialog>
 
       {/* Proof Images Gallery Modal */}
       <Dialog open={!!proofGallery} onOpenChange={() => setProofGallery(null)}>
-        <DialogContent className="bg-white border-slate-200 max-w-lg">
+        <DialogContent className="bg-card border max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-slate-800 text-sm font-bold uppercase">
-              <ImageIcon className="w-4 h-4 inline mr-2 text-blue-500" />
+            <DialogTitle className="text-foreground text-sm font-bold uppercase">
+              <ImageIcon className="w-4 h-4 inline mr-2 text-primary/80" />
               Proof Images — {proofGallery?.label} ({proofGallery?.images?.length})
             </DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-3 mt-2">
             {proofGallery?.images?.map((url, i) => {
               const src = url?.startsWith('http') ? url : `data:image/png;base64,${url}`;
-              return <img key={i} src={src} alt={`Proof ${i+1}`} className="w-full rounded border border-slate-200 cursor-pointer hover:opacity-80" onClick={() => window.open(src, '_blank')} />;
+              return <img key={i} src={src} alt={`Proof ${i+1}`} className="w-full rounded border border cursor-pointer hover:opacity-80" onClick={() => window.open(src, '_blank')} />;
             })}
           </div>
         </DialogContent>

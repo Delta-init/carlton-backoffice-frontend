@@ -280,8 +280,8 @@ export default function Settings() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || "Something went wrong. Please try again.");
     } finally {
       setSavingFxRates(false);
     }
@@ -320,8 +320,8 @@ export default function Settings() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || "Something went wrong. Please try again.");
     }
   };
 
@@ -339,8 +339,8 @@ export default function Settings() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || "Something went wrong. Please try again.");
     }
   };
 
@@ -431,8 +431,8 @@ export default function Settings() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || "Something went wrong. Please try again.");
     } finally {
       setSavingEmail(false);
     }
@@ -453,8 +453,8 @@ export default function Settings() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || "Something went wrong. Please try again.");
     } finally {
       setSendingTest(false);
     }
@@ -475,8 +475,8 @@ export default function Settings() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || "Something went wrong. Please try again.");
     } finally {
       setSendingReport(false);
     }
@@ -498,8 +498,8 @@ export default function Settings() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || "Something went wrong. Please try again.");
     } finally {
       setSendingMonthlyReport(false);
     }
@@ -536,9 +536,9 @@ export default function Settings() {
     );
 
     const roleStyles = {
-      admin: "bg-blue-100 text-blue-700 border border-blue-200",
+      admin: "bg-primary/15 text-primary border border-primary/30",
       super_admin: "bg-red-100 text-red-700 border border-red-200",
-      sub_admin: "bg-slate-100 text-slate-600 border border-slate-200",
+      sub_admin: "bg-muted text-card-foreground border border",
       accountant: "bg-purple-100 text-purple-700 border border-purple-200",
       vendor: "bg-amber-100 text-amber-700 border border-amber-200",
       exchanger: "bg-amber-100 text-amber-700 border border-amber-200",
@@ -550,7 +550,7 @@ export default function Settings() {
 
     return (
       <Badge
-        className={`${roleStyles[styleKey] || "bg-slate-100 text-slate-600 border border-slate-200"} text-xs uppercase`}
+        className={`${roleStyles[styleKey] || "bg-muted text-card-foreground border border"} text-xs uppercase`}
       >
         {displayName}
       </Badge>
@@ -564,27 +564,26 @@ export default function Settings() {
       {/* Header */}
       <div>
         <h1
-          className="text-4xl font-bold uppercase tracking-tight text-white"
-          style={{ fontFamily: "Barlow Condensed" }}
+          className="text-3xl font-bold text-foreground"
         >
           Settings
         </h1>
-        <p className="text-[#C5C6C7]">
+        <p className="text-card-foreground">
           System settings, user management, and email reports
         </p>
       </div>
 
       {/* Current User Info */}
-      <Card className="bg-white border-slate-200">
+      <Card className="bg-card border">
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
-            <UserCog className="w-5 h-5 text-[#1FA21B]" />
+          <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
+            <UserCog className="w-5 h-5 text-indigo-600" />
             Your Account
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-[#1FA21B]/10 rounded-full flex items-center justify-center">
+            <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center">
               {user?.picture ? (
                 <img
                   src={user.picture}
@@ -592,14 +591,14 @@ export default function Settings() {
                   className="w-16 h-16 rounded-full"
                 />
               ) : (
-                <span className="text-[#1FA21B] font-bold text-xl">
+                <span className="text-indigo-600 font-bold text-xl">
                   {user?.name?.charAt(0) || "U"}
                 </span>
               )}
             </div>
             <div>
-              <p className="text-xl text-white font-medium">{user?.name}</p>
-              <p className="text-[#C5C6C7] font-mono">{user?.email}</p>
+              <p className="text-xl text-foreground font-medium">{user?.name}</p>
+              <p className="text-card-foreground font-mono">{user?.email}</p>
               <div className="mt-2">
                 {getRoleBadge(user?.role, user?.role_id)}
               </div>
@@ -611,17 +610,17 @@ export default function Settings() {
       {/* Admin-Only Settings with Tabs */}
       {isCurrentUserAdmin ? (
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="bg-slate-50 border border-slate-200 mb-4">
+          <TabsList className="bg-muted/50 border border mb-4">
             <TabsTrigger
               value="users"
-              className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10]"
+              className="data-[state=active]:bg-card data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm"
             >
               <Users className="w-4 h-4 mr-2" />
               Users
             </TabsTrigger>
             <TabsTrigger
               value="email"
-              className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10]"
+              className="data-[state=active]:bg-card data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm"
             >
               <Mail className="w-4 h-4 mr-2" />
               Email Reports
@@ -630,11 +629,11 @@ export default function Settings() {
 
           {/* Users Tab */}
           <TabsContent value="users">
-            <Card className="bg-white border-slate-200">
+            <Card className="bg-card border">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
-                    <Users className="w-5 h-5 text-[#1FA21B]" />
+                  <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
+                    <Users className="w-5 h-5 text-indigo-600" />
                     User Management
                   </CardTitle>
                   <Dialog
@@ -646,25 +645,24 @@ export default function Settings() {
                   >
                     <DialogTrigger asChild>
                       <Button
-                        className="bg-[#1FA21B] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-xl text-sm"
+                        className="bg-indigo-600 text-white hover:bg-indigo-700 font-bold uppercase tracking-wider rounded-lg text-sm"
                         data-testid="add-user-btn"
                       >
                         <Plus className="w-4 h-4 mr-2" />
                         Add User
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="bg-white border-slate-200 text-white max-w-lg">
+                    <DialogContent className="bg-card border text-foreground max-w-lg">
                       <DialogHeader>
                         <DialogTitle
-                          className="text-2xl font-bold uppercase tracking-tight"
-                          style={{ fontFamily: "Barlow Condensed" }}
+                          className="text-lg font-bold text-foreground"
                         >
                           {selectedUser ? "Edit User" : "Add New User"}
                         </DialogTitle>
                       </DialogHeader>
                       <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="space-y-2">
-                          <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">
+                          <Label className="text-card-foreground text-xs uppercase tracking-wider">
                             Name
                           </Label>
                           <Input
@@ -672,7 +670,7 @@ export default function Settings() {
                             onChange={(e) =>
                               setFormData({ ...formData, name: e.target.value })
                             }
-                            className="bg-slate-50 border-slate-200 text-white focus:border-[#1FA21B]"
+                            className="bg-muted/50 border text-foreground focus:border-indigo-500"
                             data-testid="user-name-input"
                             required
                           />
@@ -680,7 +678,7 @@ export default function Settings() {
                         {!selectedUser && (
                           <>
                             <div className="space-y-2">
-                              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">
+                              <Label className="text-card-foreground text-xs uppercase tracking-wider">
                                 Email
                               </Label>
                               <Input
@@ -692,13 +690,13 @@ export default function Settings() {
                                     email: e.target.value,
                                   })
                                 }
-                                className="bg-slate-50 border-slate-200 text-white focus:border-[#1FA21B] font-mono"
+                                className="bg-muted/50 border text-foreground focus:border-indigo-500 font-mono"
                                 data-testid="user-email-input"
                                 required
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">
+                              <Label className="text-card-foreground text-xs uppercase tracking-wider">
                                 Password
                               </Label>
                               <Input
@@ -710,7 +708,7 @@ export default function Settings() {
                                     password: e.target.value,
                                   })
                                 }
-                                className="bg-slate-50 border-slate-200 text-white focus:border-[#1FA21B]"
+                                className="bg-muted/50 border text-foreground focus:border-indigo-500"
                                 data-testid="user-password-input"
                                 required
                               />
@@ -718,7 +716,7 @@ export default function Settings() {
                           </>
                         )}
                         <div className="space-y-2">
-                          <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                          <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                             Role
                           </Label>
                           <Select
@@ -735,21 +733,21 @@ export default function Settings() {
                             }}
                           >
                             <SelectTrigger
-                              className="bg-slate-50 border-slate-200 text-slate-800"
+                              className="bg-muted/50 border text-foreground"
                               data-testid="user-role-select"
                             >
                               <SelectValue placeholder="Select role" />
                             </SelectTrigger>
-                            <SelectContent className="bg-white border-slate-200">
+                            <SelectContent className="bg-card border">
                               {roles.map((role) => (
                                 <SelectItem
                                   key={role.role_id}
                                   value={role.role_id}
-                                  className="text-slate-800 hover:bg-slate-100"
+                                  className="text-foreground hover:bg-muted"
                                 >
                                   {role.display_name}
                                   {role.is_system_role && (
-                                    <span className="ml-2 text-xs text-slate-400">
+                                    <span className="ml-2 text-xs text-muted-foreground">
                                       (System)
                                     </span>
                                   )}
@@ -762,13 +760,13 @@ export default function Settings() {
                         {(formData.role === "vendor" ||
                           formData.role_id === "exchanger") &&
                           !selectedUser && (
-                            <div className="space-y-3 p-3 bg-amber-50/5 border border-amber-200 rounded-xl">
+                            <div className="space-y-3 p-3 bg-amber-50/5border border-amber-200 rounded-sm">
                               <p className="text-xs text-amber-700 font-semibold uppercase tracking-wider">
                                 Exchanger Commission Rates
                               </p>
                               <div className="grid grid-cols-2 gap-3">
                                 <div className="space-y-1">
-                                  <Label className="text-slate-500 text-xs">
+                                  <Label className="text-muted-foreground text-xs">
                                     Deposit Commission (%)
                                   </Label>
                                   <Input
@@ -783,12 +781,12 @@ export default function Settings() {
                                           parseFloat(e.target.value) || 0,
                                       })
                                     }
-                                    className="bg-white border-slate-200 text-slate-800"
+                                    className="bg-card border text-foreground"
                                     placeholder="0.0"
                                   />
                                 </div>
                                 <div className="space-y-1">
-                                  <Label className="text-slate-500 text-xs">
+                                  <Label className="text-muted-foreground text-xs">
                                     Withdrawal Commission (%)
                                   </Label>
                                   <Input
@@ -803,7 +801,7 @@ export default function Settings() {
                                           parseFloat(e.target.value) || 0,
                                       })
                                     }
-                                    className="bg-white border-slate-200 text-slate-800"
+                                    className="bg-card border text-foreground"
                                     placeholder="0.0"
                                   />
                                 </div>
@@ -811,8 +809,8 @@ export default function Settings() {
                             </div>
                           )}
                         {selectedUser && (
-                          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
-                            <Label className="text-[#C5C6C7]">Active</Label>
+                          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-sm border border">
+                            <Label className="text-card-foreground">Active</Label>
                             <Switch
                               checked={formData.is_active}
                               onCheckedChange={(checked) =>
@@ -830,13 +828,13 @@ export default function Settings() {
                               setIsDialogOpen(false);
                               resetForm();
                             }}
-                            className="border-slate-200 text-[#C5C6C7] hover:bg-white/5"
+                            className="border text-card-foreground hover:bg-muted/50"
                           >
                             Cancel
                           </Button>
                           <Button
                             type="submit"
-                            className="bg-[#1FA21B] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider"
+                            className="bg-indigo-600 text-white hover:bg-indigo-700 font-bold uppercase tracking-wider"
                             data-testid="save-user-btn"
                           >
                             {selectedUser ? "Update" : "Create"}
@@ -851,20 +849,20 @@ export default function Settings() {
                 <ScrollArea className="h-[400px]">
                   <Table>
                     <TableHeader>
-                      <TableRow className="border-slate-200 hover:bg-transparent">
-                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">
+                      <TableRow className="border hover:bg-transparent">
+                        <TableHead className="text-card-foreground font-bold uppercase tracking-wider text-xs">
                           User
                         </TableHead>
-                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">
+                        <TableHead className="text-card-foreground font-bold uppercase tracking-wider text-xs">
                           Email
                         </TableHead>
-                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">
+                        <TableHead className="text-card-foreground font-bold uppercase tracking-wider text-xs">
                           Role
                         </TableHead>
-                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs">
+                        <TableHead className="text-card-foreground font-bold uppercase tracking-wider text-xs">
                           Status
                         </TableHead>
-                        <TableHead className="text-[#C5C6C7] font-bold uppercase tracking-wider text-xs text-right">
+                        <TableHead className="text-card-foreground font-bold uppercase tracking-wider text-xs text-right">
                           Actions
                         </TableHead>
                       </TableRow>
@@ -873,14 +871,14 @@ export default function Settings() {
                       {loading ? (
                         <TableRow>
                           <TableCell colSpan={5} className="text-center py-8">
-                            <div className="w-6 h-6 border-2 border-[#1FA21B] border-t-transparent rounded-full animate-spin mx-auto" />
+                            <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
                           </TableCell>
                         </TableRow>
                       ) : users.length === 0 ? (
                         <TableRow>
                           <TableCell
                             colSpan={5}
-                            className="text-center py-8 text-[#C5C6C7]"
+                            className="text-center py-8 text-card-foreground"
                           >
                             No users found
                           </TableCell>
@@ -889,11 +887,11 @@ export default function Settings() {
                         users.map((userItem) => (
                           <TableRow
                             key={userItem.user_id}
-                            className="border-slate-200 hover:bg-white/5"
+                            className="border hover:bg-muted/50"
                           >
                             <TableCell>
                               <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-[#1FA21B]/10 rounded-full flex items-center justify-center">
+                                <div className="w-10 h-10 bg-indigo-50 rounded-full flex items-center justify-center">
                                   {userItem.picture ? (
                                     <img
                                       src={userItem.picture}
@@ -901,22 +899,22 @@ export default function Settings() {
                                       className="w-10 h-10 rounded-full"
                                     />
                                   ) : (
-                                    <span className="text-[#1FA21B] font-bold text-sm">
+                                    <span className="text-indigo-600 font-bold text-sm">
                                       {userItem.name?.charAt(0) || "U"}
                                     </span>
                                   )}
                                 </div>
                                 <div>
-                                  <p className="text-white font-medium">
+                                  <p className="text-foreground font-medium">
                                     {userItem.name}
                                   </p>
-                                  <p className="text-xs text-[#C5C6C7] font-mono">
+                                  <p className="text-xs text-card-foreground font-mono">
                                     {userItem.user_id}
                                   </p>
                                 </div>
                               </div>
                             </TableCell>
-                            <TableCell className="text-white font-mono">
+                            <TableCell className="text-foreground font-mono">
                               {userItem.email}
                             </TableCell>
                             <TableCell>
@@ -937,7 +935,7 @@ export default function Settings() {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="text-[#C5C6C7] hover:text-white hover:bg-white/5"
+                                    className="text-card-foreground hover:text-foreground hover:bg-muted/50"
                                     data-testid={`user-actions-${userItem.user_id}`}
                                   >
                                     <MoreVertical className="w-4 h-4" />
@@ -945,11 +943,11 @@ export default function Settings() {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent
                                   align="end"
-                                  className="bg-white border-slate-200"
+                                  className="bg-card border"
                                 >
                                   <DropdownMenuItem
                                     onClick={() => handleEdit(userItem)}
-                                    className="text-white hover:bg-white/5 cursor-pointer"
+                                    className="text-foreground hover:bg-muted/50 cursor-pointer"
                                   >
                                     <Edit className="w-4 h-4 mr-2" /> Edit
                                   </DropdownMenuItem>
@@ -959,7 +957,7 @@ export default function Settings() {
                                         onClick={() =>
                                           handleImpersonate(userItem)
                                         }
-                                        className="text-amber-500 hover:bg-white/5 cursor-pointer"
+                                        className="text-amber-500 hover:bg-muted/50 cursor-pointer"
                                         data-testid={`impersonate-${userItem.user_id}`}
                                       >
                                         <LogIn className="w-4 h-4 mr-2" /> Login
@@ -971,7 +969,7 @@ export default function Settings() {
                                       onClick={() =>
                                         handleDelete(userItem.user_id)
                                       }
-                                      className="text-red-500 hover:bg-white/5 cursor-pointer"
+                                      className="text-red-500 hover:bg-muted/50 cursor-pointer"
                                       data-testid={`delete-user-${userItem.user_id}`}
                                     >
                                       <Trash2 className="w-4 h-4 mr-2" /> Delete
@@ -994,17 +992,17 @@ export default function Settings() {
           <TabsContent value="email">
             <div className="grid gap-6 md:grid-cols-2">
               {/* SMTP Settings Card */}
-              <Card className="bg-white border-slate-200">
+              <Card className="bg-card border">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
-                    <Mail className="w-5 h-5 text-[#1FA21B]" />
+                  <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
+                    <Mail className="w-5 h-5 text-indigo-600" />
                     SMTP Settings
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
-                      <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">
+                      <Label className="text-card-foreground text-xs uppercase tracking-wider">
                         SMTP Host
                       </Label>
                       <Input
@@ -1016,13 +1014,13 @@ export default function Settings() {
                             smtp_host: e.target.value,
                           }))
                         }
-                        className="bg-slate-50 border-slate-200 text-white focus:border-[#1FA21B] font-mono text-sm"
+                        className="bg-muted/50 border text-foreground focus:border-indigo-500 font-mono text-sm"
                         placeholder="smtp.gmail.com"
                         data-testid="smtp-host"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">
+                      <Label className="text-card-foreground text-xs uppercase tracking-wider">
                         Port
                       </Label>
                       <Input
@@ -1034,14 +1032,14 @@ export default function Settings() {
                             smtp_port: e.target.value,
                           }))
                         }
-                        className="bg-slate-50 border-slate-200 text-white focus:border-[#1FA21B] font-mono text-sm"
+                        className="bg-muted/50 border text-foreground focus:border-indigo-500 font-mono text-sm"
                         placeholder="587"
                         data-testid="smtp-port"
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">
+                    <Label className="text-card-foreground text-xs uppercase tracking-wider">
                       Username (Email)
                     </Label>
                     <Input
@@ -1053,13 +1051,13 @@ export default function Settings() {
                           smtp_email: e.target.value,
                         }))
                       }
-                      className="bg-slate-50 border-slate-200 text-white focus:border-[#1FA21B] font-mono"
-                      placeholder="no-reply@milescapitals.com"
+                      className="bg-muted/50 border text-foreground focus:border-indigo-500 font-mono"
+                      placeholder="no-reply@carlton.com"
                       data-testid="smtp-email"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">
+                    <Label className="text-card-foreground text-xs uppercase tracking-wider">
                       Password{" "}
                       {emailSettings.smtp_password_set && (
                         <span className="text-green-400">(Set)</span>
@@ -1074,7 +1072,7 @@ export default function Settings() {
                           smtp_password: e.target.value,
                         }))
                       }
-                      className="bg-slate-50 border-slate-200 text-white focus:border-[#1FA21B] font-mono"
+                      className="bg-muted/50 border text-foreground focus:border-indigo-500 font-mono"
                       placeholder={
                         emailSettings.smtp_password_set
                           ? "••••••••••••••••"
@@ -1084,7 +1082,7 @@ export default function Settings() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">
+                    <Label className="text-card-foreground text-xs uppercase tracking-wider">
                       Send From Email
                     </Label>
                     <Input
@@ -1096,8 +1094,8 @@ export default function Settings() {
                           smtp_from_email: e.target.value,
                         }))
                       }
-                      className="bg-slate-50 border-slate-200 text-white focus:border-[#1FA21B] font-mono"
-                      placeholder="no-reply@milescapitals.com"
+                      className="bg-muted/50 border text-foreground focus:border-indigo-500 font-mono"
+                      placeholder="no-reply@carlton.com"
                       data-testid="smtp-from-email"
                     />
                   </div>
@@ -1110,11 +1108,11 @@ export default function Settings() {
                         !emailSettings.smtp_password_set)
                     }
                     variant="outline"
-                    className="w-full border-[#1FA21B]/30 text-[#1FA21B] hover:bg-[#1FA21B]/10"
+                    className="w-full border-indigo-600/30 text-indigo-600 hover:bg-indigo-50"
                     data-testid="test-email-btn"
                   >
                     {sendingTest ? (
-                      <div className="w-4 h-4 border-2 border-[#1FA21B] border-t-transparent rounded-full animate-spin mr-2" />
+                      <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mr-2" />
                     ) : (
                       <Send className="w-4 h-4 mr-2" />
                     )}
@@ -1124,10 +1122,10 @@ export default function Settings() {
               </Card>
 
               {/* Director Emails Card */}
-              <Card className="bg-white border-slate-200">
+              <Card className="bg-card border">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
-                    <Users className="w-5 h-5 text-[#1FA21B]" />
+                  <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
+                    <Users className="w-5 h-5 text-indigo-600" />
                     Director Emails
                   </CardTitle>
                 </CardHeader>
@@ -1137,7 +1135,7 @@ export default function Settings() {
                       type="email"
                       value={newDirectorEmail}
                       onChange={(e) => setNewDirectorEmail(e.target.value)}
-                      className="bg-slate-50 border-slate-200 text-white focus:border-[#1FA21B] font-mono"
+                      className="bg-muted/50 border text-foreground focus:border-indigo-500 font-mono"
                       placeholder="director@company.com"
                       onKeyPress={(e) =>
                         e.key === "Enter" &&
@@ -1147,7 +1145,7 @@ export default function Settings() {
                     />
                     <Button
                       onClick={addDirectorEmail}
-                      className="bg-[#1FA21B] text-[#0B0C10] hover:bg-[#45A29E]"
+                      className="bg-indigo-600 text-white hover:bg-indigo-700"
                       data-testid="add-director-btn"
                     >
                       <Plus className="w-4 h-4" />
@@ -1155,16 +1153,16 @@ export default function Settings() {
                   </div>
                   <div className="space-y-2 max-h-[200px] overflow-y-auto">
                     {emailSettings.director_emails.length === 0 ? (
-                      <p className="text-[#C5C6C7] text-sm text-center py-4">
+                      <p className="text-card-foreground text-sm text-center py-4">
                         No directors added yet
                       </p>
                     ) : (
                       emailSettings.director_emails.map((email, index) => (
                         <div
                           key={index}
-                          className="flex items-center justify-between p-2 bg-slate-50 rounded-xl border border-slate-200"
+                          className="flex items-center justify-between p-2 bg-muted/50 rounded-sm border border"
                         >
-                          <span className="text-white font-mono text-sm">
+                          <span className="text-foreground font-mono text-sm">
                             {email}
                           </span>
                           <Button
@@ -1183,18 +1181,18 @@ export default function Settings() {
               </Card>
 
               {/* Schedule Settings Card */}
-              <Card className="bg-white border-slate-200">
+              <Card className="bg-card border">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-[#1FA21B]" />
+                  <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-indigo-600" />
                     Daily Report Schedule
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-sm border border">
                     <div>
-                      <Label className="text-white">Enable Daily Reports</Label>
-                      <p className="text-xs text-[#C5C6C7]">
+                      <Label className="text-card-foreground">Enable Daily Reports</Label>
+                      <p className="text-xs text-card-foreground">
                         Auto-send reports to directors
                       </p>
                     </div>
@@ -1235,7 +1233,7 @@ export default function Settings() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">
+                    <Label className="text-card-foreground text-xs uppercase tracking-wider">
                       Report Time (UTC)
                     </Label>
                     <Input
@@ -1247,10 +1245,10 @@ export default function Settings() {
                           report_time: e.target.value,
                         }))
                       }
-                      className="bg-slate-50 border-slate-200 text-white focus:border-[#1FA21B]"
+                      className="bg-muted/50 border text-foreground focus:border-indigo-500"
                       data-testid="report-time"
                     />
-                    <p className="text-xs text-[#C5C6C7]">
+                    <p className="text-xs text-card-foreground">
                       Currently set to: {emailSettings.report_time} UTC
                     </p>
                   </div>
@@ -1258,11 +1256,11 @@ export default function Settings() {
                     <Button
                       onClick={handleSaveEmailSettings}
                       disabled={savingEmail}
-                      className="flex-1 bg-[#1FA21B] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase"
+                      className="flex-1 bg-indigo-600 text-white hover:bg-indigo-700 font-bold uppercase"
                       data-testid="save-email-settings-btn"
                     >
                       {savingEmail ? (
-                        <div className="w-4 h-4 border-2 border-[#0B0C10] border-t-transparent rounded-full animate-spin mr-2" />
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
                       ) : (
                         <CheckCircle2 className="w-4 h-4 mr-2" />
                       )}
@@ -1275,11 +1273,11 @@ export default function Settings() {
                         emailSettings.director_emails.length === 0
                       }
                       variant="outline"
-                      className="border-[#1FA21B]/30 text-[#1FA21B] hover:bg-[#1FA21B]/10"
+                      className="border-indigo-600/30 text-indigo-600 hover:bg-indigo-50"
                       data-testid="send-report-now-btn"
                     >
                       {sendingReport ? (
-                        <div className="w-4 h-4 border-2 border-[#1FA21B] border-t-transparent rounded-full animate-spin mr-2" />
+                        <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mr-2" />
                       ) : (
                         <FileText className="w-4 h-4 mr-2" />
                       )}
@@ -1290,20 +1288,20 @@ export default function Settings() {
               </Card>
 
               {/* Monthly Reports Card */}
-              <Card className="bg-white border-slate-200">
+              <Card className="bg-card border">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+                  <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                     <Calendar className="w-5 h-5 text-purple-400" />
                     Monthly Reports
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-sm border border">
                     <div>
-                      <Label className="text-white">
+                      <Label className="text-card-foreground">
                         Enable Monthly Reports
                       </Label>
-                      <p className="text-xs text-[#C5C6C7]">
+                      <p className="text-xs text-card-foreground">
                         Auto-send on the last day of each month
                       </p>
                     </div>
@@ -1344,7 +1342,7 @@ export default function Settings() {
                       data-testid="monthly-report-enabled-switch"
                     />
                   </div>
-                  <p className="text-xs text-[#C5C6C7]">
+                  <p className="text-xs text-card-foreground">
                     Includes: Transaction Summary, Treasury Balances, I&E,
                     Loans, Exchanger Settlements, PSP Summary, Outstanding
                     Accounts
@@ -1369,7 +1367,7 @@ export default function Settings() {
                     </Button>
                     <Button
                       variant="outline"
-                      className="border-slate-400/30 text-slate-400 hover:bg-slate-400/10"
+                      className="border-slate-400/30 text-muted-foreground hover:bg-slate-400/10"
                       onClick={() =>
                         window.open(
                           `${API_URL}/api/reports/monthly/preview`,
@@ -1384,21 +1382,22 @@ export default function Settings() {
                   </div>
                 </CardContent>
               </Card>
+
               {/* Security Settings Card */}
-              <Card className="bg-white border-slate-200">
+              <Card className="bg-card border">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+                  <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                     <AlertCircle className="w-5 h-5 text-red-400" />
                     Security
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-sm border border-slate-200">
+                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-sm border border">
                     <div>
-                      <Label className="text-white">
+                      <Label className="text-card-foreground">
                         Enable 2FA (Email OTP)
                       </Label>
-                      <p className="text-xs text-[#C5C6C7]">
+                      <p className="text-xs text-card-foreground">
                         Require email verification code on every login
                       </p>
                     </div>
@@ -1425,9 +1424,9 @@ export default function Settings() {
                       data-testid="twofa-toggle"
                     />
                   </div>
-                  <div className="p-3 bg-slate-50 rounded-sm border border-slate-200">
-                    <Label className="text-white">Session Timeout</Label>
-                    <p className="text-xs text-[#C5C6C7] mb-2">
+                  <div className="p-3 bg-muted/50 rounded-sm border border">
+                    <Label className="text-card-foreground">Session Timeout</Label>
+                    <p className="text-xs text-card-foreground mb-2">
                       Auto-logout after inactivity (current: {sessionTimeout}h)
                     </p>
                     <div className="flex items-center gap-2">
@@ -1451,7 +1450,7 @@ export default function Settings() {
                             toast.error(err?.message || "Something went wrong. Please try again.");
                           }
                         }}
-                        className="bg-slate-50 border-slate-200 text-white px-3 py-1.5 rounded-md text-sm"
+                        className="bg-muted/50 border text-foreground px-3 py-1.5 rounded-md text-sm"
                       >
                         <option value="1">1 hour</option>
                         <option value="2">2 hours</option>
@@ -1460,13 +1459,13 @@ export default function Settings() {
                       </select>
                     </div>
                   </div>
-                  <div className="p-3 bg-slate-50 rounded-sm border border-slate-200">
+                  <div className="p-3 bg-muted/50 rounded-sm border border">
                     <div className="flex items-center justify-between">
                       <div>
-                        <Label className="text-white">
+                        <Label className="text-card-foreground">
                           My Approval Notifications
                         </Label>
-                        <p className="text-xs text-[#C5C6C7]">
+                        <p className="text-xs text-card-foreground">
                           Receive email when transactions need approval
                         </p>
                       </div>
@@ -1503,15 +1502,15 @@ export default function Settings() {
               </Card>
 
               {/* Manual FX Rates Card */}
-              <Card className="bg-white border-slate-200 md:col-span-2">
+              <Card className="bg-card border md:col-span-2">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+                  <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                     <DollarSign className="w-5 h-5 text-green-400" />
                     Manual FX Rates (1 unit = X USD)
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <p className="text-xs text-[#C5C6C7]">
+                  <p className="text-xs text-card-foreground">
                     Set exchange rates for currency conversion in Treasury and
                     Dashboard. These replace live FX rates.
                   </p>
@@ -1525,10 +1524,10 @@ export default function Settings() {
                             key={currency}
                             className="flex items-center gap-2"
                           >
-                            <span className="text-sm font-mono text-slate-800 w-16 font-bold">
+                            <span className="text-sm font-mono text-foreground w-16 font-bold">
                               {currency}
                             </span>
-                            <span className="text-xs text-[#C5C6C7]">
+                            <span className="text-xs text-card-foreground">
                               1 {currency} =
                             </span>
                             <Input
@@ -1541,9 +1540,9 @@ export default function Settings() {
                                   [currency]: parseFloat(e.target.value) || 0,
                                 }))
                               }
-                              className="w-32 bg-slate-50 border-slate-200 text-white text-sm"
+                              className="w-32 bg-muted/50 border text-foreground text-sm"
                             />
-                            <span className="text-xs text-[#C5C6C7]">USD</span>
+                            <span className="text-xs text-card-foreground">USD</span>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1560,20 +1559,20 @@ export default function Settings() {
                         ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-[#C5C6C7]">
+                    <p className="text-sm text-card-foreground">
                       No manual rates set. USD equivalents won't be shown for
                       non-USD accounts.
                     </p>
                   )}
 
-                  <div className="flex items-center gap-2 pt-2 border-t border-slate-200">
+                  <div className="flex items-center gap-2 pt-2 border-t border">
                     <Input
                       placeholder="Currency code (e.g., INR)"
                       value={newFxCurrency}
                       onChange={(e) =>
                         setNewFxCurrency(e.target.value.toUpperCase())
                       }
-                      className="w-40 bg-slate-50 border-slate-200 text-white text-sm"
+                      className="w-40 bg-muted/50 border text-foreground text-sm"
                       data-testid="new-fx-currency"
                     />
                     <Button
@@ -1596,7 +1595,7 @@ export default function Settings() {
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <div className="text-xs text-[#C5C6C7]">
+                    <div className="text-xs text-card-foreground">
                       {fxRatesUpdatedAt && (
                         <span>
                           Last updated:{" "}
@@ -1608,11 +1607,11 @@ export default function Settings() {
                     <Button
                       onClick={handleSaveFxRates}
                       disabled={savingFxRates}
-                      className="bg-primary text-[#0B0C10] hover:bg-[#45A29E] font-bold"
+                      className="bg-indigo-600 text-white hover:bg-indigo-700 font-bold"
                       data-testid="save-fx-rates-btn"
                     >
                       {savingFxRates ? (
-                        <div className="w-4 h-4 border-2 border-[#0B0C10] border-t-transparent rounded-full animate-spin mr-2" />
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
                       ) : (
                         <CheckCircle2 className="w-4 h-4 mr-2" />
                       )}
@@ -1623,17 +1622,17 @@ export default function Settings() {
               </Card>
 
               {/* Email Logs Card */}
-              <Card className="bg-white border-slate-200">
+              <Card className="bg-card border">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-[#1FA21B]" />
+                  <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-indigo-600" />
                     Email History
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ScrollArea className="h-[250px]">
                     {emailLogs.length === 0 ? (
-                      <p className="text-[#C5C6C7] text-sm text-center py-8">
+                      <p className="text-card-foreground text-sm text-center py-8">
                         No emails sent yet
                       </p>
                     ) : (
@@ -1641,10 +1640,10 @@ export default function Settings() {
                         {emailLogs.map((log, index) => (
                           <div
                             key={index}
-                            className="p-3 bg-slate-50 rounded-xl border border-slate-200"
+                            className="p-3 bg-muted/50 rounded-sm border border"
                           >
                             <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs text-[#C5C6C7] uppercase">
+                              <span className="text-xs text-card-foreground uppercase">
                                 {log.type}
                               </span>
                               {log.status === "sent" ? (
@@ -1657,12 +1656,12 @@ export default function Settings() {
                                 </Badge>
                               )}
                             </div>
-                            <p className="text-white text-sm">
+                            <p className="text-foreground text-sm">
                               {log.recipients?.length > 0
                                 ? `To: ${log.recipients.join(", ")}`
                                 : "No recipients"}
                             </p>
-                            <p className="text-xs text-[#C5C6C7] mt-1">
+                            <p className="text-xs text-card-foreground mt-1">
                               {new Date(
                                 log.sent_at || log.attempted_at,
                               ).toLocaleString()}
@@ -1686,52 +1685,52 @@ export default function Settings() {
         /* Non-Admin Settings: Password Change + Security Info */
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Change Password */}
-          <Card className="bg-white border-slate-200">
+          <Card className="bg-card border">
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
-                <Lock className="w-5 h-5 text-[#66FCF1]" />
+              <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <Lock className="w-5 h-5 text-indigo-600" />
                 Change Password
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">
+                <Label className="text-card-foreground text-xs uppercase tracking-wider">
                   Current Password
                 </Label>
                 <Input
                   type="password"
                   id="current-password"
                   placeholder="Enter current password"
-                  className="bg-slate-50 border-slate-200 text-white"
+                  className="bg-muted/50 border text-foreground"
                   data-testid="current-password"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">
+                <Label className="text-card-foreground text-xs uppercase tracking-wider">
                   New Password
                 </Label>
                 <Input
                   type="password"
                   id="new-password"
                   placeholder="Enter new password (min 6 chars)"
-                  className="bg-slate-50 border-slate-200 text-white"
+                  className="bg-muted/50 border text-foreground"
                   data-testid="new-password"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">
+                <Label className="text-card-foreground text-xs uppercase tracking-wider">
                   Confirm New Password
                 </Label>
                 <Input
                   type="password"
                   id="confirm-password"
                   placeholder="Confirm new password"
-                  className="bg-slate-50 border-slate-200 text-white"
+                  className="bg-muted/50 border text-foreground"
                   data-testid="confirm-password"
                 />
               </div>
               <Button
-                className="w-full bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase"
+                className="w-full bg-indigo-600 text-white hover:bg-indigo-700 font-bold uppercase"
                 data-testid="change-password-btn"
                 onClick={async () => {
                   const curPw =
@@ -1783,19 +1782,19 @@ export default function Settings() {
           </Card>
 
           {/* Security Info */}
-          <Card className="bg-white border-slate-200">
+          <Card className="bg-card border">
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
-                <Shield className="w-5 h-5 text-[#66FCF1]" />
+              <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <Shield className="w-5 h-5 text-indigo-600" />
                 Security
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="p-3 bg-slate-50 rounded-sm border border-slate-200">
+              <div className="p-3 bg-muted/50 rounded-sm border border">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-white font-medium">2FA (Email OTP)</p>
-                    <p className="text-xs text-[#C5C6C7]">
+                    <p className="text-foreground font-medium">2FA (Email OTP)</p>
+                    <p className="text-xs text-card-foreground">
                       Email verification on every login
                     </p>
                   </div>
@@ -1803,36 +1802,36 @@ export default function Settings() {
                     className={
                       twofaEnabled
                         ? "bg-green-500/20 text-green-400"
-                        : "bg-slate-500/20 text-slate-400"
+                        : "bg-slate-500/20 text-muted-foreground"
                     }
                   >
                     {twofaEnabled ? "ENABLED" : "DISABLED"}
                   </Badge>
                 </div>
               </div>
-              <div className="p-3 bg-slate-50 rounded-sm border border-slate-200">
+              <div className="p-3 bg-muted/50 rounded-sm border border">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-white font-medium">Session Timeout</p>
-                    <p className="text-xs text-[#C5C6C7]">
+                    <p className="text-foreground font-medium">Session Timeout</p>
+                    <p className="text-xs text-card-foreground">
                       Auto-logout after inactivity
                     </p>
                   </div>
-                  <Badge className="bg-blue-500/20 text-blue-400">
+                  <Badge className="bg-primary/80/20 text-primary/60">
                     {sessionTimeout} hours
                   </Badge>
                 </div>
               </div>
-              <p className="text-xs text-[#C5C6C7]">
+              <p className="text-xs text-card-foreground">
                 Security settings are managed by your system administrator.
               </p>
-              <div className="p-3 bg-slate-50 rounded-sm border border-slate-200">
+              <div className="p-3 bg-muted/50 rounded-sm border border">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-white font-medium">
+                    <p className="text-foreground font-medium">
                       Approval Notifications
                     </p>
-                    <p className="text-xs text-[#C5C6C7]">
+                    <p className="text-xs text-card-foreground">
                       Receive email when transactions need approval
                     </p>
                   </div>

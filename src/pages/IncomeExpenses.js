@@ -17,7 +17,6 @@ import {
   TableHeader,
   TableRow,
 } from "../components/ui/table";
-
 import {
   Dialog,
   DialogContent,
@@ -39,6 +38,7 @@ import {
 } from "../components/ui/tabs";
 import { Textarea } from "../components/ui/textarea";
 import { ScrollArea } from "../components/ui/scroll-area";
+import PaginationControls from "../components/PaginationControls";
 import {
   Pagination,
   PaginationContent,
@@ -48,9 +48,8 @@ import {
   PaginationPrevious,
 } from "../components/ui/pagination";
 import { toast } from "sonner";
-import PaginationControls from "../components/PaginationControls";
-import { useAuth } from "../context/AuthContext";
 import { getApiError } from "../lib/utils";
+import { useAuth } from "../context/AuthContext";
 import {
   TrendingUp,
   TrendingDown,
@@ -297,15 +296,12 @@ export default function IncomeExpenses() {
     try {
       const response = await fetch(`${API_URL}/api/clients?page_size=500`, {
         headers: getAuthHeaders(),
-        credentials: "include",
       });
       if (response.ok) {
-        const data = await response.json();
-        setClients(data.items || data);
+        const d = await response.json();
+        setClients(d.items || d);
       }
-    } catch (error) {
-      console.error("Error fetching clients:", error);
-    }
+    } catch {}
   };
 
   const fetchBorrowers = async () => {
@@ -641,7 +637,7 @@ export default function IncomeExpenses() {
         window.URL.revokeObjectURL(url);
       }
     } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+      toast.error(err?.message || "Failed to download template");
     }
   };
 
@@ -923,12 +919,11 @@ export default function IncomeExpenses() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1
-            className="text-4xl font-bold uppercase tracking-tight text-slate-800"
-            style={{ fontFamily: "Barlow Condensed" }}
+            className="text-3xl font-bold tracking-tight text-foreground"
           >
             Income & Expenses
           </h1>
-          <p className="text-slate-500">
+          <p className="text-muted-foreground">
             Track and manage your business income and expenses
           </p>
         </div>
@@ -936,14 +931,14 @@ export default function IncomeExpenses() {
           <Button
             variant="outline"
             onClick={() => setImportDialog(true)}
-            className="border-slate-200 text-slate-600 hover:bg-slate-100"
+            className="border text-card-foreground hover:bg-muted"
             data-testid="import-btn"
           >
             <FileSpreadsheet className="w-4 h-4 mr-2" /> Import Excel
           </Button>
           <Button
             onClick={() => setIsDialogOpen(true)}
-            className="bg-[#1FA21B] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-xl glow-cyan"
+            className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm glow-cyan"
             data-testid="add-entry-btn"
           >
             <Plus className="w-4 h-4 mr-2" /> Add Entry
@@ -954,58 +949,58 @@ export default function IncomeExpenses() {
       {/* Summary Cards */}
       {summary && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="bg-white border-slate-200">
+          <Card className="bg-card border">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Total Income
                   </p>
                   <p className="text-3xl font-bold font-mono text-green-400">
                     ${summary.total_income_usd?.toLocaleString()}
                   </p>
                 </div>
-                <div className="p-3 bg-green-500/10 rounded-xl">
+                <div className="p-3 bg-green-500/10 rounded-sm">
                   <TrendingUp className="w-6 h-6 text-green-400" />
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-white border-slate-200">
+          <Card className="bg-card border">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Total Expenses
                   </p>
                   <p className="text-3xl font-bold font-mono text-red-400">
                     ${summary.total_expense_usd?.toLocaleString()}
                   </p>
                 </div>
-                <div className="p-3 bg-red-500/10 rounded-xl">
+                <div className="p-3 bg-red-500/10 rounded-sm">
                   <TrendingDown className="w-6 h-6 text-red-400" />
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-white border-slate-200">
+          <Card className="bg-card border">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Net Profit/Loss
                   </p>
                   <p
-                    className={`text-3xl font-bold font-mono ${summary.net_profit_usd >= 0 ? "text-blue-600" : "text-red-400"}`}
+                    className={`text-3xl font-bold font-mono ${summary.net_profit_usd >= 0 ? "text-primary" : "text-red-400"}`}
                   >
                     ${summary.net_profit_usd?.toLocaleString()}
                   </p>
                 </div>
                 <div
-                  className={`p-3 rounded-xl ${summary.net_profit_usd >= 0 ? "bg-blue-100" : "bg-red-500/10"}`}
+                  className={`p-3 rounded-sm ${summary.net_profit_usd >= 0 ? "bg-primary/15" : "bg-red-500/10"}`}
                 >
                   <DollarSign
-                    className={`w-6 h-6 ${summary.net_profit_usd >= 0 ? "text-blue-600" : "text-red-400"}`}
+                    className={`w-6 h-6 ${summary.net_profit_usd >= 0 ? "text-primary" : "text-red-400"}`}
                   />
                 </div>
               </div>
@@ -1023,10 +1018,10 @@ export default function IncomeExpenses() {
         }}
         className="w-full"
       >
-        <TabsList className="bg-white border border-slate-200">
+        <TabsList className="bg-card border border">
           <TabsTrigger
             value="all"
-            className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-600"
+            className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary"
           >
             All Entries
           </TabsTrigger>
@@ -1056,7 +1051,7 @@ export default function IncomeExpenses() {
           </TabsTrigger>
           <TabsTrigger
             value="reports"
-            className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-600"
+            className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary"
           >
             Reports
           </TabsTrigger>
@@ -1064,11 +1059,11 @@ export default function IncomeExpenses() {
 
         {/* Filters for entry tabs */}
         {["all", "income", "expense"].includes(activeTab) && (
-          <Card className="bg-white border-slate-200 mt-4">
+          <Card className="bg-card border mt-4">
             <CardContent className="p-4">
               <div className="flex flex-wrap items-end gap-3">
                 <div className="flex-1 min-w-[130px] space-y-1">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                     Start Date
                   </Label>
                   <Input
@@ -1077,11 +1072,11 @@ export default function IncomeExpenses() {
                     onChange={(e) =>
                       setFilters({ ...filters, startDate: e.target.value })
                     }
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B]"
+                    className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
                   />
                 </div>
                 <div className="flex-1 min-w-[130px] space-y-1">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                     End Date
                   </Label>
                   <Input
@@ -1090,12 +1085,12 @@ export default function IncomeExpenses() {
                     onChange={(e) =>
                       setFilters({ ...filters, endDate: e.target.value })
                     }
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B]"
+                    className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
                   />
                 </div>
                 {activeTab === "all" && (
                   <div className="flex-1 min-w-[120px] space-y-1">
-                    <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                    <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                       Type
                     </Label>
                     <Select
@@ -1107,11 +1102,11 @@ export default function IncomeExpenses() {
                         })
                       }
                     >
-                      <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800">
+                      <SelectTrigger className="bg-muted/50 border text-foreground">
                         <SelectValue placeholder="All Types" />
                       </SelectTrigger>
-                      <SelectContent className="bg-white border-slate-200">
-                        <SelectItem value="all" className="text-slate-800">
+                      <SelectContent className="bg-card border">
+                        <SelectItem value="all" className="text-foreground">
                           All Types
                         </SelectItem>
                         <SelectItem value="income" className="text-green-600">
@@ -1125,7 +1120,7 @@ export default function IncomeExpenses() {
                   </div>
                 )}
                 <div className="flex-1 min-w-[120px] space-y-1">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                     Category
                   </Label>
                   <Select
@@ -1137,11 +1132,11 @@ export default function IncomeExpenses() {
                       })
                     }
                   >
-                    <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800">
+                    <SelectTrigger className="bg-muted/50 border text-foreground">
                       <SelectValue placeholder="All Categories" />
                     </SelectTrigger>
-                    <SelectContent className="bg-white border-slate-200">
-                      <SelectItem value="all" className="text-slate-800">
+                    <SelectContent className="bg-card border">
+                      <SelectItem value="all" className="text-foreground">
                         All Categories
                       </SelectItem>
                       {ieCategories
@@ -1150,7 +1145,7 @@ export default function IncomeExpenses() {
                           <SelectItem
                             key={c.category_id}
                             value={c.name.toLowerCase()}
-                            className="text-slate-800"
+                            className="text-foreground"
                           >
                             {c.name}
                           </SelectItem>
@@ -1162,7 +1157,7 @@ export default function IncomeExpenses() {
                         <SelectItem
                           key={c.value}
                           value={c.value}
-                          className="text-slate-800"
+                          className="text-foreground"
                         >
                           {c.label}
                         </SelectItem>
@@ -1171,7 +1166,7 @@ export default function IncomeExpenses() {
                   </Select>
                 </div>
                 <div className="flex-1 min-w-[140px] space-y-1">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                     Account / Linked
                   </Label>
                   <Select
@@ -1201,35 +1196,35 @@ export default function IncomeExpenses() {
                         });
                     }}
                   >
-                    <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800">
+                    <SelectTrigger className="bg-muted/50 border text-foreground">
                       <SelectValue placeholder="All Accounts" />
                     </SelectTrigger>
-                    <SelectContent className="bg-white border-slate-200">
-                      <SelectItem value="all" className="text-slate-800">
+                    <SelectContent className="bg-card border">
+                      <SelectItem value="all" className="text-foreground">
                         All Accounts
                       </SelectItem>
-                      <div className="px-2 py-1 text-xs text-blue-600 font-semibold uppercase">
+                      <div className="px-2 py-1 text-xs text-primary font-semibold uppercase">
                         Treasury
                       </div>
                       {treasuryAccounts.map((acc) => (
                         <SelectItem
                           key={acc.account_id}
                           value={acc.account_id}
-                          className="text-slate-800"
+                          className="text-foreground"
                         >
                           {acc.account_name}
                         </SelectItem>
                       ))}
                       {exchangers.length > 0 && (
                         <>
-                          <div className="px-2 py-1 text-xs text-amber-500 font-semibold uppercase mt-1 border-t border-slate-200 pt-1">
+                          <div className="px-2 py-1 text-xs text-amber-500 font-semibold uppercase mt-1 border-t border pt-1">
                             Exchangers
                           </div>
                           {exchangers.map((v) => (
                             <SelectItem
                               key={v.vendor_id}
                               value={`vendor_${v.vendor_id}`}
-                              className="text-slate-800"
+                              className="text-foreground"
                             >
                               {v.vendor_name}
                             </SelectItem>
@@ -1240,7 +1235,7 @@ export default function IncomeExpenses() {
                   </Select>
                 </div>
                 <div className="flex-1 min-w-[120px] space-y-1">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                     Status
                   </Label>
                   <Select
@@ -1252,14 +1247,14 @@ export default function IncomeExpenses() {
                       })
                     }
                   >
-                    <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800">
+                    <SelectTrigger className="bg-muted/50 border text-foreground">
                       <SelectValue placeholder="All Statuses" />
                     </SelectTrigger>
-                    <SelectContent className="bg-white border-slate-200">
-                      <SelectItem value="all" className="text-slate-800">
+                    <SelectContent className="bg-card border">
+                      <SelectItem value="all" className="text-foreground">
                         All Statuses
                       </SelectItem>
-                      <SelectItem value="active" className="text-blue-600">
+                      <SelectItem value="active" className="text-primary">
                         Active
                       </SelectItem>
                       <SelectItem value="completed" className="text-green-600">
@@ -1280,7 +1275,7 @@ export default function IncomeExpenses() {
                 <Button
                   variant="outline"
                   onClick={clearFilters}
-                  className="border-slate-200 text-slate-500 hover:bg-slate-100"
+                  className="border text-muted-foreground hover:bg-muted"
                 >
                   <X className="w-4 h-4 mr-1" />
                   Clear
@@ -1309,7 +1304,7 @@ export default function IncomeExpenses() {
                   variant="outline"
                   size="sm"
                   onClick={() => exportCSV(filteredEntries)}
-                  className="border-slate-200 text-slate-600 hover:bg-slate-100"
+                  className="border text-card-foreground hover:bg-muted"
                   data-testid="export-csv-btn"
                 >
                   <Download className="w-3.5 h-3.5 mr-1.5" /> CSV
@@ -1318,7 +1313,7 @@ export default function IncomeExpenses() {
                   variant="outline"
                   size="sm"
                   onClick={() => exportExcel(filteredEntries)}
-                  className="border-slate-200 text-slate-600 hover:bg-slate-100"
+                  className="border text-card-foreground hover:bg-muted"
                   data-testid="export-xlsx-btn"
                 >
                   <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5" /> Excel
@@ -1327,7 +1322,7 @@ export default function IncomeExpenses() {
                   variant="outline"
                   size="sm"
                   onClick={() => exportPDF(filteredEntries)}
-                  className="border-slate-200 text-slate-600 hover:bg-slate-100"
+                  className="border text-card-foreground hover:bg-muted"
                   data-testid="export-pdf-btn"
                 >
                   <FileText className="w-3.5 h-3.5 mr-1.5" /> PDF
@@ -1348,7 +1343,6 @@ export default function IncomeExpenses() {
                 }
               />
 
-              {/* Pagination */}
               <PaginationControls
                 currentPage={currentPage}
                 totalPages={totalPages}
@@ -1366,9 +1360,9 @@ export default function IncomeExpenses() {
 
         {/* Vendors Tab */}
         <TabsContent value="vendors" className="mt-4">
-          <Card className="bg-white border-slate-200">
+          <Card className="bg-card border">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-lg text-slate-800 flex items-center gap-2">
+              <CardTitle className="text-lg text-foreground flex items-center gap-2">
                 <Users className="w-5 h-5 text-purple-500" /> Service Vendors
                 (Suppliers)
               </CardTitle>
@@ -1388,36 +1382,36 @@ export default function IncomeExpenses() {
               </Button>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-slate-500 mb-4">
+              <p className="text-sm text-muted-foreground mb-4">
                 Manage vendors for services like rent, utilities, office
                 supplies, etc. These are different from Exchangers (money
                 partners).
               </p>
               {vendorSuppliers.length === 0 ? (
                 <div className="text-center py-12">
-                  <Users className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                  <p className="text-slate-500">No vendors yet</p>
-                  <p className="text-sm text-slate-400 mt-1">
+                  <Users className="w-12 h-12 text-muted-foreground/60 mx-auto mb-4" />
+                  <p className="text-muted-foreground">No vendors yet</p>
+                  <p className="text-sm text-muted-foreground mt-1">
                     Click "Add Vendor" to create your first service vendor
                   </p>
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-slate-200">
-                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                    <TableRow className="border">
+                      <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                         Name
                       </TableHead>
-                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                      <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                         Contact
                       </TableHead>
-                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                      <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                         Bank Details
                       </TableHead>
-                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                      <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                         Status
                       </TableHead>
-                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs w-24">
+                      <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs w-24">
                         Actions
                       </TableHead>
                     </TableRow>
@@ -1426,44 +1420,44 @@ export default function IncomeExpenses() {
                     {vendorSuppliers.map((v) => (
                       <TableRow
                         key={v.supplier_id}
-                        className="border-slate-200 hover:bg-slate-50"
+                        className="border hover:bg-muted/50"
                       >
                         <TableCell>
-                          <div className="font-medium text-slate-800">
+                          <div className="font-medium text-foreground">
                             {v.name}
                           </div>
                           {v.notes && (
-                            <p className="text-xs text-slate-400 mt-0.5">
+                            <p className="text-xs text-muted-foreground mt-0.5">
                               {v.notes}
                             </p>
                           )}
                         </TableCell>
                         <TableCell>
                           {v.contact_person && (
-                            <p className="text-sm text-slate-800">
+                            <p className="text-sm text-foreground">
                               {v.contact_person}
                             </p>
                           )}
                           {v.email && (
-                            <p className="text-xs text-slate-500">{v.email}</p>
+                            <p className="text-xs text-muted-foreground">{v.email}</p>
                           )}
                           {v.phone && (
-                            <p className="text-xs text-slate-500">{v.phone}</p>
+                            <p className="text-xs text-muted-foreground">{v.phone}</p>
                           )}
                         </TableCell>
                         <TableCell>
                           {v.bank_name && (
-                            <p className="text-sm text-slate-800">
+                            <p className="text-sm text-foreground">
                               {v.bank_name}
                             </p>
                           )}
                           {v.bank_account_number && (
-                            <p className="text-xs text-slate-500">
+                            <p className="text-xs text-muted-foreground">
                               A/C: {v.bank_account_number}
                             </p>
                           )}
                           {v.bank_ifsc && (
-                            <p className="text-xs text-slate-500">
+                            <p className="text-xs text-muted-foreground">
                               IFSC: {v.bank_ifsc}
                             </p>
                           )}
@@ -1473,7 +1467,7 @@ export default function IncomeExpenses() {
                             className={
                               v.status === "active"
                                 ? "bg-green-100 text-green-700"
-                                : "bg-slate-100 text-slate-500"
+                                : "bg-muted text-muted-foreground"
                             }
                           >
                             {v.status}
@@ -1505,7 +1499,7 @@ export default function IncomeExpenses() {
                                   data: v,
                                 });
                               }}
-                              className="text-blue-600 hover:bg-blue-50 h-8 w-8 p-0"
+                              className="text-primary hover:bg-primary/10 h-8 w-8 p-0"
                             >
                               <Pencil className="w-4 h-4" />
                             </Button>
@@ -1522,9 +1516,9 @@ export default function IncomeExpenses() {
 
         {/* Categories Tab */}
         <TabsContent value="categories" className="mt-4">
-          <Card className="bg-white border-slate-200">
+          <Card className="bg-card border">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-lg text-slate-800 flex items-center gap-2">
+              <CardTitle className="text-lg text-foreground flex items-center gap-2">
                 <FolderTree className="w-5 h-5 text-amber-500" /> Account
                 Categories
               </CardTitle>
@@ -1540,35 +1534,35 @@ export default function IncomeExpenses() {
               </Button>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-slate-500 mb-4">
+              <p className="text-sm text-muted-foreground mb-4">
                 Create custom categories to better organize your income and
                 expenses.
               </p>
               {ieCategories.length === 0 ? (
                 <div className="text-center py-12">
-                  <FolderTree className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                  <p className="text-slate-500">No custom categories yet</p>
-                  <p className="text-sm text-slate-400 mt-1">
+                  <FolderTree className="w-12 h-12 text-muted-foreground/60 mx-auto mb-4" />
+                  <p className="text-muted-foreground">No custom categories yet</p>
+                  <p className="text-sm text-muted-foreground mt-1">
                     Click "Add Category" to create your first category
                   </p>
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-slate-200">
-                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                    <TableRow className="border">
+                      <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                         Name
                       </TableHead>
-                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                      <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                         Type
                       </TableHead>
-                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                      <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                         Description
                       </TableHead>
-                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                      <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                         Status
                       </TableHead>
-                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs w-24">
+                      <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs w-24">
                         Actions
                       </TableHead>
                     </TableRow>
@@ -1577,9 +1571,9 @@ export default function IncomeExpenses() {
                     {ieCategories.map((c) => (
                       <TableRow
                         key={c.category_id}
-                        className="border-slate-200 hover:bg-slate-50"
+                        className="border hover:bg-muted/50"
                       >
-                        <TableCell className="font-medium text-slate-800">
+                        <TableCell className="font-medium text-foreground">
                           {c.name}
                         </TableCell>
                         <TableCell>
@@ -1589,7 +1583,7 @@ export default function IncomeExpenses() {
                                 ? "bg-green-100 text-green-700"
                                 : c.category_type === "expense"
                                   ? "bg-red-100 text-red-700"
-                                  : "bg-blue-100 text-blue-700"
+                                  : "bg-primary/15 text-primary"
                             }
                           >
                             {c.category_type === "both"
@@ -1597,7 +1591,7 @@ export default function IncomeExpenses() {
                               : c.category_type}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-slate-500 text-sm">
+                        <TableCell className="text-muted-foreground text-sm">
                           {c.description || "-"}
                         </TableCell>
                         <TableCell>
@@ -1605,7 +1599,7 @@ export default function IncomeExpenses() {
                             className={
                               c.is_active
                                 ? "bg-green-100 text-green-700"
-                                : "bg-slate-100 text-slate-500"
+                                : "bg-muted text-muted-foreground"
                             }
                           >
                             {c.is_active ? "Active" : "Inactive"}
@@ -1628,7 +1622,7 @@ export default function IncomeExpenses() {
                                   data: c,
                                 });
                               }}
-                              className="text-blue-600 hover:bg-blue-50 h-8 w-8 p-0"
+                              className="text-primary hover:bg-primary/10 h-8 w-8 p-0"
                             >
                               <Pencil className="w-4 h-4" />
                             </Button>
@@ -1647,9 +1641,9 @@ export default function IncomeExpenses() {
         <TabsContent value="reports" className="mt-4 space-y-6">
           {summary && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="bg-white border-slate-200">
+              <Card className="bg-card border">
                 <CardHeader>
-                  <CardTitle className="text-lg text-slate-800 flex items-center gap-2">
+                  <CardTitle className="text-lg text-foreground flex items-center gap-2">
                     <TrendingUp className="w-5 h-5 text-green-400" />
                     Income by Category
                   </CardTitle>
@@ -1662,7 +1656,7 @@ export default function IncomeExpenses() {
                           key={cat}
                           className="flex items-center justify-between"
                         >
-                          <span className="text-slate-500 capitalize">
+                          <span className="text-muted-foreground capitalize">
                             {cat.replace("_", " ")}
                           </span>
                           <span className="text-green-400 font-mono">
@@ -1673,16 +1667,16 @@ export default function IncomeExpenses() {
                     )}
                     {Object.keys(summary.income_by_category || {}).length ===
                       0 && (
-                      <p className="text-slate-500 text-sm">
+                      <p className="text-muted-foreground text-sm">
                         No income recorded
                       </p>
                     )}
                   </div>
                 </CardContent>
               </Card>
-              <Card className="bg-white border-slate-200">
+              <Card className="bg-card border">
                 <CardHeader>
-                  <CardTitle className="text-lg text-slate-800 flex items-center gap-2">
+                  <CardTitle className="text-lg text-foreground flex items-center gap-2">
                     <TrendingDown className="w-5 h-5 text-red-400" />
                     Expenses by Category
                   </CardTitle>
@@ -1695,7 +1689,7 @@ export default function IncomeExpenses() {
                           key={cat}
                           className="flex items-center justify-between"
                         >
-                          <span className="text-slate-500 capitalize">
+                          <span className="text-muted-foreground capitalize">
                             {cat.replace("_", " ")}
                           </span>
                           <span className="text-red-400 font-mono">
@@ -1706,7 +1700,7 @@ export default function IncomeExpenses() {
                     )}
                     {Object.keys(summary.expense_by_category || {}).length ===
                       0 && (
-                      <p className="text-slate-500 text-sm">
+                      <p className="text-muted-foreground text-sm">
                         No expenses recorded
                       </p>
                     )}
@@ -1715,10 +1709,10 @@ export default function IncomeExpenses() {
               </Card>
             </div>
           )}
-          <Card className="bg-white border-slate-200">
+          <Card className="bg-card border">
             <CardHeader>
-              <CardTitle className="text-lg text-slate-800 flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-blue-600" />
+              <CardTitle className="text-lg text-foreground flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-primary" />
                 Monthly P&L ({new Date().getFullYear()})
               </CardTitle>
             </CardHeader>
@@ -1726,17 +1720,17 @@ export default function IncomeExpenses() {
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-slate-200 hover:bg-transparent">
-                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                    <TableRow className="border hover:bg-transparent">
+                      <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                         Month
                       </TableHead>
-                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">
+                      <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">
                         Income
                       </TableHead>
-                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">
+                      <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">
                         Expenses
                       </TableHead>
-                      <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">
+                      <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">
                         Net
                       </TableHead>
                     </TableRow>
@@ -1745,9 +1739,9 @@ export default function IncomeExpenses() {
                     {monthlyData.map((row) => (
                       <TableRow
                         key={row.month}
-                        className="border-slate-200 hover:bg-slate-100"
+                        className="border hover:bg-muted"
                       >
-                        <TableCell className="text-slate-800">
+                        <TableCell className="text-foreground">
                           {row.month}
                         </TableCell>
                         <TableCell className="text-green-400 font-mono text-right">
@@ -1757,7 +1751,7 @@ export default function IncomeExpenses() {
                           ${row.expense.toLocaleString()}
                         </TableCell>
                         <TableCell
-                          className={`font-mono text-right ${row.net >= 0 ? "text-blue-600" : "text-red-400"}`}
+                          className={`font-mono text-right ${row.net >= 0 ? "text-primary" : "text-red-400"}`}
                         >
                           ${row.net.toLocaleString()}
                         </TableCell>
@@ -1779,11 +1773,10 @@ export default function IncomeExpenses() {
           if (!open) resetForm();
         }}
       >
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-card border text-foreground max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle
-              className="text-2xl font-bold uppercase tracking-tight"
-              style={{ fontFamily: "Barlow Condensed" }}
+              className="text-lg font-bold text-foreground"
             >
               Add {formData.entry_type === "income" ? "Income" : "Expense"}
             </DialogTitle>
@@ -1807,7 +1800,7 @@ export default function IncomeExpenses() {
                 className={
                   formData.entry_type === "income"
                     ? "bg-green-500 hover:bg-green-600 text-white flex-1"
-                    : "border-slate-200 text-slate-500 hover:bg-slate-100 flex-1"
+                    : "border text-muted-foreground hover:bg-muted flex-1"
                 }
                 data-testid="toggle-income"
               >
@@ -1830,7 +1823,7 @@ export default function IncomeExpenses() {
                 className={
                   formData.entry_type === "expense"
                     ? "bg-red-500 hover:bg-red-600 text-white flex-1"
-                    : "border-slate-200 text-slate-500 hover:bg-slate-100 flex-1"
+                    : "border text-muted-foreground hover:bg-muted flex-1"
                 }
                 data-testid="toggle-expense"
               >
@@ -1841,23 +1834,23 @@ export default function IncomeExpenses() {
 
             {/* Category Selection - Searchable */}
             <div className="space-y-2">
-              <Label className="text-slate-500 text-xs uppercase tracking-wider">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                 Category *
               </Label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   value={categorySearch}
                   onChange={(e) => setCategorySearch(e.target.value)}
-                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B] pl-9"
+                  className="bg-muted/50 border text-foreground focus:border-[#66FCF1] pl-9"
                   placeholder="Search category..."
                   data-testid="entry-category-search"
                 />
               </div>
-              <div className="max-h-32 overflow-y-auto border border-slate-200 rounded-xl bg-slate-50">
+              <div className="max-h-32 overflow-y-auto border border rounded-md bg-muted/50">
                 {/* Add New Category Option */}
                 <div
-                  className="px-3 py-2 cursor-pointer hover:bg-amber-50/5text-amber-600 flex items-center gap-2 border-b border-slate-200"
+                  className="px-3 py-2 cursor-pointer hover:bg-amber-50/5text-amber-600 flex items-center gap-2 border-b border"
                   onClick={() => {
                     setCategoryDialog({
                       open: true,
@@ -1882,7 +1875,7 @@ export default function IncomeExpenses() {
                   .map((c) => (
                     <div
                       key={c.category_id}
-                      className={`px-3 py-2 cursor-pointer hover:bg-slate-100 ${formData.ie_category_id === c.category_id ? "bg-blue-50 text-blue-700" : "text-slate-700"}`}
+                      className={`px-3 py-2 cursor-pointer hover:bg-muted ${formData.ie_category_id === c.category_id ? "bg-primary/10 text-primary" : "text-card-foreground"}`}
                       onClick={() => {
                         setFormData({
                           ...formData,
@@ -1909,7 +1902,7 @@ export default function IncomeExpenses() {
                   .map((c) => (
                     <div
                       key={c.value}
-                      className={`px-3 py-2 cursor-pointer hover:bg-slate-100 ${formData.category === c.value ? "bg-blue-50 text-blue-700" : "text-slate-700"}`}
+                      className={`px-3 py-2 cursor-pointer hover:bg-muted ${formData.category === c.value ? "bg-primary/10 text-primary" : "text-card-foreground"}`}
                       onClick={() => {
                         setFormData({
                           ...formData,
@@ -1928,7 +1921,7 @@ export default function IncomeExpenses() {
             {/* Amount & Currency */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                   {formData.base_currency !== "USD"
                     ? "Amount in USD (Auto-calculated)"
                     : "Amount in USD *"}
@@ -1944,14 +1937,14 @@ export default function IncomeExpenses() {
                       setFormData({ ...formData, amount: value });
                     }
                   }}
-                  className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
+                  className="bg-muted/50 border text-foreground focus:border-[#66FCF1] font-mono"
                   placeholder="0.00 USD"
                   data-testid="entry-amount"
                   readOnly={formData.base_currency !== "USD"}
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                   Payment Currency
                 </Label>
                 <Select
@@ -1967,15 +1960,15 @@ export default function IncomeExpenses() {
                     })
                   }
                 >
-                  <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800">
+                  <SelectTrigger className="bg-muted/50 border text-foreground">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border-slate-200">
+                  <SelectContent className="bg-card border">
                     {currencies.map((cur) => (
                       <SelectItem
                         key={cur}
                         value={cur}
-                        className="text-slate-800 hover:bg-slate-100"
+                        className="text-foreground hover:bg-muted"
                       >
                         {cur}
                       </SelectItem>
@@ -1988,7 +1981,7 @@ export default function IncomeExpenses() {
             {formData.base_currency !== "USD" && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                     Amount in {formData.base_currency} *
                   </Label>
                   <Input
@@ -2011,13 +2004,13 @@ export default function IncomeExpenses() {
                         });
                       }
                     }}
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
+                    className="bg-muted/50 border text-foreground focus:border-[#66FCF1] font-mono"
                     placeholder={`0.00 ${formData.base_currency}`}
                     data-testid="entry-base-amount"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                     Exchange Rate (1 {formData.base_currency} = ? USD) *
                   </Label>
                   <Input
@@ -2040,7 +2033,7 @@ export default function IncomeExpenses() {
                         });
                       }
                     }}
-                    className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B] font-mono"
+                    className="bg-muted/50 border text-foreground focus:border-[#66FCF1] font-mono"
                     placeholder="0.0000"
                     data-testid="entry-exchange-rate"
                   />
@@ -2051,7 +2044,7 @@ export default function IncomeExpenses() {
             {formData.base_currency !== "USD" &&
               formData.base_amount &&
               formData.exchange_rate && (
-                <p className="text-xs text-blue-600">
+                <p className="text-xs text-primary">
                   {formData.base_amount} {formData.base_currency} ×{" "}
                   {formData.exchange_rate} = {formData.amount} USD
                 </p>
@@ -2059,7 +2052,7 @@ export default function IncomeExpenses() {
 
             {/* Account / Exchanger Selection */}
             <div className="space-y-2">
-              <Label className="text-slate-500 text-xs uppercase tracking-wider">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                 {formData.entry_type === "income"
                   ? "Credit to Account / Exchanger *"
                   : "Deduct from Account / Exchanger *"}
@@ -2091,20 +2084,20 @@ export default function IncomeExpenses() {
                 }}
               >
                 <SelectTrigger
-                  className="bg-slate-50 border-slate-200 text-slate-800"
+                  className="bg-muted/50 border text-foreground"
                   data-testid="entry-account"
                 >
                   <SelectValue placeholder="Select account or exchanger" />
                 </SelectTrigger>
-                <SelectContent className="bg-white border-slate-200">
-                  <div className="px-2 py-1 text-xs text-blue-600 font-semibold uppercase tracking-wider">
+                <SelectContent className="bg-card border">
+                  <div className="px-2 py-1 text-xs text-primary font-semibold uppercase tracking-wider">
                     Treasury Accounts
                   </div>
                   {treasuryAccounts.map((acc) => (
                     <SelectItem
                       key={acc.account_id}
                       value={acc.account_id}
-                      className="text-slate-800 hover:bg-slate-100"
+                      className="text-foreground hover:bg-muted"
                     >
                       {acc.account_name} ({acc.balance?.toLocaleString()}{" "}
                       {acc.currency})
@@ -2112,14 +2105,14 @@ export default function IncomeExpenses() {
                   ))}
                   {exchangers.length > 0 && (
                     <>
-                      <div className="px-2 py-1 text-xs text-amber-500 font-semibold uppercase tracking-wider mt-2 border-t border-slate-200 pt-2">
+                      <div className="px-2 py-1 text-xs text-amber-500 font-semibold uppercase tracking-wider mt-2 border-t border pt-2">
                         Exchangers (Requires Approval)
                       </div>
                       {exchangers.map((v) => (
                         <SelectItem
                           key={v.vendor_id}
                           value={`vendor_${v.vendor_id}`}
-                          className="text-slate-800 hover:bg-slate-100"
+                          className="text-foreground hover:bg-muted"
                         >
                           <span className="flex items-center gap-2">
                             <Store className="w-3 h-3 text-amber-500" />
@@ -2143,7 +2136,7 @@ export default function IncomeExpenses() {
 
                 {/* Transaction Mode for Exchanger */}
                 <div className="space-y-2">
-                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                     Transaction Mode *
                   </Label>
                   <Select
@@ -2158,16 +2151,16 @@ export default function IncomeExpenses() {
                     }
                   >
                     <SelectTrigger
-                      className="bg-slate-50 border-slate-200 text-slate-800"
+                      className="bg-muted/50 border text-foreground"
                       data-testid="ie-tx-mode"
                     >
                       <SelectValue placeholder="Select mode" />
                     </SelectTrigger>
-                    <SelectContent className="bg-white border-slate-200">
-                      <SelectItem value="bank" className="text-slate-800">
+                    <SelectContent className="bg-card border">
+                      <SelectItem value="bank" className="text-foreground">
                         Bank Transfer
                       </SelectItem>
-                      <SelectItem value="cash" className="text-slate-800">
+                      <SelectItem value="cash" className="text-foreground">
                         Cash
                       </SelectItem>
                     </SelectContent>
@@ -2176,7 +2169,7 @@ export default function IncomeExpenses() {
 
                 {/* Cash collecting person details */}
                 {formData.transaction_mode === "cash" && (
-                  <div className="grid grid-cols-2 gap-3 p-3 bg-amber-50/5border border-amber-200 rounded-xl">
+                  <div className="grid grid-cols-2 gap-3 p-3 bg-amber-50/5border border-amber-200 rounded-sm">
                     <div className="space-y-1">
                       <Label className="text-amber-700 text-xs uppercase">
                         Collecting Person Name
@@ -2189,7 +2182,7 @@ export default function IncomeExpenses() {
                             collecting_person_name: e.target.value,
                           })
                         }
-                        className="bg-white border-amber-200 text-slate-800"
+                        className="bg-card border-amber-200 text-foreground"
                         placeholder="Full name"
                         data-testid="ie-collecting-name"
                       />
@@ -2206,7 +2199,7 @@ export default function IncomeExpenses() {
                             collecting_person_number: e.target.value,
                           })
                         }
-                        className="bg-white border-amber-200 text-slate-800"
+                        className="bg-card border-amber-200 text-foreground"
                         placeholder="Phone number"
                         data-testid="ie-collecting-number"
                       />
@@ -2215,13 +2208,13 @@ export default function IncomeExpenses() {
                 )}
 
                 {formData.transaction_mode !== "cash" && (
-                  <div className="space-y-3 p-3 bg-slate-50/50 border border-slate-200 rounded">
-                    <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">
+                  <div className="space-y-3 p-3 bg-muted/50/50 border border rounded">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
                       Exchanger Bank Details
                     </p>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <Label className="text-slate-400 text-[10px] uppercase">
+                        <Label className="text-muted-foreground text-[10px] uppercase">
                           Account Holder Name
                         </Label>
                         <Input
@@ -2232,12 +2225,12 @@ export default function IncomeExpenses() {
                               vendor_bank_account_name: e.target.value,
                             })
                           }
-                          className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B] h-8 text-sm"
+                          className="bg-muted/50 border text-foreground focus:border-[#66FCF1] h-8 text-sm"
                           placeholder="Name"
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-slate-400 text-[10px] uppercase">
+                        <Label className="text-muted-foreground text-[10px] uppercase">
                           Account Number
                         </Label>
                         <Input
@@ -2248,12 +2241,12 @@ export default function IncomeExpenses() {
                               vendor_bank_account_number: e.target.value,
                             })
                           }
-                          className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B] h-8 text-sm"
+                          className="bg-muted/50 border text-foreground focus:border-[#66FCF1] h-8 text-sm"
                           placeholder="Account number"
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-slate-400 text-[10px] uppercase">
+                        <Label className="text-muted-foreground text-[10px] uppercase">
                           IFSC Code
                         </Label>
                         <Input
@@ -2264,12 +2257,12 @@ export default function IncomeExpenses() {
                               vendor_bank_ifsc: e.target.value,
                             })
                           }
-                          className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B] h-8 text-sm"
+                          className="bg-muted/50 border text-foreground focus:border-[#66FCF1] h-8 text-sm"
                           placeholder="IFSC code"
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-slate-400 text-[10px] uppercase">
+                        <Label className="text-muted-foreground text-[10px] uppercase">
                           Branch
                         </Label>
                         <Input
@@ -2280,7 +2273,7 @@ export default function IncomeExpenses() {
                               vendor_bank_branch: e.target.value,
                             })
                           }
-                          className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B] h-8 text-sm"
+                          className="bg-muted/50 border text-foreground focus:border-[#66FCF1] h-8 text-sm"
                           placeholder="Branch name"
                         />
                       </div>
@@ -2291,14 +2284,14 @@ export default function IncomeExpenses() {
             )}
 
             {/* Linked Entities (Client, Vendor Supplier) - Optional */}
-            <div className="space-y-2 border-t border-slate-200 pt-4">
-              <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">
+            <div className="space-y-2 border-t border pt-4">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
                 Link to (Optional)
               </p>
               <div className="grid grid-cols-2 gap-3">
                 {/* Client */}
                 <div className="space-y-1">
-                  <Label className="text-slate-400 text-[10px] uppercase flex items-center gap-1">
+                  <Label className="text-muted-foreground text-[10px] uppercase flex items-center gap-1">
                     <User className="w-3 h-3" />
                     Client
                   </Label>
@@ -2311,18 +2304,18 @@ export default function IncomeExpenses() {
                       })
                     }
                   >
-                    <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800 h-8 text-sm">
+                    <SelectTrigger className="bg-muted/50 border text-foreground h-8 text-sm">
                       <SelectValue placeholder="Select client" />
                     </SelectTrigger>
-                    <SelectContent className="bg-white border-slate-200 max-h-48">
-                      <SelectItem value="none" className="text-slate-400">
+                    <SelectContent className="bg-card border max-h-48">
+                      <SelectItem value="none" className="text-muted-foreground">
                         None
                       </SelectItem>
                       {clients.map((c) => (
                         <SelectItem
                           key={c.client_id}
                           value={c.client_id}
-                          className="text-slate-800"
+                          className="text-foreground"
                         >
                           {c.first_name} {c.last_name}
                         </SelectItem>
@@ -2332,7 +2325,7 @@ export default function IncomeExpenses() {
                 </div>
                 {/* Vendor Supplier */}
                 <div className="space-y-1">
-                  <Label className="text-slate-400 text-[10px] uppercase flex items-center gap-1">
+                  <Label className="text-muted-foreground text-[10px] uppercase flex items-center gap-1">
                     <Users className="w-3 h-3" />
                     Vendor (Supplier)
                   </Label>
@@ -2345,11 +2338,11 @@ export default function IncomeExpenses() {
                       })
                     }
                   >
-                    <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800 h-8 text-sm">
+                    <SelectTrigger className="bg-muted/50 border text-foreground h-8 text-sm">
                       <SelectValue placeholder="Select vendor" />
                     </SelectTrigger>
-                    <SelectContent className="bg-white border-slate-200 max-h-48">
-                      <SelectItem value="none" className="text-slate-400">
+                    <SelectContent className="bg-card border max-h-48">
+                      <SelectItem value="none" className="text-muted-foreground">
                         None
                       </SelectItem>
                       <div
@@ -2370,7 +2363,7 @@ export default function IncomeExpenses() {
                           <SelectItem
                             key={v.supplier_id}
                             value={v.supplier_id}
-                            className="text-slate-800"
+                            className="text-foreground"
                           >
                             {v.name}
                           </SelectItem>
@@ -2383,7 +2376,7 @@ export default function IncomeExpenses() {
 
             {/* Date */}
             <div className="space-y-2">
-              <Label className="text-slate-500 text-xs uppercase tracking-wider">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                 Date
               </Label>
               <Input
@@ -2392,13 +2385,13 @@ export default function IncomeExpenses() {
                 onChange={(e) =>
                   setFormData({ ...formData, date: e.target.value })
                 }
-                className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B]"
+                className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
               />
             </div>
 
             {/* Description */}
             <div className="space-y-2">
-              <Label className="text-slate-500 text-xs uppercase tracking-wider">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                 Description
               </Label>
               <Textarea
@@ -2406,7 +2399,7 @@ export default function IncomeExpenses() {
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
-                className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B]"
+                className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
                 rows={2}
                 placeholder="Enter description..."
               />
@@ -2414,7 +2407,7 @@ export default function IncomeExpenses() {
 
             {/* Reference */}
             <div className="space-y-2">
-              <Label className="text-slate-500 text-xs uppercase tracking-wider">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                 Reference / Invoice #
               </Label>
               <Input
@@ -2422,7 +2415,7 @@ export default function IncomeExpenses() {
                 onChange={(e) =>
                   setFormData({ ...formData, reference: e.target.value })
                 }
-                className="bg-slate-50 border-slate-200 text-slate-800 focus:border-[#1FA21B]"
+                className="bg-muted/50 border text-foreground focus:border-[#66FCF1]"
                 placeholder="INV-001, REF-123, etc."
               />
             </div>
@@ -2436,7 +2429,7 @@ export default function IncomeExpenses() {
                   setIsDialogOpen(false);
                   resetForm();
                 }}
-                className="border-slate-200 text-slate-500 hover:bg-slate-100"
+                className="border text-muted-foreground hover:bg-muted"
               >
                 Cancel
               </Button>
@@ -2476,7 +2469,7 @@ export default function IncomeExpenses() {
           }
         }}
       >
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-card border text-foreground max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
               <Users className="w-5 h-5 text-purple-500" />{" "}
@@ -2486,7 +2479,7 @@ export default function IncomeExpenses() {
           </DialogHeader>
           <form onSubmit={handleVendorSupplierSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-slate-500 text-xs uppercase tracking-wider">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                 Name *
               </Label>
               <Input
@@ -2497,7 +2490,7 @@ export default function IncomeExpenses() {
                     name: e.target.value,
                   })
                 }
-                className="bg-slate-50 border-slate-200 text-slate-800"
+                className="bg-muted/50 border text-foreground"
                 placeholder="e.g., Office Rent - Building A"
                 data-testid="vendor-name"
               />
@@ -2505,7 +2498,7 @@ export default function IncomeExpenses() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                   Contact Person
                 </Label>
                 <Input
@@ -2516,12 +2509,12 @@ export default function IncomeExpenses() {
                       contact_person: e.target.value,
                     })
                   }
-                  className="bg-slate-50 border-slate-200 text-slate-800"
+                  className="bg-muted/50 border text-foreground"
                   placeholder="John Smith"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                   Phone
                 </Label>
                 <Input
@@ -2532,14 +2525,14 @@ export default function IncomeExpenses() {
                       phone: e.target.value,
                     })
                   }
-                  className="bg-slate-50 border-slate-200 text-slate-800"
+                  className="bg-muted/50 border text-foreground"
                   placeholder="+1234567890"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-500 text-xs uppercase tracking-wider">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                 Email
               </Label>
               <Input
@@ -2551,19 +2544,19 @@ export default function IncomeExpenses() {
                     email: e.target.value,
                   })
                 }
-                className="bg-slate-50 border-slate-200 text-slate-800"
+                className="bg-muted/50 border text-foreground"
                 placeholder="vendor@example.com"
               />
             </div>
 
-            <div className="border-t border-slate-200 pt-4">
-              <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-3">
+            <div className="border-t border pt-4">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-3">
                 Bank Details
               </p>
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label className="text-slate-400 text-[10px] uppercase">
+                    <Label className="text-muted-foreground text-[10px] uppercase">
                       Bank Name
                     </Label>
                     <Input
@@ -2574,12 +2567,12 @@ export default function IncomeExpenses() {
                           bank_name: e.target.value,
                         })
                       }
-                      className="bg-slate-50 border-slate-200 text-slate-800 h-8 text-sm"
+                      className="bg-muted/50 border text-foreground h-8 text-sm"
                       placeholder="HSBC"
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-slate-400 text-[10px] uppercase">
+                    <Label className="text-muted-foreground text-[10px] uppercase">
                       Account Holder
                     </Label>
                     <Input
@@ -2590,14 +2583,14 @@ export default function IncomeExpenses() {
                           bank_account_name: e.target.value,
                         })
                       }
-                      className="bg-slate-50 border-slate-200 text-slate-800 h-8 text-sm"
+                      className="bg-muted/50 border text-foreground h-8 text-sm"
                       placeholder="Account holder name"
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label className="text-slate-400 text-[10px] uppercase">
+                    <Label className="text-muted-foreground text-[10px] uppercase">
                       Account Number
                     </Label>
                     <Input
@@ -2608,12 +2601,12 @@ export default function IncomeExpenses() {
                           bank_account_number: e.target.value,
                         })
                       }
-                      className="bg-slate-50 border-slate-200 text-slate-800 h-8 text-sm"
+                      className="bg-muted/50 border text-foreground h-8 text-sm"
                       placeholder="1234567890"
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-slate-400 text-[10px] uppercase">
+                    <Label className="text-muted-foreground text-[10px] uppercase">
                       IFSC Code
                     </Label>
                     <Input
@@ -2624,13 +2617,13 @@ export default function IncomeExpenses() {
                           bank_ifsc: e.target.value,
                         })
                       }
-                      className="bg-slate-50 border-slate-200 text-slate-800 h-8 text-sm"
+                      className="bg-muted/50 border text-foreground h-8 text-sm"
                       placeholder="HSBC001"
                     />
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-slate-400 text-[10px] uppercase">
+                  <Label className="text-muted-foreground text-[10px] uppercase">
                     Branch
                   </Label>
                   <Input
@@ -2641,7 +2634,7 @@ export default function IncomeExpenses() {
                         bank_branch: e.target.value,
                       })
                     }
-                    className="bg-slate-50 border-slate-200 text-slate-800 h-8 text-sm"
+                    className="bg-muted/50 border text-foreground h-8 text-sm"
                     placeholder="Main Branch"
                   />
                 </div>
@@ -2649,7 +2642,7 @@ export default function IncomeExpenses() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-500 text-xs uppercase tracking-wider">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                 Notes
               </Label>
               <Textarea
@@ -2660,7 +2653,7 @@ export default function IncomeExpenses() {
                     notes: e.target.value,
                   })
                 }
-                className="bg-slate-50 border-slate-200 text-slate-800"
+                className="bg-muted/50 border text-foreground"
                 rows={2}
                 placeholder="Additional notes..."
               />
@@ -2678,7 +2671,7 @@ export default function IncomeExpenses() {
                   });
                   resetVendorSupplierForm();
                 }}
-                className="border-slate-200 text-slate-500 hover:bg-slate-100"
+                className="border text-muted-foreground hover:bg-muted"
               >
                 Cancel
               </Button>
@@ -2705,7 +2698,7 @@ export default function IncomeExpenses() {
           }
         }}
       >
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
+        <DialogContent className="bg-card border text-foreground max-w-md">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
               <FolderTree className="w-5 h-5 text-amber-500" />{" "}
@@ -2714,7 +2707,7 @@ export default function IncomeExpenses() {
           </DialogHeader>
           <form onSubmit={handleCategorySubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-slate-500 text-xs uppercase tracking-wider">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                 Name *
               </Label>
               <Input
@@ -2722,14 +2715,14 @@ export default function IncomeExpenses() {
                 onChange={(e) =>
                   setCategoryForm({ ...categoryForm, name: e.target.value })
                 }
-                className="bg-slate-50 border-slate-200 text-slate-800"
+                className="bg-muted/50 border text-foreground"
                 placeholder="e.g., Office Supplies"
                 data-testid="category-name"
               />
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-500 text-xs uppercase tracking-wider">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                 Type
               </Label>
               <Select
@@ -2738,17 +2731,17 @@ export default function IncomeExpenses() {
                   setCategoryForm({ ...categoryForm, category_type: v })
                 }
               >
-                <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800">
+                <SelectTrigger className="bg-muted/50 border text-foreground">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-white border-slate-200">
-                  <SelectItem value="both" className="text-slate-800">
+                <SelectContent className="bg-card border">
+                  <SelectItem value="both" className="text-foreground">
                     Both (Income & Expense)
                   </SelectItem>
-                  <SelectItem value="income" className="text-slate-800">
+                  <SelectItem value="income" className="text-foreground">
                     Income Only
                   </SelectItem>
-                  <SelectItem value="expense" className="text-slate-800">
+                  <SelectItem value="expense" className="text-foreground">
                     Expense Only
                   </SelectItem>
                 </SelectContent>
@@ -2756,7 +2749,7 @@ export default function IncomeExpenses() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-500 text-xs uppercase tracking-wider">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                 Description
               </Label>
               <Textarea
@@ -2767,7 +2760,7 @@ export default function IncomeExpenses() {
                     description: e.target.value,
                   })
                 }
-                className="bg-slate-50 border-slate-200 text-slate-800"
+                className="bg-muted/50 border text-foreground"
                 rows={2}
                 placeholder="Optional description..."
               />
@@ -2785,7 +2778,7 @@ export default function IncomeExpenses() {
                   });
                   resetCategoryForm();
                 }}
-                className="border-slate-200 text-slate-500 hover:bg-slate-100"
+                className="border text-muted-foreground hover:bg-muted"
               >
                 Cancel
               </Button>
@@ -2812,7 +2805,7 @@ export default function IncomeExpenses() {
           }
         }}
       >
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
+        <DialogContent className="bg-card border text-foreground max-w-md">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
               <FileSpreadsheet className="w-5 h-5 text-green-500" /> Import from
@@ -2820,7 +2813,7 @@ export default function IncomeExpenses() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="p-3 bg-blue-50 rounded border border-blue-200 text-sm text-blue-700">
+            <div className="p-3 bg-primary/10 rounded border border-primary/30 text-sm text-primary">
               <p className="font-medium mb-1">Excel Format:</p>
               <p className="text-xs">
                 Columns: Entry Type, Category, Amount, Currency, Date,
@@ -2830,29 +2823,29 @@ export default function IncomeExpenses() {
                 variant="link"
                 size="sm"
                 onClick={downloadTemplate}
-                className="text-blue-600 p-0 h-auto mt-1"
+                className="text-primary p-0 h-auto mt-1"
               >
                 <Download className="w-3 h-3 mr-1" /> Download Template
               </Button>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-500 text-xs uppercase tracking-wider">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                 Treasury Account *
               </Label>
               <Select
                 value={importTreasuryId}
                 onValueChange={setImportTreasuryId}
               >
-                <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-800">
+                <SelectTrigger className="bg-muted/50 border text-foreground">
                   <SelectValue placeholder="Select treasury account" />
                 </SelectTrigger>
-                <SelectContent className="bg-white border-slate-200">
+                <SelectContent className="bg-card border">
                   {treasuryAccounts.map((acc) => (
                     <SelectItem
                       key={acc.account_id}
                       value={acc.account_id}
-                      className="text-slate-800 hover:bg-slate-100"
+                      className="text-foreground hover:bg-muted"
                     >
                       {acc.account_name} ({acc.balance?.toLocaleString()}{" "}
                       {acc.currency})
@@ -2869,10 +2862,10 @@ export default function IncomeExpenses() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-500 text-xs uppercase tracking-wider">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                 Excel File *
               </Label>
-              <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center hover:border-[#1FA21B] transition-colors">
+              <div className="border-2 border-dashed border rounded-lg p-4 text-center hover:border-[#66FCF1] transition-colors">
                 <input
                   type="file"
                   accept=".xlsx,.xls"
@@ -2881,13 +2874,13 @@ export default function IncomeExpenses() {
                   id="import-file"
                 />
                 <label htmlFor="import-file" className="cursor-pointer">
-                  <FileSpreadsheet className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                  <FileSpreadsheet className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
                   {importFile ? (
-                    <p className="text-sm text-slate-800 font-medium">
+                    <p className="text-sm text-foreground font-medium">
                       {importFile.name}
                     </p>
                   ) : (
-                    <p className="text-sm text-slate-500">
+                    <p className="text-sm text-muted-foreground">
                       Click to select Excel file
                     </p>
                   )}
@@ -2903,7 +2896,7 @@ export default function IncomeExpenses() {
                   setImportFile(null);
                   setImportTreasuryId("");
                 }}
-                className="border-slate-200 text-slate-500"
+                className="border text-muted-foreground"
               >
                 Cancel
               </Button>
@@ -2929,31 +2922,31 @@ export default function IncomeExpenses() {
           }
         }}
       >
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
+        <DialogContent className="bg-card border text-foreground max-w-md">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
-              <Upload className="w-5 h-5 text-blue-500" /> Upload Invoice /
+              <Upload className="w-5 h-5 text-primary/80" /> Upload Invoice /
               Document
             </DialogTitle>
           </DialogHeader>
           {invoiceDialog.entry && (
             <div className="space-y-4">
-              <div className="p-3 bg-slate-50 rounded border border-slate-200">
-                <p className="text-xs text-slate-400 uppercase">Entry</p>
-                <p className="font-medium text-slate-800">
+              <div className="p-3 bg-muted/50 rounded border border">
+                <p className="text-xs text-muted-foreground uppercase">Entry</p>
+                <p className="font-medium text-foreground">
                   {invoiceDialog.entry.description || "No description"}
                 </p>
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-muted-foreground">
                   {invoiceDialog.entry.amount?.toLocaleString()}{" "}
                   {invoiceDialog.entry.currency}
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                   Select File
                 </Label>
-                <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center hover:border-blue-400 transition-colors">
+                <div className="border-2 border-dashed border rounded-lg p-4 text-center hover:border-primary/70 transition-colors">
                   <input
                     type="file"
                     accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
@@ -2962,17 +2955,17 @@ export default function IncomeExpenses() {
                     id="invoice-file"
                   />
                   <label htmlFor="invoice-file" className="cursor-pointer">
-                    <FileText className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                    <FileText className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
                     {invoiceFile ? (
-                      <p className="text-sm text-slate-800 font-medium">
+                      <p className="text-sm text-foreground font-medium">
                         {invoiceFile.name}
                       </p>
                     ) : (
                       <>
-                        <p className="text-sm text-slate-500">
+                        <p className="text-sm text-muted-foreground">
                           Click to select file
                         </p>
-                        <p className="text-xs text-slate-400 mt-1">
+                        <p className="text-xs text-muted-foreground mt-1">
                           PDF, Images, or Documents
                         </p>
                       </>
@@ -2988,14 +2981,14 @@ export default function IncomeExpenses() {
                     setInvoiceDialog({ open: false, entry: null });
                     setInvoiceFile(null);
                   }}
-                  className="border-slate-200 text-slate-500"
+                  className="border text-muted-foreground"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleInvoiceUpload}
                   disabled={uploadingInvoice || !invoiceFile}
-                  className="bg-blue-500 hover:bg-blue-600 text-white font-bold"
+                  className="bg-primary/80 hover:bg-primary text-white font-bold"
                 >
                   {uploadingInvoice ? "Uploading..." : "Upload"}
                 </Button>
@@ -3012,15 +3005,15 @@ export default function IncomeExpenses() {
           if (!open) setViewInvoiceDialog({ open: false, file: null });
         }}
       >
-        <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-2xl max-h-[80vh]">
+        <DialogContent className="bg-card border text-foreground max-w-2xl max-h-[80vh]">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
-              <FileText className="w-5 h-5 text-blue-500" /> Invoice Preview
+              <FileText className="w-5 h-5 text-primary/80" /> Invoice Preview
             </DialogTitle>
           </DialogHeader>
           {viewInvoiceDialog.file && (
             <div className="space-y-4">
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-muted-foreground">
                 Filename: {viewInvoiceDialog.file.filename}
               </p>
               {viewInvoiceDialog.file.url ? (
@@ -3038,12 +3031,12 @@ export default function IncomeExpenses() {
                     title="Invoice PDF"
                   />
                 ) : (
-                  <div className="p-8 text-center bg-slate-50 rounded">
-                    <FileText className="w-12 h-12 text-slate-400 mx-auto mb-2" />
+                  <div className="p-8 text-center bg-muted/50 rounded">
+                    <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
                     <a
                       href={viewInvoiceDialog.file.url}
                       download={viewInvoiceDialog.file.filename}
-                      className="text-blue-600 text-sm hover:underline"
+                      className="text-primary text-sm hover:underline"
                     >
                       Download File
                     </a>
@@ -3062,15 +3055,15 @@ export default function IncomeExpenses() {
                   title="Invoice PDF"
                 />
               ) : (
-                <div className="p-8 text-center bg-slate-50 rounded">
-                  <FileText className="w-12 h-12 text-slate-400 mx-auto mb-2" />
-                  <p className="text-slate-500">
+                <div className="p-8 text-center bg-muted/50 rounded">
+                  <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-muted-foreground">
                     Preview not available for this file type
                   </p>
                   <a
                     href={`data:${viewInvoiceDialog.file.content_type};base64,${viewInvoiceDialog.file.data}`}
                     download={viewInvoiceDialog.file.filename}
-                    className="text-blue-600 text-sm hover:underline mt-2 inline-block"
+                    className="text-primary text-sm hover:underline mt-2 inline-block"
                   >
                     Download File
                   </a>
@@ -3097,20 +3090,20 @@ function EntriesTable({
 }) {
   if (loading) {
     return (
-      <Card className="bg-white border-slate-200">
+      <Card className="bg-card border">
         <CardContent className="p-12 flex justify-center">
-          <div className="w-8 h-8 border-2 border-[#1FA21B] border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin" />
         </CardContent>
       </Card>
     );
   }
   if (entries.length === 0) {
     return (
-      <Card className="bg-white border-slate-200">
+      <Card className="bg-card border">
         <CardContent className="p-12 text-center">
-          <Wallet className="w-12 h-12 text-slate-500 mx-auto mb-4" />
-          <p className="text-slate-500">No entries found</p>
-          <p className="text-sm text-slate-500/60 mt-2">
+          <Wallet className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground">No entries found</p>
+          <p className="text-sm text-muted-foreground/60 mt-2">
             Click "Add Entry" to record income or expenses
           </p>
         </CardContent>
@@ -3146,50 +3139,50 @@ function EntriesTable({
       );
     if (entry.status === "active")
       return (
-        <Badge className="bg-blue-500/20 text-blue-600 border-blue-500/30 text-[10px]">
+        <Badge className="bg-primary/80/20 text-primary border-primary/30 text-[10px]">
           Active
         </Badge>
       );
     return (
-      <Badge className="bg-slate-200 text-slate-600 text-[10px]">
+      <Badge className="bg-slate-200 text-card-foreground text-[10px]">
         {entry.status || "-"}
       </Badge>
     );
   };
 
   return (
-    <Card className="bg-white border-slate-200">
+    <Card className="bg-card border">
       <CardContent className="p-0">
         <ScrollArea className="h-[500px]">
           <Table>
             <TableHeader>
-              <TableRow className="border-slate-200 hover:bg-transparent">
-                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+              <TableRow className="border hover:bg-transparent">
+                <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                   Date
                 </TableHead>
-                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                   Type
                 </TableHead>
-                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                   Category
                 </TableHead>
-                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                   Description
                 </TableHead>
-                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                   Account / Linked
                 </TableHead>
-                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                   Status
                 </TableHead>
-                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs">
+                <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                   Payment Currency
                 </TableHead>
-                <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs text-right">
+                <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">
                   Amount (USD)
                 </TableHead>
                 {isAdmin && (
-                  <TableHead className="text-slate-500 font-bold uppercase tracking-wider text-xs w-24">
+                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs w-24">
                     Actions
                   </TableHead>
                 )}
@@ -3208,10 +3201,10 @@ function EntriesTable({
                 return (
                   <TableRow
                     key={entry.entry_id}
-                    className={`border-slate-200 hover:bg-slate-100 border-l-4 ${borderColor} ${isConverted ? "opacity-50" : ""}`}
+                    className={`border hover:bg-muted border-l-4 ${borderColor} ${isConverted ? "opacity-50" : ""}`}
                     data-testid={`entry-row-${entry.entry_id}`}
                   >
-                    <TableCell className="text-slate-800 text-sm">
+                    <TableCell className="text-foreground text-sm">
                       {formatDate(entry.date)}
                     </TableCell>
                     <TableCell>
@@ -3233,10 +3226,10 @@ function EntriesTable({
                         )}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-slate-500 text-sm">
+                    <TableCell className="text-muted-foreground text-sm">
                       {getCategoryLabel(entry)}
                     </TableCell>
-                    <TableCell className="text-slate-800 text-sm max-w-[200px] truncate">
+                    <TableCell className="text-foreground text-sm max-w-[200px] truncate">
                       {entry.description || "-"}
                     </TableCell>
                     <TableCell className="text-sm">
@@ -3247,13 +3240,13 @@ function EntriesTable({
                             {entry.vendor_name}
                           </span>
                           {entry.vendor_bank_account_number && (
-                            <p className="text-[10px] text-slate-400 mt-0.5">
+                            <p className="text-[10px] text-muted-foreground mt-0.5">
                               A/C: {entry.vendor_bank_account_number}
                             </p>
                           )}
                         </div>
                       ) : entry.treasury_account_name ? (
-                        <span className="text-blue-600">
+                        <span className="text-primary">
                           {entry.treasury_account_name}
                         </span>
                       ) : (
@@ -3261,7 +3254,7 @@ function EntriesTable({
                       )}
                       {/* Show linked entities */}
                       {entry.client_name && (
-                        <p className="text-[10px] text-slate-400 mt-0.5">
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
                           Client: {entry.client_name}
                         </p>
                       )}
@@ -3274,7 +3267,7 @@ function EntriesTable({
                     <TableCell>{getStatusBadge(entry)}</TableCell>
                     <TableCell>
                       <div className="flex flex-col">
-                        <Badge className="bg-blue-100 text-blue-700 text-xs w-fit">
+                        <Badge className="bg-primary/15 text-primary text-xs w-fit">
                           {paymentCurrency}
                         </Badge>
                         <span
@@ -3310,7 +3303,7 @@ function EntriesTable({
                               variant="ghost"
                               size="sm"
                               onClick={() => onUploadInvoice(entry)}
-                              className="text-slate-400 hover:text-blue-600 hover:bg-blue-50 h-7 px-2"
+                              className="text-muted-foreground hover:text-primary hover:bg-primary/10 h-7 px-2"
                               title="Upload Invoice"
                             >
                               <Upload className="w-3.5 h-3.5" />

@@ -32,8 +32,8 @@ import {
   SelectValue,
 } from "../components/ui/select";
 import { toast } from "sonner";
-import { useAuth } from "../context/AuthContext";
 import { getApiError } from "../lib/utils";
+import { useAuth } from "../context/AuthContext";
 import {
   ClipboardCheck,
   CheckCircle,
@@ -60,7 +60,7 @@ import {
   Landmark,
   FileText,
 } from "lucide-react";
-import { useAutoRefresh } from '../hooks/useAutoRefresh';
+import { useAutoRefresh } from "../hooks/useAutoRefresh";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -97,37 +97,37 @@ const MathCaptcha = ({ onVerified, onCancel, actionType }) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 text-[#1FA21B]">
+      <div className="flex items-center gap-2 text-indigo-600">
         <Calculator className="w-5 h-5" />
         <span className="text-sm uppercase tracking-wider">
           Security Verification
         </span>
       </div>
 
-      <div className="p-4 bg-[#0F172A] rounded-xl border border-[#1F2833]">
-        <p className="text-[#C5C6C7] text-sm mb-3">
+      <div className="p-4 bg-muted/50 rounded-sm border border">
+        <p className="text-card-foreground text-sm mb-3">
           Please solve this math problem to{" "}
           {actionType === "approve" ? "approve" : "reject"} the transaction:
         </p>
-        <div className="flex items-center justify-center gap-4 text-3xl font-mono text-white">
+        <div className="flex items-center justify-center gap-4 text-3xl font-mono text-foreground">
           <span>{num1}</span>
-          <span className="text-[#1FA21B]">+</span>
+          <span className="text-indigo-600">+</span>
           <span>{num2}</span>
-          <span className="text-[#C5C6C7]">=</span>
-          <span className="text-[#1FA21B]">?</span>
+          <span className="text-card-foreground">=</span>
+          <span className="text-indigo-600">?</span>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">
+          <Label className="text-card-foreground text-xs uppercase tracking-wider">
             Your Answer
           </Label>
           <Input
             type="number"
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}
-            className="bg-[#0F172A] border-[#1F2833] text-white focus:border-[#1FA21B] font-mono text-xl text-center"
+            className="bg-muted/50 border text-foreground focus:border-indigo-500 font-mono text-xl text-center"
             placeholder="Enter the sum"
             autoFocus
             data-testid="captcha-answer"
@@ -140,7 +140,7 @@ const MathCaptcha = ({ onVerified, onCancel, actionType }) => {
             type="button"
             variant="outline"
             onClick={onCancel}
-            className="flex-1 border-[#1F2833] text-[#C5C6C7] hover:bg-white/5"
+            className="flex-1 border text-card-foreground hover:bg-muted/50"
           >
             Cancel
           </Button>
@@ -187,8 +187,8 @@ export default function AccountantDashboard() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("pending");
   const [destFilter, setDestFilter] = useState("all");
-  const [clientTags, setClientTags] = useState([]);
   const [clientFilter, setClientFilter] = useState("");
+  const [clientTags, setClientTags] = useState([]);
   const [emailFilter, setEmailFilter] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -203,19 +203,20 @@ export default function AccountantDashboard() {
   const [showApprovalDialog, setShowApprovalDialog] = useState(null);
   const [approvalSourceAccount, setApprovalSourceAccount] = useState("");
   const [approvalProofs, setApprovalProofs] = useState([]);
+
   const [approvalProofPreviews, setApprovalProofPreviews] = useState([]);
   const [bankReceiptDate, setBankReceiptDate] = useState("");
   const [treasuryAccounts, setTreasuryAccounts] = useState([]);
-   const [psps, setPsps] = useState([]);
-
+  const [psps, setPsps] = useState([]);
 
   // Captcha states
   const [showCaptcha, setShowCaptcha] = useState(false);
   const [captchaAction, setCaptchaAction] = useState(null); // { type: 'approve' | 'reject', transactionId: string, isSettlement?: boolean }
 
   // Generic approval dialog (for IE, Loan, Repayment, PSP Settlement, Vendor Settlement)
-  const [showGenericApprovalDialog, setShowGenericApprovalDialog] = useState(null); // { type, id, item }
-  const [genericApprovalDate, setGenericApprovalDate] = useState('');
+  const [showGenericApprovalDialog, setShowGenericApprovalDialog] =
+    useState(null); // { type, id, item }
+  const [genericApprovalDate, setGenericApprovalDate] = useState("");
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem("auth_token");
@@ -239,7 +240,6 @@ export default function AccountantDashboard() {
       console.error("Error fetching treasury accounts:", error);
     }
   };
-
 
   const fetchPsps = async () => {
     try {
@@ -285,9 +285,9 @@ export default function AccountantDashboard() {
         setTotalPages(data.total_pages || 1);
         setCurrentPage(page);
       }
-    } catch (err) {
-      console.error("Error fetching pending transactions:", err);
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      console.error("Error fetching pending transactions:", error);
+      toast.error("Failed to load pending transactions");
     }
   };
 
@@ -376,9 +376,15 @@ export default function AccountantDashboard() {
   const initiateApprove = (transactionId, isSettlement = false) => {
     if (isSettlement) {
       // Vendor settlements also go through the date approval dialog
-      const s = pendingSettlements.find(st => st.settlement_id === transactionId);
-      setShowGenericApprovalDialog({ type: 'vendor_settlement', id: transactionId, item: s || null });
-      setGenericApprovalDate(getItemOriginalDate('vendor_settlement', s));
+      const s = pendingSettlements.find(
+        (st) => st.settlement_id === transactionId,
+      );
+      setShowGenericApprovalDialog({
+        type: "vendor_settlement",
+        id: transactionId,
+        item: s || null,
+      });
+      setGenericApprovalDate(getItemOriginalDate("vendor_settlement", s));
       return;
     }
     // For withdrawals and deposits, show approval dialog with screenshot requirement
@@ -405,6 +411,7 @@ export default function AccountantDashboard() {
     setCaptchaAction({ type: "approve", transactionId, isSettlement });
     setShowCaptcha(true);
   };
+
   const initiateReject = (transactionId, isSettlement = false) => {
     setCaptchaAction({ type: "reject", transactionId, isSettlement });
     if (isSettlement) {
@@ -417,17 +424,18 @@ export default function AccountantDashboard() {
   const handleApprovalProofChange = (e) => {
     const files = Array.from(e.target.files);
     if (files.length) {
-      setApprovalProofs(prev => [...prev, ...files]);
-      files.forEach(file => {
+      setApprovalProofs((prev) => [...prev, ...files]);
+      files.forEach((file) => {
         const reader = new FileReader();
-        reader.onloadend = () => setApprovalProofPreviews(prev => [...prev, reader.result]);
+        reader.onloadend = () =>
+          setApprovalProofPreviews((prev) => [...prev, reader.result]);
         reader.readAsDataURL(file);
       });
     }
   };
   const removeApprovalProof = (idx) => {
-    setApprovalProofs(prev => prev.filter((_, i) => i !== idx));
-    setApprovalProofPreviews(prev => prev.filter((_, i) => i !== idx));
+    setApprovalProofs((prev) => prev.filter((_, i) => i !== idx));
+    setApprovalProofPreviews((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const handleTransactionApproval = () => {
@@ -466,14 +474,22 @@ export default function AccountantDashboard() {
 
     if (captchaAction.type === "approve") {
       if (captchaAction.isSettlement) {
-        await executeApproveSettlement(captchaAction.transactionId, captchaAction.approvalDate);
+        await executeApproveSettlement(
+          captchaAction.transactionId,
+          captchaAction.approvalDate,
+        );
       } else if (captchaAction.genericType) {
-        await executeGenericApprove(captchaAction.genericType, captchaAction.genericId, captchaAction.approvalDate);
+        await executeGenericApprove(
+          captchaAction.genericType,
+          captchaAction.genericId,
+          captchaAction.approvalDate,
+        );
       } else {
         await executeApprove(
           captchaAction.transactionId,
           captchaAction.sourceAccount,
-          captchaAction.proofFiles || (captchaAction.proofFile ? [captchaAction.proofFile] : []),
+          captchaAction.proofFiles ||
+            (captchaAction.proofFile ? [captchaAction.proofFile] : []),
           captchaAction.bankReceiptDate,
         );
       }
@@ -481,7 +497,10 @@ export default function AccountantDashboard() {
       if (captchaAction.isSettlement) {
         await executeRejectSettlement(captchaAction.transactionId);
       } else if (captchaAction.genericType) {
-        await executeGenericReject(captchaAction.genericType, captchaAction.genericId);
+        await executeGenericReject(
+          captchaAction.genericType,
+          captchaAction.genericId,
+        );
       } else {
         await executeReject(captchaAction.transactionId);
       }
@@ -505,7 +524,7 @@ export default function AccountantDashboard() {
       // Upload all proof files
       if (proofFiles && proofFiles.length) {
         const formData = new FormData();
-        proofFiles.forEach(f => formData.append("proof_images", f));
+        proofFiles.forEach((f) => formData.append("proof_images", f));
 
         const uploadResponse = await fetch(
           `${API_URL}/api/transactions/${transactionId}/upload-proof`,
@@ -544,8 +563,8 @@ export default function AccountantDashboard() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || "Something went wrong. Please try again.");
     } finally {
       setProcessingId(null);
     }
@@ -582,19 +601,22 @@ export default function AccountantDashboard() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || "Something went wrong. Please try again.");
     } finally {
       setProcessingId(null);
     }
   };
 
-  const executeApproveSettlement = async (settlementId, approvalDate = null) => {
+  const executeApproveSettlement = async (
+    settlementId,
+    approvalDate = null,
+  ) => {
     setProcessingId(settlementId);
     try {
       const params = new URLSearchParams();
-      if (approvalDate) params.append('approval_date', approvalDate);
-      const queryStr = params.toString() ? `?${params.toString()}` : '';
+      if (approvalDate) params.append("approval_date", approvalDate);
+      const queryStr = params.toString() ? `?${params.toString()}` : "";
       const response = await fetch(
         `${API_URL}/api/settlements/${settlementId}/approve${queryStr}`,
         {
@@ -610,8 +632,8 @@ export default function AccountantDashboard() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || "Something went wrong. Please try again.");
     } finally {
       setProcessingId(null);
     }
@@ -636,8 +658,8 @@ export default function AccountantDashboard() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || "Something went wrong. Please try again.");
     } finally {
       setProcessingId(null);
     }
@@ -645,15 +667,16 @@ export default function AccountantDashboard() {
 
   // ---- Generic Approve/Reject for IE, Loans, Repayments, PSP Settlements ----
   const getItemOriginalDate = (type, item) => {
-    if (!item) return new Date().toISOString().split('T')[0];
+    if (!item) return new Date().toISOString().split("T")[0];
     let raw = null;
-    if (type === 'ie') raw = item.date || item.created_at;
-    else if (type === 'loan') raw = item.loan_date || item.created_at;
-    else if (type === 'repayment') raw = item.payment_date || item.created_at;
-    else if (type === 'psp_settlement') raw = item.settlement_date || item.created_at;
-    else if (type === 'vendor_settlement') raw = item.created_at;
-    if (!raw) return new Date().toISOString().split('T')[0];
-    return raw.split('T')[0];
+    if (type === "ie") raw = item.date || item.created_at;
+    else if (type === "loan") raw = item.loan_date || item.created_at;
+    else if (type === "repayment") raw = item.payment_date || item.created_at;
+    else if (type === "psp_settlement")
+      raw = item.settlement_date || item.created_at;
+    else if (type === "vendor_settlement") raw = item.created_at;
+    if (!raw) return new Date().toISOString().split("T")[0];
+    return raw.split("T")[0];
   };
 
   const initiateGenericApprove = (type, id, item = null) => {
@@ -665,10 +688,20 @@ export default function AccountantDashboard() {
     if (!showGenericApprovalDialog) return;
     const { type, id } = showGenericApprovalDialog;
     const approvalDate = genericApprovalDate || null;
-    if (type === 'vendor_settlement') {
-      setCaptchaAction({ type: 'approve', transactionId: id, isSettlement: true, approvalDate });
+    if (type === "vendor_settlement") {
+      setCaptchaAction({
+        type: "approve",
+        transactionId: id,
+        isSettlement: true,
+        approvalDate,
+      });
     } else {
-      setCaptchaAction({ type: 'approve', genericType: type, genericId: id, approvalDate });
+      setCaptchaAction({
+        type: "approve",
+        genericType: type,
+        genericId: id,
+        approvalDate,
+      });
     }
     setShowGenericApprovalDialog(null);
     setShowCaptcha(true);
@@ -694,8 +727,8 @@ export default function AccountantDashboard() {
     };
     try {
       const params = new URLSearchParams();
-      if (approvalDate) params.append('approval_date', approvalDate);
-      const queryStr = params.toString() ? `?${params.toString()}` : '';
+      if (approvalDate) params.append("approval_date", approvalDate);
+      const queryStr = params.toString() ? `?${params.toString()}` : "";
       const response = await fetch(`${API_URL}${urlMap[type]}${queryStr}`, {
         method: "POST",
         headers: getAuthHeaders(),
@@ -782,15 +815,15 @@ export default function AccountantDashboard() {
       } else {
         toast.error(await getApiError(response));
       }
-    } catch (err) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
+    } catch (error) {
+      toast.error(error?.message || "Something went wrong. Please try again.");
     } finally {
       setProcessingId(null);
     }
   };
 
   const getTypeBadge = (type) => {
-    const isIncoming = ["deposit", "rebate", "income"].includes(type);
+    const isIncoming = ["deposit", "rebate"].includes(type);
     return (
       <div
         className={`flex items-center gap-1 ${isIncoming ? "text-green-400" : "text-red-400"}`}
@@ -832,6 +865,8 @@ export default function AccountantDashboard() {
     return `${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
   };
 
+  // All filtering is handled server-side; pendingTransactions already contains the filtered page.
+
   return (
     <div
       className="space-y-6 animate-fade-in"
@@ -840,12 +875,11 @@ export default function AccountantDashboard() {
       {/* Header */}
       <div>
         <h1
-          className="text-4xl font-bold uppercase tracking-tight text-white"
-          style={{ fontFamily: "Barlow Condensed" }}
+          className="text-3xl font-bold text-foreground"
         >
           Pending Approvals
         </h1>
-        <p className="text-[#C5C6C7]">
+        <p className="text-muted-foreground">
           Review and approve/reject transactions and settlements
         </p>
       </div>
@@ -853,23 +887,65 @@ export default function AccountantDashboard() {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
-          { label: "Transactions", count: totalItems, icon: Clock, color: "yellow", tab: "transactions" },
-          { label: "Vendor Settlements", count: pendingSettlements.length, icon: Store, color: "purple", tab: "settlements" },
-          { label: "Income/Expenses", count: pendingIE.length, icon: ReceiptText, color: "blue", tab: "ie" },
-          { label: "Loan Disbursements", count: pendingLoans.length, icon: HandCoins, color: "orange", tab: "loans" },
-          { label: "Loan Repayments", count: pendingRepayments.length, icon: DollarSign, color: "emerald", tab: "repayments" },
-          { label: "PSP Settlements", count: pendingPSPSettlements.length, icon: Landmark, color: "pink", tab: "psp_settlements" },
+          {
+            label: "Transactions",
+            count: totalItems,
+            icon: Clock,
+            color: "yellow",
+            tab: "transactions",
+          },
+          {
+            label: "Vendor Settlements",
+            count: pendingSettlements.length,
+            icon: Store,
+            color: "purple",
+            tab: "settlements",
+          },
+          {
+            label: "Income/Expenses",
+            count: pendingIE.length,
+            icon: ReceiptText,
+            color: "blue",
+            tab: "ie",
+          },
+          {
+            label: "Loan Disbursements",
+            count: pendingLoans.length,
+            icon: HandCoins,
+            color: "orange",
+            tab: "loans",
+          },
+          {
+            label: "Loan Repayments",
+            count: pendingRepayments.length,
+            icon: DollarSign,
+            color: "emerald",
+            tab: "repayments",
+          },
+          {
+            label: "PSP Settlements",
+            count: pendingPSPSettlements.length,
+            icon: Landmark,
+            color: "pink",
+            tab: "psp_settlements",
+          },
         ].map(({ label, count, icon: Icon, color, tab }) => (
           <Card
             key={tab}
-            className={`bg-[#1F2833] border-[#1F2833] cursor-pointer transition-colors ${activeTab === tab ? `border-${color}-400` : `hover:border-${color}-400/50`}`}
+            className={`bg-card border cursor-pointer transition-colors ${activeTab === tab ? `border-${color}-400` : `hover:border-${color}-400/50`}`}
             onClick={() => setActiveTab(tab)}
           >
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[10px] text-[#94A3B8] uppercase tracking-wider mb-1">{label}</p>
-                  <p className={`text-2xl font-bold font-mono text-${color}-400`}>{count}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
+                    {label}
+                  </p>
+                  <p
+                    className={`text-2xl font-bold font-mono text-${color}-400`}
+                  >
+                    {count}
+                  </p>
                 </div>
                 <Icon className={`w-5 h-5 text-${color}-400 opacity-50`} />
               </div>
@@ -880,253 +956,253 @@ export default function AccountantDashboard() {
 
       {/* Filters (for Transactions tab only) */}
       {activeTab === "transactions" && (
-      <Card className="bg-[#1F2833] border-[#1F2833]">
-        <CardContent className="p-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 shrink-0">
-              <Filter className="w-4 h-4 text-[#1FA21B]" />
-              <span className="text-[#94A3B8] text-sm uppercase tracking-wider">
-                Filters
-              </span>
+        <Card className="bg-card border">
+          <CardContent className="p-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2 shrink-0">
+                <Filter className="w-4 h-4 text-indigo-600" />
+                <span className="text-card-foreground text-sm uppercase tracking-wider">
+                  Filters
+                </span>
+              </div>
+
+              {/* Search by name / reference */}
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                <Input
+                  value={clientFilter}
+                  onChange={(e) => setClientFilter(e.target.value)}
+                  placeholder="Search client / reference..."
+                  className="pl-8 w-[200px] bg-muted/50 border text-foreground placeholder:text-muted-foreground focus:border-indigo-500 h-9"
+                />
+              </div>
+
+              {/* Email filter */}
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                <Input
+                  value={emailFilter}
+                  onChange={(e) => setEmailFilter(e.target.value)}
+                  placeholder="Filter by email..."
+                  className="pl-8 w-[190px] bg-muted/50 border text-foreground placeholder:text-muted-foreground focus:border-indigo-500 h-9"
+                />
+              </div>
+
+              {/* Status filter */}
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[140px] bg-muted/50 border text-foreground h-9">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent className="bg-card border">
+                  <SelectItem
+                    value="pending"
+                    className="text-foreground hover:bg-muted"
+                  >
+                    Pending
+                  </SelectItem>
+                  <SelectItem
+                    value="approved"
+                    className="text-foreground hover:bg-muted"
+                  >
+                    Approved
+                  </SelectItem>
+                  <SelectItem
+                    value="completed"
+                    className="text-foreground hover:bg-muted"
+                  >
+                    Completed
+                  </SelectItem>
+                  <SelectItem
+                    value="rejected"
+                    className="text-foreground hover:bg-muted"
+                  >
+                    Rejected
+                  </SelectItem>
+                  <SelectItem
+                    value="cancelled"
+                    className="text-foreground hover:bg-muted"
+                  >
+                    Cancelled
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Type filter */}
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="w-[140px] bg-muted/50 border text-foreground h-9">
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent className="bg-card border">
+                  <SelectItem
+                    value="all"
+                    className="text-foreground hover:bg-muted"
+                  >
+                    All Types
+                  </SelectItem>
+                  <SelectItem
+                    value="deposit"
+                    className="text-foreground hover:bg-muted"
+                  >
+                    Deposit
+                  </SelectItem>
+                  <SelectItem
+                    value="withdrawal"
+                    className="text-foreground hover:bg-muted"
+                  >
+                    Withdrawal
+                  </SelectItem>
+                  <SelectItem
+                    value="transfer"
+                    className="text-foreground hover:bg-muted"
+                  >
+                    Transfer
+                  </SelectItem>
+                  <SelectItem
+                    value="commission"
+                    className="text-foreground hover:bg-muted"
+                  >
+                    Commission
+                  </SelectItem>
+                  <SelectItem
+                    value="rebate"
+                    className="text-foreground hover:bg-muted"
+                  >
+                    Rebate
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Destination filter */}
+              <Select value={destFilter} onValueChange={setDestFilter}>
+                <SelectTrigger className="w-[155px] bg-muted/50 border text-foreground h-9">
+                  <SelectValue placeholder="Destination" />
+                </SelectTrigger>
+                <SelectContent className="bg-card border">
+                  <SelectItem
+                    value="all"
+                    className="text-foreground hover:bg-muted"
+                  >
+                    All Destinations
+                  </SelectItem>
+                  <SelectItem
+                    value="treasury"
+                    className="text-foreground hover:bg-muted"
+                  >
+                    Treasury
+                  </SelectItem>
+                  <SelectItem
+                    value="bank"
+                    className="text-foreground hover:bg-muted"
+                  >
+                    Client Bank
+                  </SelectItem>
+                  <SelectItem
+                    value="usdt"
+                    className="text-foreground hover:bg-muted"
+                  >
+                    USDT
+                  </SelectItem>
+                  <SelectItem
+                    value="psp"
+                    className="text-foreground hover:bg-muted"
+                  >
+                    PSP
+                  </SelectItem>
+                  <SelectItem
+                    value="vendor"
+                    className="text-foreground hover:bg-muted"
+                  >
+                    Exchanger
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Date range */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-muted-foreground">From:</span>
+                <Input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="w-[135px] bg-muted/50 border text-foreground h-9"
+                />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-muted-foreground">To:</span>
+                <Input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="w-[135px] bg-muted/50 border text-foreground h-9"
+                />
+              </div>
+
+              {/* Clear all */}
+              {(typeFilter !== "all" ||
+                statusFilter !== "pending" ||
+                destFilter !== "all" ||
+                clientFilter ||
+                emailFilter ||
+                dateFrom ||
+                dateTo) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setTypeFilter("all");
+                    setStatusFilter("pending");
+                    setDestFilter("all");
+                    setClientFilter("");
+                    setEmailFilter("");
+                    setDateFrom("");
+                    setDateTo("");
+                  }}
+                  className="text-red-500 hover:text-red-600 hover:bg-red-50 h-9"
+                >
+                  Clear Filters
+                </Button>
+              )}
             </div>
-
-            {/* Search by name / reference */}
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94A3B8]" />
-              <Input
-                value={clientFilter}
-                onChange={(e) => setClientFilter(e.target.value)}
-                placeholder="Search client / reference..."
-                className="pl-8 w-[200px] bg-[#0F172A] border-[#1F2833] text-white placeholder:text-[#94A3B8] focus:border-[#1FA21B] h-9"
-              />
-            </div>
-
-            {/* Email filter */}
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94A3B8]" />
-              <Input
-                value={emailFilter}
-                onChange={(e) => setEmailFilter(e.target.value)}
-                placeholder="Filter by email..."
-                className="pl-8 w-[190px] bg-[#0F172A] border-[#1F2833] text-white placeholder:text-[#94A3B8] focus:border-[#1FA21B] h-9"
-              />
-            </div>
-
-            {/* Status filter */}
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[140px] bg-[#0F172A] border-[#1F2833] text-white h-9">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent className="bg-[#1F2833] border-[#1F2833]">
-                <SelectItem
-                  value="pending"
-                  className="text-white hover:bg-[#0F172A]"
-                >
-                  Pending
-                </SelectItem>
-                <SelectItem
-                  value="approved"
-                  className="text-white hover:bg-[#0F172A]"
-                >
-                  Approved
-                </SelectItem>
-                <SelectItem
-                  value="completed"
-                  className="text-white hover:bg-[#0F172A]"
-                >
-                  Completed
-                </SelectItem>
-                <SelectItem
-                  value="rejected"
-                  className="text-white hover:bg-[#0F172A]"
-                >
-                  Rejected
-                </SelectItem>
-                <SelectItem
-                  value="cancelled"
-                  className="text-white hover:bg-[#0F172A]"
-                >
-                  Cancelled
-                </SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Type filter */}
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-[140px] bg-[#0F172A] border-[#1F2833] text-white h-9">
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-              <SelectContent className="bg-[#1F2833] border-[#1F2833]">
-                <SelectItem
-                  value="all"
-                  className="text-white hover:bg-[#0F172A]"
-                >
-                  All Types
-                </SelectItem>
-                <SelectItem
-                  value="deposit"
-                  className="text-white hover:bg-[#0F172A]"
-                >
-                  Deposit
-                </SelectItem>
-                <SelectItem
-                  value="withdrawal"
-                  className="text-white hover:bg-[#0F172A]"
-                >
-                  Withdrawal
-                </SelectItem>
-                <SelectItem
-                  value="transfer"
-                  className="text-white hover:bg-[#0F172A]"
-                >
-                  Transfer
-                </SelectItem>
-                <SelectItem
-                  value="commission"
-                  className="text-white hover:bg-[#0F172A]"
-                >
-                  Commission
-                </SelectItem>
-                <SelectItem
-                  value="rebate"
-                  className="text-white hover:bg-[#0F172A]"
-                >
-                  Rebate
-                </SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Destination filter */}
-            <Select value={destFilter} onValueChange={setDestFilter}>
-              <SelectTrigger className="w-[155px] bg-[#0F172A] border-[#1F2833] text-white h-9">
-                <SelectValue placeholder="Destination" />
-              </SelectTrigger>
-              <SelectContent className="bg-[#1F2833] border-[#1F2833]">
-                <SelectItem
-                  value="all"
-                  className="text-white hover:bg-[#0F172A]"
-                >
-                  All Destinations
-                </SelectItem>
-                <SelectItem
-                  value="treasury"
-                  className="text-white hover:bg-[#0F172A]"
-                >
-                  Treasury
-                </SelectItem>
-                <SelectItem
-                  value="bank"
-                  className="text-white hover:bg-[#0F172A]"
-                >
-                  Client Bank
-                </SelectItem>
-                <SelectItem
-                  value="usdt"
-                  className="text-white hover:bg-[#0F172A]"
-                >
-                  USDT
-                </SelectItem>
-                <SelectItem
-                  value="psp"
-                  className="text-white hover:bg-[#0F172A]"
-                >
-                  PSP
-                </SelectItem>
-                <SelectItem
-                  value="vendor"
-                  className="text-white hover:bg-[#0F172A]"
-                >
-                  Exchanger
-                </SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Date range */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-[#94A3B8]">From:</span>
-              <Input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="w-[135px] bg-[#0F172A] border-[#1F2833] text-white h-9"
-              />
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-[#94A3B8]">To:</span>
-              <Input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="w-[135px] bg-[#0F172A] border-[#1F2833] text-white h-9"
-              />
-            </div>
-
-            {/* Clear all */}
-            {(typeFilter !== "all" ||
-              statusFilter !== "pending" ||
-              destFilter !== "all" ||
-              clientFilter ||
-              emailFilter ||
-              dateFrom ||
-              dateTo) && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setTypeFilter("all");
-                  setStatusFilter("pending");
-                  setDestFilter("all");
-                  setClientFilter("");
-                  setEmailFilter("");
-                  setDateFrom("");
-                  setDateTo("");
-                }}
-                className="text-red-500 hover:text-red-600 hover:bg-red-50 h-9"
-              >
-                Clear Filters
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
       )}
 
       {/* Tabs for Transactions, Settlements, and More */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-[#0F172A] border border-[#1F2833] mb-4 flex-wrap h-auto gap-1 p-1">
+        <TabsList className="bg-muted border border mb-4 flex-wrap h-auto gap-1 p-1">
           <TabsTrigger
             value="transactions"
-            className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10] text-xs"
+            className="data-[state=active]:bg-card data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm text-xs"
           >
             Transactions ({totalItems})
           </TabsTrigger>
           <TabsTrigger
             value="settlements"
-            className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10] text-xs"
+            className="data-[state=active]:bg-card data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm text-xs"
           >
             Vendor Settl. ({pendingSettlements.length})
           </TabsTrigger>
           <TabsTrigger
             value="ie"
-            className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10] text-xs"
+            className="data-[state=active]:bg-card data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm text-xs"
           >
             Income/Exp ({pendingIE.length})
           </TabsTrigger>
           <TabsTrigger
             value="loans"
-            className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10] text-xs"
+            className="data-[state=active]:bg-card data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm text-xs"
           >
             Loans ({pendingLoans.length})
           </TabsTrigger>
           <TabsTrigger
             value="repayments"
-            className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10] text-xs"
+            className="data-[state=active]:bg-card data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm text-xs"
           >
             Repayments ({pendingRepayments.length})
           </TabsTrigger>
           <TabsTrigger
             value="psp_settlements"
-            className="data-[state=active]:bg-[#1FA21B] data-[state=active]:text-[#0B0C10] text-xs"
+            className="data-[state=active]:bg-card data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm text-xs"
           >
             PSP Settl. ({pendingPSPSettlements.length})
           </TabsTrigger>
@@ -1137,15 +1213,15 @@ export default function AccountantDashboard() {
           <div className="space-y-4">
             {loading ? (
               <div className="flex justify-center py-12">
-                <div className="w-8 h-8 border-2 border-[#1FA21B] border-t-transparent rounded-full animate-spin" />
+                <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
               </div>
             ) : pendingTransactions.length === 0 ? (
-              <Card className="bg-[#1F2833] border-[#1F2833]">
+              <Card className="bg-card border">
                 <CardContent className="p-12 text-center">
                   <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
-                  <p className="text-white text-lg">All caught up!</p>
-                  <p className="text-[#C5C6C7] mt-2">
-                    No pending transactions to review
+                  <p className="text-foreground text-lg">All caught up!</p>
+                  <p className="text-muted-foreground mt-2">
+                    No transactions match the current filters
                   </p>
                 </CardContent>
               </Card>
@@ -1160,17 +1236,17 @@ export default function AccountantDashboard() {
                 return (
                   <Card
                     key={tx.transaction_id}
-                    className={`border-[#1F2833] ${!hasProperDest ? "bg-red-500/5 border-red-500/30" : "bg-[#1F2833]"}`}
+                    className={`border ${!hasProperDest ? "bg-red-500/5 border-red-200" : "bg-card"}`}
                   >
                     <CardContent className="p-4">
                       <div className="grid grid-cols-[140px_80px_120px_90px_120px_150px_100px_100px_auto] items-center gap-3">
                         {/* Reference + CRM Ref */}
                         <div className="min-w-0">
-                          <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
                             Reference
                           </p>
                           <p
-                            className="text-white font-mono text-xs truncate"
+                            className="text-foreground font-mono text-xs truncate"
                             title={tx.reference}
                           >
                             {tx.reference}
@@ -1184,16 +1260,16 @@ export default function AccountantDashboard() {
                             </p>
                           )}
                           {tx.proof_image && (
-                            <ImageIcon className="w-3 h-3 text-[#66FCF1] mt-0.5" />
+                            <ImageIcon className="w-3 h-3 text-indigo-600 mt-0.5" />
                           )}
                         </div>
                         {/* Description */}
                         <div className="min-w-0">
-                          <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
                             Desc
                           </p>
                           <p
-                            className="text-white text-[11px] truncate"
+                            className="text-foreground text-[11px] truncate"
                             title={tx.description || "-"}
                           >
                             {tx.description || "-"}
@@ -1201,23 +1277,23 @@ export default function AccountantDashboard() {
                         </div>
                         {/* Client */}
                         <div className="min-w-0">
-                          <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
                             Client
                           </p>
-                          <p className="text-white text-sm truncate">
+                          <p className="text-foreground text-sm truncate">
                             {tx.client_name}
                           </p>
                         </div>
                         {/* Type */}
                         <div>
-                          <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
                             Type
                           </p>
                           {getTypeBadge(tx.transaction_type)}
                         </div>
                         {/* Amount */}
                         <div>
-                          <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
                             Amount
                           </p>
                           <p
@@ -1228,7 +1304,7 @@ export default function AccountantDashboard() {
                               : "-"}
                             ${tx.amount?.toLocaleString()}
                           </p>
-                          <p className="text-[10px] text-[#C5C6C7] font-mono">
+                          <p className="text-[10px] text-muted-foreground font-mono">
                             {tx.currency || "USD"}
                             {tx.base_currency &&
                             tx.base_currency !== "USD" &&
@@ -1239,7 +1315,7 @@ export default function AccountantDashboard() {
                         </div>
                         {/* Destination */}
                         <div className="min-w-0">
-                          <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
                             Destination
                           </p>
                           {(() => {
@@ -1257,13 +1333,13 @@ export default function AccountantDashboard() {
                             ) {
                               return (
                                 <div>
-                                  <p className="text-white text-xs font-medium truncate">
+                                  <p className="text-foreground text-xs font-medium truncate">
                                     {tx.client_bank_name}
                                   </p>
-                                  <p className="text-[10px] text-[#C5C6C7] font-mono truncate">
+                                  <p className="text-[10px] text-muted-foreground font-mono truncate">
                                     {tx.client_bank_account_number}
                                   </p>
-                                  <p className="text-[10px] text-[#66FCF1]">
+                                  <p className="text-[10px] text-indigo-600">
                                     {tx.client_bank_currency || "USD"}
                                   </p>
                                 </div>
@@ -1275,11 +1351,11 @@ export default function AccountantDashboard() {
                             ) {
                               return (
                                 <div>
-                                  <p className="text-white text-xs font-mono truncate">
+                                  <p className="text-foreground text-xs font-mono truncate">
                                     {tx.client_usdt_address?.slice(0, 8)}...
                                     {tx.client_usdt_address?.slice(-4)}
                                   </p>
-                                  <Badge className="bg-green-500/20 text-green-400 text-[10px] mt-0.5">
+                                  <Badge className="bg-green-100 text-green-700 text-[10px] mt-0.5">
                                     {tx.client_usdt_network || "USDT"}
                                   </Badge>
                                 </div>
@@ -1288,12 +1364,12 @@ export default function AccountantDashboard() {
                             if (hasProperDest) {
                               return (
                                 <div>
-                                  <p className="text-white text-xs truncate">
+                                  <p className="text-foreground text-xs truncate">
                                     {tx.destination_account_name ||
                                       tx.vendor_name ||
                                       tx.psp_name}
                                   </p>
-                                  <p className="text-[10px] text-[#C5C6C7] truncate">
+                                  <p className="text-[10px] text-muted-foreground truncate">
                                     {tx.destination_bank_name ||
                                       (tx.psp_name
                                         ? "PSP"
@@ -1321,23 +1397,21 @@ export default function AccountantDashboard() {
                             );
                           })()}
                         </div>
-
                         {/* Created */}
                         <div>
-                          <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
                             Created
                           </p>
-
-                          <p className="text-white text-xs">
+                          <p className="text-foreground text-xs">
                             {formatDate(tx.transaction_date || tx.created_at)}
                           </p>
-                          <p className="text-[10px] text-[#C5C6C7]">
+                          <p className="text-[10px] text-muted-foreground">
                             by {tx.created_by_name || "System"}
                           </p>
                         </div>
                         {/* Tags */}
                         <div className="min-w-0">
-                          <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
                             Tags
                           </p>
                           <div className="flex flex-wrap gap-0.5">
@@ -1360,7 +1434,7 @@ export default function AccountantDashboard() {
                                 );
                               })
                             ) : (
-                              <span className="text-[10px] text-[#C5C6C7]">
+                              <span className="text-[10px] text-muted-foreground">
                                 -
                               </span>
                             )}
@@ -1372,7 +1446,7 @@ export default function AccountantDashboard() {
                             variant="ghost"
                             size="sm"
                             onClick={() => setViewTransaction(tx)}
-                            className="text-[#C5C6C7] hover:text-white hover:bg-white/5 h-8 w-8 p-0"
+                            className="text-muted-foreground hover:text-foreground hover:bg-muted/50 h-8 w-8 p-0"
                             data-testid={`view-tx-${tx.transaction_id}`}
                           >
                             <Eye className="w-4 h-4" />
@@ -1383,14 +1457,14 @@ export default function AccountantDashboard() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => setUploadingProof(tx)}
-                                className="text-[#1FA21B] hover:text-white hover:bg-[#1FA21B]/10 h-8 w-8 p-0"
+                                className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 h-8 w-8 p-0"
                                 data-testid={`upload-proof-${tx.transaction_id}`}
                               >
                                 <Upload className="w-4 h-4" />
                               </Button>
                             )}
                           {tx.accountant_proof_image && (
-                            <Badge className="bg-green-500/20 text-green-400 text-[10px]">
+                            <Badge className="bg-green-100 text-green-700 text-[10px]">
                               <ImageIcon className="w-3 h-3 mr-0.5" />
                               Proof
                             </Badge>
@@ -1404,7 +1478,7 @@ export default function AccountantDashboard() {
                               processingId === tx.transaction_id ||
                               !hasProperDest
                             }
-                            className={`h-8 text-xs px-3 ${!hasProperDest ? "bg-slate-500/20 text-slate-500 border border-slate-500/30 cursor-not-allowed" : "bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30"}`}
+                            className={`h-8 text-xs px-3 ${!hasProperDest ? "bg-slate-500/20 text-muted-foreground border border-slate-500/30 cursor-not-allowed" : "bg-green-100 text-green-700 hover:bg-green-200 border border-green-200"}`}
                             data-testid={`approve-tx-${tx.transaction_id}`}
                             title={
                               !hasProperDest
@@ -1421,7 +1495,7 @@ export default function AccountantDashboard() {
                               initiateReject(tx.transaction_id, false)
                             }
                             disabled={processingId === tx.transaction_id}
-                            className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 h-8 text-xs px-3"
+                            className="bg-red-100 text-red-700 hover:bg-red-200 border border-red-200 h-8 text-xs px-3"
                             data-testid={`reject-tx-${tx.transaction_id}`}
                           >
                             <XCircle className="w-3.5 h-3.5 mr-1" />
@@ -1446,7 +1520,6 @@ export default function AccountantDashboard() {
                 onPageSizeChange={(s) => {
                   setPageSize(s);
                   setCurrentPage(1);
-                  // pageSize in useEffect deps triggers re-fetch with the new value
                 }}
               />
             )}
@@ -1458,14 +1531,14 @@ export default function AccountantDashboard() {
           <div className="space-y-4">
             {loading ? (
               <div className="flex justify-center py-12">
-                <div className="w-8 h-8 border-2 border-[#1FA21B] border-t-transparent rounded-full animate-spin" />
+                <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
               </div>
             ) : pendingSettlements.length === 0 ? (
-              <Card className="bg-[#1F2833] border-[#1F2833]">
+              <Card className="bg-card border">
                 <CardContent className="p-12 text-center">
                   <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
-                  <p className="text-white text-lg">All caught up!</p>
-                  <p className="text-[#C5C6C7] mt-2">
+                  <p className="text-foreground text-lg">All caught up!</p>
+                  <p className="text-muted-foreground mt-2">
                     No pending settlements to review
                   </p>
                 </CardContent>
@@ -1474,32 +1547,32 @@ export default function AccountantDashboard() {
               pendingSettlements.map((settlement) => (
                 <Card
                   key={settlement.settlement_id}
-                  className="bg-[#1F2833] border-[#1F2833]"
+                  className="bg-card border"
                 >
                   <CardContent className="p-6">
                     <div className="flex flex-col lg:flex-row lg:items-center gap-4">
                       {/* Settlement Info */}
                       <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div>
-                          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
+                          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                             Exchanger
                           </p>
                           <div className="flex items-center gap-2">
-                            <Store className="w-4 h-4 text-[#1FA21B]" />
-                            <p className="text-white">
+                            <Store className="w-4 h-4 text-indigo-600" />
+                            <p className="text-foreground">
                               {settlement.vendor_name}
                             </p>
                           </div>
                         </div>
                         <div>
-                          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
+                          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                             Type
                           </p>
                           <Badge
                             className={
                               settlement.settlement_type === "bank"
-                                ? "bg-blue-500/20 text-blue-400"
-                                : "bg-purple-500/20 text-purple-400"
+                                ? "bg-primary/15 text-primary"
+                                : "bg-purple-100 text-purple-700"
                             }
                           >
                             {settlement.settlement_type === "bank" ? (
@@ -1511,17 +1584,17 @@ export default function AccountantDashboard() {
                           </Badge>
                         </div>
                         <div>
-                          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
+                          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                             Gross Amount
                           </p>
-                          <p className="font-mono text-lg font-bold text-white">
+                          <p className="font-mono text-lg font-bold text-foreground">
                             {settlement.source_currency !== "USD" ? "" : "$"}
                             {settlement.gross_amount?.toLocaleString()}{" "}
                             {settlement.source_currency || "USD"}
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
+                          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                             Settlement Amount
                           </p>
                           <p className="font-mono text-lg font-bold text-green-400">
@@ -1537,24 +1610,24 @@ export default function AccountantDashboard() {
                       {/* Destination & Date */}
                       <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
+                          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                             Destination
                           </p>
-                          <p className="text-white">
+                          <p className="text-foreground">
                             {settlement.settlement_destination_name}
                           </p>
-                          <p className="text-xs text-[#C5C6C7]">
+                          <p className="text-xs text-muted-foreground">
                             {settlement.transaction_count} transactions
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
+                          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                             Created
                           </p>
-                          <p className="text-white text-sm">
+                          <p className="text-foreground text-sm">
                             {formatDate(settlement.created_at)}
                           </p>
-                          <p className="text-xs text-[#C5C6C7]">
+                          <p className="text-xs text-muted-foreground">
                             by {settlement.created_by_name || "System"}
                           </p>
                         </div>
@@ -1566,7 +1639,7 @@ export default function AccountantDashboard() {
                           variant="ghost"
                           size="sm"
                           onClick={() => setViewSettlement(settlement)}
-                          className="text-[#C5C6C7] hover:text-white hover:bg-white/5"
+                          className="text-muted-foreground hover:text-foreground hover:bg-muted/50"
                           data-testid={`view-settlement-${settlement.settlement_id}`}
                         >
                           <Eye className="w-4 h-4" />
@@ -1576,7 +1649,7 @@ export default function AccountantDashboard() {
                             initiateApprove(settlement.settlement_id, true)
                           }
                           disabled={processingId === settlement.settlement_id}
-                          className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30"
+                          className="bg-green-100 text-green-700 hover:bg-green-200 border border-green-200"
                           data-testid={`approve-settlement-${settlement.settlement_id}`}
                         >
                           <CheckCircle className="w-4 h-4 mr-2" />
@@ -1587,7 +1660,7 @@ export default function AccountantDashboard() {
                             initiateReject(settlement.settlement_id, true)
                           }
                           disabled={processingId === settlement.settlement_id}
-                          className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"
+                          className="bg-red-100 text-red-700 hover:bg-red-200 border border-red-200"
                           data-testid={`reject-settlement-${settlement.settlement_id}`}
                         >
                           <XCircle className="w-4 h-4 mr-2" />
@@ -1607,52 +1680,121 @@ export default function AccountantDashboard() {
           <div className="space-y-3">
             {loading ? (
               <div className="flex justify-center py-12">
-                <div className="w-8 h-8 border-2 border-[#1FA21B] border-t-transparent rounded-full animate-spin" />
+                <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
               </div>
             ) : pendingIE.length === 0 ? (
-              <Card className="bg-[#1F2833] border-[#1F2833]">
+              <Card className="bg-card border">
                 <CardContent className="p-12 text-center">
                   <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
-                  <p className="text-white text-lg">All caught up!</p>
-                  <p className="text-[#C5C6C7] mt-2">No pending income/expense entries</p>
+                  <p className="text-foreground text-lg">All caught up!</p>
+                  <p className="text-muted-foreground mt-2">
+                    No pending income/expense entries
+                  </p>
                 </CardContent>
               </Card>
             ) : (
               pendingIE.map((ie) => (
-                <Card key={ie.entry_id} className="bg-[#1F2833] border-[#1F2833]">
+                <Card key={ie.entry_id} className="bg-card border">
                   <CardContent className="p-4">
                     <div className="flex flex-wrap items-center gap-4">
                       <div className="flex-1 min-w-[120px]">
-                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Description</p>
-                        <p className="text-white text-sm truncate">{ie.description || ie.category || ie.ie_category_name || "-"}</p>
-                        {ie.vendor_name && <p className="text-[10px] text-[#C5C6C7]">Exchanger: {ie.vendor_name}</p>}
-                        {ie.client_name && <p className="text-[10px] text-[#C5C6C7]">Client: {ie.client_name}</p>}
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
+                          Description
+                        </p>
+                        <p className="text-foreground text-sm truncate">
+                          {ie.description ||
+                            ie.category ||
+                            ie.ie_category_name ||
+                            "-"}
+                        </p>
+                        {ie.vendor_name && (
+                          <p className="text-[10px] text-muted-foreground">
+                            Exchanger: {ie.vendor_name}
+                          </p>
+                        )}
+                        {ie.client_name && (
+                          <p className="text-[10px] text-muted-foreground">
+                            Client: {ie.client_name}
+                          </p>
+                        )}
                       </div>
                       <div className="min-w-[80px]">
-                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Type</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
+                          Type
+                        </p>
                         {getTypeBadge(ie.entry_type)}
                       </div>
                       <div className="min-w-[120px]">
-                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Amount</p>
-                        <p className={`font-mono text-sm font-bold ${ie.entry_type === "income" ? "text-green-400" : "text-red-400"}`}>
-                          {ie.entry_type === "income" ? "+" : "-"}{formatCurrency(ie.amount, ie.currency)}
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
+                          Amount
                         </p>
-                        {ie.base_currency && ie.base_currency !== ie.currency && ie.base_amount && (
-                          <p className="text-[10px] text-[#C5C6C7]">{ie.base_amount?.toLocaleString()} {ie.base_currency}</p>
-                        )}
+                        <p
+                          className={`font-mono text-sm font-bold ${ie.entry_type === "income" ? "text-green-400" : "text-red-400"}`}
+                        >
+                          {ie.entry_type === "income" ? "+" : "-"}
+                          {formatCurrency(ie.amount, ie.currency)}
+                        </p>
+                        {ie.base_currency &&
+                          ie.base_currency !== ie.currency &&
+                          ie.base_amount && (
+                            <p className="text-[10px] text-muted-foreground">
+                              {ie.base_amount?.toLocaleString()}{" "}
+                              {ie.base_currency}
+                            </p>
+                          )}
                       </div>
                       <div className="min-w-[100px]">
-                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Treasury</p>
-                        <p className="text-white text-xs truncate">{ie.treasury_account_name || "-"}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
+                          Treasury
+                        </p>
+                        <p className="text-foreground text-xs truncate">
+                          {ie.treasury_account_name || "-"}
+                        </p>
                       </div>
                       <div className="min-w-[80px]">
-                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Date</p>
-                        <p className="text-white text-xs">{ie.date || formatDate(ie.created_at)}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
+                          Date
+                        </p>
+                        <p className="text-foreground text-xs">
+                          {ie.date || formatDate(ie.created_at)}
+                        </p>
                       </div>
                       <div className="flex items-center gap-1.5 ml-auto">
-                        <Button variant="ghost" size="sm" onClick={() => setViewItem({ ...ie, _viewType: "ie" })} className="text-[#C5C6C7] hover:text-white hover:bg-white/5 h-8 w-8 p-0" data-testid={`view-ie-${ie.entry_id}`}><Eye className="w-4 h-4" /></Button>
-                        <Button size="sm" onClick={() => initiateGenericApprove("ie", ie.entry_id, ie)} disabled={processingId === ie.entry_id} className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30 h-8 text-xs px-3" data-testid={`approve-ie-${ie.entry_id}`}><CheckCircle className="w-3.5 h-3.5 mr-1" />Approve</Button>
-                        <Button size="sm" onClick={() => initiateGenericReject("ie", ie.entry_id)} disabled={processingId === ie.entry_id} className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 h-8 text-xs px-3" data-testid={`reject-ie-${ie.entry_id}`}><XCircle className="w-3.5 h-3.5 mr-1" />Reject</Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            setViewItem({ ...ie, _viewType: "ie" })
+                          }
+                          className="text-muted-foreground hover:text-foreground hover:bg-muted/50 h-8 w-8 p-0"
+                          data-testid={`view-ie-${ie.entry_id}`}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            initiateGenericApprove("ie", ie.entry_id, ie)
+                          }
+                          disabled={processingId === ie.entry_id}
+                          className="bg-green-100 text-green-700 hover:bg-green-200 border border-green-200 h-8 text-xs px-3"
+                          data-testid={`approve-ie-${ie.entry_id}`}
+                        >
+                          <CheckCircle className="w-3.5 h-3.5 mr-1" />
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            initiateGenericReject("ie", ie.entry_id)
+                          }
+                          disabled={processingId === ie.entry_id}
+                          className="bg-red-100 text-red-700 hover:bg-red-200 border border-red-200 h-8 text-xs px-3"
+                          data-testid={`reject-ie-${ie.entry_id}`}
+                        >
+                          <XCircle className="w-3.5 h-3.5 mr-1" />
+                          Reject
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -1667,46 +1809,104 @@ export default function AccountantDashboard() {
           <div className="space-y-3">
             {loading ? (
               <div className="flex justify-center py-12">
-                <div className="w-8 h-8 border-2 border-[#1FA21B] border-t-transparent rounded-full animate-spin" />
+                <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
               </div>
             ) : pendingLoans.length === 0 ? (
-              <Card className="bg-[#1F2833] border-[#1F2833]">
+              <Card className="bg-card border">
                 <CardContent className="p-12 text-center">
                   <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
-                  <p className="text-white text-lg">All caught up!</p>
-                  <p className="text-[#C5C6C7] mt-2">No pending loan disbursements</p>
+                  <p className="text-foreground text-lg">All caught up!</p>
+                  <p className="text-muted-foreground mt-2">
+                    No pending loan disbursements
+                  </p>
                 </CardContent>
               </Card>
             ) : (
               pendingLoans.map((loan) => (
-                <Card key={loan.loan_id} className="bg-[#1F2833] border-[#1F2833]">
+                <Card key={loan.loan_id} className="bg-card border">
                   <CardContent className="p-4">
                     <div className="flex flex-wrap items-center gap-4">
                       <div className="flex-1 min-w-[120px]">
-                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Borrower</p>
-                        <p className="text-white text-sm font-medium">{loan.borrower_name}</p>
-                        {loan.vendor_name && <p className="text-[10px] text-[#C5C6C7]">Exchanger: {loan.vendor_name}</p>}
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
+                          Borrower
+                        </p>
+                        <p className="text-foreground text-sm font-medium">
+                          {loan.borrower_name}
+                        </p>
+                        {loan.vendor_name && (
+                          <p className="text-[10px] text-muted-foreground">
+                            Exchanger: {loan.vendor_name}
+                          </p>
+                        )}
                       </div>
                       <div className="min-w-[120px]">
-                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Amount</p>
-                        <p className="font-mono text-sm font-bold text-red-400">-{formatCurrency(loan.amount, loan.currency)}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
+                          Amount
+                        </p>
+                        <p className="font-mono text-sm font-bold text-red-400">
+                          -{formatCurrency(loan.amount, loan.currency)}
+                        </p>
                       </div>
                       <div className="min-w-[80px]">
-                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Interest</p>
-                        <p className="text-white text-xs">{loan.interest_rate}%</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
+                          Interest
+                        </p>
+                        <p className="text-foreground text-xs">
+                          {loan.interest_rate}%
+                        </p>
                       </div>
                       <div className="min-w-[100px]">
-                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Source</p>
-                        <p className="text-white text-xs truncate">{loan.source_vendor_name || "Treasury"}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
+                          Source
+                        </p>
+                        <p className="text-foreground text-xs truncate">
+                          {loan.source_vendor_name || "Treasury"}
+                        </p>
                       </div>
                       <div className="min-w-[80px]">
-                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Due Date</p>
-                        <p className="text-white text-xs">{loan.due_date?.split("T")[0]}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
+                          Due Date
+                        </p>
+                        <p className="text-foreground text-xs">
+                          {loan.due_date?.split("T")[0]}
+                        </p>
                       </div>
                       <div className="flex items-center gap-1.5 ml-auto">
-                        <Button variant="ghost" size="sm" onClick={() => setViewItem({ ...loan, _viewType: "loan" })} className="text-[#C5C6C7] hover:text-white hover:bg-white/5 h-8 w-8 p-0" data-testid={`view-loan-${loan.loan_id}`}><Eye className="w-4 h-4" /></Button>
-                        <Button size="sm" onClick={() => initiateGenericApprove("loan", loan.loan_id, loan)} disabled={processingId === loan.loan_id} className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30 h-8 text-xs px-3" data-testid={`approve-loan-${loan.loan_id}`}><CheckCircle className="w-3.5 h-3.5 mr-1" />Approve</Button>
-                        <Button size="sm" onClick={() => initiateGenericReject("loan", loan.loan_id)} disabled={processingId === loan.loan_id} className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 h-8 text-xs px-3" data-testid={`reject-loan-${loan.loan_id}`}><XCircle className="w-3.5 h-3.5 mr-1" />Reject</Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            setViewItem({ ...loan, _viewType: "loan" })
+                          }
+                          className="text-muted-foreground hover:text-foreground hover:bg-muted/50 h-8 w-8 p-0"
+                          data-testid={`view-loan-${loan.loan_id}`}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            initiateGenericApprove("loan", loan.loan_id, loan)
+                          }
+                          disabled={processingId === loan.loan_id}
+                          className="bg-green-100 text-green-700 hover:bg-green-200 border border-green-200 h-8 text-xs px-3"
+                          data-testid={`approve-loan-${loan.loan_id}`}
+                        >
+                          <CheckCircle className="w-3.5 h-3.5 mr-1" />
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            initiateGenericReject("loan", loan.loan_id)
+                          }
+                          disabled={processingId === loan.loan_id}
+                          className="bg-red-100 text-red-700 hover:bg-red-200 border border-red-200 h-8 text-xs px-3"
+                          data-testid={`reject-loan-${loan.loan_id}`}
+                        >
+                          <XCircle className="w-3.5 h-3.5 mr-1" />
+                          Reject
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -1721,45 +1921,107 @@ export default function AccountantDashboard() {
           <div className="space-y-3">
             {loading ? (
               <div className="flex justify-center py-12">
-                <div className="w-8 h-8 border-2 border-[#1FA21B] border-t-transparent rounded-full animate-spin" />
+                <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
               </div>
             ) : pendingRepayments.length === 0 ? (
-              <Card className="bg-[#1F2833] border-[#1F2833]">
+              <Card className="bg-card border">
                 <CardContent className="p-12 text-center">
                   <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
-                  <p className="text-white text-lg">All caught up!</p>
-                  <p className="text-[#C5C6C7] mt-2">No pending loan repayments</p>
+                  <p className="text-foreground text-lg">All caught up!</p>
+                  <p className="text-muted-foreground mt-2">
+                    No pending loan repayments
+                  </p>
                 </CardContent>
               </Card>
             ) : (
               pendingRepayments.map((rep) => (
-                <Card key={rep.repayment_id} className="bg-[#1F2833] border-[#1F2833]">
+                <Card
+                  key={rep.repayment_id}
+                  className="bg-card border"
+                >
                   <CardContent className="p-4">
                     <div className="flex flex-wrap items-center gap-4">
                       <div className="flex-1 min-w-[120px]">
-                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Borrower</p>
-                        <p className="text-white text-sm font-medium">{rep.borrower_name || "-"}</p>
-                        <p className="text-[10px] text-[#C5C6C7] font-mono">{rep.loan_id}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
+                          Borrower
+                        </p>
+                        <p className="text-foreground text-sm font-medium">
+                          {rep.borrower_name || "-"}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground font-mono">
+                          {rep.loan_id}
+                        </p>
                       </div>
                       <div className="min-w-[120px]">
-                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Amount</p>
-                        <p className="font-mono text-sm font-bold text-green-400">+{formatCurrency(rep.amount, rep.currency)}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
+                          Amount
+                        </p>
+                        <p className="font-mono text-sm font-bold text-green-400">
+                          +{formatCurrency(rep.amount, rep.currency)}
+                        </p>
                         {rep.currency !== rep.loan_currency && (
-                          <p className="text-[10px] text-[#C5C6C7]">{formatCurrency(rep.amount_in_loan_currency, rep.loan_currency)}</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {formatCurrency(
+                              rep.amount_in_loan_currency,
+                              rep.loan_currency,
+                            )}
+                          </p>
                         )}
                       </div>
                       <div className="min-w-[80px]">
-                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Payment Date</p>
-                        <p className="text-white text-xs">{rep.payment_date}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
+                          Payment Date
+                        </p>
+                        <p className="text-foreground text-xs">{rep.payment_date}</p>
                       </div>
                       <div className="min-w-[80px]">
-                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Reference</p>
-                        <p className="text-white text-xs truncate">{rep.reference || "-"}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
+                          Reference
+                        </p>
+                        <p className="text-foreground text-xs truncate">
+                          {rep.reference || "-"}
+                        </p>
                       </div>
                       <div className="flex items-center gap-1.5 ml-auto">
-                        <Button variant="ghost" size="sm" onClick={() => setViewItem({ ...rep, _viewType: "repayment" })} className="text-[#C5C6C7] hover:text-white hover:bg-white/5 h-8 w-8 p-0" data-testid={`view-rep-${rep.repayment_id}`}><Eye className="w-4 h-4" /></Button>
-                        <Button size="sm" onClick={() => initiateGenericApprove("repayment", rep.repayment_id, rep)} disabled={processingId === rep.repayment_id} className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30 h-8 text-xs px-3" data-testid={`approve-rep-${rep.repayment_id}`}><CheckCircle className="w-3.5 h-3.5 mr-1" />Approve</Button>
-                        <Button size="sm" onClick={() => initiateGenericReject("repayment", rep.repayment_id)} disabled={processingId === rep.repayment_id} className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 h-8 text-xs px-3" data-testid={`reject-rep-${rep.repayment_id}`}><XCircle className="w-3.5 h-3.5 mr-1" />Reject</Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            setViewItem({ ...rep, _viewType: "repayment" })
+                          }
+                          className="text-muted-foreground hover:text-foreground hover:bg-muted/50 h-8 w-8 p-0"
+                          data-testid={`view-rep-${rep.repayment_id}`}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            initiateGenericApprove(
+                              "repayment",
+                              rep.repayment_id,
+                              rep,
+                            )
+                          }
+                          disabled={processingId === rep.repayment_id}
+                          className="bg-green-100 text-green-700 hover:bg-green-200 border border-green-200 h-8 text-xs px-3"
+                          data-testid={`approve-rep-${rep.repayment_id}`}
+                        >
+                          <CheckCircle className="w-3.5 h-3.5 mr-1" />
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            initiateGenericReject("repayment", rep.repayment_id)
+                          }
+                          disabled={processingId === rep.repayment_id}
+                          className="bg-red-100 text-red-700 hover:bg-red-200 border border-red-200 h-8 text-xs px-3"
+                          data-testid={`reject-rep-${rep.repayment_id}`}
+                        >
+                          <XCircle className="w-3.5 h-3.5 mr-1" />
+                          Reject
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -1774,49 +2036,113 @@ export default function AccountantDashboard() {
           <div className="space-y-3">
             {loading ? (
               <div className="flex justify-center py-12">
-                <div className="w-8 h-8 border-2 border-[#1FA21B] border-t-transparent rounded-full animate-spin" />
+                <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
               </div>
             ) : pendingPSPSettlements.length === 0 ? (
-              <Card className="bg-[#1F2833] border-[#1F2833]">
+              <Card className="bg-card border">
                 <CardContent className="p-12 text-center">
                   <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
-                  <p className="text-white text-lg">All caught up!</p>
-                  <p className="text-[#C5C6C7] mt-2">No pending PSP settlements</p>
+                  <p className="text-foreground text-lg">All caught up!</p>
+                  <p className="text-muted-foreground mt-2">
+                    No pending PSP settlements
+                  </p>
                 </CardContent>
               </Card>
             ) : (
               pendingPSPSettlements.map((stl) => (
-                <Card key={stl.settlement_id} className="bg-[#1F2833] border-[#1F2833]">
+                <Card
+                  key={stl.settlement_id}
+                  className="bg-card border"
+                >
                   <CardContent className="p-4">
                     <div className="flex flex-wrap items-center gap-4">
                       <div className="flex-1 min-w-[120px]">
-                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">PSP</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
+                          PSP
+                        </p>
                         <div className="flex items-center gap-2">
                           <CreditCard className="w-4 h-4 text-purple-400" />
-                          <p className="text-white text-sm">{stl.psp_name}</p>
+                          <p className="text-foreground text-sm">{stl.psp_name}</p>
                         </div>
-                        <Badge className="mt-1 bg-slate-100 text-[#C5C6C7] text-[10px]">{stl.settlement_type || "standard"}</Badge>
+                        <Badge className="mt-1 bg-muted text-muted-foreground text-[10px]">
+                          {stl.settlement_type || "standard"}
+                        </Badge>
                       </div>
                       <div className="min-w-[100px]">
-                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Gross</p>
-                        <p className="font-mono text-sm text-white">${stl.gross_amount?.toLocaleString()}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
+                          Gross
+                        </p>
+                        <p className="font-mono text-sm text-foreground">
+                          ${stl.gross_amount?.toLocaleString()}
+                        </p>
                       </div>
                       <div className="min-w-[100px]">
-                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Net Amount</p>
-                        <p className="font-mono text-sm font-bold text-green-400">${stl.net_amount?.toLocaleString()}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
+                          Net Amount
+                        </p>
+                        <p className="font-mono text-sm font-bold text-green-400">
+                          ${stl.net_amount?.toLocaleString()}
+                        </p>
                       </div>
                       <div className="min-w-[80px]">
-                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Txns</p>
-                        <p className="text-white text-sm">{stl.transaction_count}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
+                          Txns
+                        </p>
+                        <p className="text-foreground text-sm">
+                          {stl.transaction_count}
+                        </p>
                       </div>
                       <div className="min-w-[120px]">
-                        <p className="text-[10px] text-[#C5C6C7] uppercase tracking-wider mb-0.5">Destination</p>
-                        <p className="text-white text-xs truncate">{stl.settlement_destination_name || "-"}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
+                          Destination
+                        </p>
+                        <p className="text-foreground text-xs truncate">
+                          {stl.settlement_destination_name || "-"}
+                        </p>
                       </div>
                       <div className="flex items-center gap-1.5 ml-auto">
-                        <Button variant="ghost" size="sm" onClick={() => setViewItem({ ...stl, _viewType: "psp_settlement" })} className="text-[#C5C6C7] hover:text-white hover:bg-white/5 h-8 w-8 p-0" data-testid={`view-psp-${stl.settlement_id}`}><Eye className="w-4 h-4" /></Button>
-                        <Button size="sm" onClick={() => initiateGenericApprove("psp_settlement", stl.settlement_id, stl)} disabled={processingId === stl.settlement_id} className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30 h-8 text-xs px-3" data-testid={`approve-psp-${stl.settlement_id}`}><CheckCircle className="w-3.5 h-3.5 mr-1" />Approve</Button>
-                        <Button size="sm" onClick={() => initiateGenericReject("psp_settlement", stl.settlement_id)} disabled={processingId === stl.settlement_id} className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 h-8 text-xs px-3" data-testid={`reject-psp-${stl.settlement_id}`}><XCircle className="w-3.5 h-3.5 mr-1" />Reject</Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            setViewItem({ ...stl, _viewType: "psp_settlement" })
+                          }
+                          className="text-muted-foreground hover:text-foreground hover:bg-muted/50 h-8 w-8 p-0"
+                          data-testid={`view-psp-${stl.settlement_id}`}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            initiateGenericApprove(
+                              "psp_settlement",
+                              stl.settlement_id,
+                              stl,
+                            )
+                          }
+                          disabled={processingId === stl.settlement_id}
+                          className="bg-green-100 text-green-700 hover:bg-green-200 border border-green-200 h-8 text-xs px-3"
+                          data-testid={`approve-psp-${stl.settlement_id}`}
+                        >
+                          <CheckCircle className="w-3.5 h-3.5 mr-1" />
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            initiateGenericReject(
+                              "psp_settlement",
+                              stl.settlement_id,
+                            )
+                          }
+                          disabled={processingId === stl.settlement_id}
+                          className="bg-red-100 text-red-700 hover:bg-red-200 border border-red-200 h-8 text-xs px-3"
+                          data-testid={`reject-psp-${stl.settlement_id}`}
+                        >
+                          <XCircle className="w-3.5 h-3.5 mr-1" />
+                          Reject
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -1832,11 +2158,10 @@ export default function AccountantDashboard() {
         open={!!viewTransaction}
         onOpenChange={() => setViewTransaction(null)}
       >
-        <DialogContent className="bg-[#1F2833] border-[#1F2833] text-white max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-card border text-foreground max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle
-              className="text-2xl font-bold uppercase tracking-tight text-white"
-              style={{ fontFamily: "Barlow Condensed" }}
+              className="text-3xl font-bold text-foreground"
             >
               Transaction Details
             </DialogTitle>
@@ -1845,10 +2170,10 @@ export default function AccountantDashboard() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Reference
                   </p>
-                  <p className="text-white font-mono text-lg">
+                  <p className="text-foreground font-mono text-lg">
                     {viewTransaction.reference}
                   </p>
                   {viewTransaction.crm_reference && (
@@ -1861,21 +2186,21 @@ export default function AccountantDashboard() {
                   Pending
                 </Badge>
               </div>
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-[#1F2833]">
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border">
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Client
                   </p>
-                  <p className="text-white">{viewTransaction.client_name}</p>
+                  <p className="text-foreground">{viewTransaction.client_name}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Type
                   </p>
                   {getTypeBadge(viewTransaction.transaction_type)}
                 </div>
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Amount (USD)
                   </p>
                   <p
@@ -1891,7 +2216,7 @@ export default function AccountantDashboard() {
                   {viewTransaction.base_currency &&
                     viewTransaction.base_currency !== "USD" &&
                     viewTransaction.base_amount && (
-                      <p className="text-sm text-[#C5C6C7]">
+                      <p className="text-sm text-muted-foreground">
                         Original:{" "}
                         {viewTransaction.base_amount?.toLocaleString()}{" "}
                         {viewTransaction.base_currency}
@@ -1899,10 +2224,10 @@ export default function AccountantDashboard() {
                     )}
                 </div>
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Created
                   </p>
-                  <p className="text-white text-sm">
+                  <p className="text-foreground text-sm">
                     {formatDate(
                       viewTransaction.transaction_date ||
                         viewTransaction.created_at,
@@ -1911,57 +2236,56 @@ export default function AccountantDashboard() {
                 </div>
               </div>
               {viewTransaction.destination_account_name && (
-                <div className="pt-4 border-t border-[#1F2833]">
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
+                <div className="pt-4 border-t border">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Destination
                   </p>
-                  <p className="text-white">
+                  <p className="text-foreground">
                     {viewTransaction.destination_account_name}
                   </p>
-                  <p className="text-sm text-[#C5C6C7]">
+                  <p className="text-sm text-muted-foreground">
                     {viewTransaction.destination_bank_name}
                   </p>
                 </div>
               )}
-
               {/* Client Bank Details */}
               {viewTransaction.client_bank_name && (
                 <div
-                  className="pt-4 border-t border-[#1F2833]"
+                  className="pt-4 border-t border"
                   data-testid="approval-bank-details"
                 >
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
                     Client Bank Details
                   </p>
-                  <div className="grid grid-cols-2 gap-3 p-3 bg-[#1F2833] rounded-sm border border-[#66FCF1]/20">
+                  <div className="grid grid-cols-2 gap-3 p-3 bg-muted/50 rounded-sm border border">
                     <div>
-                      <p className="text-xs text-[#C5C6C7]">Bank Name</p>
-                      <p className="text-white text-sm font-medium">
+                      <p className="text-xs text-muted-foreground">Bank Name</p>
+                      <p className="text-foreground text-sm font-medium">
                         {viewTransaction.client_bank_name}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-[#C5C6C7]">Account Holder</p>
-                      <p className="text-white text-sm font-medium">
+                      <p className="text-xs text-muted-foreground">Account Holder</p>
+                      <p className="text-foreground text-sm font-medium">
                         {viewTransaction.client_bank_account_name}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-[#C5C6C7]">Account Number</p>
-                      <p className="text-white text-sm font-mono">
+                      <p className="text-xs text-muted-foreground">Account Number</p>
+                      <p className="text-foreground text-sm font-mono">
                         {viewTransaction.client_bank_account_number}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-[#C5C6C7]">SWIFT / IBAN</p>
-                      <p className="text-white text-sm font-mono">
+                      <p className="text-xs text-muted-foreground">SWIFT / IBAN</p>
+                      <p className="text-foreground text-sm font-mono">
                         {viewTransaction.client_bank_swift_iban || "-"}
                       </p>
                     </div>
                     {viewTransaction.client_bank_currency && (
                       <div>
-                        <p className="text-xs text-[#C5C6C7]">Currency</p>
-                        <p className="text-white text-sm font-medium">
+                        <p className="text-xs text-muted-foreground">Currency</p>
+                        <p className="text-foreground text-sm font-medium">
                           {viewTransaction.client_bank_currency}
                         </p>
                       </div>
@@ -1972,23 +2296,23 @@ export default function AccountantDashboard() {
               {/* USDT Details */}
               {viewTransaction.client_usdt_address && (
                 <div
-                  className="pt-4 border-t border-[#1F2833]"
+                  className="pt-4 border-t border"
                   data-testid="approval-usdt-details"
                 >
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
                     USDT Details
                   </p>
-                  <div className="grid grid-cols-1 gap-3 p-3 bg-[#1F2833] rounded-sm border border-[#66FCF1]/20">
+                  <div className="grid grid-cols-1 gap-3 p-3 bg-muted/50 rounded-sm border border">
                     <div>
-                      <p className="text-xs text-[#C5C6C7]">Wallet Address</p>
-                      <p className="text-white text-sm font-mono break-all">
+                      <p className="text-xs text-muted-foreground">Wallet Address</p>
+                      <p className="text-foreground text-sm font-mono break-all">
                         {viewTransaction.client_usdt_address}
                       </p>
                     </div>
                     {viewTransaction.client_usdt_network && (
                       <div>
-                        <p className="text-xs text-[#C5C6C7]">Network</p>
-                        <p className="text-white text-sm font-medium">
+                        <p className="text-xs text-muted-foreground">Network</p>
+                        <p className="text-foreground text-sm font-medium">
                           {viewTransaction.client_usdt_network}
                         </p>
                       </div>
@@ -1997,35 +2321,66 @@ export default function AccountantDashboard() {
                 </div>
               )}
               {viewTransaction.description && (
-                <div className="pt-4 border-t border-[#1F2833]">
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
+                <div className="pt-4 border-t border">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Description
                   </p>
-                  <p className="text-white">{viewTransaction.description}</p>
+                  <p className="text-foreground">{viewTransaction.description}</p>
                 </div>
               )}
               {(() => {
                 const imgs = viewTransaction.proof_images?.length
                   ? viewTransaction.proof_images
-                  : viewTransaction.proof_image ? [viewTransaction.proof_image] : [];
+                  : viewTransaction.proof_image
+                    ? [viewTransaction.proof_image]
+                    : [];
                 if (!imgs.length) return null;
                 return (
-                  <div className="pt-4 border-t border-[#1F2833]">
-                    <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">Proof of Payment ({imgs.length})</p>
+                  <div className="pt-4 border-t border">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
+                      Proof of Payment ({imgs.length})
+                    </p>
                     <div className="grid grid-cols-2 gap-2">
                       {imgs.map((url, i) => {
-                        const src = url?.startsWith("https") ? url : `data:image/png;base64,${url}`;
-                        console.log(src);
-                        
-                        if (url?.toLowerCase().includes('.pdf')) {
+                        const src = url?.startsWith("http")
+                          ? url
+                          : `data:image/png;base64,${url}`;
+                        if (url?.toLowerCase().includes(".pdf")) {
                           return (
-                            <a key={i} href={src} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center p-4 rounded border border-red-200 bg-red-50 hover:bg-red-100 cursor-pointer">
+                            <a
+                              key={i}
+                              href={src}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="flex flex-col items-center justify-center p-4 rounded border border-red-200 bg-red-50 hover:bg-red-100 cursor-pointer"
+                            >
                               <FileText className="w-8 h-8 text-red-500 mb-1" />
-                              <span className="text-xs text-red-600">PDF {i + 1}</span>
+                              <span className="text-xs text-red-600">
+                                PDF {i + 1}
+                              </span>
                             </a>
                           );
                         }
-                        return <img key={i} src={src} alt={`Proof ${i+1}`} className="w-full rounded border border-[#1F2833] cursor-pointer hover:opacity-80" onClick={() => window.open(src, "_blank")} />;
+                        return (
+                          <img
+                            key={i}
+                            src={src}
+                            alt={`Proof ${i + 1}`}
+                            className="w-full rounded border border cursor-pointer hover:opacity-80"
+                            onClick={() => {
+                              if (src.startsWith("data:")) {
+                                fetch(src)
+                                  .then((r) => r.blob())
+                                  .then((blob) => {
+                                    const url = URL.createObjectURL(blob);
+                                    window.open(url, "_blank");
+                                  });
+                              } else {
+                                window.open(src, "_blank");
+                              }
+                            }}
+                          />
+                        );
                       })}
                     </div>
                   </div>
@@ -2037,7 +2392,7 @@ export default function AccountantDashboard() {
                     setViewTransaction(null);
                     initiateApprove(viewTransaction.transaction_id);
                   }}
-                  className="flex-1 bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30"
+                  className="flex-1 bg-green-100 text-green-700 hover:bg-green-200 border border-green-200"
                 >
                   <CheckCircle className="w-4 h-4 mr-2" />
                   Approve
@@ -2047,7 +2402,7 @@ export default function AccountantDashboard() {
                     setViewTransaction(null);
                     initiateReject(viewTransaction.transaction_id);
                   }}
-                  className="flex-1 bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"
+                  className="flex-1 bg-red-100 text-red-700 hover:bg-red-200 border border-red-200"
                 >
                   <XCircle className="w-4 h-4 mr-2" />
                   Reject
@@ -2059,69 +2414,157 @@ export default function AccountantDashboard() {
       </Dialog>
 
       {/* Generic Approval Dialog with Date (for IE, Loan, Repayment, PSP Settlement, Vendor Settlement) */}
-      <Dialog open={!!showGenericApprovalDialog} onOpenChange={() => { setShowGenericApprovalDialog(null); setGenericApprovalDate(''); }}>
-        <DialogContent className="bg-[#1F2833] border-[#1F2833] text-white max-w-md" data-testid="generic-approval-dialog">
+      <Dialog
+        open={!!showGenericApprovalDialog}
+        onOpenChange={() => {
+          setShowGenericApprovalDialog(null);
+          setGenericApprovalDate("");
+        }}
+      >
+        <DialogContent
+          className="bg-card border text-foreground max-w-md"
+          data-testid="generic-approval-dialog"
+        >
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2 text-white" style={{ fontFamily: 'Barlow Condensed' }}>
+            <DialogTitle
+              className="text-3xl font-bold text-foreground flex items-center gap-2"
+            >
               <CheckCircle className="w-6 h-6 text-green-400" />
-              Approve {showGenericApprovalDialog?.type === 'ie' ? 'Income/Expense' : showGenericApprovalDialog?.type === 'loan' ? 'Loan Disbursement' : showGenericApprovalDialog?.type === 'repayment' ? 'Loan Repayment' : showGenericApprovalDialog?.type === 'psp_settlement' ? 'PSP Settlement' : 'Vendor Settlement'}
+              Approve{" "}
+              {showGenericApprovalDialog?.type === "ie"
+                ? "Income/Expense"
+                : showGenericApprovalDialog?.type === "loan"
+                  ? "Loan Disbursement"
+                  : showGenericApprovalDialog?.type === "repayment"
+                    ? "Loan Repayment"
+                    : showGenericApprovalDialog?.type === "psp_settlement"
+                      ? "PSP Settlement"
+                      : "Vendor Settlement"}
             </DialogTitle>
           </DialogHeader>
           {showGenericApprovalDialog && (
             <div className="space-y-4">
-              <div className="p-4 bg-[#0F172A] rounded-lg border border-[#1F2833]">
-                {showGenericApprovalDialog.type === 'ie' && showGenericApprovalDialog.item && (
-                  <>
-                    <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">{showGenericApprovalDialog.item.entry_type}</p>
-                    <p className="text-white text-sm">{showGenericApprovalDialog.item.description || showGenericApprovalDialog.item.category || '-'}</p>
-                    <p className={`font-mono text-lg font-bold mt-1 ${showGenericApprovalDialog.item.entry_type === 'income' ? 'text-green-400' : 'text-red-400'}`}>
-                      {formatCurrency(showGenericApprovalDialog.item.amount, showGenericApprovalDialog.item.currency)}
-                    </p>
-                  </>
-                )}
-                {showGenericApprovalDialog.type === 'loan' && showGenericApprovalDialog.item && (
-                  <>
-                    <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Loan Disbursement</p>
-                    <p className="text-white text-sm">Borrower: {showGenericApprovalDialog.item.borrower_name}</p>
-                    <p className="font-mono text-lg font-bold text-red-400 mt-1">-{formatCurrency(showGenericApprovalDialog.item.amount, showGenericApprovalDialog.item.currency)}</p>
-                  </>
-                )}
-                {showGenericApprovalDialog.type === 'repayment' && showGenericApprovalDialog.item && (
-                  <>
-                    <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Loan Repayment</p>
-                    <p className="text-white text-sm">From: {showGenericApprovalDialog.item.borrower_name || '-'}</p>
-                    <p className="font-mono text-lg font-bold text-green-400 mt-1">+{formatCurrency(showGenericApprovalDialog.item.amount, showGenericApprovalDialog.item.currency)}</p>
-                  </>
-                )}
-                {showGenericApprovalDialog.type === 'psp_settlement' && showGenericApprovalDialog.item && (
-                  <>
-                    <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">PSP Settlement</p>
-                    <p className="text-white text-sm">{showGenericApprovalDialog.item.psp_name}</p>
-                    <p className="font-mono text-lg font-bold text-green-400 mt-1">${showGenericApprovalDialog.item.net_amount?.toLocaleString()}</p>
-                  </>
-                )}
-                {showGenericApprovalDialog.type === 'vendor_settlement' && showGenericApprovalDialog.item && (
-                  <>
-                    <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Vendor Settlement</p>
-                    <p className="text-white text-sm">{showGenericApprovalDialog.item.vendor_name}</p>
-                    <p className="font-mono text-lg font-bold text-green-400 mt-1">{showGenericApprovalDialog.item.settlement_amount?.toLocaleString()} {showGenericApprovalDialog.item.destination_currency || 'USD'}</p>
-                  </>
-                )}
+              <div className="p-4 bg-muted/50 rounded-sm">
+                {showGenericApprovalDialog.type === "ie" &&
+                  showGenericApprovalDialog.item && (
+                    <>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+                        {showGenericApprovalDialog.item.entry_type}
+                      </p>
+                      <p className="text-foreground text-sm">
+                        {showGenericApprovalDialog.item.description ||
+                          showGenericApprovalDialog.item.category ||
+                          "-"}
+                      </p>
+                      <p
+                        className={`font-mono text-lg font-bold mt-1 ${showGenericApprovalDialog.item.entry_type === "income" ? "text-green-400" : "text-red-400"}`}
+                      >
+                        {formatCurrency(
+                          showGenericApprovalDialog.item.amount,
+                          showGenericApprovalDialog.item.currency,
+                        )}
+                      </p>
+                    </>
+                  )}
+                {showGenericApprovalDialog.type === "loan" &&
+                  showGenericApprovalDialog.item && (
+                    <>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+                        Loan Disbursement
+                      </p>
+                      <p className="text-foreground text-sm">
+                        Borrower: {showGenericApprovalDialog.item.borrower_name}
+                      </p>
+                      <p className="font-mono text-lg font-bold text-red-400 mt-1">
+                        -
+                        {formatCurrency(
+                          showGenericApprovalDialog.item.amount,
+                          showGenericApprovalDialog.item.currency,
+                        )}
+                      </p>
+                    </>
+                  )}
+                {showGenericApprovalDialog.type === "repayment" &&
+                  showGenericApprovalDialog.item && (
+                    <>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+                        Loan Repayment
+                      </p>
+                      <p className="text-foreground text-sm">
+                        From:{" "}
+                        {showGenericApprovalDialog.item.borrower_name || "-"}
+                      </p>
+                      <p className="font-mono text-lg font-bold text-green-400 mt-1">
+                        +
+                        {formatCurrency(
+                          showGenericApprovalDialog.item.amount,
+                          showGenericApprovalDialog.item.currency,
+                        )}
+                      </p>
+                    </>
+                  )}
+                {showGenericApprovalDialog.type === "psp_settlement" &&
+                  showGenericApprovalDialog.item && (
+                    <>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+                        PSP Settlement
+                      </p>
+                      <p className="text-foreground text-sm">
+                        {showGenericApprovalDialog.item.psp_name}
+                      </p>
+                      <p className="font-mono text-lg font-bold text-green-400 mt-1">
+                        $
+                        {showGenericApprovalDialog.item.net_amount?.toLocaleString()}
+                      </p>
+                    </>
+                  )}
+                {showGenericApprovalDialog.type === "vendor_settlement" &&
+                  showGenericApprovalDialog.item && (
+                    <>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+                        Vendor Settlement
+                      </p>
+                      <p className="text-foreground text-sm">
+                        {showGenericApprovalDialog.item.vendor_name}
+                      </p>
+                      <p className="font-mono text-lg font-bold text-green-400 mt-1">
+                        {showGenericApprovalDialog.item.settlement_amount?.toLocaleString()}{" "}
+                        {showGenericApprovalDialog.item.destination_currency ||
+                          "USD"}
+                      </p>
+                    </>
+                  )}
               </div>
               <div className="space-y-2">
-                <Label className="text-[#94A3B8] text-xs uppercase tracking-wider">Date (Actual transaction/settlement date)</Label>
+                <Label className="text-card-foreground text-xs uppercase tracking-wider">
+                  Date (Actual transaction/settlement date)
+                </Label>
                 <Input
                   type="date"
                   value={genericApprovalDate}
-                  onChange={e => setGenericApprovalDate(e.target.value)}
-                  className="bg-[#0F172A] border-[#1F2833] text-white"
+                  onChange={(e) => setGenericApprovalDate(e.target.value)}
+                  className="bg-muted/50 border text-foreground"
                   data-testid="generic-approval-date"
                 />
               </div>
               <div className="flex gap-3 pt-2">
-                <Button variant="outline" onClick={() => { setShowGenericApprovalDialog(null); setGenericApprovalDate(''); }} className="flex-1 border-[#1F2833] text-[#C5C6C7] hover:bg-white/5">Cancel</Button>
-                <Button onClick={handleGenericApprovalConfirm} className="flex-1 bg-green-500 text-white hover:bg-green-600" data-testid="confirm-generic-approval">
-                  <CheckCircle className="w-4 h-4 mr-2" />Continue to Approve
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowGenericApprovalDialog(null);
+                    setGenericApprovalDate("");
+                  }}
+                  className="flex-1 border text-muted-foreground hover:bg-muted/50"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleGenericApprovalConfirm}
+                  className="flex-1 bg-green-500 text-white hover:bg-green-600"
+                  data-testid="confirm-generic-approval"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Continue to Approve
                 </Button>
               </div>
             </div>
@@ -2139,13 +2582,12 @@ export default function AccountantDashboard() {
           }
         }}
       >
-        <DialogContent className="bg-[#1F2833] border-[#1F2833] text-white max-w-md">
+        <DialogContent className="bg-card border text-foreground max-w-md">
           <DialogHeader>
             <DialogTitle
-              className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2 text-white"
-              style={{ fontFamily: "Barlow Condensed" }}
+              className="text-3xl font-bold text-foreground flex items-center gap-2"
             >
-              <Calculator className="w-6 h-6 text-[#1FA21B]" />
+              <Calculator className="w-6 h-6 text-indigo-600" />
               Verification Required
             </DialogTitle>
           </DialogHeader>
@@ -2168,25 +2610,24 @@ export default function AccountantDashboard() {
           setRejectReason("");
         }}
       >
-        <DialogContent className="bg-[#1F2833] border-[#1F2833] text-white max-w-md">
+        <DialogContent className="bg-card border text-foreground max-w-md">
           <DialogHeader>
             <DialogTitle
-              className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2 text-white"
-              style={{ fontFamily: "Barlow Condensed" }}
+              className="text-3xl font-bold text-foreground flex items-center gap-2"
             >
               <AlertCircle className="w-6 h-6 text-red-400" />
               Reject Transaction
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-[#C5C6C7]">
+            <p className="text-muted-foreground">
               Please provide a reason for rejecting this transaction:
             </p>
             <Textarea
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               placeholder="Enter rejection reason..."
-              className="bg-[#0F172A] border-[#1F2833] text-white focus:border-[#1FA21B]"
+              className="bg-muted/50 border text-foreground focus:border-indigo-500"
               rows={3}
               data-testid="reject-reason"
             />
@@ -2197,7 +2638,7 @@ export default function AccountantDashboard() {
                   setShowRejectDialog(null);
                   setRejectReason("");
                 }}
-                className="flex-1 border-[#1F2833] text-[#C5C6C7] hover:bg-white/5"
+                className="flex-1 border text-muted-foreground hover:bg-muted/50"
               >
                 Cancel
               </Button>
@@ -2218,13 +2659,12 @@ export default function AccountantDashboard() {
         open={!!viewSettlement}
         onOpenChange={() => setViewSettlement(null)}
       >
-        <DialogContent className="bg-[#1F2833] border-[#1F2833] text-white max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-card border text-foreground max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle
-              className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2 text-white"
-              style={{ fontFamily: "Barlow Condensed" }}
+              className="text-3xl font-bold text-foreground flex items-center gap-2"
             >
-              <Wallet className="w-6 h-6 text-[#1FA21B]" />
+              <Wallet className="w-6 h-6 text-indigo-600" />
               Settlement Details
             </DialogTitle>
           </DialogHeader>
@@ -2232,25 +2672,25 @@ export default function AccountantDashboard() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Store className="w-5 h-5 text-[#1FA21B]" />
-                  <span className="text-white text-lg">
+                  <Store className="w-5 h-5 text-indigo-600" />
+                  <span className="text-foreground text-lg">
                     {viewSettlement.vendor_name}
                   </span>
                 </div>
-                <Badge className="bg-yellow-500/20 text-yellow-400 text-xs uppercase">
+                <Badge className="bg-yellow-100 text-yellow-700 text-xs uppercase">
                   Pending
                 </Badge>
               </div>
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-[#1F2833]">
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border">
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Settlement Type
                   </p>
                   <Badge
                     className={
                       viewSettlement.settlement_type === "bank"
-                        ? "bg-blue-500/20 text-blue-400"
-                        : "bg-purple-500/20 text-purple-400"
+                        ? "bg-primary/15 text-primary"
+                        : "bg-purple-100 text-purple-700"
                     }
                   >
                     {viewSettlement.settlement_type === "bank" ? (
@@ -2262,24 +2702,24 @@ export default function AccountantDashboard() {
                   </Badge>
                 </div>
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Transactions
                   </p>
-                  <p className="text-white font-mono">
+                  <p className="text-foreground font-mono">
                     {viewSettlement.transaction_count}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Gross Amount
                   </p>
-                  <p className="text-white font-mono text-xl">
+                  <p className="text-foreground font-mono text-xl">
                     {viewSettlement.gross_amount?.toLocaleString()}{" "}
                     {viewSettlement.source_currency || "USD"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Commission
                   </p>
                   <p className="text-red-400 font-mono">
@@ -2290,7 +2730,7 @@ export default function AccountantDashboard() {
                 {viewSettlement.charges_amount > 0 && (
                   <>
                     <div>
-                      <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                         Charges
                       </p>
                       <p className="text-red-400 font-mono">
@@ -2300,10 +2740,10 @@ export default function AccountantDashboard() {
                     </div>
                     {viewSettlement.charges_description && (
                       <div>
-                        <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                           Charges Desc.
                         </p>
-                        <p className="text-white text-sm">
+                        <p className="text-foreground text-sm">
                           {viewSettlement.charges_description}
                         </p>
                       </div>
@@ -2311,16 +2751,16 @@ export default function AccountantDashboard() {
                   </>
                 )}
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Net (Source)
                   </p>
-                  <p className="text-white font-mono">
+                  <p className="text-foreground font-mono">
                     {viewSettlement.net_amount_source?.toLocaleString()}{" "}
                     {viewSettlement.source_currency || "USD"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Settlement Amount
                   </p>
                   <p className="text-green-400 font-mono text-xl">
@@ -2329,20 +2769,20 @@ export default function AccountantDashboard() {
                   </p>
                 </div>
               </div>
-              <div className="pt-4 border-t border-[#1F2833]">
-                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
+              <div className="pt-4 border-t border">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                   Destination Account
                 </p>
-                <p className="text-white">
+                <p className="text-foreground">
                   {viewSettlement.settlement_destination_name}
                 </p>
               </div>
-              <div className="pt-4 border-t border-[#1F2833]">
-                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
+              <div className="pt-4 border-t border">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                   Created By
                 </p>
-                <p className="text-white">{viewSettlement.created_by_name}</p>
-                <p className="text-sm text-[#C5C6C7]">
+                <p className="text-foreground">{viewSettlement.created_by_name}</p>
+                <p className="text-sm text-muted-foreground">
                   {formatDate(viewSettlement.created_at)}
                 </p>
               </div>
@@ -2352,7 +2792,7 @@ export default function AccountantDashboard() {
                     setViewSettlement(null);
                     initiateApprove(viewSettlement.settlement_id, true);
                   }}
-                  className="flex-1 bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30"
+                  className="flex-1 bg-green-100 text-green-700 hover:bg-green-200 border border-green-200"
                 >
                   <CheckCircle className="w-4 h-4 mr-2" />
                   Approve
@@ -2362,7 +2802,7 @@ export default function AccountantDashboard() {
                     setViewSettlement(null);
                     initiateReject(viewSettlement.settlement_id, true);
                   }}
-                  className="flex-1 bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"
+                  className="flex-1 bg-red-100 text-red-700 hover:bg-red-200 border border-red-200"
                 >
                   <XCircle className="w-4 h-4 mr-2" />
                   Reject
@@ -2381,25 +2821,24 @@ export default function AccountantDashboard() {
           setRejectReason("");
         }}
       >
-        <DialogContent className="bg-[#1F2833] border-[#1F2833] text-white max-w-md">
+        <DialogContent className="bg-card border text-foreground max-w-md">
           <DialogHeader>
             <DialogTitle
-              className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2 text-white"
-              style={{ fontFamily: "Barlow Condensed" }}
+              className="text-3xl font-bold text-foreground flex items-center gap-2"
             >
               <AlertCircle className="w-6 h-6 text-red-400" />
               Reject Settlement
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-[#C5C6C7]">
+            <p className="text-muted-foreground">
               Please provide a reason for rejecting this settlement:
             </p>
             <Textarea
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               placeholder="Enter rejection reason..."
-              className="bg-[#0F172A] border-[#1F2833] text-white focus:border-[#1FA21B]"
+              className="bg-muted/50 border text-foreground focus:border-indigo-500"
               rows={3}
               data-testid="settlement-reject-reason"
             />
@@ -2410,7 +2849,7 @@ export default function AccountantDashboard() {
                   setShowSettlementRejectDialog(null);
                   setRejectReason("");
                 }}
-                className="flex-1 border-[#1F2833] text-[#C5C6C7] hover:bg-white/5"
+                className="flex-1 border text-muted-foreground hover:bg-muted/50"
               >
                 Cancel
               </Button>
@@ -2434,26 +2873,25 @@ export default function AccountantDashboard() {
           setProofPreview(null);
         }}
       >
-        <DialogContent className="bg-[#1F2833] border-[#1F2833] text-white max-w-md">
+        <DialogContent className="bg-card border text-foreground max-w-md">
           <DialogHeader>
             <DialogTitle
-              className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2 text-white"
-              style={{ fontFamily: "Barlow Condensed" }}
+              className="text-3xl font-bold text-foreground flex items-center gap-2"
             >
-              <Upload className="w-6 h-6 text-[#1FA21B]" />
+              <Upload className="w-6 h-6 text-indigo-600" />
               Upload Proof of Payment
             </DialogTitle>
           </DialogHeader>
           {uploadingProof && (
             <div className="space-y-4">
-              <div className="p-4 bg-[#0F172A] rounded-xl border border-[#1F2833]">
-                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
+              <div className="p-4 bg-muted/50 rounded-sm">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                   Transaction
                 </p>
-                <p className="text-white font-mono">
+                <p className="text-foreground font-mono">
                   {uploadingProof.reference}
                 </p>
-                <p className="text-sm text-[#C5C6C7] mt-2">
+                <p className="text-sm text-muted-foreground mt-2">
                   Withdrawal of{" "}
                   <span className="text-red-400 font-mono">
                     ${uploadingProof.amount?.toLocaleString()}
@@ -2462,28 +2900,28 @@ export default function AccountantDashboard() {
                 </p>
                 {uploadingProof.destination_type === "bank" &&
                   uploadingProof.client_bank_name && (
-                    <div className="mt-2 p-2 bg-[#0F172A] rounded-xl border border-[#1F2833]">
+                    <div className="mt-2 p-2 bg-card rounded-sm">
                       <div className="flex items-center gap-2">
-                        <Building2 className="w-4 h-4 text-blue-400" />
-                        <span className="text-white text-sm">
+                        <Building2 className="w-4 h-4 text-primary/60" />
+                        <span className="text-foreground text-sm">
                           {uploadingProof.client_bank_name}
                         </span>
                       </div>
-                      <p className="text-xs text-[#C5C6C7] font-mono mt-1">
+                      <p className="text-xs text-muted-foreground font-mono mt-1">
                         {uploadingProof.client_bank_account_number}
                       </p>
                     </div>
                   )}
                 {uploadingProof.destination_type === "usdt" &&
                   uploadingProof.client_usdt_address && (
-                    <div className="mt-2 p-2 bg-[#0F172A] rounded-xl border border-[#1F2833]">
+                    <div className="mt-2 p-2 bg-card rounded-sm">
                       <div className="flex items-center gap-2">
                         <Wallet className="w-4 h-4 text-green-400" />
-                        <Badge className="bg-green-500/20 text-green-400 text-xs">
+                        <Badge className="bg-green-100 text-green-700 text-xs">
                           {uploadingProof.client_usdt_network}
                         </Badge>
                       </div>
-                      <p className="text-xs text-[#C5C6C7] font-mono mt-1 break-all">
+                      <p className="text-xs text-muted-foreground font-mono mt-1 break-all">
                         {uploadingProof.client_usdt_address}
                       </p>
                     </div>
@@ -2492,18 +2930,25 @@ export default function AccountantDashboard() {
 
               {proofPreview ? (
                 <div className="relative">
-                  {proofPreview.startsWith('data:application/pdf') || proofPreview.startsWith('data:application/octet') ? (
-                    <div className="w-full h-48 flex flex-col items-center justify-center bg-red-50 border border-red-200 rounded-xl">
+                  {proofPreview.startsWith("data:application/pdf") ||
+                  proofPreview.startsWith("data:application/octet") ? (
+                    <div className="w-full h-48 flex flex-col items-center justify-center bg-red-50 border border-red-200 rounded-sm">
                       <FileText className="w-12 h-12 text-red-500 mb-2" />
                       <p className="text-sm text-red-600">PDF uploaded</p>
-                      <a href={proofPreview} target="_blank" rel="noreferrer" className="text-xs text-blue-600 underline mt-1">View PDF</a>
+                      <a
+                        href={proofPreview}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs text-primary underline mt-1"
+                      >
+                        View PDF
+                      </a>
                     </div>
                   ) : (
                     <img
-                      onClick={() => window.open(proofPreview, '_blank')}
                       src={proofPreview}
                       alt="Proof preview"
-                      className="w-full h-48 object-contain bg-[#0F172A] rounded-xl"
+                      className="w-full h-48 object-contain bg-muted/50 rounded-sm"
                     />
                   )}
                   <Button
@@ -2516,9 +2961,9 @@ export default function AccountantDashboard() {
                   </Button>
                 </div>
               ) : (
-                <div className="border-2 border-dashed border-white/20 rounded-xl p-8 text-center">
-                  <Upload className="w-8 h-8 text-[#C5C6C7] mx-auto mb-2" />
-                  <p className="text-[#C5C6C7] mb-2">
+                <div className="border-2 border-dashed border rounded-sm p-8 text-center">
+                  <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-muted-foreground mb-2">
                     Upload screenshot or PDF of completed payment
                   </p>
                   <Input
@@ -2530,7 +2975,7 @@ export default function AccountantDashboard() {
                   />
                   <Label
                     htmlFor="proof-upload-input"
-                    className="cursor-pointer inline-block px-4 py-2 bg-[#1FA21B] text-[#0B0C10] font-bold uppercase text-sm rounded-xl hover:bg-[#45A29E]"
+                    className="cursor-pointer inline-block px-4 py-2 bg-indigo-600 text-white font-bold uppercase text-sm rounded-sm hover:bg-indigo-700"
                   >
                     Choose File
                   </Label>
@@ -2543,7 +2988,7 @@ export default function AccountantDashboard() {
                   setUploadingProof(null);
                   setProofPreview(null);
                 }}
-                className="w-full border-[#1F2833] text-[#C5C6C7] hover:bg-white/5"
+                className="w-full border text-muted-foreground hover:bg-muted/50"
               >
                 Cancel
               </Button>
@@ -2563,11 +3008,10 @@ export default function AccountantDashboard() {
           setBankReceiptDate("");
         }}
       >
-        <DialogContent className="bg-[#1F2833] border-[#1F2833] text-white max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-card border text-foreground max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle
-              className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2 text-white"
-              style={{ fontFamily: "Barlow Condensed" }}
+              className="text-3xl font-bold text-foreground flex items-center gap-2"
             >
               <CheckCircle className="w-6 h-6 text-green-400" />
               Approve{" "}
@@ -2579,11 +3023,11 @@ export default function AccountantDashboard() {
           {showApprovalDialog && (
             <div className="space-y-4">
               {/* Transaction Details */}
-              <div className="p-4 bg-[#0F172A] rounded-xl border border-[#1F2833]">
-                <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">
+              <div className="p-4 bg-muted/50 rounded-sm">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                   Transaction
                 </p>
-                <p className="text-white font-mono">
+                <p className="text-foreground font-mono">
                   {showApprovalDialog.reference}
                 </p>
                 {showApprovalDialog.crm_reference && (
@@ -2592,12 +3036,12 @@ export default function AccountantDashboard() {
                   </p>
                 )}
                 {showApprovalDialog.description && (
-                  <p className="text-[#C5C6C7] text-xs mt-1">
+                  <p className="text-muted-foreground text-xs mt-1">
                     {showApprovalDialog.description}
                   </p>
                 )}
                 <div className="mt-2 flex items-center justify-between">
-                  <span className="text-[#C5C6C7]">Amount:</span>
+                  <span className="text-muted-foreground">Amount:</span>
                   <span
                     className={`font-mono text-lg font-bold ${showApprovalDialog.transaction_type === "deposit" ? "text-green-400" : "text-red-400"}`}
                   >
@@ -2608,8 +3052,8 @@ export default function AccountantDashboard() {
                   </span>
                 </div>
                 <div className="mt-2">
-                  <span className="text-[#C5C6C7] text-sm">Client: </span>
-                  <span className="text-white">
+                  <span className="text-muted-foreground text-sm">Client: </span>
+                  <span className="text-foreground">
                     {showApprovalDialog.client_name}
                   </span>
                 </div>
@@ -2617,8 +3061,8 @@ export default function AccountantDashboard() {
                   <Badge
                     className={
                       showApprovalDialog.transaction_type === "deposit"
-                        ? "bg-green-500/20 text-green-400"
-                        : "bg-red-500/20 text-red-400"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-red-100 text-red-700"
                     }
                   >
                     {showApprovalDialog.transaction_type === "deposit" ? (
@@ -2633,30 +3077,30 @@ export default function AccountantDashboard() {
 
               {/* Destination Details - Only for Withdrawals */}
               {showApprovalDialog.transaction_type === "withdrawal" && (
-                <div className="p-4 bg-[#0F172A] rounded-xl border border-[#1F2833]">
-                  <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">
+                <div className="p-4 bg-muted/50 rounded-sm">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
                     Sending To
                   </p>
                   {showApprovalDialog.destination_type === "bank" &&
                     showApprovalDialog.client_bank_name && (
                       <div className="flex items-start gap-2">
-                        <Building2 className="w-5 h-5 text-blue-400 mt-0.5" />
+                        <Building2 className="w-5 h-5 text-primary/60 mt-0.5" />
                         <div>
-                          <p className="text-white">
+                          <p className="text-foreground">
                             {showApprovalDialog.client_bank_name}
                           </p>
-                          <p className="text-sm text-[#C5C6C7]">
+                          <p className="text-sm text-muted-foreground">
                             {showApprovalDialog.client_bank_account_name}
                           </p>
-                          <p className="text-xs text-[#C5C6C7] font-mono">
+                          <p className="text-xs text-muted-foreground font-mono">
                             {showApprovalDialog.client_bank_account_number}
                           </p>
                           {showApprovalDialog.client_bank_swift_iban && (
-                            <p className="text-xs text-[#C5C6C7]">
+                            <p className="text-xs text-muted-foreground">
                               SWIFT: {showApprovalDialog.client_bank_swift_iban}
                             </p>
                           )}
-                          <Badge className="mt-1 bg-blue-500/20 text-blue-400 text-xs">
+                          <Badge className="mt-1 bg-primary/15 text-primary text-xs">
                             {showApprovalDialog.client_bank_currency || "USD"}
                           </Badge>
                         </div>
@@ -2667,10 +3111,10 @@ export default function AccountantDashboard() {
                       <div className="flex items-start gap-2">
                         <Wallet className="w-5 h-5 text-green-400 mt-0.5" />
                         <div>
-                          <Badge className="bg-green-500/20 text-green-400 text-xs">
+                          <Badge className="bg-green-100 text-green-700 text-xs">
                             {showApprovalDialog.client_usdt_network}
                           </Badge>
-                          <p className="text-xs text-[#C5C6C7] font-mono mt-1 break-all">
+                          <p className="text-xs text-muted-foreground font-mono mt-1 break-all">
                             {showApprovalDialog.client_usdt_address}
                           </p>
                         </div>
@@ -2682,17 +3126,17 @@ export default function AccountantDashboard() {
               {/* Deposit Destination Info */}
               {showApprovalDialog.transaction_type === "deposit" &&
                 showApprovalDialog.destination_account_name && (
-                  <div className="p-4 bg-[#0F172A] rounded-xl border border-[#1F2833]">
-                    <p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-2">
+                  <div className="p-4 bg-muted/50 rounded-sm">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
                       Depositing To
                     </p>
                     <div className="flex items-start gap-2">
-                      <Building2 className="w-5 h-5 text-[#1FA21B] mt-0.5" />
+                      <Building2 className="w-5 h-5 text-indigo-600 mt-0.5" />
                       <div>
-                        <p className="text-white">
+                        <p className="text-foreground">
                           {showApprovalDialog.destination_account_name}
                         </p>
-                        <p className="text-sm text-[#C5C6C7]">
+                        <p className="text-sm text-muted-foreground">
                           {showApprovalDialog.destination_bank_name}
                         </p>
                       </div>
@@ -2703,7 +3147,7 @@ export default function AccountantDashboard() {
               {/* Source Treasury/USDT Account Selection - Only for Withdrawals */}
               {showApprovalDialog.transaction_type === "withdrawal" && (
                 <div className="space-y-2">
-                  <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                     Source Account (Where funds come from) *
                   </Label>
                   {(() => {
@@ -2713,75 +3157,75 @@ export default function AccountantDashboard() {
                         ? showApprovalDialog.base_currency
                         : showApprovalDialog.currency || "USD";
                     const filteredTreasury = treasuryAccounts.filter(
-                      (a) => a.currency === txCurrency
+                      (a) => a.currency === txCurrency,
                     );
                     const filteredPsps = psps.filter(
-                      (p) => p.status === "active"
+                      (p) => p.status === "active",
                     );
                     return (
-                  <Select
-                    value={approvalSourceAccount}
-                    onValueChange={setApprovalSourceAccount}
-                  >
-                    <SelectTrigger
-                      className="bg-[#0F172A] border-[#1F2833] text-white"
-                      data-testid="approval-source-account"
-                    >
-                     <SelectValue placeholder="Select treasury, USDT or PSP account" />
-                    </SelectTrigger>
-                  <SelectContent className="bg-[#1F2833] border-[#1F2833] max-h-[250px]">
-                      {filteredTreasury.length > 0 && (
-                        <div className="px-2 py-1 text-[10px] text-[#94A3B8] uppercase tracking-wider font-bold border-b border-[#1F2833]">
-                          Treasury / USDT
-                        </div>
-                      )}
-                      {filteredTreasury.map((account) => (
-                        <SelectItem
-                          key={account.account_id}
-                          value={account.account_id}
-                          className="text-white hover:bg-white/5"
+                      <Select
+                        value={approvalSourceAccount}
+                        onValueChange={setApprovalSourceAccount}
+                      >
+                        <SelectTrigger
+                          className="bg-muted/50 border text-foreground"
+                          data-testid="approval-source-account"
                         >
-                          <div className="flex items-center gap-2">
-                            {account.account_type === "usdt" ? (
-                              <Wallet className="w-3 h-3" />
-                            ) : (
-                              <Building2 className="w-3 h-3" />
-                            )}
-                            <span>{account.account_name}</span>
-                            <span className="text-[#C5C6C7] text-xs">
-                              ({account.currency})
-                            </span>
-                            <span className="text-[#1FA21B] font-mono text-xs">
-                               {account.balance?.toLocaleString()}
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                      {filteredPsps.length > 0 && (
-                        <div className="px-2 py-1 text-[10px] text-[#94A3B8] uppercase tracking-wider font-bold border-b border-[#1F2833] mt-1">
-                          PSP
-                        </div>
-                      )}
-                      {filteredPsps.map((psp) => (
-                          <SelectItem
-                            key={`psp_${psp.psp_id}`}
-                            value={`psp_${psp.psp_id}`}
-                            className="text-white hover:bg-white/5"
-                          >
-                            <div className="flex items-center gap-2">
-                              <CreditCard className="w-3 h-3 text-purple-400" />
-                              <span>{psp.psp_name}</span>
-                              <span className="text-[#C5C6C7] text-xs">
-                                ({psp.currency || "USD"})
-                              </span>
-                              <span className="text-purple-400 font-mono text-xs">
-                                {psp.current_balance?.toLocaleString() || "0"}
-                              </span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                          <SelectValue placeholder="Select treasury, USDT or PSP account" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-card border max-h-[250px]">
+                          {filteredTreasury.length > 0 && (
+                            <div className="px-2 py-1 text-[10px] text-muted-foreground uppercase tracking-wider font-bold border-b border/60">
+                              Treasury / USDT
+                            </div>
+                          )}
+                          {filteredTreasury.map((account) => (
+                            <SelectItem
+                              key={account.account_id}
+                              value={account.account_id}
+                              className="text-foreground hover:bg-muted/50"
+                            >
+                              <div className="flex items-center gap-2">
+                                {account.account_type === "usdt" ? (
+                                  <Wallet className="w-3 h-3" />
+                                ) : (
+                                  <Building2 className="w-3 h-3" />
+                                )}
+                                <span>{account.account_name}</span>
+                                <span className="text-muted-foreground text-xs">
+                                  ({account.currency})
+                                </span>
+                                <span className="text-indigo-600 font-mono text-xs">
+                                  {account.balance?.toLocaleString()}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                          {filteredPsps.length > 0 && (
+                            <div className="px-2 py-1 text-[10px] text-muted-foreground uppercase tracking-wider font-bold border-b border/60 mt-1">
+                              PSP
+                            </div>
+                          )}
+                          {filteredPsps.map((psp) => (
+                            <SelectItem
+                              key={`psp_${psp.psp_id}`}
+                              value={`psp_${psp.psp_id}`}
+                              className="text-foreground hover:bg-muted/50"
+                            >
+                              <div className="flex items-center gap-2">
+                                <CreditCard className="w-3 h-3 text-purple-400" />
+                                <span>{psp.psp_name}</span>
+                                <span className="text-muted-foreground text-xs">
+                                  ({psp.currency || "USD"})
+                                </span>
+                                <span className="text-purple-400 font-mono text-xs">
+                                  {psp.current_balance?.toLocaleString() || "0"}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     );
                   })()}
                 </div>
@@ -2789,17 +3233,17 @@ export default function AccountantDashboard() {
 
               {/* Bank Receipt Date - Optional */}
               <div className="space-y-2">
-                <Label className="text-[#94A3B8] text-xs uppercase tracking-wider">
+                <Label className="text-card-foreground text-xs uppercase tracking-wider">
                   Bank Receipt Date (Actual payment date)
                 </Label>
                 <Input
                   type="date"
                   value={bankReceiptDate}
                   onChange={(e) => setBankReceiptDate(e.target.value)}
-                  className="bg-[#0F172A] border-[#1F2833] text-white"
+                  className="bg-muted/50 border text-foreground"
                   data-testid="bank-receipt-date"
                 />
-                <p className="text-[#94A3B8] text-xs">
+                <p className="text-muted-foreground text-xs">
                   Date the payment was actually received in the bank. Used for
                   reconciliation matching.
                 </p>
@@ -2807,7 +3251,7 @@ export default function AccountantDashboard() {
 
               {/* Proof of Payment Upload - Required for both */}
               <div className="space-y-2">
-                <Label className="text-[#C5C6C7] text-xs uppercase tracking-wider">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                   Proof of{" "}
                   {showApprovalDialog.transaction_type === "deposit"
                     ? "Deposit"
@@ -2817,33 +3261,85 @@ export default function AccountantDashboard() {
                 {approvalProofPreviews.length > 0 ? (
                   <div className="space-y-2">
                     <div className="grid grid-cols-3 gap-2">
-                    {approvalProofPreviews.map((src, i) => (
+                      {approvalProofPreviews.map((src, i) => (
                         <div key={i} className="relative group">
-                          <img onClick={() => {
-                            if (src.startsWith("data:")) {
-                              fetch(src).then(r => r.blob()).then(blob => {
-                                const url = URL.createObjectURL(blob);
-                                window.open(url, "_blank");
-                              });
-                            } else {
-                              window.open(src, "_blank");
-                            }
-                          }} src={src} alt={`Proof ${i+1}`} className="w-full h-20 object-cover rounded border border-white/20 cursor-pointer" />
-                          <button type="button" onClick={() => removeApprovalProof(i)} className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full w-4 h-4 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">×</button>
+                          {src.startsWith("data:application/pdf") ||
+                          src.startsWith("data:application/octet") ? (
+                            <div
+                              className="w-full h-20 flex flex-col items-center justify-center rounded border border-red-200 bg-red-50 cursor-pointer"
+                              onClick={() => window.open(src, "_blank")}
+                            >
+                              <FileText className="w-6 h-6 text-red-500 mb-1" />
+                              <span className="text-xs text-red-600">
+                                PDF {i + 1}
+                              </span>
+                            </div>
+                          ) : (
+                            <img
+                              onClick={() => {
+                                if (src.startsWith("data:")) {
+                                  fetch(src)
+                                    .then((r) => r.blob())
+                                    .then((blob) => {
+                                      const url = URL.createObjectURL(blob);
+                                      window.open(url, "_blank");
+                                    });
+                                } else {
+                                  window.open(src, "_blank");
+                                }
+                              }}
+                              alt={`Proof ${i + 1}`}
+                              className="w-full h-20 object-cover rounded border border cursor-pointer"
+                            
+                            />
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeApprovalProof(i)}
+                            className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full w-4 h-4 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            ×
+                          </button>
                         </div>
                       ))}
                     </div>
-                    <Label htmlFor="approval-proof-input" className="cursor-pointer inline-block px-3 py-1 bg-[#66FCF1]/20 text-[#66FCF1] text-xs rounded-sm hover:bg-[#66FCF1]/30">{approvalProofPreviews.length} image(s) — add more</Label>
-                    <Input type="file" accept="image/*,application/pdf,.pdf" multiple onChange={handleApprovalProofChange} className="hidden" id="approval-proof-input" />
+                    <Label
+                      htmlFor="approval-proof-input"
+                      className="cursor-pointer inline-block px-3 py-1 bg-indigo-600/20 text-indigo-600 text-xs rounded-sm hover:bg-indigo-600/30"
+                    >
+                      {approvalProofPreviews.length} file(s) — add more
+                    </Label>
+                    <Input
+                      type="file"
+                      accept="image/*,application/pdf,.pdf"
+                      multiple
+                      onChange={handleApprovalProofChange}
+                      className="hidden"
+                      id="approval-proof-input"
+                    />
                   </div>
                 ) : (
-                  <div className="border-2 border-dashed border-white/20 rounded-sm p-6 text-center">
-                    <Upload className="w-6 h-6 text-[#C5C6C7] mx-auto mb-2" />
-                    <p className="text-[#C5C6C7] text-sm mb-2">
-                      Upload {showApprovalDialog.transaction_type === "deposit" ? "deposit confirmation" : "payment confirmation"} screenshot
+                  <div className="border-2 border-dashed border rounded-sm p-6 text-center">
+                    <Upload className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-muted-foreground text-sm mb-2">
+                      Upload{" "}
+                      {showApprovalDialog.transaction_type === "deposit"
+                        ? "deposit confirmation"
+                        : "payment confirmation"}{" "}
+                      (screenshot or PDF)
                     </p>
-                    <Input type="file" accept="image/*,application/pdf,.pdf" multiple onChange={handleApprovalProofChange} className="hidden" id="approval-proof-input" />
-                    <Label htmlFor="approval-proof-input" className="cursor-pointer inline-block px-4 py-2 bg-[#66FCF1] text-[#0B0C10] font-bold uppercase text-sm rounded-sm hover:bg-[#45A29E]">
+                    <Input
+                      type="file"
+                      accept="image/*,application/pdf,.pdf"
+                      multiple
+                      onChange={handleApprovalProofChange}
+                      className="hidden"
+                      id="approval-proof-input"
+                    />
+                    <Label
+                      htmlFor="approval-proof-input"
+                      className="cursor-pointer inline-block px-4 py-2 bg-indigo-600 text-white font-bold uppercase text-sm rounded-sm hover:bg-indigo-700"
+                    >
                       Choose File(s)
                     </Label>
                   </div>
@@ -2861,7 +3357,7 @@ export default function AccountantDashboard() {
                     setApprovalProofPreviews([]);
                     setBankReceiptDate("");
                   }}
-                  className="flex-1 border-[#1F2833] text-[#C5C6C7] hover:bg-white/5"
+                  className="flex-1 border text-muted-foreground hover:bg-muted/50"
                 >
                   Cancel
                 </Button>
@@ -2886,11 +3382,10 @@ export default function AccountantDashboard() {
 
       {/* Generic View Item Dialog (IE / Loan / Repayment / PSP Settlement) */}
       <Dialog open={!!viewItem} onOpenChange={() => setViewItem(null)}>
-        <DialogContent className="bg-[#1F2833] border-[#1F2833] text-white max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-card border text-foreground max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle
-              className="text-2xl font-bold uppercase tracking-tight text-white"
-              style={{ fontFamily: "Barlow Condensed" }}
+              className="text-3xl font-bold text-foreground"
             >
               {viewItem?._viewType === "ie"
                 ? "Income/Expense Details"
@@ -2924,9 +3419,10 @@ export default function AccountantDashboard() {
                     setViewItem(null);
                     initiateGenericApprove(type, id, viewItem);
                   }}
-                  className="flex-1 bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30"
+                  className="flex-1 bg-green-100 text-green-700 hover:bg-green-200 border border-green-200"
                 >
-                  <CheckCircle className="w-4 h-4 mr-2" />Approve
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Approve
                 </Button>
                 <Button
                   onClick={() => {
@@ -2942,9 +3438,10 @@ export default function AccountantDashboard() {
                     setViewItem(null);
                     initiateGenericReject(type, id);
                   }}
-                  className="flex-1 bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"
+                  className="flex-1 bg-red-100 text-red-700 hover:bg-red-200 border border-red-200"
                 >
-                  <XCircle className="w-4 h-4 mr-2" />Reject
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Reject
                 </Button>
               </div>
             </div>
@@ -2960,22 +3457,24 @@ export default function AccountantDashboard() {
           setRejectReason("");
         }}
       >
-        <DialogContent className="bg-[#1F2833] border-[#1F2833] text-white max-w-md">
+        <DialogContent className="bg-card border text-foreground max-w-md">
           <DialogHeader>
             <DialogTitle
-              className="text-2xl font-bold uppercase tracking-tight flex items-center gap-2 text-white"
-              style={{ fontFamily: "Barlow Condensed" }}
+              className="text-3xl font-bold text-foreground flex items-center gap-2"
             >
-              <AlertCircle className="w-6 h-6 text-red-400" />Reject Item
+              <AlertCircle className="w-6 h-6 text-red-400" />
+              Reject Item
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-[#C5C6C7]">Please provide a reason for rejection:</p>
+            <p className="text-muted-foreground">
+              Please provide a reason for rejection:
+            </p>
             <Textarea
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               placeholder="Enter rejection reason..."
-              className="bg-[#0F172A] border-[#1F2833] text-white focus:border-[#1FA21B]"
+              className="bg-muted/50 border text-foreground focus:border-indigo-500"
               rows={3}
               data-testid="generic-reject-reason"
             />
@@ -2986,7 +3485,7 @@ export default function AccountantDashboard() {
                   setShowGenericRejectDialog(null);
                   setRejectReason("");
                 }}
-                className="flex-1 border-[#1F2833] text-[#C5C6C7] hover:bg-white/5"
+                className="flex-1 border text-muted-foreground hover:bg-muted/50"
               >
                 Cancel
               </Button>
@@ -3012,72 +3511,309 @@ function GenericDetailView({ item, formatCurrency, formatDate, getTypeBadge }) {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <Badge className={item.entry_type === "income" ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}>{item.entry_type}</Badge>
-          <Badge className="bg-yellow-500/20 text-yellow-400 text-xs uppercase">Pending</Badge>
+          <Badge
+            className={
+              item.entry_type === "income"
+                ? "bg-green-100 text-green-700"
+                : "bg-red-100 text-red-700"
+            }
+          >
+            {item.entry_type}
+          </Badge>
+          <Badge className="bg-yellow-100 text-yellow-700 text-xs uppercase">
+            Pending
+          </Badge>
         </div>
         <div className="grid grid-cols-2 gap-4">
-          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Description</p><p className="text-white">{item.description || item.category || item.ie_category_name || "-"}</p></div>
-          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Amount</p><p className={`font-mono text-xl ${item.entry_type === "income" ? "text-green-400" : "text-red-400"}`}>{formatCurrency(item.amount, item.currency)}</p></div>
-          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Treasury</p><p className="text-white">{item.treasury_account_name || "-"}</p></div>
-          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Date</p><p className="text-white">{item.date || formatDate(item.created_at)}</p></div>
-          {item.vendor_name && <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Exchanger</p><p className="text-white">{item.vendor_name}</p></div>}
-          {item.client_name && <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Client</p><p className="text-white">{item.client_name}</p></div>}
-          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Created By</p><p className="text-white">{item.created_by_name}</p></div>
-          {item.reference && <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Reference</p><p className="text-white font-mono text-sm">{item.reference}</p></div>}
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+              Description
+            </p>
+            <p className="text-foreground">
+              {item.description ||
+                item.category ||
+                item.ie_category_name ||
+                "-"}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+              Amount
+            </p>
+            <p
+              className={`font-mono text-xl ${item.entry_type === "income" ? "text-green-400" : "text-red-400"}`}
+            >
+              {formatCurrency(item.amount, item.currency)}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+              Treasury
+            </p>
+            <p className="text-foreground">{item.treasury_account_name || "-"}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+              Date
+            </p>
+            <p className="text-foreground">
+              {item.date || formatDate(item.created_at)}
+            </p>
+          </div>
+          {item.vendor_name && (
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+                Exchanger
+              </p>
+              <p className="text-foreground">{item.vendor_name}</p>
+            </div>
+          )}
+          {item.client_name && (
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+                Client
+              </p>
+              <p className="text-foreground">{item.client_name}</p>
+            </div>
+          )}
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+              Created By
+            </p>
+            <p className="text-foreground">{item.created_by_name}</p>
+          </div>
+          {item.reference && (
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+                Reference
+              </p>
+              <p className="text-foreground font-mono text-sm">{item.reference}</p>
+            </div>
+          )}
         </div>
       </div>
     );
   if (item._viewType === "loan")
     return (
       <div className="space-y-4">
-        <Badge className="bg-yellow-500/20 text-yellow-400 text-xs uppercase">Pending Approval</Badge>
+        <Badge className="bg-yellow-100 text-yellow-700 text-xs uppercase">
+          Pending Approval
+        </Badge>
         <div className="grid grid-cols-2 gap-4">
-          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Borrower</p><p className="text-white text-lg">{item.borrower_name}</p></div>
-          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Amount</p><p className="font-mono text-xl text-red-400">-{formatCurrency(item.amount, item.currency)}</p></div>
-          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Interest Rate</p><p className="text-white">{item.interest_rate}%</p></div>
-          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Loan Type</p><p className="text-white capitalize">{item.loan_type?.replace("_", " ")}</p></div>
-          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Loan Date</p><p className="text-white">{item.loan_date?.split("T")[0]}</p></div>
-          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Due Date</p><p className="text-white">{item.due_date?.split("T")[0]}</p></div>
-          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Source</p><p className="text-white">{item.source_vendor_name || "Treasury"}</p></div>
-          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Created By</p><p className="text-white">{item.created_by_name}</p></div>
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+              Borrower
+            </p>
+            <p className="text-foreground text-lg">{item.borrower_name}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+              Amount
+            </p>
+            <p className="font-mono text-xl text-red-400">
+              -{formatCurrency(item.amount, item.currency)}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+              Interest Rate
+            </p>
+            <p className="text-foreground">{item.interest_rate}%</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+              Loan Type
+            </p>
+            <p className="text-foreground capitalize">
+              {item.loan_type?.replace("_", " ")}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+              Loan Date
+            </p>
+            <p className="text-foreground">{item.loan_date?.split("T")[0]}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+              Due Date
+            </p>
+            <p className="text-foreground">{item.due_date?.split("T")[0]}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+              Source
+            </p>
+            <p className="text-foreground">
+              {item.source_vendor_name || "Treasury"}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+              Created By
+            </p>
+            <p className="text-foreground">{item.created_by_name}</p>
+          </div>
         </div>
-        {item.notes && <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Notes</p><p className="text-white">{item.notes}</p></div>}
+        {item.notes && (
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+              Notes
+            </p>
+            <p className="text-foreground">{item.notes}</p>
+          </div>
+        )}
       </div>
     );
   if (item._viewType === "repayment")
     return (
       <div className="space-y-4">
-        <Badge className="bg-yellow-500/20 text-yellow-400 text-xs uppercase">Pending Approval</Badge>
+        <Badge className="bg-yellow-100 text-yellow-700 text-xs uppercase">
+          Pending Approval
+        </Badge>
         <div className="grid grid-cols-2 gap-4">
-          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Borrower</p><p className="text-white text-lg">{item.borrower_name}</p></div>
-          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Repayment Amount</p><p className="font-mono text-xl text-green-400">+{formatCurrency(item.amount, item.currency)}</p></div>
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+              Borrower
+            </p>
+            <p className="text-foreground text-lg">{item.borrower_name}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+              Repayment Amount
+            </p>
+            <p className="font-mono text-xl text-green-400">
+              +{formatCurrency(item.amount, item.currency)}
+            </p>
+          </div>
           {item.currency !== item.loan_currency && (
-            <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">In Loan Currency</p><p className="text-white font-mono">{formatCurrency(item.amount_in_loan_currency, item.loan_currency)}</p></div>
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+                In Loan Currency
+              </p>
+              <p className="text-foreground font-mono">
+                {formatCurrency(
+                  item.amount_in_loan_currency,
+                  item.loan_currency,
+                )}
+              </p>
+            </div>
           )}
-          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Payment Date</p><p className="text-white">{item.payment_date}</p></div>
-          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Loan ID</p><p className="text-white font-mono text-xs">{item.loan_id}</p></div>
-          {item.reference && <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Reference</p><p className="text-white">{item.reference}</p></div>}
-          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Created By</p><p className="text-white">{item.created_by_name}</p></div>
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+              Payment Date
+            </p>
+            <p className="text-foreground">{item.payment_date}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+              Loan ID
+            </p>
+            <p className="text-foreground font-mono text-xs">{item.loan_id}</p>
+          </div>
+          {item.reference && (
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+                Reference
+              </p>
+              <p className="text-foreground">{item.reference}</p>
+            </div>
+          )}
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+              Created By
+            </p>
+            <p className="text-foreground">{item.created_by_name}</p>
+          </div>
         </div>
-        {item.notes && <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Notes</p><p className="text-white">{item.notes}</p></div>}
+        {item.notes && (
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+              Notes
+            </p>
+            <p className="text-foreground">{item.notes}</p>
+          </div>
+        )}
       </div>
     );
   if (item._viewType === "psp_settlement")
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2"><CreditCard className="w-5 h-5 text-purple-400" /><span className="text-white text-lg">{item.psp_name}</span></div>
-          <Badge className="bg-yellow-500/20 text-yellow-400 text-xs uppercase">Pending</Badge>
+          <div className="flex items-center gap-2">
+            <CreditCard className="w-5 h-5 text-purple-400" />
+            <span className="text-foreground text-lg">{item.psp_name}</span>
+          </div>
+          <Badge className="bg-yellow-100 text-yellow-700 text-xs uppercase">
+            Pending
+          </Badge>
         </div>
         <div className="grid grid-cols-2 gap-4">
-          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Type</p><Badge className="bg-purple-500/20 text-purple-400">{item.settlement_type || "standard"}</Badge></div>
-          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Transactions</p><p className="text-white font-mono">{item.transaction_count}</p></div>
-          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Gross Amount</p><p className="text-white font-mono text-xl">${item.gross_amount?.toLocaleString()}</p></div>
-          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Net Amount</p><p className="text-green-400 font-mono text-xl">${item.net_amount?.toLocaleString()}</p></div>
-          {item.commission_amount > 0 && <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Commission</p><p className="text-red-400 font-mono">-${item.commission_amount?.toLocaleString()}</p></div>}
-          {item.reserve_fund_amount > 0 && <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Reserve Fund</p><p className="text-red-400 font-mono">-${item.reserve_fund_amount?.toLocaleString()}</p></div>}
-          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Destination</p><p className="text-white">{item.settlement_destination_name}</p></div>
-          <div><p className="text-xs text-[#C5C6C7] uppercase tracking-wider mb-1">Created By</p><p className="text-white">{item.created_by_name}</p><p className="text-xs text-[#C5C6C7]">{formatDate(item.created_at)}</p></div>
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+              Type
+            </p>
+            <Badge className="bg-purple-100 text-purple-700">
+              {item.settlement_type || "standard"}
+            </Badge>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+              Transactions
+            </p>
+            <p className="text-foreground font-mono">{item.transaction_count}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+              Gross Amount
+            </p>
+            <p className="text-foreground font-mono text-xl">
+              ${item.gross_amount?.toLocaleString()}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+              Net Amount
+            </p>
+            <p className="text-green-400 font-mono text-xl">
+              ${item.net_amount?.toLocaleString()}
+            </p>
+          </div>
+          {item.commission_amount > 0 && (
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+                Commission
+              </p>
+              <p className="text-red-400 font-mono">
+                -${item.commission_amount?.toLocaleString()}
+              </p>
+            </div>
+          )}
+          {item.reserve_fund_amount > 0 && (
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+                Reserve Fund
+              </p>
+              <p className="text-red-400 font-mono">
+                -${item.reserve_fund_amount?.toLocaleString()}
+              </p>
+            </div>
+          )}
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+              Destination
+            </p>
+            <p className="text-foreground">{item.settlement_destination_name}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+              Created By
+            </p>
+            <p className="text-foreground">{item.created_by_name}</p>
+            <p className="text-xs text-muted-foreground">
+              {formatDate(item.created_at)}
+            </p>
+          </div>
         </div>
       </div>
     );
