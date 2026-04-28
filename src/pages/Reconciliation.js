@@ -249,6 +249,13 @@ export default function Reconciliation() {
   // Left panel: internal transactions
   const [transactions, setTransactions] = useState([]);
   const [txLoading, setTxLoading] = useState(false);
+  const [txPage, setTxPage] = useState(0);
+  const TX_PAGE_SIZE = 20; // individual transactions per page
+
+  // Exchanger: inner tab + settlement history
+  const [exchInnerTab, setExchInnerTab] = useState('transactions'); // 'transactions' | 'settlements'
+  const [exchSettlements, setExchSettlements] = useState([]);
+  const [exchSettlementsLoading, setExchSettlementsLoading] = useState(false);
 
   // Right panel: uploaded statements
   const [statements, setStatements] = useState([]);
@@ -378,8 +385,12 @@ export default function Reconciliation() {
         if (res.ok) {
           const data = await res.json();
           const raw = Array.isArray(data) ? data : data.items || [];
+          // Only show approved / completed transactions
+          const approved = raw.filter(t =>
+            ['approved', 'completed'].includes((t.status || '').toLowerCase())
+          );
           // Normalize to payment (base) currency — same as PSP
-          list = raw.map(t => ({
+          list = approved.map(t => ({
             ...t,
             amount: t.base_amount ?? t.amount,
             currency: t.base_currency || t.currency || 'USD',
@@ -424,6 +435,23 @@ export default function Reconciliation() {
     }
   }, [getAuthHeaders]);
 
+  // ── Fetch exchanger settlement history ───────────────────────────
+  const fetchExchSettlements = useCallback(async (vendorId) => {
+    if (!vendorId) return;
+    setExchSettlementsLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/vendors/${vendorId}/settlements`, { headers: getAuthHeaders() });
+      if (res.ok) {
+        const data = await res.json();
+        setExchSettlements(Array.isArray(data) ? data : []);
+      }
+    } catch (e) {
+      console.error('Error fetching exchanger settlements:', e);
+    } finally {
+      setExchSettlementsLoading(false);
+    }
+  }, [getAuthHeaders]);
+
   // ── Initial load ─────────────────────────────────────────────────
   useEffect(() => {
     fetchAccounts().then(list => {
@@ -433,6 +461,7 @@ export default function Reconciliation() {
         setSelectedAccountType(first.type);
         fetchTransactions(first.id, first.type);
         fetchStatements(first.id, first.type);
+        if (first.type === 'exchanger') fetchExchSettlements(first.id);
       }
     });
   }, []);
@@ -443,9 +472,13 @@ export default function Reconciliation() {
     setSelectedAccountType(type);
     setTransactions([]);
     setStatements([]);
+    setExchSettlements([]);
     setSummary({ txCount: 0, uploaded: 0, reconciled: 0, pending: 0 });
+    setTxPage(0);
+    setExchInnerTab('transactions');
     fetchTransactions(id, type);
     fetchStatements(id, type);
+    if (type === 'exchanger') fetchExchSettlements(id);
   };
 
   // ── Upload ───────────────────────────────────────────────────────
@@ -709,14 +742,22 @@ export default function Reconciliation() {
 
   const selectedAccount = allAccounts.find(a => a.id === selectedAccountId);
 
-  // Group transactions by date
-  const groupedTx = transactions.reduce((acc, tx) => {
-    const date = (tx.created_at || tx.date || '')?.split('T')[0] || 'Unknown';
+  // Sort all transactions newest-first for pagination
+  const sortedAllTxs = [...transactions].sort((a, b) => {
+    const da = a.created_at || a.date || '';
+    const db = b.created_at || b.date || '';
+    return db.localeCompare(da);
+  });
+  const totalTxPages = Math.ceil(sortedAllTxs.length / TX_PAGE_SIZE);
+  const pagedTxs = sortedAllTxs.slice(txPage * TX_PAGE_SIZE, (txPage + 1) * TX_PAGE_SIZE);
+  // Group paged transactions by date for display headers
+  const pagedGrouped = pagedTxs.reduce((acc, tx) => {
+    const date = (tx.created_at || tx.date || '').split('T')[0] || 'Unknown';
     if (!acc[date]) acc[date] = [];
     acc[date].push(tx);
     return acc;
   }, {});
-  const sortedTxDates = Object.keys(groupedTx).sort((a, b) => b.localeCompare(a));
+  const pagedDates = Object.keys(pagedGrouped).sort((a, b) => b.localeCompare(a));
 
   const getAccountName = (accountId) =>
     allAccounts.find(a => a.id === accountId)?.name || accountId;
@@ -884,12 +925,160 @@ export default function Reconciliation() {
                   <CardHeader className="py-3 px-4 border-b">
                     <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                       <FileText className="w-4 h-4 text-slate-400" />
-                      Transactions
-                      <Badge variant="outline" className="ml-auto text-xs">{transactions.length}</Badge>
+                      {selectedAccount?.type === 'exchanger' ? (
+                        /* Exchanger: inner tab strip */
+                        <div className="flex gap-1 ml-1">
+                          {[['transactions', 'Transactions'], ['settlements', 'Settlements']].map(([val, lbl]) => (
+                            <button
+                              key={val}
+                              onClick={() => setExchInnerTab(val)}
+                              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                                exchInnerTab === val
+                                  ? 'bg-orange-600 text-white'
+                                  : 'text-slate-500 hover:bg-slate-100'
+                              }`}
+                            >{lbl}</button>
+                          ))}
+                        </div>
+                      ) : 'Transactions'}
+                      <Badge variant="outline" className="ml-auto text-xs">
+                        {selectedAccount?.type === 'exchanger' && exchInnerTab === 'settlements'
+                          ? exchSettlements.length
+                          : transactions.length}
+                      </Badge>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-0">
-                    {txLoading ? (
+                    {/* PSP: net pending settlement summary */}
+                    {selectedAccount?.type === 'psp' && !txLoading && transactions.length > 0 && (() => {
+                      const pending = transactions.filter(t => t.status !== 'settled');
+                      const netMap = {};
+                      pending.forEach(t => {
+                        const cur = t.base_currency || t.currency || 'USD';
+                        const type = t.transaction_type || t.type || '';
+                        const sign = /withdrawal|withdraw|debit|out/i.test(type) ? -1 : 1;
+                        netMap[cur] = (netMap[cur] || 0) + sign * Math.abs(Number(t.base_amount ?? t.amount) || 0);
+                      });
+                      const entries = Object.entries(netMap);
+                      if (entries.length === 0) return null;
+                      return (
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2 bg-amber-50 border-b border-amber-100">
+                          <span className="text-xs font-semibold text-amber-700 shrink-0">Net Pending Settlement</span>
+                          <span className="text-xs text-amber-500 shrink-0">({pending.length} txn{pending.length !== 1 ? 's' : ''})</span>
+                          <div className="flex flex-wrap gap-x-3 gap-y-0.5 ml-auto">
+                            {entries.map(([cur, net]) => (
+                              <span key={cur} className={`text-xs font-bold ${net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {net >= 0 ? '+' : ''}{formatAmount(net, cur)}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Exchanger: total net settlement in payment currency */}
+                    {selectedAccount?.type === 'exchanger' && exchInnerTab === 'transactions' && !txLoading && transactions.length > 0 && (() => {
+                      const netMap = {};
+                      transactions.forEach(t => {
+                        const cur = t.base_currency || t.currency || selectedAccount?.currency || '';
+                        const type = t.transaction_type || t.type || '';
+                        const sign = /withdrawal|withdraw|debit|out/i.test(type) ? -1 : 1;
+                        netMap[cur] = (netMap[cur] || 0) + sign * Math.abs(Number(t.base_amount ?? t.amount) || 0);
+                      });
+                      const entries = Object.entries(netMap);
+                      if (entries.length === 0) return null;
+                      return (
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2 bg-orange-50 border-b border-orange-100">
+                          <span className="text-xs font-semibold text-orange-700 shrink-0">Net Settlement</span>
+                          <span className="text-xs text-orange-400 shrink-0">({transactions.length} txn{transactions.length !== 1 ? 's' : ''})</span>
+                          <div className="flex flex-wrap gap-x-3 gap-y-0.5 ml-auto">
+                            {entries.map(([cur, net]) => (
+                              <span key={cur} className={`text-xs font-bold ${net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {net >= 0 ? '+' : ''}{formatAmount(net, cur)}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Exchanger: Settlement History tab */}
+                    {selectedAccount?.type === 'exchanger' && exchInnerTab === 'settlements' && (
+                      exchSettlementsLoading ? (
+                        <div className="flex justify-center py-10">
+                          <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
+                        </div>
+                      ) : exchSettlements.length === 0 ? (
+                        <div className="text-center py-14 text-slate-400 text-sm">
+                          No settlements found
+                        </div>
+                      ) : (
+                        <ScrollArea className="h-[520px]">
+                          {exchSettlements.map((s, i) => {
+                            const statusColor = {
+                              completed: 'bg-green-100 text-green-700',
+                              approved:  'bg-blue-100 text-blue-700',
+                              pending:   'bg-yellow-100 text-yellow-700',
+                            }[s.status] || 'bg-slate-100 text-slate-500';
+                            const net = s.net_amount_source ?? s.settlement_amount ?? 0;
+                            const srcCur = s.source_currency || 'USD';
+                            const dstCur = s.destination_currency || srcCur;
+                            const settleAmt = s.settlement_amount ?? 0;
+                            return (
+                              <div key={s.settlement_id || i} className="px-4 py-3 border-b border-slate-100 hover:bg-slate-50/70">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="text-xs font-semibold text-slate-700">
+                                        {s.settlement_type === 'cash' ? '💵 Cash' : '🏦 Bank'} Settlement
+                                      </span>
+                                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded capitalize ${statusColor}`}>
+                                        {s.status}
+                                      </span>
+                                      {s.settlement_mode === 'custom' && (
+                                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 font-medium">Partial</span>
+                                      )}
+                                    </div>
+                                    <p className="text-[11px] text-slate-400 mt-0.5">
+                                      {formatDate(s.settled_at || s.created_at)}
+                                      {s.settlement_destination_name && (
+                                        <span className="ml-2 text-slate-300">→ {s.settlement_destination_name}</span>
+                                      )}
+                                    </p>
+                                    {s.notes && <p className="text-[11px] text-slate-400 mt-0.5 italic truncate">{s.notes}</p>}
+                                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-[11px] text-slate-500">
+                                      {s.transaction_count > 0 && <span>{s.transaction_count} txns</span>}
+                                      {s.commission_amount > 0 && <span className="text-red-500">Commission: -{formatAmount(s.commission_amount, srcCur)}</span>}
+                                      {s.charges_amount > 0 && <span className="text-red-500">Charges: -{formatAmount(s.charges_amount, srcCur)}</span>}
+                                      {s.exchange_rate && s.exchange_rate !== 1 && (
+                                        <span className="text-slate-400">Rate: {s.exchange_rate}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-col items-end shrink-0 ml-2">
+                                    <span className="text-sm font-bold text-green-600">
+                                      +{formatAmount(settleAmt, dstCur)}
+                                    </span>
+                                    {srcCur !== dstCur && (
+                                      <span className="text-[10px] text-slate-400 font-mono">
+                                        Gross: {formatAmount(s.gross_amount, srcCur)}
+                                      </span>
+                                    )}
+                                    <span className="text-[10px] text-slate-400 font-mono">
+                                      Net: {formatAmount(net, srcCur)}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </ScrollArea>
+                      )
+                    )}
+
+                    {/* Transactions tab (all types) — hidden for exchanger when settlements tab active */}
+                    {(selectedAccount?.type !== 'exchanger' || exchInnerTab === 'transactions') && (
+                    txLoading ? (
                       <div className="flex justify-center py-10">
                         <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
                       </div>
@@ -898,9 +1087,10 @@ export default function Reconciliation() {
                         No transactions for this account
                       </div>
                     ) : (
+                      <>
                       <ScrollArea className="h-[480px]">
-                        {sortedTxDates.map(date => {
-                          const txs = groupedTx[date];
+                        {pagedDates.map(date => {
+                          const txs = pagedGrouped[date];
                           const net = txs.reduce((s, tx) => s + (Number(tx.amount) || 0), 0);
                           return (
                             <div key={date}>
@@ -941,7 +1131,52 @@ export default function Reconciliation() {
                           );
                         })}
                       </ScrollArea>
-                    )}
+
+                      {/* Pagination controls */}
+                      {transactions.length > 0 && (
+                        <div className="flex items-center justify-between px-4 py-2 border-t border-slate-100 bg-slate-50/60">
+                          <span className="text-xs text-slate-400">
+                            {txPage * TX_PAGE_SIZE + 1}–{Math.min((txPage + 1) * TX_PAGE_SIZE, sortedAllTxs.length)} of {sortedAllTxs.length} transactions
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => setTxPage(0)}
+                              disabled={txPage === 0}
+                              className="px-2 py-1 text-xs rounded border border-slate-200 bg-white text-slate-500 hover:border-slate-400 disabled:opacity-30 disabled:cursor-not-allowed"
+                            >«</button>
+                            <button
+                              onClick={() => setTxPage(p => Math.max(0, p - 1))}
+                              disabled={txPage === 0}
+                              className="px-2 py-1 text-xs rounded border border-slate-200 bg-white text-slate-500 hover:border-slate-400 disabled:opacity-30 disabled:cursor-not-allowed"
+                            >‹ Prev</button>
+                            {Array.from({ length: totalTxPages }, (_, i) => i)
+                              .filter(i => Math.abs(i - txPage) <= 2)
+                              .map(i => (
+                                <button
+                                  key={i}
+                                  onClick={() => setTxPage(i)}
+                                  className={`px-2.5 py-1 text-xs rounded border ${
+                                    i === txPage
+                                      ? 'bg-slate-800 text-white border-slate-800'
+                                      : 'border-slate-200 bg-white text-slate-500 hover:border-slate-400'
+                                  }`}
+                                >{i + 1}</button>
+                              ))}
+                            <button
+                              onClick={() => setTxPage(p => Math.min(totalTxPages - 1, p + 1))}
+                              disabled={txPage === totalTxPages - 1}
+                              className="px-2 py-1 text-xs rounded border border-slate-200 bg-white text-slate-500 hover:border-slate-400 disabled:opacity-30 disabled:cursor-not-allowed"
+                            >Next ›</button>
+                            <button
+                              onClick={() => setTxPage(totalTxPages - 1)}
+                              disabled={txPage === totalTxPages - 1}
+                              className="px-2 py-1 text-xs rounded border border-slate-200 bg-white text-slate-500 hover:border-slate-400 disabled:opacity-30 disabled:cursor-not-allowed"
+                            >»</button>
+                          </div>
+                        </div>
+                      )}
+                      </>
+                    ))}
                   </CardContent>
                 </Card>
 
