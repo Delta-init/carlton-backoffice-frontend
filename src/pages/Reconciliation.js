@@ -909,9 +909,11 @@ export default function Reconciliation() {
                                 <span className="text-xs font-semibold text-slate-500">
                                   {formatDate(date)}
                                 </span>
-                                <span className={`text-xs font-bold ${net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                  Net: {net >= 0 ? '+' : '-'}{formatAmount(net, selectedAccount?.currency)}
-                                </span>
+                                {selectedAccountType !== 'treasury' && (
+                                  <span className={`text-xs font-bold ${net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                    Net: {net >= 0 ? '+' : '-'}{formatAmount(net, selectedAccount?.currency)}
+                                  </span>
+                                )}
                               </div>
                               {txs.map((tx, i) => (
                                 <div
