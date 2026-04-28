@@ -588,7 +588,8 @@ export default function Reconciliation() {
               fetch(`${API_URL}/api/psp/${acc.id}/withdrawal-transactions?page_size=200`, { headers }),
             ]);
             const normalise = t => ({ ...t, amount: t.base_amount ?? t.gross_amount ?? t.amount, currency: t.base_currency || t.currency || 'USD' });
-            const settled = (sr.ok ? ((await sr.json()).transactions || await sr.json() || []) : []).map(normalise);
+            const srData = sr.ok ? await sr.json() : {};
+            const settled = (Array.isArray(srData) ? srData : (srData.transactions || [])).map(normalise);
             const dep     = dr.ok ? ((await dr.json()).items || []) : [];
             const wth     = wr.ok ? ((await wr.json()).items || []) : [];
             const settledIds = new Set(settled.map(t => t.transaction_id));
