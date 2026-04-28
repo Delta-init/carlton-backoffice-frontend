@@ -1366,6 +1366,22 @@ export default function Reconciliation() {
             if (historyDateFrom) visibleRows = visibleRows.filter(r => r.date >= historyDateFrom);
             if (historyDateTo)   visibleRows = visibleRows.filter(r => r.date <= historyDateTo);
 
+            // Compute closing running balance per account (cumulative net oldest→newest)
+            const runningBalanceMap = {}; // key: `${account_id}-${date}` → cumulative balance
+            const accountRows = {};
+            historyRows.forEach(r => {
+              if (!accountRows[r.account_id]) accountRows[r.account_id] = [];
+              accountRows[r.account_id].push(r);
+            });
+            Object.values(accountRows).forEach(rows => {
+              const sorted = [...rows].sort((a, b) => a.date.localeCompare(b.date));
+              let cum = 0;
+              sorted.forEach(r => {
+                cum += r.net_amount || 0;
+                runningBalanceMap[`${r.account_id}-${r.date}`] = cum;
+              });
+            });
+
             // Group by date for display
             const byDate = {};
             visibleRows.forEach(r => {
@@ -1505,6 +1521,7 @@ export default function Reconciliation() {
                                   <TableHead className="text-xs py-2">Type</TableHead>
                                   <TableHead className="text-xs py-2 text-right">Transactions</TableHead>
                                   <TableHead className="text-xs py-2 text-right">Net Amount</TableHead>
+                                  <TableHead className="text-xs py-2 text-right">Closing Balance</TableHead>
                                   <TableHead className="text-xs py-2">Statement</TableHead>
                                   <TableHead className="text-xs py-2">Recon Status</TableHead>
                                   <TableHead className="text-xs py-2">Done Date</TableHead>
@@ -1534,6 +1551,17 @@ export default function Reconciliation() {
                                         {row.tx_count > 0
                                           ? `${row.net_amount >= 0 ? '+' : ''}${formatAmount(row.net_amount, row.currency)}`
                                           : '—'}
+                                      </TableCell>
+                                      <TableCell className="text-right py-2.5">
+                                        {(() => {
+                                          const bal = runningBalanceMap[`${row.account_id}-${row.date}`];
+                                          if (bal == null) return <span className="text-slate-300">—</span>;
+                                          return (
+                                            <span className={`font-semibold text-xs ${bal >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                                              {formatAmount(bal, row.currency)}
+                                            </span>
+                                          );
+                                        })()}
                                       </TableCell>
                                       <TableCell className="py-2.5">
                                         {row.statement ? (
