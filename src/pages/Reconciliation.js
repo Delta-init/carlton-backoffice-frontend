@@ -23,7 +23,7 @@ import { getApiError } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
 import {
   Upload, CheckCircle2, Clock, History, Loader2, FileText, Download, Eye,
-  X, FileSpreadsheet, Building2, CreditCard, Store, Trash2,
+  X, FileSpreadsheet, Building2, CreditCard, Store, Trash2, Pencil,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -278,6 +278,10 @@ export default function Reconciliation() {
   // Inline date editing
   const [editingDateId, setEditingDateId] = useState(null);
   const [editDateValue, setEditDateValue] = useState('');
+
+  // Inline description editing
+  const [editingDescId, setEditingDescId] = useState(null);
+  const [editDescValue, setEditDescValue] = useState('');
 
   // Preview
   const [previewStatement, setPreviewStatement] = useState(null);
@@ -552,6 +556,27 @@ export default function Reconciliation() {
       }
     } catch (err) {
       toast.error(err?.message || "Something went wrong. Please try again.");
+    }
+  };
+
+  // ── Update statement description inline ──────────────────────────
+  const handleUpdateDescription = async (statementId) => {
+    try {
+      const res = await fetch(`${API_URL}/api/reconciliation/statements/${statementId}/description`, {
+        method: 'PATCH',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: editDescValue }),
+      });
+      if (res.ok) {
+        toast.success('Description updated');
+        setEditingDescId(null);
+        fetchStatements(selectedAccountId, selectedAccountType);
+        fetchHistory();
+      } else {
+        toast.error(await getApiError(res));
+      }
+    } catch (err) {
+      toast.error(err?.message || 'Something went wrong. Please try again.');
     }
   };
 
@@ -1523,6 +1548,7 @@ export default function Reconciliation() {
                                   <TableHead className="text-xs py-2 text-right">Net Amount</TableHead>
                                   <TableHead className="text-xs py-2 text-right">Closing Balance</TableHead>
                                   <TableHead className="text-xs py-2">Statement</TableHead>
+                                  <TableHead className="text-xs py-2">Description</TableHead>
                                   <TableHead className="text-xs py-2">Recon Status</TableHead>
                                   <TableHead className="text-xs py-2">Done Date</TableHead>
                                 </TableRow>
@@ -1579,6 +1605,50 @@ export default function Reconciliation() {
                                           <span className="text-slate-300 italic text-xs">No statement</span>
                                         )}
                                       </TableCell>
+
+                                      {/* Description cell — inline editable */}
+                                      <TableCell className="py-2 min-w-[160px] max-w-[220px]">
+                                        {row.statement ? (
+                                          editingDescId === row.statement.statement_id ? (
+                                            <div className="flex flex-col gap-1">
+                                              <textarea
+                                                autoFocus
+                                                value={editDescValue}
+                                                onChange={e => setEditDescValue(e.target.value)}
+                                                rows={2}
+                                                className="w-full text-xs px-2 py-1 border border-blue-300 rounded resize-none focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                                placeholder="Add description…"
+                                              />
+                                              <div className="flex gap-1">
+                                                <button
+                                                  onClick={() => handleUpdateDescription(row.statement.statement_id)}
+                                                  className="text-[10px] px-2 py-0.5 bg-blue-600 text-white rounded hover:bg-blue-700"
+                                                >Save</button>
+                                                <button
+                                                  onClick={() => setEditingDescId(null)}
+                                                  className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-500 rounded hover:bg-slate-200"
+                                                >Cancel</button>
+                                              </div>
+                                            </div>
+                                          ) : (
+                                            <div
+                                              className="flex items-start gap-1 group cursor-pointer"
+                                              onClick={() => {
+                                                setEditingDescId(row.statement.statement_id);
+                                                setEditDescValue(row.statement.description || row.statement.notes || '');
+                                              }}
+                                            >
+                                              <span className={`text-xs flex-1 ${(row.statement.description || row.statement.notes) ? 'text-slate-600' : 'text-slate-300 italic'}`}>
+                                                {row.statement.description || row.statement.notes || 'Add description…'}
+                                              </span>
+                                              <Pencil className="w-3 h-3 text-slate-300 group-hover:text-blue-500 shrink-0 mt-0.5 transition-colors" />
+                                            </div>
+                                          )
+                                        ) : (
+                                          <span className="text-slate-200 text-xs">—</span>
+                                        )}
+                                      </TableCell>
+
                                       <TableCell className="py-2.5">
                                         {row.status === 'done' ? (
                                           <Badge className="bg-green-100 text-green-700 text-xs py-0 px-2 gap-1">
