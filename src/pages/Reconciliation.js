@@ -252,6 +252,9 @@ export default function Reconciliation() {
   const [txPage, setTxPage] = useState(0);
   const TX_PAGE_SIZE = 20; // individual transactions per page
 
+  // Vendor data map: vendor_id → full vendor object (for correct settlement figures)
+  const [vendorMap, setVendorMap] = useState({});
+
   // Exchanger: inner tab + settlement history
   const [exchInnerTab, setExchInnerTab] = useState('transactions'); // 'transactions' | 'settlements'
   const [exchSettlements, setExchSettlements] = useState([]);
@@ -316,6 +319,11 @@ export default function Reconciliation() {
           id: v.vendor_id, name: v.vendor_name, type: 'exchanger', currency: v.currency || 'USD',
         })),
       ];
+
+      // Store full vendor objects for correct settlement_by_currency figures
+      const vMap = {};
+      (vendors.items || vendors || []).forEach(v => { vMap[v.vendor_id] = v; });
+      setVendorMap(vMap);
 
       setAllAccounts(combined);
       return combined;
@@ -976,27 +984,31 @@ export default function Reconciliation() {
                       );
                     })()}
 
-                    {/* Exchanger: total net settlement in payment currency */}
-                    {selectedAccount?.type === 'exchanger' && exchInnerTab === 'transactions' && !txLoading && transactions.length > 0 && (() => {
-                      const netMap = {};
-                      transactions.forEach(t => {
-                        const cur = t.base_currency || t.currency || selectedAccount?.currency || '';
-                        const type = t.transaction_type || t.type || '';
-                        const sign = /withdrawal|withdraw|debit|out/i.test(type) ? -1 : 1;
-                        netMap[cur] = (netMap[cur] || 0) + sign * Math.abs(Number(t.base_amount ?? t.amount) || 0);
-                      });
-                      const entries = Object.entries(netMap);
-                      if (entries.length === 0) return null;
+                    {/* Exchanger: net settlement from vendor API (includes commission) */}
+                    {selectedAccount?.type === 'exchanger' && exchInnerTab === 'transactions' && !txLoading && (() => {
+                      const vendor = vendorMap[selectedAccount.id];
+                      const currencies = vendor?.settlement_by_currency || [];
+                      if (currencies.length === 0) return null;
+                      const pendingUsd = vendor?.pending_amount ?? vendor?.pending_settlement ?? null;
                       return (
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2 bg-orange-50 border-b border-orange-100">
-                          <span className="text-xs font-semibold text-orange-700 shrink-0">Net Settlement</span>
-                          <span className="text-xs text-orange-400 shrink-0">({transactions.length} txn{transactions.length !== 1 ? 's' : ''})</span>
-                          <div className="flex flex-wrap gap-x-3 gap-y-0.5 ml-auto">
-                            {entries.map(([cur, net]) => (
-                              <span key={cur} className={`text-xs font-bold ${net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                {net >= 0 ? '+' : ''}{formatAmount(net, cur)}
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2 bg-orange-50/10 border-b border-orange-900/20">
+                          <span className="text-xs font-semibold text-orange-400 shrink-0">Net Settlement</span>
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 ml-auto items-center">
+                            {currencies.map(s => (
+                              <span key={s.currency} className={`text-xs font-bold ${(s.amount ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                {(s.amount ?? 0) >= 0 ? '+' : ''}{formatAmount(s.amount, s.currency)}
+                                {s.usd_equivalent != null && s.currency !== 'USD' && (
+                                  <span className="font-normal text-slate-500 ml-1">
+                                    (≈ USD {Math.abs(s.usd_equivalent).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                                  </span>
+                                )}
                               </span>
                             ))}
+                            {pendingUsd != null && currencies.every(s => s.currency === 'USD') === false && (
+                              <span className={`text-xs font-semibold border-l border-orange-900/30 pl-4 ${pendingUsd >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                Total: {pendingUsd >= 0 ? '+' : ''}USD {Math.abs(pendingUsd).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                            )}
                           </div>
                         </div>
                       );
