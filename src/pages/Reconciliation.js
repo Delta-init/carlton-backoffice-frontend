@@ -250,6 +250,8 @@ export default function Reconciliation() {
   const [transactions, setTransactions] = useState([]);
   const [txLoading, setTxLoading] = useState(false);
   const [txPage, setTxPage] = useState(0);
+  const [txTotalPages, setTxTotalPages] = useState(1);
+  const [txTotalFromApi, setTxTotalFromApi] = useState(null);
   const TX_PAGE_SIZE = 20; // individual transactions per page
 
   // Vendor data map: vendor_id → full vendor object (for correct settlement figures)
@@ -294,6 +296,8 @@ export default function Reconciliation() {
   const [historyDateFrom, setHistoryDateFrom] = useState('');
   const [historyDateTo, setHistoryDateTo] = useState('');
   const [historySummary, setHistorySummary] = useState({ treasury: { done: 0, pending: 0 }, psp: { done: 0, pending: 0 }, exchanger: { done: 0, pending: 0 } });
+  const [historyPage, setHistoryPage] = useState(0);
+  const HISTORY_PAGE_SIZE = 7;
 
   // ── Fetch accounts (treasury + PSP + exchangers) ────────────────
   const fetchAccounts = useCallback(async () => {
@@ -336,7 +340,7 @@ export default function Reconciliation() {
   }, [getAuthHeaders]);
 
   // ── Fetch transactions for selected account ─────────────────────
-  const fetchTransactions = useCallback(async (accountId, accountType) => {
+  const fetchTransactions = useCallback(async (accountId, accountType, page = 0) => {
     if (!accountId) return;
     setTxLoading(true);
     try {
@@ -344,12 +348,14 @@ export default function Reconciliation() {
 
       if (accountType === 'treasury') {
         const res = await fetch(
-          `${API_URL}/api/treasury/${accountId}/history?limit=500`,
+          `${API_URL}/api/treasury/${accountId}/history?page=${page + 1}&page_size=20`,
           { headers: getAuthHeaders() }
         );
         if (res.ok) {
           const data = await res.json();
           list = data.items || (Array.isArray(data) ? data : []);
+          setTxTotalPages(data.total_pages || 1);
+          setTxTotalFromApi(data.total || null);
         }
       } else if (accountType === 'psp') {
         // Combine settled + unsettled (deposit + withdrawal) for full picture
@@ -483,8 +489,10 @@ export default function Reconciliation() {
     setExchSettlements([]);
     setSummary({ txCount: 0, uploaded: 0, reconciled: 0, pending: 0 });
     setTxPage(0);
+    setTxTotalPages(1);
+    setTxTotalFromApi(null);
     setExchInnerTab('transactions');
-    fetchTransactions(id, type);
+    fetchTransactions(id, type, 0);
     fetchStatements(id, type);
     if (type === 'exchanger') fetchExchSettlements(id);
   };
@@ -571,7 +579,7 @@ export default function Reconciliation() {
         try {
           let txList = [];
           if (acc.type === 'treasury') {
-            const r = await fetch(`${API_URL}/api/treasury/${acc.id}/history?limit=500`, { headers });
+            const r = await fetch(`${API_URL}/api/treasury/${acc.id}/history?page_size=200&limit=5000`, { headers });
             if (r.ok) { const d = await r.json(); txList = d.items || []; }
           } else if (acc.type === 'psp') {
             const [sr, dr, wr] = await Promise.all([
@@ -683,6 +691,10 @@ export default function Reconciliation() {
     if (mainTab === 'history' && allAccounts.length > 0) fetchHistory();
   }, [mainTab, fetchHistory, allAccounts.length]);
 
+  useEffect(() => {
+    setHistoryPage(0);
+  }, [historyTypeFilter, historyStatusFilter, historyDateFrom, historyDateTo]);
+
   // ── Mark done ────────────────────────────────────────────────────
   const handleMarkDone = async () => {
     if (!doneModal.statement) return;
@@ -756,7 +768,9 @@ export default function Reconciliation() {
     const db = b.created_at || b.date || '';
     return db.localeCompare(da);
   });
-  const totalTxPages = Math.ceil(sortedAllTxs.length / TX_PAGE_SIZE);
+  const effectiveTotalTxPages = selectedAccountType === 'treasury'
+    ? txTotalPages
+    : Math.ceil(sortedAllTxs.length / TX_PAGE_SIZE) || 1;
   const pagedTxs = sortedAllTxs.slice(txPage * TX_PAGE_SIZE, (txPage + 1) * TX_PAGE_SIZE);
   // Group paged transactions by date for display headers
   const pagedGrouped = pagedTxs.reduce((acc, tx) => {
@@ -766,6 +780,13 @@ export default function Reconciliation() {
     return acc;
   }, {});
   const pagedDates = Object.keys(pagedGrouped).sort((a, b) => b.localeCompare(a));
+
+  const handleTxPageChange = (newPage) => {
+    setTxPage(newPage);
+    if (selectedAccountType === 'treasury') {
+      fetchTransactions(selectedAccountId, 'treasury', newPage);
+    }
+  };
 
   const getAccountName = (accountId) =>
     allAccounts.find(a => a.id === accountId)?.name || accountId;
@@ -1148,25 +1169,25 @@ export default function Reconciliation() {
                       {transactions.length > 0 && (
                         <div className="flex items-center justify-between px-4 py-2 border-t border-slate-100 bg-slate-50/60">
                           <span className="text-xs text-slate-400">
-                            {txPage * TX_PAGE_SIZE + 1}–{Math.min((txPage + 1) * TX_PAGE_SIZE, sortedAllTxs.length)} of {sortedAllTxs.length} transactions
+                            {txPage * TX_PAGE_SIZE + 1}–{Math.min((txPage + 1) * TX_PAGE_SIZE, selectedAccountType === 'treasury' && txTotalFromApi != null ? txTotalFromApi : sortedAllTxs.length)} of {selectedAccountType === 'treasury' && txTotalFromApi != null ? txTotalFromApi : sortedAllTxs.length} transactions
                           </span>
                           <div className="flex items-center gap-1">
                             <button
-                              onClick={() => setTxPage(0)}
+                              onClick={() => handleTxPageChange(0)}
                               disabled={txPage === 0}
                               className="px-2 py-1 text-xs rounded border border-slate-200 bg-white text-slate-500 hover:border-slate-400 disabled:opacity-30 disabled:cursor-not-allowed"
                             >«</button>
                             <button
-                              onClick={() => setTxPage(p => Math.max(0, p - 1))}
+                              onClick={() => handleTxPageChange(Math.max(0, txPage - 1))}
                               disabled={txPage === 0}
                               className="px-2 py-1 text-xs rounded border border-slate-200 bg-white text-slate-500 hover:border-slate-400 disabled:opacity-30 disabled:cursor-not-allowed"
                             >‹ Prev</button>
-                            {Array.from({ length: totalTxPages }, (_, i) => i)
+                            {Array.from({ length: effectiveTotalTxPages }, (_, i) => i)
                               .filter(i => Math.abs(i - txPage) <= 2)
                               .map(i => (
                                 <button
                                   key={i}
-                                  onClick={() => setTxPage(i)}
+                                  onClick={() => handleTxPageChange(i)}
                                   className={`px-2.5 py-1 text-xs rounded border ${
                                     i === txPage
                                       ? 'bg-slate-800 text-white border-slate-800'
@@ -1175,13 +1196,13 @@ export default function Reconciliation() {
                                 >{i + 1}</button>
                               ))}
                             <button
-                              onClick={() => setTxPage(p => Math.min(totalTxPages - 1, p + 1))}
-                              disabled={txPage === totalTxPages - 1}
+                              onClick={() => handleTxPageChange(Math.min(effectiveTotalTxPages - 1, txPage + 1))}
+                              disabled={txPage === effectiveTotalTxPages - 1}
                               className="px-2 py-1 text-xs rounded border border-slate-200 bg-white text-slate-500 hover:border-slate-400 disabled:opacity-30 disabled:cursor-not-allowed"
                             >Next ›</button>
                             <button
-                              onClick={() => setTxPage(totalTxPages - 1)}
-                              disabled={txPage === totalTxPages - 1}
+                              onClick={() => handleTxPageChange(effectiveTotalTxPages - 1)}
+                              disabled={txPage === effectiveTotalTxPages - 1}
                               className="px-2 py-1 text-xs rounded border border-slate-200 bg-white text-slate-500 hover:border-slate-400 disabled:opacity-30 disabled:cursor-not-allowed"
                             >»</button>
                           </div>
@@ -1348,6 +1369,8 @@ export default function Reconciliation() {
               byDate[r.date].push(r);
             });
             const sortedDates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
+            const totalHistoryPages = Math.ceil(sortedDates.length / HISTORY_PAGE_SIZE) || 1;
+            const pagedHistoryDates = sortedDates.slice(historyPage * HISTORY_PAGE_SIZE, (historyPage + 1) * HISTORY_PAGE_SIZE);
 
             return (
               <div className="space-y-4">
@@ -1447,7 +1470,7 @@ export default function Reconciliation() {
                   </div>
                 ) : (
                   <div className="space-y-5">
-                    {sortedDates.map(date => {
+                    {pagedHistoryDates.map(date => {
                       const dateRows = byDate[date];
                       const doneCount = dateRows.filter(r => r.status === 'done').length;
                       const pendingCount = dateRows.length - doneCount;
@@ -1549,6 +1572,26 @@ export default function Reconciliation() {
                         </div>
                       );
                     })}
+                  </div>
+                )}
+
+                {/* History pagination */}
+                {!historyLoading && totalHistoryPages > 1 && (
+                  <div className="flex items-center justify-between px-2 py-2 border-t border-slate-100">
+                    <span className="text-xs text-slate-400">
+                      Page {historyPage + 1} of {totalHistoryPages} ({sortedDates.length} date groups)
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => setHistoryPage(0)} disabled={historyPage === 0} className="px-2 py-1 text-xs rounded border border-slate-200 bg-white text-slate-500 hover:border-slate-400 disabled:opacity-30 disabled:cursor-not-allowed">«</button>
+                      <button onClick={() => setHistoryPage(p => Math.max(0, p - 1))} disabled={historyPage === 0} className="px-2 py-1 text-xs rounded border border-slate-200 bg-white text-slate-500 hover:border-slate-400 disabled:opacity-30 disabled:cursor-not-allowed">‹ Prev</button>
+                      {Array.from({ length: totalHistoryPages }, (_, i) => i)
+                        .filter(i => Math.abs(i - historyPage) <= 2)
+                        .map(i => (
+                          <button key={i} onClick={() => setHistoryPage(i)} className={`px-2.5 py-1 text-xs rounded border ${i === historyPage ? 'bg-slate-800 text-white border-slate-800' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-400'}`}>{i + 1}</button>
+                        ))}
+                      <button onClick={() => setHistoryPage(p => Math.min(totalHistoryPages - 1, p + 1))} disabled={historyPage === totalHistoryPages - 1} className="px-2 py-1 text-xs rounded border border-slate-200 bg-white text-slate-500 hover:border-slate-400 disabled:opacity-30 disabled:cursor-not-allowed">Next ›</button>
+                      <button onClick={() => setHistoryPage(totalHistoryPages - 1)} disabled={historyPage === totalHistoryPages - 1} className="px-2 py-1 text-xs rounded border border-slate-200 bg-white text-slate-500 hover:border-slate-400 disabled:opacity-30 disabled:cursor-not-allowed">»</button>
+                    </div>
                   </div>
                 )}
               </div>
