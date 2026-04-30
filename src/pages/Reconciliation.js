@@ -24,6 +24,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   Upload, CheckCircle2, Clock, History, Loader2, FileText, Download, Eye,
   X, FileSpreadsheet, Building2, CreditCard, Store, Trash2, Pencil,
+  Search, SlidersHorizontal,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -292,6 +293,18 @@ export default function Reconciliation() {
   const [doneNotes, setDoneNotes] = useState('');
   const [doneSubmitting, setDoneSubmitting] = useState(false);
 
+  // Transaction search & filters
+  const [txSearchInput, setTxSearchInput] = useState(''); // raw input (debounced → txSearch)
+  const [txSearch, setTxSearch] = useState('');           // debounced — triggers API fetch
+  const txSearchTimer = useRef(null);
+  const [txFilterType, setTxFilterType] = useState('all');
+  const [txFilterStatus, setTxFilterStatus] = useState('all');
+  const [txFilterDateFrom, setTxFilterDateFrom] = useState('');
+  const [txFilterDateTo, setTxFilterDateTo] = useState('');
+  const [txFilterAmountMin, setTxFilterAmountMin] = useState('');
+  const [txFilterAmountMax, setTxFilterAmountMax] = useState('');
+  const [txShowFilters, setTxShowFilters] = useState(false);
+
   // Recon History
   const [historyRows, setHistoryRows] = useState([]);   // { account, date, txCount, netAmount, statement, status }
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -344,80 +357,78 @@ export default function Reconciliation() {
   }, [getAuthHeaders]);
 
   // ── Fetch transactions for selected account ─────────────────────
-  const fetchTransactions = useCallback(async (accountId, accountType, page = 0) => {
+  const fetchTransactions = useCallback(async (accountId, accountType, page = 0, filters = {}) => {
     if (!accountId) return;
     setTxLoading(true);
+    const {
+      search = '', txType = 'all', txStatus = 'all',
+      dateFrom = '', dateTo = '', amountMin = '', amountMax = '',
+    } = filters;
     try {
       let list = [];
+      let totalCount = null;
+      let totalPagesCount = 1;
+
+      const buildParams = (extra = {}) => {
+        const p = new URLSearchParams({ page: page + 1, page_size: 20 });
+        if (search) p.set('search', search);
+        if (dateFrom) p.set('date_from', dateFrom);
+        if (dateTo) p.set('date_to', dateTo);
+        if (amountMin) p.set('amount_min', amountMin);
+        if (amountMax) p.set('amount_max', amountMax);
+        Object.entries(extra).forEach(([k, v]) => { if (v && v !== 'all') p.set(k, v); });
+        return p.toString();
+      };
 
       if (accountType === 'treasury') {
-        const res = await fetch(
-          `${API_URL}/api/treasury/${accountId}/history?page=${page + 1}&page_size=20`,
-          { headers: getAuthHeaders() }
-        );
+        const qs = new URLSearchParams({ page: page + 1, page_size: 20 });
+        if (search) qs.set('search', search);
+        if (txType !== 'all') qs.set('transaction_type', txType);
+        if (dateFrom) qs.set('start_date', dateFrom);
+        if (dateTo) qs.set('end_date', dateTo);
+        if (amountMin) qs.set('amount_min', amountMin);
+        if (amountMax) qs.set('amount_max', amountMax);
+
+        const res = await fetch(`${API_URL}/api/treasury/${accountId}/history?${qs}`, { headers: getAuthHeaders() });
         if (res.ok) {
           const data = await res.json();
-          list = data.items || (Array.isArray(data) ? data : []);
-          setTxTotalPages(data.total_pages || 1);
-          setTxTotalFromApi(data.total || null);
+          list = data.items || [];
+          totalPagesCount = data.total_pages || 1;
+          totalCount = data.total ?? null;
         }
       } else if (accountType === 'psp') {
-        // Combine settled + unsettled (deposit + withdrawal) for full picture
-        const [settledRes, depRes, wthRes] = await Promise.all([
-          fetch(`${API_URL}/api/reconciliation/psp/${accountId}/details`, { headers: getAuthHeaders() }),
-          fetch(`${API_URL}/api/psp/${accountId}/pending-transactions?page_size=200`, { headers: getAuthHeaders() }),
-          fetch(`${API_URL}/api/psp/${accountId}/withdrawal-transactions?page_size=200`, { headers: getAuthHeaders() }),
-        ]);
-        // settled: normalize fields to common shape — prefer payment (base) currency over USD
-        const settledRaw = settledRes.ok ? (await settledRes.json()) : [];
-        const settled = (Array.isArray(settledRaw) ? settledRaw : []).map(t => ({
-          transaction_id: t.transaction_id,
-          reference: t.reference,
-          client_name: t.client_name,
-          // Use base (payment) currency when available, fall back to USD gross_amount
-          amount: t.base_amount ?? t.gross_amount,
-          currency: t.base_currency || t.currency || 'USD',
-          transaction_type: t.transaction_type || 'deposit',
-          status: 'settled',
-          created_at: t.settled_at,
-        }));
-        const dep = depRes.ok ? (await depRes.json()) : {};
-        const wth = wthRes.ok ? (await wthRes.json()) : {};
-        // Normalize unsettled PSP transactions to payment (base) currency too
-        const unsettledRaw = [...(dep.items || []), ...(wth.items || [])];
-        const unsettled = unsettledRaw.map(t => ({
-          ...t,
-          amount: t.base_amount ?? t.amount,
-          currency: t.base_currency || t.currency || 'USD',
-        }));
-        // Deduplicate by transaction_id (settled takes precedence)
-        const settledIds = new Set(settled.map(t => t.transaction_id));
-        const dedupedUnsettled = unsettled.filter(t => !settledIds.has(t.transaction_id));
-        list = [...settled, ...dedupedUnsettled];
-        list.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
-      } else if (accountType === 'exchanger') {
-        const res = await fetch(
-          `${API_URL}/api/vendors/${accountId}/transactions`,
-          { headers: getAuthHeaders() }
-        );
+        const qs = buildParams({ transaction_type: txType, status: txStatus });
+        const res = await fetch(`${API_URL}/api/psp/${accountId}/all-transactions?${qs}`, { headers: getAuthHeaders() });
         if (res.ok) {
           const data = await res.json();
-          const raw = Array.isArray(data) ? data : data.items || [];
-          // Only show approved / completed transactions
-          const approved = raw.filter(t =>
-            ['approved', 'completed'].includes((t.status || '').toLowerCase())
-          );
-          // Normalize to payment (base) currency — same as PSP
-          list = approved.map(t => ({
+          list = (data.items || []).map(t => ({
+            ...t,
+            amount: t.base_amount ?? t.amount,
+            currency: t.base_currency || t.currency || 'USD',
+            status: t.settled ? 'settled' : (t.status || ''),
+          }));
+          totalPagesCount = data.total_pages || 1;
+          totalCount = data.total ?? null;
+        }
+      } else if (accountType === 'exchanger') {
+        const qs = buildParams({ status: txStatus });
+        const res = await fetch(`${API_URL}/api/vendors/${accountId}/transactions?${qs}`, { headers: getAuthHeaders() });
+        if (res.ok) {
+          const data = await res.json();
+          list = (data.items || []).map(t => ({
             ...t,
             amount: t.base_amount ?? t.amount,
             currency: t.base_currency || t.currency || 'USD',
           }));
+          totalPagesCount = data.total_pages || 1;
+          totalCount = data.total ?? null;
         }
       }
 
       setTransactions(list);
-      setSummary(prev => ({ ...prev, txCount: list.length }));
+      setTxTotalPages(totalPagesCount);
+      setTxTotalFromApi(totalCount);
+      setSummary(prev => ({ ...prev, txCount: totalCount ?? list.length }));
     } catch (e) {
       console.error('Error fetching transactions:', e);
     } finally {
@@ -439,12 +450,16 @@ export default function Reconciliation() {
         const list = data.statements || (Array.isArray(data) ? data : []);
         setStatements(list);
         const reconciled = list.filter(s => isDone(s.status)).length;
-        setSummary(prev => ({
-          ...prev,
-          uploaded: list.length,
-          reconciled,
-          pending: list.length - reconciled,
-        }));
+        setSummary(prev => {
+          // Only count pending if transactions exist for this account
+          const hasTx = (prev.txCount || 0) > 0;
+          return {
+            ...prev,
+            uploaded: list.length,
+            reconciled: hasTx ? reconciled : 0,
+            pending: hasTx ? (list.length - reconciled) : 0,
+          };
+        });
       }
     } catch (e) {
       console.error('Error fetching statements:', e);
@@ -495,8 +510,18 @@ export default function Reconciliation() {
     setTxPage(0);
     setTxTotalPages(1);
     setTxTotalFromApi(null);
+    if (txSearchTimer.current) clearTimeout(txSearchTimer.current);
+    setTxSearchInput('');
+    setTxSearch('');
+    setTxFilterType('all');
+    setTxFilterStatus('all');
+    setTxFilterDateFrom('');
+    setTxFilterDateTo('');
+    setTxFilterAmountMin('');
+    setTxFilterAmountMax('');
+    setTxShowFilters(false);
     setExchInnerTab('transactions');
-    fetchTransactions(id, type, 0);
+    fetchTransactions(id, type, 0, {});
     fetchStatements(id, type);
     if (type === 'exchanger') fetchExchSettlements(id);
   };
@@ -690,25 +715,7 @@ export default function Reconciliation() {
           });
         });
 
-        // Also add rows for statements that don't correspond to a date with transactions
-        accStatements.forEach(s => {
-          const sd = (s.statement_date || '').split('T')[0];
-          const alreadyCovered = rows.some(r => r.account_id === acc.id && r.date === sd);
-          if (!alreadyCovered) {
-            rows.push({
-              key: `${acc.id}-stmt-${s.statement_id}`,
-              account_id: acc.id,
-              account_name: acc.name,
-              account_type: acc.type,
-              currency: acc.currency,
-              date: sd,
-              tx_count: 0,
-              net_amount: 0,
-              statement: s,
-              status: isDone(s.status) ? 'done' : 'pending',
-            });
-          }
-        });
+        // Only rows with actual transactions are tracked — statement-only dates are excluded.
       });
 
       // Sort: newest date first, then by account name
@@ -797,13 +804,13 @@ export default function Reconciliation() {
     const db = b.created_at || b.date || '';
     return db.localeCompare(da);
   });
-  const effectiveTotalTxPages = selectedAccountType === 'treasury'
-    ? txTotalPages
-    : Math.ceil(sortedAllTxs.length / TX_PAGE_SIZE) || 1;
-  // Treasury: API already returns exactly this page's items — no local slice needed
-  const pagedTxs = selectedAccountType === 'treasury'
-    ? sortedAllTxs
-    : sortedAllTxs.slice(txPage * TX_PAGE_SIZE, (txPage + 1) * TX_PAGE_SIZE);
+
+  // All filtering is server-side — API returns the correct page directly
+  const txHasActiveFilter = txSearch || txFilterType !== 'all' || txFilterStatus !== 'all'
+    || txFilterDateFrom || txFilterDateTo || txFilterAmountMin || txFilterAmountMax;
+
+  const effectiveTotalTxPages = txTotalPages;
+  const pagedTxs = sortedAllTxs; // server already returned only this page
   // Group paged transactions by date for display headers
   const pagedGrouped = pagedTxs.reduce((acc, tx) => {
     const date = (tx.created_at || tx.date || '').split('T')[0] || 'Unknown';
@@ -826,11 +833,42 @@ export default function Reconciliation() {
     return Object.entries(netMap); // [[currency, net], ...]
   };
 
+  // Helper: current filters object (used by page-change and filter effects)
+  const currentFilters = () => ({
+    search: txSearch, txType: txFilterType, txStatus: txFilterStatus,
+    dateFrom: txFilterDateFrom, dateTo: txFilterDateTo,
+    amountMin: txFilterAmountMin, amountMax: txFilterAmountMax,
+  });
+
+  // Re-fetch from server whenever filters change (txSearch is debounced)
+  const skipFilterEffect = useRef(true); // skip on initial mount
+  useEffect(() => {
+    if (skipFilterEffect.current) { skipFilterEffect.current = false; return; }
+    if (!selectedAccountId) return;
+    setTxPage(0);
+    fetchTransactions(selectedAccountId, selectedAccountType, 0, {
+      search: txSearch, txType: txFilterType, txStatus: txFilterStatus,
+      dateFrom: txFilterDateFrom, dateTo: txFilterDateTo,
+      amountMin: txFilterAmountMin, amountMax: txFilterAmountMax,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [txSearch, txFilterType, txFilterStatus, txFilterDateFrom, txFilterDateTo, txFilterAmountMin, txFilterAmountMax]);
+
   const handleTxPageChange = (newPage) => {
     setTxPage(newPage);
-    if (selectedAccountType === 'treasury') {
-      fetchTransactions(selectedAccountId, 'treasury', newPage);
-    }
+    fetchTransactions(selectedAccountId, selectedAccountType, newPage, currentFilters());
+  };
+
+  const clearTxFilters = () => {
+    if (txSearchTimer.current) clearTimeout(txSearchTimer.current);
+    setTxSearchInput('');
+    setTxSearch('');
+    setTxFilterType('all');
+    setTxFilterStatus('all');
+    setTxFilterDateFrom('');
+    setTxFilterDateTo('');
+    setTxFilterAmountMin('');
+    setTxFilterAmountMax('');
   };
 
   const getAccountName = (accountId) =>
@@ -996,7 +1034,7 @@ export default function Reconciliation() {
 
                 {/* LEFT: Internal transactions */}
                 <Card>
-                  <CardHeader className="py-3 px-4 border-b">
+                  <CardHeader className="py-3 px-4 border-b space-y-2">
                     <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-2">
                       <FileText className="w-4 h-4 text-muted-foreground" />
                       {selectedAccount?.type === 'exchanger' ? (
@@ -1018,9 +1056,131 @@ export default function Reconciliation() {
                       <Badge variant="outline" className="ml-auto text-xs">
                         {selectedAccount?.type === 'exchanger' && exchInnerTab === 'settlements'
                           ? exchSettlements.length
-                          : transactions.length}
+                          : txTotalFromApi ?? transactions.length}
                       </Badge>
                     </CardTitle>
+
+                    {/* Search + filter bar (hide for exchanger settlements tab) */}
+                    {(selectedAccount?.type !== 'exchanger' || exchInnerTab === 'transactions') && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <div className="relative flex-1">
+                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+                            <input
+                              type="text"
+                              placeholder="Search reference, client, ID…"
+                              value={txSearchInput}
+                              onChange={e => {
+                                const val = e.target.value;
+                                setTxSearchInput(val);
+                                if (txSearchTimer.current) clearTimeout(txSearchTimer.current);
+                                txSearchTimer.current = setTimeout(() => setTxSearch(val), 400);
+                              }}
+                              className="w-full h-8 pl-8 pr-3 text-xs border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                            />
+                            {txSearchInput && (
+                              <button onClick={clearTxFilters} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                                <X className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => setTxShowFilters(v => !v)}
+                            className={`h-8 px-2.5 flex items-center gap-1.5 text-xs rounded-md border transition-colors ${
+                              txShowFilters || (txFilterType !== 'all' || txFilterStatus !== 'all' || txFilterDateFrom || txFilterDateTo || txFilterAmountMin || txFilterAmountMax)
+                                ? 'bg-foreground text-background border-foreground'
+                                : 'border bg-background text-muted-foreground hover:text-foreground'
+                            }`}
+                          >
+                            <SlidersHorizontal className="w-3.5 h-3.5" />
+                            Filters
+                          </button>
+                          {txHasActiveFilter && (
+                            <button onClick={clearTxFilters} className="h-8 px-2 text-xs text-muted-foreground hover:text-destructive transition-colors" title="Clear filters">
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+
+                        {txShowFilters && (
+                          <div className="grid grid-cols-2 gap-2 p-2 bg-muted/50 rounded-md border">
+                            {/* Type filter */}
+                            <div>
+                              <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium mb-1 block">Type</label>
+                              <select
+                                value={txFilterType}
+                                onChange={e => setTxFilterType(e.target.value)}
+                                className="w-full h-7 px-2 text-xs border rounded bg-background text-foreground focus:outline-none"
+                              >
+                                <option value="all">All types</option>
+                                <option value="deposit">Deposit</option>
+                                <option value="withdrawal">Withdrawal</option>
+                                <option value="transfer">Transfer</option>
+                                <option value="credit">Credit</option>
+                                <option value="debit">Debit</option>
+                              </select>
+                            </div>
+                            {/* Status filter */}
+                            <div>
+                              <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium mb-1 block">Status</label>
+                              <select
+                                value={txFilterStatus}
+                                onChange={e => setTxFilterStatus(e.target.value)}
+                                className="w-full h-7 px-2 text-xs border rounded bg-background text-foreground focus:outline-none"
+                              >
+                                <option value="all">All statuses</option>
+                                <option value="settled">Settled</option>
+                                <option value="pending">Pending</option>
+                                <option value="completed">Completed</option>
+                                <option value="cancelled">Cancelled</option>
+                              </select>
+                            </div>
+                            {/* Date From */}
+                            <div>
+                              <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium mb-1 block">Date from</label>
+                              <input
+                                type="date"
+                                value={txFilterDateFrom}
+                                onChange={e => setTxFilterDateFrom(e.target.value)}
+                                className="w-full h-7 px-2 text-xs border rounded bg-background text-foreground focus:outline-none"
+                              />
+                            </div>
+                            {/* Date To */}
+                            <div>
+                              <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium mb-1 block">Date to</label>
+                              <input
+                                type="date"
+                                value={txFilterDateTo}
+                                onChange={e => setTxFilterDateTo(e.target.value)}
+                                className="w-full h-7 px-2 text-xs border rounded bg-background text-foreground focus:outline-none"
+                              />
+                            </div>
+                            {/* Amount Min */}
+                            <div>
+                              <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium mb-1 block">Amount min</label>
+                              <input
+                                type="number"
+                                placeholder="0"
+                                value={txFilterAmountMin}
+                                onChange={e => setTxFilterAmountMin(e.target.value)}
+                                className="w-full h-7 px-2 text-xs border rounded bg-background text-foreground focus:outline-none"
+                              />
+                            </div>
+                            {/* Amount Max */}
+                            <div>
+                              <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium mb-1 block">Amount max</label>
+                              <input
+                                type="number"
+                                placeholder="∞"
+                                value={txFilterAmountMax}
+                                onChange={e => setTxFilterAmountMax(e.target.value)}
+                                className="w-full h-7 px-2 text-xs border rounded bg-background text-foreground focus:outline-none"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </CardHeader>
                   <CardContent className="p-0">
                     {/* PSP: net pending settlement summary */}
@@ -1165,6 +1325,12 @@ export default function Reconciliation() {
                       <div className="text-center py-14 text-muted-foreground text-sm">
                         No transactions for this account
                       </div>
+                    ) : transactions.length === 0 && txHasActiveFilter ? (
+                      <div className="text-center py-14 text-muted-foreground text-sm">
+                        No transactions match your search/filters
+                        <br />
+                        <button onClick={clearTxFilters} className="mt-2 text-xs text-primary hover:underline">Clear filters</button>
+                      </div>
                     ) : (
                       <>
                       <ScrollArea className="h-[480px]">
@@ -1240,10 +1406,10 @@ export default function Reconciliation() {
                       </ScrollArea>
 
                       {/* Pagination controls */}
-                      {transactions.length > 0 && (
+                      {(txTotalFromApi ?? transactions.length) > 0 && (
                         <div className="flex items-center justify-between px-4 py-2 border-t border/60 bg-muted/50/60">
                           <span className="text-xs text-muted-foreground">
-                            {txPage * TX_PAGE_SIZE + 1}–{Math.min((txPage + 1) * TX_PAGE_SIZE, selectedAccountType === 'treasury' && txTotalFromApi != null ? txTotalFromApi : sortedAllTxs.length)} of {selectedAccountType === 'treasury' && txTotalFromApi != null ? txTotalFromApi : sortedAllTxs.length} transactions
+                            {txPage * TX_PAGE_SIZE + 1}–{Math.min((txPage + 1) * TX_PAGE_SIZE, txTotalFromApi ?? transactions.length)} of {txTotalFromApi ?? transactions.length}{txHasActiveFilter ? ' filtered' : ''} transactions
                           </span>
                           <div className="flex items-center gap-1">
                             <button

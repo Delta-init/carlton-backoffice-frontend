@@ -112,12 +112,12 @@ export default function Login() {
 
   /* ── shared input class ── */
   const inputCls = "pl-10 h-11 bg-card border border text-foreground placeholder:text-muted-foreground " +
-    "focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-xl transition-all " +
+    "focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl transition-all " +
     "shadow-[inset_0_1px_3px_rgba(0,0,0,0.06)]";
 
-  const btnCls = "w-full h-11 bg-primary hover:bg-primary/70 active:scale-[0.98] active:translate-y-px " +
-    "text-white font-semibold rounded-xl transition-all " +
-    "shadow-[0_4px_14px_rgba(99,102,241,0.4)] hover:shadow-[0_6px_20px_rgba(99,102,241,0.5)]";
+  const btnCls = "w-full h-11 bg-primary hover:bg-primary/90 active:scale-[0.98] active:translate-y-px " +
+    "text-primary-foreground font-semibold rounded-xl transition-all " +
+    "shadow-[0_4px_14px_hsl(var(--primary)/0.4)] hover:shadow-[0_6px_20px_hsl(var(--primary)/0.5)]";
 
   /* ── form content ── */
   const renderForm = () => {
@@ -156,9 +156,9 @@ export default function Login() {
     if (forgotStep === 'code') return (
       <div className="space-y-7">
         <div>
-          <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center mb-5
-            shadow-[0_8px_20px_rgba(99,102,241,0.25)] transform-gpu">
-            <KeyRound className="w-6 h-6 text-indigo-600" />
+          <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mb-5
+            shadow-[0_8px_20px_hsl(var(--primary)/0.25)] transform-gpu">
+            <KeyRound className="w-6 h-6 text-primary" />
           </div>
           <h2 className="text-3xl font-bold text-foreground mb-1">Reset Password</h2>
           <p className="text-muted-foreground text-sm">Code sent to <span className="font-medium text-card-foreground">{resetEmail}</span></p>
@@ -170,7 +170,7 @@ export default function Login() {
             <Input type="text" placeholder="• • • • • •" value={resetCode}
               onChange={(e) => setResetCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
               className="text-center text-2xl tracking-[0.5em] font-mono h-14 bg-card border border
-                text-foreground focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-xl transition-all
+                text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl transition-all
                 shadow-[inset_0_1px_3px_rgba(0,0,0,0.06)]"
               maxLength={6} autoFocus required data-testid="reset-code-input" />
           </div>
@@ -223,7 +223,7 @@ export default function Login() {
             <div className="flex justify-between items-center">
               <Label htmlFor="password" className="text-sm font-medium text-card-foreground">Password</Label>
               <button type="button"
-                className="text-xs font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
+                className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
                 onClick={() => { setForgotStep('email'); setResetEmail(email); }}
                 data-testid="forgot-password-link">
                 Forgot password?
@@ -263,9 +263,9 @@ export default function Login() {
     return (
       <div className="space-y-7">
         <div>
-          <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center mb-5
-            shadow-[0_8px_20px_rgba(99,102,241,0.25)] transform-gpu">
-            <ShieldCheck className="w-6 h-6 text-indigo-600" />
+          <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mb-5
+            shadow-[0_8px_20px_hsl(var(--primary)/0.25)] transform-gpu">
+            <ShieldCheck className="w-6 h-6 text-primary" />
           </div>
           <h2 className="text-3xl font-bold text-foreground mb-1">Verify Identity</h2>
           <p className="text-muted-foreground text-sm">{otpMessage}</p>
@@ -277,7 +277,7 @@ export default function Login() {
             <Input id="otp" type="text" placeholder="• • • • • •" value={otpCode}
               onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
               className="text-center text-2xl tracking-[0.5em] font-mono h-14 bg-card border border
-                text-foreground focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-xl transition-all
+                text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl transition-all
                 shadow-[inset_0_1px_3px_rgba(0,0,0,0.06)]"
               data-testid="otp-input" maxLength={6} autoFocus required />
           </div>
@@ -288,7 +288,7 @@ export default function Login() {
               <div key={i}
                 className={`w-2.5 h-2.5 rounded-full transition-all duration-200 ${
                   i < otpCode.length
-                    ? 'bg-indigo-600 shadow-[0_0_6px_rgba(99,102,241,0.6)] scale-110'
+                    ? 'bg-primary shadow-[0_0_6px_hsl(var(--primary)/0.6)] scale-110'
                     : 'bg-slate-200'
                 }`} />
             ))}
@@ -386,9 +386,9 @@ export default function Login() {
         <div className="w-full flex items-center justify-center bg-card relative overflow-hidden">
 
           {/* ── soft background orbs ── */}
-          <div className="pulse-orb absolute -top-24 -right-24 w-80 h-80 rounded-full bg-indigo-100/50 blur-3xl pointer-events-none" />
+          <div className="pulse-orb absolute -top-24 -right-24 w-80 h-80 rounded-full bg-primary/5 blur-3xl pointer-events-none" />
           <div className="pulse-orb absolute -bottom-20 -left-20 w-64 h-64 rounded-full bg-muted/70 blur-2xl pointer-events-none" style={{ animationDelay: '2.5s' }} />
-          <div className="pulse-orb absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-indigo-50/30 blur-3xl pointer-events-none" style={{ animationDelay: '1.2s' }} />
+          <div className="pulse-orb absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-primary/3 blur-3xl pointer-events-none" style={{ animationDelay: '1.2s' }} />
 
           {/* ── floating 3D brand elements ── */}
           {floaters.map((f, i) => (
@@ -403,16 +403,16 @@ export default function Login() {
               }}>
                 {/* icon box */}
                 <div
-                  className="bg-indigo-600 rounded-xl flex items-center justify-center mx-auto
-                    shadow-[0_8px_24px_rgba(99,102,241,0.5),inset_0_1px_0_rgba(255,255,255,0.2)]
-                    border border-indigo-500"
+                  className="bg-primary rounded-xl flex items-center justify-center mx-auto
+                    shadow-[0_8px_24px_hsl(var(--primary)/0.5),inset_0_1px_0_rgba(255,255,255,0.2)]
+                    border border-primary/80"
                   style={{ width: f.size, height: f.size }}
                 >
                   <TrendingUp style={{ width: f.size * 0.45, height: f.size * 0.45 }} className="text-white" />
                 </div>
                 {/* title */}
                 <p
-                  className="text-center font-bold text-indigo-600 mt-1.5 whitespace-nowrap tracking-tight"
+                  className="text-center font-bold text-primary mt-1.5 whitespace-nowrap tracking-tight"
                   style={{ fontSize: Math.max(f.size * 0.22, 9) }}
                 >
                  Carlton
