@@ -24,7 +24,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   Upload, CheckCircle2, Clock, History, Loader2, FileText, Download, Eye,
   X, FileSpreadsheet, Building2, CreditCard, Store, Trash2, Pencil,
-  Search, SlidersHorizontal,
+  Search, SlidersHorizontal, Tag,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -303,7 +303,11 @@ export default function Reconciliation() {
   const [txFilterDateTo, setTxFilterDateTo] = useState('');
   const [txFilterAmountMin, setTxFilterAmountMin] = useState('');
   const [txFilterAmountMax, setTxFilterAmountMax] = useState('');
+  const [txFilterTags, setTxFilterTags] = useState([]); // selected tag IDs
   const [txShowFilters, setTxShowFilters] = useState(false);
+
+  // Available tags
+  const [availableTags, setAvailableTags] = useState([]);
 
   // Recon History
   const [historyRows, setHistoryRows] = useState([]);   // { account, date, txCount, netAmount, statement, status }
@@ -363,6 +367,7 @@ export default function Reconciliation() {
     const {
       search = '', txType = 'all', txStatus = 'all',
       dateFrom = '', dateTo = '', amountMin = '', amountMax = '',
+      tags = [],
     } = filters;
     try {
       let list = [];
@@ -376,6 +381,7 @@ export default function Reconciliation() {
         if (dateTo) p.set('date_to', dateTo);
         if (amountMin) p.set('amount_min', amountMin);
         if (amountMax) p.set('amount_max', amountMax);
+        if (tags && tags.length > 0) p.set('tags', tags.join(','));
         Object.entries(extra).forEach(([k, v]) => { if (v && v !== 'all') p.set(k, v); });
         return p.toString();
       };
@@ -388,6 +394,7 @@ export default function Reconciliation() {
         if (dateTo) qs.set('end_date', dateTo);
         if (amountMin) qs.set('amount_min', amountMin);
         if (amountMax) qs.set('amount_max', amountMax);
+        if (tags && tags.length > 0) qs.set('tags', tags.join(','));
 
         const res = await fetch(`${API_URL}/api/treasury/${accountId}/history?${qs}`, { headers: getAuthHeaders() });
         if (res.ok) {
@@ -485,8 +492,17 @@ export default function Reconciliation() {
     }
   }, [getAuthHeaders]);
 
+  // ── Fetch available tags ─────────────────────────────────────────
+  const fetchAvailableTags = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/client-tags`, { headers: getAuthHeaders() });
+      if (res.ok) setAvailableTags(await res.json());
+    } catch (e) { console.error('Failed to load tags', e); }
+  }, [getAuthHeaders]);
+
   // ── Initial load ─────────────────────────────────────────────────
   useEffect(() => {
+    fetchAvailableTags();
     fetchAccounts().then(list => {
       if (list.length > 0) {
         const first = list[0];
@@ -519,6 +535,7 @@ export default function Reconciliation() {
     setTxFilterDateTo('');
     setTxFilterAmountMin('');
     setTxFilterAmountMax('');
+    setTxFilterTags([]);
     setTxShowFilters(false);
     setExchInnerTab('transactions');
     fetchTransactions(id, type, 0, {});
@@ -807,7 +824,7 @@ export default function Reconciliation() {
 
   // All filtering is server-side — API returns the correct page directly
   const txHasActiveFilter = txSearch || txFilterType !== 'all' || txFilterStatus !== 'all'
-    || txFilterDateFrom || txFilterDateTo || txFilterAmountMin || txFilterAmountMax;
+    || txFilterDateFrom || txFilterDateTo || txFilterAmountMin || txFilterAmountMax || txFilterTags.length > 0;
 
   const effectiveTotalTxPages = txTotalPages;
   const pagedTxs = sortedAllTxs; // server already returned only this page
@@ -838,6 +855,7 @@ export default function Reconciliation() {
     search: txSearch, txType: txFilterType, txStatus: txFilterStatus,
     dateFrom: txFilterDateFrom, dateTo: txFilterDateTo,
     amountMin: txFilterAmountMin, amountMax: txFilterAmountMax,
+    tags: txFilterTags,
   });
 
   // Re-fetch from server whenever filters change (txSearch is debounced)
@@ -850,9 +868,10 @@ export default function Reconciliation() {
       search: txSearch, txType: txFilterType, txStatus: txFilterStatus,
       dateFrom: txFilterDateFrom, dateTo: txFilterDateTo,
       amountMin: txFilterAmountMin, amountMax: txFilterAmountMax,
+      tags: txFilterTags,
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [txSearch, txFilterType, txFilterStatus, txFilterDateFrom, txFilterDateTo, txFilterAmountMin, txFilterAmountMax]);
+  }, [txSearch, txFilterType, txFilterStatus, txFilterDateFrom, txFilterDateTo, txFilterAmountMin, txFilterAmountMax, txFilterTags]);
 
   const handleTxPageChange = (newPage) => {
     setTxPage(newPage);
@@ -869,6 +888,7 @@ export default function Reconciliation() {
     setTxFilterDateTo('');
     setTxFilterAmountMin('');
     setTxFilterAmountMax('');
+    setTxFilterTags([]);
   };
 
   const getAccountName = (accountId) =>
@@ -1087,7 +1107,7 @@ export default function Reconciliation() {
                           <button
                             onClick={() => setTxShowFilters(v => !v)}
                             className={`h-8 px-2.5 flex items-center gap-1.5 text-xs rounded-md border transition-colors ${
-                              txShowFilters || (txFilterType !== 'all' || txFilterStatus !== 'all' || txFilterDateFrom || txFilterDateTo || txFilterAmountMin || txFilterAmountMax)
+                              txShowFilters || (txFilterType !== 'all' || txFilterStatus !== 'all' || txFilterDateFrom || txFilterDateTo || txFilterAmountMin || txFilterAmountMax || txFilterTags.length > 0)
                                 ? 'bg-foreground text-background border-foreground'
                                 : 'border bg-background text-muted-foreground hover:text-foreground'
                             }`}
@@ -1103,80 +1123,111 @@ export default function Reconciliation() {
                         </div>
 
                         {txShowFilters && (
-                          <div className="grid grid-cols-2 gap-2 p-2 bg-muted/50 rounded-md border">
-                            {/* Type filter */}
-                            <div>
-                              <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium mb-1 block">Type</label>
-                              <select
-                                value={txFilterType}
-                                onChange={e => setTxFilterType(e.target.value)}
-                                className="w-full h-7 px-2 text-xs border rounded bg-background text-foreground focus:outline-none"
-                              >
-                                <option value="all">All types</option>
-                                <option value="deposit">Deposit</option>
-                                <option value="withdrawal">Withdrawal</option>
-                                <option value="transfer">Transfer</option>
-                                <option value="credit">Credit</option>
-                                <option value="debit">Debit</option>
-                              </select>
+                          <div className="space-y-2 p-2 bg-muted/50 rounded-md border">
+                            <div className="grid grid-cols-2 gap-2">
+                              {/* Type filter */}
+                              <div>
+                                <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium mb-1 block">Type</label>
+                                <select
+                                  value={txFilterType}
+                                  onChange={e => setTxFilterType(e.target.value)}
+                                  className="w-full h-7 px-2 text-xs border rounded bg-background text-foreground focus:outline-none"
+                                >
+                                  <option value="all">All types</option>
+                                  <option value="deposit">Deposit</option>
+                                  <option value="withdrawal">Withdrawal</option>
+                                  <option value="transfer">Transfer</option>
+                                  <option value="credit">Credit</option>
+                                  <option value="debit">Debit</option>
+                                </select>
+                              </div>
+                              {/* Status filter */}
+                              <div>
+                                <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium mb-1 block">Status</label>
+                                <select
+                                  value={txFilterStatus}
+                                  onChange={e => setTxFilterStatus(e.target.value)}
+                                  className="w-full h-7 px-2 text-xs border rounded bg-background text-foreground focus:outline-none"
+                                >
+                                  <option value="all">All statuses</option>
+                                  <option value="settled">Settled</option>
+                                  <option value="pending">Pending</option>
+                                  <option value="completed">Completed</option>
+                                  <option value="cancelled">Cancelled</option>
+                                </select>
+                              </div>
+                              {/* Date From */}
+                              <div>
+                                <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium mb-1 block">Date from</label>
+                                <input
+                                  type="date"
+                                  value={txFilterDateFrom}
+                                  onChange={e => setTxFilterDateFrom(e.target.value)}
+                                  className="w-full h-7 px-2 text-xs border rounded bg-background text-foreground focus:outline-none"
+                                />
+                              </div>
+                              {/* Date To */}
+                              <div>
+                                <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium mb-1 block">Date to</label>
+                                <input
+                                  type="date"
+                                  value={txFilterDateTo}
+                                  onChange={e => setTxFilterDateTo(e.target.value)}
+                                  className="w-full h-7 px-2 text-xs border rounded bg-background text-foreground focus:outline-none"
+                                />
+                              </div>
+                              {/* Amount Min */}
+                              <div>
+                                <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium mb-1 block">Amount min</label>
+                                <input
+                                  type="number"
+                                  placeholder="0"
+                                  value={txFilterAmountMin}
+                                  onChange={e => setTxFilterAmountMin(e.target.value)}
+                                  className="w-full h-7 px-2 text-xs border rounded bg-background text-foreground focus:outline-none"
+                                />
+                              </div>
+                              {/* Amount Max */}
+                              <div>
+                                <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium mb-1 block">Amount max</label>
+                                <input
+                                  type="number"
+                                  placeholder="∞"
+                                  value={txFilterAmountMax}
+                                  onChange={e => setTxFilterAmountMax(e.target.value)}
+                                  className="w-full h-7 px-2 text-xs border rounded bg-background text-foreground focus:outline-none"
+                                />
+                              </div>
                             </div>
-                            {/* Status filter */}
-                            <div>
-                              <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium mb-1 block">Status</label>
-                              <select
-                                value={txFilterStatus}
-                                onChange={e => setTxFilterStatus(e.target.value)}
-                                className="w-full h-7 px-2 text-xs border rounded bg-background text-foreground focus:outline-none"
-                              >
-                                <option value="all">All statuses</option>
-                                <option value="settled">Settled</option>
-                                <option value="pending">Pending</option>
-                                <option value="completed">Completed</option>
-                                <option value="cancelled">Cancelled</option>
-                              </select>
-                            </div>
-                            {/* Date From */}
-                            <div>
-                              <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium mb-1 block">Date from</label>
-                              <input
-                                type="date"
-                                value={txFilterDateFrom}
-                                onChange={e => setTxFilterDateFrom(e.target.value)}
-                                className="w-full h-7 px-2 text-xs border rounded bg-background text-foreground focus:outline-none"
-                              />
-                            </div>
-                            {/* Date To */}
-                            <div>
-                              <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium mb-1 block">Date to</label>
-                              <input
-                                type="date"
-                                value={txFilterDateTo}
-                                onChange={e => setTxFilterDateTo(e.target.value)}
-                                className="w-full h-7 px-2 text-xs border rounded bg-background text-foreground focus:outline-none"
-                              />
-                            </div>
-                            {/* Amount Min */}
-                            <div>
-                              <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium mb-1 block">Amount min</label>
-                              <input
-                                type="number"
-                                placeholder="0"
-                                value={txFilterAmountMin}
-                                onChange={e => setTxFilterAmountMin(e.target.value)}
-                                className="w-full h-7 px-2 text-xs border rounded bg-background text-foreground focus:outline-none"
-                              />
-                            </div>
-                            {/* Amount Max */}
-                            <div>
-                              <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium mb-1 block">Amount max</label>
-                              <input
-                                type="number"
-                                placeholder="∞"
-                                value={txFilterAmountMax}
-                                onChange={e => setTxFilterAmountMax(e.target.value)}
-                                className="w-full h-7 px-2 text-xs border rounded bg-background text-foreground focus:outline-none"
-                              />
-                            </div>
+                            {/* Tags filter */}
+                            {availableTags.length > 0 && (
+                              <div>
+                                <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium mb-1.5 flex items-center gap-1">
+                                  <Tag className="w-3 h-3" /> Tags (any match)
+                                </label>
+                                <div className="flex flex-wrap gap-1">
+                                  {availableTags.map(tag => {
+                                    const active = txFilterTags.includes(tag.tag_id);
+                                    return (
+                                      <button
+                                        key={tag.tag_id}
+                                        type="button"
+                                        onClick={() => setTxFilterTags(active
+                                          ? txFilterTags.filter(t => t !== tag.tag_id)
+                                          : [...txFilterTags, tag.tag_id]
+                                        )}
+                                        className={`px-2 py-0.5 rounded-full text-[10px] font-medium border transition-all ${
+                                          active ? 'border-transparent text-white' : 'border bg-background text-muted-foreground hover:text-foreground'
+                                        }`}
+                                        style={active ? { backgroundColor: tag.color || 'hsl(var(--primary))' } : {}}
+                                      >
+                                        {tag.name}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1375,6 +1426,24 @@ export default function Reconciliation() {
                                         {tx.reference || tx.client_name || 'Transaction'}
                                       </p>
                                       <p className="text-xs text-muted-foreground capitalize">{txType}</p>
+                                      {/* Tag chips */}
+                                      {(tx.client_tags || []).length > 0 && (
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                          {(tx.client_tags || []).map(tagId => {
+                                            const tag = availableTags.find(t => t.tag_id === tagId);
+                                            if (!tag) return null;
+                                            return (
+                                              <span
+                                                key={tagId}
+                                                className="px-1.5 py-0.5 rounded-full text-[9px] font-medium text-white"
+                                                style={{ backgroundColor: tag.color || 'hsl(var(--primary))' }}
+                                              >
+                                                {tag.name}
+                                              </span>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
                                     </div>
 
                                     <div className="flex flex-col items-end ml-3 shrink-0">

@@ -56,6 +56,8 @@ import {
   TrendingDown,
   Upload,
   Loader2,
+  Tag,
+  X,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -89,7 +91,11 @@ export default function Clients() {
   const [dateTo, setDateTo] = useState('');
   const [minBalance, setMinBalance] = useState('');
   const [maxBalance, setMaxBalance] = useState('');
-  
+
+  // Tags
+  const [availableTags, setAvailableTags] = useState([]);
+  const [tagFilter, setTagFilter] = useState([]);
+
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -99,6 +105,7 @@ export default function Clients() {
     mt5_number: '',
     crm_customer_id: '',
     notes: '',
+    tags: [],
   });
 
   const getAuthHeaders = () => {
@@ -107,6 +114,13 @@ export default function Clients() {
       'Content-Type': 'application/json',
       ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     };
+  };
+
+  const fetchAvailableTags = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/client-tags`, { headers: getAuthHeaders(), credentials: 'include' });
+      if (res.ok) setAvailableTags(await res.json());
+    } catch (e) { console.error('Failed to load tags', e); }
   };
 
   const fetchClients = async (pg) => {
@@ -174,21 +188,54 @@ export default function Clients() {
 
   useEffect(() => {
     fetchClients();
+    fetchAvailableTags();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    fetchClients();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm, statusFilter, currentPage, pageSize]);
 
-  // Filter clients based on transaction filters
+  // Filter clients based on transaction filters + tags
   const filteredClients = clients.filter(client => {
     // Balance filter
     if (minBalance && client.net_balance < parseFloat(minBalance)) return false;
     if (maxBalance && client.net_balance > parseFloat(maxBalance)) return false;
-    
+
     // Transaction type filter
     if (txTypeFilter === 'deposits_only' && (client.deposit_count || 0) === 0) return false;
     if (txTypeFilter === 'withdrawals_only' && (client.withdrawal_count || 0) === 0) return false;
     if (txTypeFilter === 'no_transactions' && (client.transaction_count || 0) > 0) return false;
-    
+
+    // Tag filter (OR logic)
+    if (tagFilter.length > 0) {
+      const clientTags = client.tags || [];
+      if (!tagFilter.some(tid => clientTags.includes(tid))) return false;
+    }
+
     return true;
   });
+
+  // Update client tags with backfill
+  const updateClientTags = async (clientId, newTags) => {
+    try {
+      const res = await fetch(`${API_URL}/api/clients/${clientId}/tags`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({ tags: newTags }),
+      });
+      if (res.ok) {
+        toast.success('Tags updated');
+        fetchClients();
+      } else {
+        toast.error(await getApiError(res));
+      }
+    } catch (err) {
+      toast.error(err?.message || 'Something went wrong. Please try again.');
+    }
+  };
 
   // Download functions
   const downloadCSV = () => {
@@ -320,6 +367,7 @@ export default function Clients() {
       crm_customer_id: client.crm_customer_id || '',
       notes: client.notes || '',
       kyc_status: client.kyc_status,
+      tags: client.tags || [],
     });
     setIsDialogOpen(true);
   };
@@ -335,6 +383,7 @@ export default function Clients() {
       mt5_number: '',
       crm_customer_id: '',
       notes: '',
+      tags: [],
     });
   };
 
@@ -495,6 +544,38 @@ export default function Clients() {
                   data-testid="client-notes"
                 />
               </div>
+              {/* Tags */}
+              {availableTags.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider flex items-center gap-1.5">
+                    <Tag className="w-3.5 h-3.5" /> Tags
+                  </Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {availableTags.map(tag => {
+                      const selected = (formData.tags || []).includes(tag.tag_id);
+                      return (
+                        <button
+                          key={tag.tag_id}
+                          type="button"
+                          onClick={() => {
+                            const curr = formData.tags || [];
+                            setFormData({
+                              ...formData,
+                              tags: selected ? curr.filter(t => t !== tag.tag_id) : [...curr, tag.tag_id],
+                            });
+                          }}
+                          className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
+                            selected ? 'border-transparent text-white shadow-sm' : 'border bg-muted/50 text-muted-foreground hover:border-primary/50'
+                          }`}
+                          style={selected ? { backgroundColor: tag.color || 'hsl(var(--primary))' } : {}}
+                        >
+                          {tag.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               <div className="flex justify-end gap-3 pt-4">
                 <Button
                   type="button"
@@ -610,11 +691,11 @@ export default function Clients() {
                 data-testid="max-balance"
               />
             </div>
-            {(minBalance || maxBalance || txTypeFilter !== 'all') && (
+            {(minBalance || maxBalance || txTypeFilter !== 'all' || tagFilter.length > 0) && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => { setMinBalance(''); setMaxBalance(''); setTxTypeFilter('all'); setCurrentPage(1); }}
+                onClick={() => { setMinBalance(''); setMaxBalance(''); setTxTypeFilter('all'); setTagFilter([]); setCurrentPage(1); }}
                 className="text-muted-foreground hover:text-foreground"
               >
                 Clear Filters
@@ -624,6 +705,29 @@ export default function Clients() {
               Showing {filteredClients.length} of {totalClients} clients
             </div>
           </div>
+          {/* Tag filter chips */}
+          {availableTags.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border">
+              <span className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                <Tag className="w-3 h-3" /> Filter by Tag:
+              </span>
+              {availableTags.map(tag => {
+                const active = tagFilter.includes(tag.tag_id);
+                return (
+                  <button
+                    key={tag.tag_id}
+                    onClick={() => setTagFilter(active ? tagFilter.filter(t => t !== tag.tag_id) : [...tagFilter, tag.tag_id])}
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
+                      active ? 'border-transparent text-white shadow-sm' : 'border bg-muted/50 text-muted-foreground hover:border-primary/50'
+                    }`}
+                    style={active ? { backgroundColor: tag.color || 'hsl(var(--primary))' } : {}}
+                  >
+                    {tag.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -637,6 +741,7 @@ export default function Clients() {
                   <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Client</TableHead>
                   <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Contact</TableHead>
                   <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Country</TableHead>
+                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Tags</TableHead>
                   <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Transactions</TableHead>
                   <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Net Balance</TableHead>
                   <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">KYC Status</TableHead>
@@ -646,13 +751,13 @@ export default function Clients() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
+                    <TableCell colSpan={8} className="text-center py-8">
                       <div className="w-6 h-6 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
                 ) : filteredClients.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       No clients found
                     </TableCell>
                   </TableRow>
@@ -677,6 +782,24 @@ export default function Clients() {
                         <p className="text-xs text-muted-foreground font-mono">{client.phone || '-'}</p>
                       </TableCell>
                       <TableCell className="text-foreground">{client.country || '-'}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {(client.tags || []).map(tagId => {
+                            const tag = availableTags.find(t => t.tag_id === tagId);
+                            if (!tag) return null;
+                            return (
+                              <span
+                                key={tagId}
+                                className="px-2 py-0.5 rounded-full text-[10px] font-medium text-white"
+                                style={{ backgroundColor: tag.color || 'hsl(var(--primary))' }}
+                              >
+                                {tag.name}
+                              </span>
+                            );
+                          })}
+                          {(!client.tags || client.tags.length === 0) && <span className="text-muted-foreground text-xs">—</span>}
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <div className="text-xs space-y-1">
                           <div className="flex items-center gap-1 text-green-400">
@@ -908,6 +1031,40 @@ export default function Clients() {
                 </div>
               )}
               
+              {/* Tags in view dialog */}
+              {availableTags.length > 0 && (
+                <div className="pt-4 border-t border">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1">
+                    <Tag className="w-3 h-3" /> Tags
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {availableTags.map(tag => {
+                      const selected = (viewClient.tags || []).includes(tag.tag_id);
+                      return (
+                        <button
+                          key={tag.tag_id}
+                          onClick={async () => {
+                            const curr = viewClient.tags || [];
+                            const newTags = selected ? curr.filter(t => t !== tag.tag_id) : [...curr, tag.tag_id];
+                            await updateClientTags(viewClient.client_id, newTags);
+                            setViewClient({ ...viewClient, tags: newTags });
+                          }}
+                          className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
+                            selected ? 'border-transparent text-white shadow-sm' : 'border bg-muted/50 text-muted-foreground hover:border-primary/50'
+                          }`}
+                          style={selected ? { backgroundColor: tag.color || 'hsl(var(--primary))' } : {}}
+                        >
+                          {tag.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {(!viewClient.tags || viewClient.tags.length === 0) && (
+                    <p className="text-muted-foreground text-xs italic">No tags assigned — click to add</p>
+                  )}
+                </div>
+              )}
+
               {viewClient.notes && (
                 <div className="pt-4 border-t border">
                   <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Notes</p>
