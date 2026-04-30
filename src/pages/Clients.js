@@ -129,6 +129,7 @@ export default function Clients() {
       const params = new URLSearchParams({ page: p, page_size: pageSize });
       if (searchTerm) params.append('search', searchTerm);
       if (statusFilter && statusFilter !== 'all') params.append('status', statusFilter);
+      if (tagFilter.length > 0) params.append('tags', tagFilter.join(','));
       const url = `${API_URL}/api/clients?${params}`;
 
       const response = await fetch(url, { headers: getAuthHeaders(), credentials: 'include' });
@@ -195,9 +196,10 @@ export default function Clients() {
   useEffect(() => {
     fetchClients();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, statusFilter, currentPage, pageSize]);
+  }, [searchTerm, statusFilter, currentPage, pageSize, tagFilter]);
 
-  // Filter clients based on transaction filters + tags
+  // Filter clients client-side for balance and transaction type only
+  // Tag filter is applied server-side via fetchClients
   const filteredClients = clients.filter(client => {
     // Balance filter
     if (minBalance && client.net_balance < parseFloat(minBalance)) return false;
@@ -207,12 +209,6 @@ export default function Clients() {
     if (txTypeFilter === 'deposits_only' && (client.deposit_count || 0) === 0) return false;
     if (txTypeFilter === 'withdrawals_only' && (client.withdrawal_count || 0) === 0) return false;
     if (txTypeFilter === 'no_transactions' && (client.transaction_count || 0) > 0) return false;
-
-    // Tag filter (OR logic)
-    if (tagFilter.length > 0) {
-      const clientTags = client.tags || [];
-      if (!tagFilter.some(tid => clientTags.includes(tid))) return false;
-    }
 
     return true;
   });

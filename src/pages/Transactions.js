@@ -2528,7 +2528,7 @@ export default function Transactions() {
                   </Label>
                   <div className="flex flex-wrap gap-1.5 min-h-[36px] p-2 bg-muted/50 border border rounded-sm">
                     {formData.client_tags?.map((tag) => {
-                      const tagObj = clientTags.find((t) => t.name === tag);
+                      const tagObj = clientTags.find((t) => t.tag_id === tag);
                       return (
                         <span
                           key={tag}
@@ -2537,7 +2537,7 @@ export default function Transactions() {
                             backgroundColor: tagObj?.color || "#64748B",
                           }}
                         >
-                          {tag}
+                          {tagObj?.name || tag}
                           <button
                             type="button"
                             onClick={() =>
@@ -2574,8 +2574,8 @@ export default function Transactions() {
                         {clientTags.map((tag) => (
                           <SelectItem
                             key={tag.tag_id}
-                            value={tag.name}
-                            disabled={formData.client_tags?.includes(tag.name)}
+                            value={tag.tag_id}
+                            disabled={formData.client_tags?.includes(tag.tag_id)}
                           >
                             <span className="flex items-center gap-2">
                               <span
@@ -2876,7 +2876,7 @@ export default function Transactions() {
             {clientTags.map((tag) => (
               <SelectItem
                 key={tag.tag_id}
-                value={tag.name}
+                value={tag.tag_id}
                 className="text-foreground hover:bg-muted"
               >
                 <span className="flex items-center gap-2">
@@ -3131,7 +3131,7 @@ export default function Transactions() {
                             {(tx.client_tags || []).length > 0 ? (
                               tx.client_tags.map((tag) => {
                                 const tagObj = clientTags.find(
-                                  (t) => t.name === tag,
+                                  (t) => t.tag_id === tag,
                                 );
                                 return (
                                   <span
@@ -3142,7 +3142,7 @@ export default function Transactions() {
                                         tagObj?.color || "#64748B",
                                     }}
                                   >
-                                    {tag}
+                                    {tagObj?.name || tag}
                                   </span>
                                 );
                               })
@@ -4308,14 +4308,14 @@ export default function Transactions() {
           <div className="space-y-3">
             <div className="flex flex-wrap gap-1.5">
               {tagEditTags.map((tag) => {
-                const tagObj = clientTags.find((t) => t.name === tag);
+                const tagObj = clientTags.find((t) => t.tag_id === tag);
                 return (
                   <span
                     key={tag}
                     className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium text-white"
                     style={{ backgroundColor: tagObj?.color || "#64748B" }}
                   >
-                    {tag}
+                    {tagObj?.name || tag}
                     <button
                       type="button"
                       onClick={() =>
@@ -4346,9 +4346,9 @@ export default function Transactions() {
               </SelectTrigger>
               <SelectContent>
                 {clientTags
-                  .filter((t) => !tagEditTags.includes(t.name))
+                  .filter((t) => !tagEditTags.includes(t.tag_id))
                   .map((tag) => (
-                    <SelectItem key={tag.tag_id} value={tag.name}>
+                    <SelectItem key={tag.tag_id} value={tag.tag_id}>
                       <div className="flex items-center gap-2">
                         <span
                           className="w-2.5 h-2.5 rounded-full"
@@ -4358,7 +4358,7 @@ export default function Transactions() {
                       </div>
                     </SelectItem>
                   ))}
-                {clientTags.filter((t) => !tagEditTags.includes(t.name))
+                {clientTags.filter((t) => !tagEditTags.includes(t.tag_id))
                   .length === 0 && (
                   <SelectItem value="_none" disabled>
                     All tags assigned
