@@ -38,7 +38,7 @@ export default function Profile() {
   useEffect(() => {
     const load = async () => {
       try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('auth_token');
         const res = await fetch(`${API}/auth/notification-preferences`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -61,7 +61,7 @@ export default function Profile() {
     setEmailEnabled(newVal);
     setSaving(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       const res = await fetch(`${API}/auth/notification-preferences`, {
         method: 'PUT',
         headers: {
