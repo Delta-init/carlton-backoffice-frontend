@@ -7,7 +7,7 @@ import { Badge } from '../components/ui/badge';
 import { toast } from 'sonner';
 import { UserCircle, Mail, Shield, Bell, BellOff } from 'lucide-react';
 
-const API = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000/api';
+const API = process.env.REACT_APP_BACKEND_URL+"/api"  || 'http://localhost:8000/api';
 
 
 
