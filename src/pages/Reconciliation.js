@@ -644,124 +644,32 @@ export default function Reconciliation() {
   // Builds one row per account showing ALL their transactions date-grouped
   // and cross-references against uploaded statements for recon status.
   const fetchHistory = useCallback(async () => {
-    if (allAccounts.length === 0) return;
     setHistoryLoading(true);
     try {
-      const headers = getAuthHeaders();
+      const params = new URLSearchParams();
+      if (historyDateFrom) params.set('date_from', historyDateFrom);
+      if (historyDateTo)   params.set('date_to',   historyDateTo);
 
-      // 1. Fetch all uploaded statements (no filter — we need all for cross-ref)
-      const stmtRes = await fetch(`${API_URL}/api/reconciliation/statements`, { headers });
-      const stmtData = stmtRes.ok ? await stmtRes.json() : {};
-      const allStatements = stmtData.statements || [];
-
-      // Build lookup: account_id → list of statements
-      const stmtByAccount = {};
-      allStatements.forEach(s => {
-        if (!stmtByAccount[s.account_id]) stmtByAccount[s.account_id] = [];
-        stmtByAccount[s.account_id].push(s);
-      });
-
-      // 2. Fetch transactions for ALL accounts in parallel
-      const txFetches = allAccounts.map(async (acc) => {
-        try {
-          let txList = [];
-          if (acc.type === 'treasury') {
-            const r = await fetch(`${API_URL}/api/treasury/${acc.id}/history?page_size=200&limit=5000`, { headers });
-            if (r.ok) { const d = await r.json(); txList = d.items || []; }
-          } else if (acc.type === 'psp') {
-            const [sr, dr, wr] = await Promise.all([
-              fetch(`${API_URL}/api/reconciliation/psp/${acc.id}/details`, { headers }),
-              fetch(`${API_URL}/api/psp/${acc.id}/pending-transactions?page_size=200`, { headers }),
-              fetch(`${API_URL}/api/psp/${acc.id}/withdrawal-transactions?page_size=200`, { headers }),
-            ]);
-            const normalise = t => ({ ...t, amount: t.base_amount ?? t.gross_amount ?? t.amount, currency: t.base_currency || t.currency || 'USD' });
-            const srData = sr.ok ? await sr.json() : {};
-            const settled = (Array.isArray(srData) ? srData : (srData.transactions || [])).map(normalise);
-            const dep     = dr.ok ? ((await dr.json()).items || []) : [];
-            const wth     = wr.ok ? ((await wr.json()).items || []) : [];
-            const settledIds = new Set(settled.map(t => t.transaction_id));
-            txList = [...settled, ...[...dep, ...wth].filter(t => !settledIds.has(t.transaction_id)).map(normalise)];
-          } else {
-            const r = await fetch(`${API_URL}/api/vendors/${acc.id}/transactions`, { headers });
-            if (r.ok) {
-              const d = await r.json();
-              const raw = Array.isArray(d) ? d : d.items || [];
-              txList = raw.map(t => ({ ...t, amount: t.base_amount ?? t.amount, currency: t.base_currency || t.currency || 'USD' }));
-            }
-          }
-          return { acc, txList };
-        } catch { return { acc, txList: [] }; }
-      });
-
-      const results = await Promise.all(txFetches);
-
-      // 3. Build display rows: one row per account × date
-      const rows = [];
-      results.forEach(({ acc, txList }) => {
-        // Group this account's transactions by date
-        const byDate = {};
-        txList.forEach(tx => {
-          const d = (tx.created_at || tx.date || '')?.split('T')[0] || 'Unknown';
-          if (!byDate[d]) byDate[d] = { txs: [], net: 0 };
-          byDate[d].txs.push(tx);
-          byDate[d].net += Number(tx.amount) || 0;
-        });
-
-        // Cross-reference: find statement for this account that covers each date
-        const accStatements = stmtByAccount[acc.id] || [];
-
-        // Emit one row per date with transactions
-        Object.entries(byDate).forEach(([date, { txs, net }]) => {
-          // Find a statement whose statement_date matches this date (or closest)
-          const matchedStmt = accStatements.find(s =>
-            (s.statement_date || '').startsWith(date)
-          ) || null;
-
-          rows.push({
-            key: `${acc.id}-${date}`,
-            account_id: acc.id,
-            account_name: acc.name,
-            account_type: acc.type,
-            currency: acc.currency,
-            date,
-            tx_count: txs.length,
-            net_amount: net,
-            statement: matchedStmt,
-            // Status: done if a matched completed statement exists, else pending
-            status: matchedStmt ? (isDone(matchedStmt.status) ? 'done' : 'pending') : 'pending',
-          });
-        });
-
-        // Only rows with actual transactions are tracked — statement-only dates are excluded.
-      });
-
-      // Sort: newest date first, then by account name
-      rows.sort((a, b) => {
-        if (b.date !== a.date) return b.date.localeCompare(a.date);
-        return a.account_name.localeCompare(b.account_name);
-      });
-
-      // Build summary
-      const summary = { treasury: { done: 0, pending: 0 }, psp: { done: 0, pending: 0 }, exchanger: { done: 0, pending: 0 } };
-      rows.forEach(r => {
-        if (summary[r.account_type]) {
-          if (r.status === 'done') summary[r.account_type].done++;
-          else summary[r.account_type].pending++;
-        }
-      });
-
-      setHistoryRows(rows);
-      setHistorySummary(summary);
+      const res = await fetch(
+        `${API_URL}/api/reconciliation/history?${params}`,
+        { headers: getAuthHeaders() },
+      );
+      if (!res.ok) throw new Error('Failed to fetch reconciliation history');
+      const data = await res.json();
+      setHistoryRows(data.rows || []);
+      setHistorySummary(
+        data.summary || { treasury: { done: 0, pending: 0 }, psp: { done: 0, pending: 0 }, exchanger: { done: 0, pending: 0 } }
+      );
     } catch (e) {
       console.error('Error fetching history:', e);
     } finally {
       setHistoryLoading(false);
     }
-  }, [allAccounts, getAuthHeaders]);
+  }, [getAuthHeaders, historyDateFrom, historyDateTo]);
 
   useEffect(() => {
-    if (mainTab === 'history' && allAccounts.length > 0) fetchHistory();
-  }, [mainTab, fetchHistory, allAccounts.length]);
+    if (mainTab === 'history') fetchHistory();
+  }, [mainTab, fetchHistory]);
 
   useEffect(() => {
     setHistoryPage(0);
@@ -1664,27 +1572,16 @@ export default function Reconciliation() {
         {/* ═══════════════════ RECON HISTORY TAB ═══════════════════ */}
         <TabsContent value="history" className="mt-4">
           {(() => {
-            // Apply filters to historyRows
+            // Type and status filters applied client-side;
+            // date range is passed to backend as query params (fetchHistory)
             let visibleRows = historyRows;
-            if (historyTypeFilter !== 'all') visibleRows = visibleRows.filter(r => r.account_type === historyTypeFilter);
+            if (historyTypeFilter !== 'all')   visibleRows = visibleRows.filter(r => r.account_type === historyTypeFilter);
             if (historyStatusFilter !== 'all') visibleRows = visibleRows.filter(r => r.status === historyStatusFilter);
-            if (historyDateFrom) visibleRows = visibleRows.filter(r => r.date >= historyDateFrom);
-            if (historyDateTo)   visibleRows = visibleRows.filter(r => r.date <= historyDateTo);
 
-            // Compute closing running balance per account (cumulative net oldest→newest)
-            const runningBalanceMap = {}; // key: `${account_id}-${date}` → cumulative balance
-            const accountRows = {};
+            // closing_balance already computed by backend per (account + currency)
+            const runningBalanceMap = {};
             historyRows.forEach(r => {
-              if (!accountRows[r.account_id]) accountRows[r.account_id] = [];
-              accountRows[r.account_id].push(r);
-            });
-            Object.values(accountRows).forEach(rows => {
-              const sorted = [...rows].sort((a, b) => a.date.localeCompare(b.date));
-              let cum = 0;
-              sorted.forEach(r => {
-                cum += r.net_amount || 0;
-                runningBalanceMap[`${r.account_id}-${r.date}`] = cum;
-              });
+              runningBalanceMap[r.key] = r.closing_balance;
             });
 
             // Group by date for display
@@ -1860,7 +1757,7 @@ export default function Reconciliation() {
                                       </TableCell>
                                       <TableCell className="text-right py-2.5">
                                         {(() => {
-                                          const bal = runningBalanceMap[`${row.account_id}-${row.date}`];
+                                          const bal = row.closing_balance ?? runningBalanceMap[row.key];
                                           if (bal == null) return <span className="text-muted-foreground/60">—</span>;
                                           return (
                                             <span className={`font-semibold text-xs ${bal >= 0 ? 'text-primary' : 'text-red-600'}`}>

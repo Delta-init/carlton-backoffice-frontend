@@ -237,40 +237,18 @@ export default function Clients() {
   const downloadCSV = async () => {
     try {
       toast.loading('Preparing clients export...');
-      const params = new URLSearchParams({ page: 1, page_size: 100000 });
+      const params = new URLSearchParams();
       if (searchTerm) params.append('search', searchTerm);
       if (statusFilter && statusFilter !== 'all') params.append('status', statusFilter);
       if (tagFilter.length > 0) params.append('tags', tagFilter.join(','));
-      const response = await fetch(`${API_URL}/api/clients?${params}`, {
+      if (minBalance) params.append('min_balance', minBalance);
+      if (maxBalance) params.append('max_balance', maxBalance);
+      if (txTypeFilter && txTypeFilter !== 'all') params.append('tx_type', txTypeFilter);
+      const response = await fetch(`${API_URL}/api/clients/export?${params}`, {
         headers: getAuthHeaders(), credentials: 'include'
       });
       if (!response.ok) throw new Error();
-      const data = await response.json();
-      const allClients = (data.items || []).filter(c => {
-        if (minBalance && c.net_balance < parseFloat(minBalance)) return false;
-        if (maxBalance && c.net_balance > parseFloat(maxBalance)) return false;
-        if (txTypeFilter === 'deposits_only' && (c.deposit_count || 0) === 0) return false;
-        if (txTypeFilter === 'withdrawals_only' && (c.withdrawal_count || 0) === 0) return false;
-        if (txTypeFilter === 'no_transactions' && (c.transaction_count || 0) > 0) return false;
-        return true;
-      });
-      const headers = ['Client ID', 'Name', 'Email', 'Phone', 'Country', 'KYC Status', 'Tags', 'Total Deposits', 'Deposit Count', 'Total Withdrawals', 'Withdrawal Count', 'Net Balance'];
-      const rows = allClients.map(c => [
-        c.client_id,
-        `${c.first_name} ${c.last_name}`,
-        c.email,
-        c.phone || '',
-        c.country || '',
-        c.kyc_status,
-        (c.tags || []).map(tid => availableTags.find(t => t.tag_id === tid)?.name || tid).join('; '),
-        c.total_deposits || 0,
-        c.deposit_count || 0,
-        c.total_withdrawals || 0,
-        c.withdrawal_count || 0,
-        c.net_balance || 0
-      ]);
-      const csvContent = [headers, ...rows].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -278,7 +256,7 @@ export default function Clients() {
       link.click();
       URL.revokeObjectURL(url);
       toast.dismiss();
-      toast.success(`Exported ${allClients.length} clients`);
+      toast.success('Clients exported');
     } catch {
       toast.dismiss();
       toast.error('Failed to export clients');

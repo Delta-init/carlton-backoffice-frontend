@@ -42,6 +42,7 @@ import {
   RotateCcw,
   Sun,
   Moon,
+  UserCircle,
 } from 'lucide-react';
 
 // ── Theme styles ─────────────────────────────────────────────────────────────
@@ -388,6 +389,13 @@ export default function Layout() {
                   <p className={`text-xs mt-0.5 ${s.userSubText}`}>{user?.email}</p>
                 </div>
                 <DropdownMenuSeparator className={s.dropdownBorder} />
+                <DropdownMenuItem
+                  onClick={() => navigate('/profile')}
+                  className={`cursor-pointer rounded-[4px] ${s.dropdownHover}`}
+                >
+                  <UserCircle className="w-4 h-4 mr-2" />
+                  Profile
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => navigate('/settings')}
                   className={`cursor-pointer rounded-[4px] ${s.dropdownHover}`}

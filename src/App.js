@@ -31,6 +31,7 @@ import LogsManagement from "./pages/Logs";
 import ReinstateCenter from "./pages/ReinstateCenter";
 import Layout from "./components/Layout";
 import TransactionRequests from "./pages/TransactionRequests";
+import Profile from "./pages/Profile";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
 import { usePermissions } from "./context/usePermissions";
@@ -132,6 +133,7 @@ function AppRouter() {
         <Route path="reconciliation" element={<Reconciliation />} />
         <Route path="messages" element={<Messages />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="profile" element={<Profile />} />
         <Route
           path="roles"
           element={
@@ -140,6 +142,9 @@ function AppRouter() {
             </ProtectedRoute>
           }
         />
+
+
+        
         <Route
           path="accountant"
           element={

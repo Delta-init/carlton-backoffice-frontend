@@ -192,7 +192,8 @@ export default function Exchangers() {
     try {
       const response = await fetch(`${API_URL}/api/vendors/${vendorId}/transactions`, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
-        setPendingTransactions(await response.json());
+        const data = await response.json();
+        setPendingTransactions(Array.isArray(data) ? data : (data.items || []));
       }
     } catch (error) {
       console.error('Error fetching vendor transactions:', error);
