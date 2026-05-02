@@ -656,10 +656,45 @@ export default function Reconciliation() {
       );
       if (!res.ok) throw new Error('Failed to fetch reconciliation history');
       const data = await res.json();
-      setHistoryRows(data.rows || []);
-      setHistorySummary(
-        data.summary || { treasury: { done: 0, pending: 0 }, psp: { done: 0, pending: 0 }, exchanger: { done: 0, pending: 0 } }
-      );
+
+      if (Array.isArray(data)) {
+        // Backend returned raw array of db.reconciliations records
+        const defaultSummary = { treasury: { done: 0, pending: 0 }, psp: { done: 0, pending: 0 }, exchanger: { done: 0, pending: 0 } };
+        const rows = data.map(rec => {
+          const status = rec.status === 'completed' ? 'done' : 'pending';
+          const accType = rec.account_type || 'treasury';
+          if (accType in defaultSummary) defaultSummary[accType][status]++;
+          // statement_date (mark-done flow) OR date (submission flow)
+          const dateStr = (rec.statement_date || rec.date || rec.reconciliation_date || '').split('T')[0];
+          return {
+            key: rec.recon_id || rec.statement_id,
+            account_id: rec.account_id,
+            account_name: rec.account_name || rec.account_id,
+            account_type: accType,
+            date: dateStr,
+            currency: rec.currency || '',
+            net_amount: rec.net_amount || 0,
+            tx_count: rec.matched_count || rec.tx_count || 0,
+            statement: {
+              statement_id: rec.statement_id || rec.recon_id,
+              filename: rec.filename || '',
+              description: rec.remarks || '',
+              notes: rec.remarks || '',
+              status: rec.status,
+              reconciliation_date: rec.reconciliation_date,
+            },
+            status,
+            closing_balance: rec.closing_balance || null,
+          };
+        });
+        setHistoryRows(rows);
+        setHistorySummary(defaultSummary);
+      } else {
+        setHistoryRows(data.rows || []);
+        setHistorySummary(
+          data.summary || { treasury: { done: 0, pending: 0 }, psp: { done: 0, pending: 0 }, exchanger: { done: 0, pending: 0 } }
+        );
+      }
     } catch (e) {
       console.error('Error fetching history:', e);
     } finally {
@@ -1739,7 +1774,7 @@ export default function Reconciliation() {
                                       className={`text-xs ${row.status === 'done' ? 'bg-green-50/30' : 'bg-yellow-50/20'}`}
                                     >
                                       <TableCell className="font-medium text-foreground py-2.5">
-                                        {row.account_name}
+                                        {getAccountName(row.account_id) || row.account_name}
                                       </TableCell>
                                       <TableCell className="py-2.5">
                                         <span className={`inline-flex items-center gap-1 text-xs font-medium ${tc?.color}`}>
