@@ -305,6 +305,11 @@ export default function Clients() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // CRM Customer ID is required when creating a new client
+    if (!selectedClient && !formData.crm_customer_id?.trim()) {
+      toast.error('CRM Customer ID is required');
+      return;
+    }
     setSubmitting(true);
     try {
       const url = selectedClient
@@ -502,13 +507,16 @@ export default function Clients() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">CRM Customer ID</Label>
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
+                    CRM Customer ID {!selectedClient && <span className="text-red-500">*</span>}
+                  </Label>
                   <Input
                     value={formData.crm_customer_id}
                     onChange={(e) => setFormData({ ...formData, crm_customer_id: e.target.value })}
                     className="bg-muted/50 border text-foreground focus:border-[#66FCF1] font-mono"
                     placeholder="e.g., CRM-001"
                     data-testid="client-crm-id"
+                    required={!selectedClient}
                   />
                 </div>
               </div>

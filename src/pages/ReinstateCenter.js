@@ -31,6 +31,7 @@ import {
   Minus,
   Search,
   X,
+  Building2,
 } from "lucide-react";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -408,6 +409,21 @@ const tabConfig = [
       { label: "PSP", value: item.psp_name || item.psp_id || "-" },
       { label: "Net Amount", value: `${item.currency || ""} ${Number(item.net_amount || 0).toLocaleString()}` },
       { label: "Status", value: item.status },
+    ],
+  },
+  {
+    key: "treasury-transfers",
+    label: "Treasury Transfers",
+    icon: Building2,
+    endpoint: "treasury-transfers",
+    idField: "transfer_id",
+    searchPlaceholder: "Search by transfer ID, account name, notes...",
+    displayFields: (item) => [
+      { label: "Transfer ID", value: item.transfer_id || "-" },
+      { label: "From", value: item.source_account_name || "-" },
+      { label: "To", value: item.destination_account_name || "-" },
+      { label: "Amount", value: `${item.source_currency || ""} ${Number(item.source_amount || 0).toLocaleString()}` },
+      { label: "Date", value: (item.created_at || "").split("T")[0] || "-" },
     ],
   },
 ];
