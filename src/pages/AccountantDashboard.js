@@ -2340,6 +2340,7 @@ export default function AccountantDashboard() {
                     <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
                       Proof of Payment ({imgs.length})
                     </p>
+                    
                     <div className="grid grid-cols-2 gap-2">
                       {imgs.map((url, i) => {
                         const src = url?.startsWith("http")
