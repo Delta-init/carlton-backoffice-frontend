@@ -1523,10 +1523,15 @@ export default function Transactions() {
                     clients={clients}
                     value={formData.client_id}
                     onChange={(id, client) => {
+                      // client.tags contains tag IDs; resolve to names for the transaction form
+                      const resolvedTags = (client?.tags || []).map(tagId => {
+                        const found = clientTags.find(t => t.tag_id === tagId);
+                        return found ? found.name : null;
+                      }).filter(Boolean);
                       setFormData({
                         ...formData,
                         client_id: id,
-                        client_tags: client?.tags || [],
+                        client_tags: resolvedTags,
                       });
                       setClientSearchOpen(false);
                     }}
@@ -3273,9 +3278,10 @@ export default function Transactions() {
                           <div className="flex flex-wrap gap-0.5 flex-1 min-w-0">
                             {(tx.client_tags || []).length > 0 ? (
                               tx.client_tags.map((tag) => {
-                                const tagObj = clientTags.find(
-                                  (t) => t.name === tag,
-                                );
+                                // tag may be a name OR a legacy tag_id — try both
+                                const tagObj = clientTags.find(t => t.name === tag)
+                                  || clientTags.find(t => t.tag_id === tag);
+                                const displayName = tagObj ? tagObj.name : tag;
                                 return (
                                   <span
                                     key={tag}
@@ -3285,7 +3291,7 @@ export default function Transactions() {
                                         tagObj?.color || "#64748B",
                                     }}
                                   >
-                                    {tag}
+                                    {displayName}
                                   </span>
                                 );
                               })

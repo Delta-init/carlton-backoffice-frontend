@@ -1417,9 +1417,10 @@ export default function AccountantDashboard() {
                           <div className="flex flex-wrap gap-0.5">
                             {(tx.client_tags || []).length > 0 ? (
                               tx.client_tags.map((tag) => {
-                                const tagObj = clientTags.find(
-                                  (t) => t.name === tag,
-                                );
+                                // tag may be a name OR a legacy tag_id — try both
+                                const tagObj = clientTags.find(t => t.name === tag)
+                                  || clientTags.find(t => t.tag_id === tag);
+                                const displayName = tagObj ? tagObj.name : tag;
                                 return (
                                   <span
                                     key={tag}
@@ -1429,7 +1430,7 @@ export default function AccountantDashboard() {
                                         tagObj?.color || "#64748B",
                                     }}
                                   >
-                                    {tag}
+                                    {displayName}
                                   </span>
                                 );
                               })
