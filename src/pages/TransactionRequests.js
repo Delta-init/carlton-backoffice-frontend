@@ -990,7 +990,9 @@ export default function TransactionRequests() {
   const [psps, setPsps] = useState([]);
   const [vendors, setVendors] = useState([]);
  const [clientTags, setClientTags] = useState([]);
-  const [formTags, setFormTags] = useState([]); 
+  const [formTags, setFormTags] = useState([]);
+  const [txnTags, setTxnTags] = useState([]);
+  const [formTxnTags, setFormTxnTags] = useState([]);
 
   const authHeaders = useCallback(() => {
     const token = localStorage.getItem("auth_token");
@@ -1072,6 +1074,11 @@ export default function TransactionRequests() {
           headers: authHeaders(),
         });
         if (tagRes.ok) setClientTags(await tagRes.json());
+        // Fetch transaction tags
+        const txnTagRes = await fetch(`${API_URL}/api/transaction-tags`, {
+          headers: authHeaders(),
+        });
+        if (txnTagRes.ok) setTxnTags(await txnTagRes.json());
       } catch (e) {
         console.error(e);
       }
@@ -1108,6 +1115,7 @@ export default function TransactionRequests() {
       });
       proofImages.forEach(img => fd.append("proof_images", img));
       if (formTags.length > 0) fd.append("client_tags", formTags.join(","));
+      if (formTxnTags.length > 0) fd.append("transaction_tags", formTxnTags.join(","));
       const headers = authHeaders();
       delete headers["Content-Type"];
       const res = await fetch(`${API_URL}/api/transaction-requests`, {
@@ -1127,6 +1135,7 @@ export default function TransactionRequests() {
         setCreateOpen(false);
         setForm({ ...defaultForm });
         setFormTags([]);
+        setFormTxnTags([]);
         setProofImages([]);
         setProofPreviews([]);
         fetchRequests();
@@ -2008,12 +2017,13 @@ export default function TransactionRequests() {
                 data-testid="txreq-transaction-date"
               />
             </div>
+            {/* Client Tags — read-only, auto-filled from selected client */}
             <div>
               <Label className="text-xs text-muted-foreground uppercase">
-                Client Tags
+                Client Tags <span className="normal-case text-[10px] font-normal text-muted-foreground/60">(auto-filled)</span>
               </Label>
-              <div className="flex flex-wrap gap-1.5 min-h-[36px] p-2 bg-muted/50 border border rounded-sm">
-                {formTags.map((tag) => {
+              <div className="flex flex-wrap gap-1.5 min-h-[36px] p-2 bg-muted/30 border rounded-sm cursor-not-allowed opacity-80">
+                {formTags.length > 0 ? formTags.map((tag) => {
                   const tagObj = clientTags.find((t) => t.name === tag);
                   return (
                     <span
@@ -2022,10 +2032,33 @@ export default function TransactionRequests() {
                       style={{ backgroundColor: tagObj?.color || "#64748B" }}
                     >
                       {tag}
+                    </span>
+                  );
+                }) : (
+                  <span className="text-xs text-muted-foreground italic">Filled automatically when a client is selected</span>
+                )}
+              </div>
+            </div>
+
+            {/* Transaction Tags — editable at create time */}
+            <div>
+              <Label className="text-xs text-muted-foreground uppercase">
+                Transaction Tags
+              </Label>
+              <div className="flex flex-wrap gap-1.5 min-h-[36px] p-2 bg-muted/50 border rounded-sm">
+                {formTxnTags.map((tag) => {
+                  const tagObj = txnTags.find((t) => t.name === tag);
+                  return (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium text-white"
+                      style={{ backgroundColor: tagObj?.color || "#f59e0b" }}
+                    >
+                      {tag}
                       <button
                         type="button"
                         onClick={() =>
-                          setFormTags(formTags.filter((t) => t !== tag))
+                          setFormTxnTags(formTxnTags.filter((t) => t !== tag))
                         }
                         className="ml-0.5 hover:bg-card/20 rounded-full w-3.5 h-3.5 flex items-center justify-center text-[9px]"
                       >
@@ -2036,19 +2069,19 @@ export default function TransactionRequests() {
                 })}
                 <Select
                   onValueChange={(val) => {
-                    if (!formTags.includes(val))
-                      setFormTags([...formTags, val]);
+                    if (!formTxnTags.includes(val))
+                      setFormTxnTags([...formTxnTags, val]);
                   }}
                 >
                   <SelectTrigger className="w-auto h-6 border-0 bg-transparent text-xs text-muted-foreground p-0 px-1 shadow-none">
                     <span>+ Add tag</span>
                   </SelectTrigger>
                   <SelectContent>
-                    {clientTags.map((tag) => (
+                    {txnTags.map((tag) => (
                       <SelectItem
                         key={tag.tag_id}
                         value={tag.name}
-                        disabled={formTags.includes(tag.name)}
+                        disabled={formTxnTags.includes(tag.name)}
                       >
                         <span className="flex items-center gap-2">
                           <span

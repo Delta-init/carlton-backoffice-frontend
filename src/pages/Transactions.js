@@ -348,8 +348,10 @@ export default function Transactions() {
     // Client USDT details (for withdrawal to USDT)
     client_usdt_address: "",
     client_usdt_network: "",
-    // Client tags
+    // Client tags (auto-filled from client, read-only)
     client_tags: [],
+    // Transaction tags (set at create time)
+    transaction_tags: [],
   });
 
   const currencies = ["USD", "EUR", "GBP", "AED", "SAR", "INR", "JPY", "USDT"];
@@ -837,6 +839,9 @@ export default function Transactions() {
       }
       if (formData.client_tags && formData.client_tags.length > 0) {
         formDataToSend.append("client_tags", formData.client_tags.join(","));
+      }
+      if (formData.transaction_tags && formData.transaction_tags.length > 0) {
+        formDataToSend.append("transaction_tags", formData.transaction_tags.join(","));
       }
       // Transaction mode and collecting person
       formDataToSend.append(
@@ -2623,20 +2628,42 @@ export default function Transactions() {
                   />
                 </div>
 
+                {/* Client Tags — read-only, auto-filled from selected client */}
                 <div className="space-y-2">
                   <Label className="text-muted-foreground text-xs uppercase tracking-wider">
-                    Client Tags
+                    Client Tags <span className="normal-case text-[10px] font-normal text-muted-foreground/60">(auto-filled)</span>
                   </Label>
-                  <div className="flex flex-wrap gap-1.5 min-h-[36px] p-2 bg-muted/50 border border rounded-sm">
-                    {formData.client_tags?.map((tag) => {
+                  <div className="flex flex-wrap gap-1.5 min-h-[36px] p-2 bg-muted/30 border rounded-sm cursor-not-allowed opacity-80">
+                    {formData.client_tags?.length > 0 ? formData.client_tags.map((tag) => {
                       const tagObj = clientTags.find((t) => t.name === tag);
                       return (
                         <span
                           key={tag}
                           className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium text-white"
-                          style={{
-                            backgroundColor: tagObj?.color || "#64748B",
-                          }}
+                          style={{ backgroundColor: tagObj?.color || "#64748B" }}
+                        >
+                          {tag}
+                        </span>
+                      );
+                    }) : (
+                      <span className="text-xs text-muted-foreground italic">Filled automatically when a client is selected</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Transaction Tags — editable at create time */}
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">
+                    Transaction Tags
+                  </Label>
+                  <div className="flex flex-wrap gap-1.5 min-h-[36px] p-2 bg-muted/50 border rounded-sm">
+                    {formData.transaction_tags?.map((tag) => {
+                      const tagObj = txnTags.find((t) => t.name === tag);
+                      return (
+                        <span
+                          key={tag}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium text-white"
+                          style={{ backgroundColor: tagObj?.color || "#f59e0b" }}
                         >
                           {tag}
                           <button
@@ -2644,9 +2671,7 @@ export default function Transactions() {
                             onClick={() =>
                               setFormData({
                                 ...formData,
-                                client_tags: formData.client_tags.filter(
-                                  (t) => t !== tag,
-                                ),
+                                transaction_tags: formData.transaction_tags.filter((t) => t !== tag),
                               })
                             }
                             className="ml-0.5 hover:bg-card/20 rounded-full w-3.5 h-3.5 flex items-center justify-center text-[9px]"
@@ -2658,25 +2683,25 @@ export default function Transactions() {
                     })}
                     <Select
                       onValueChange={(val) => {
-                        if (!formData.client_tags?.includes(val))
+                        if (!formData.transaction_tags?.includes(val))
                           setFormData({
                             ...formData,
-                            client_tags: [...(formData.client_tags || []), val],
+                            transaction_tags: [...(formData.transaction_tags || []), val],
                           });
                       }}
                     >
                       <SelectTrigger
                         className="w-auto h-6 border-0 bg-transparent text-xs text-muted-foreground p-0 px-1 shadow-none"
-                        data-testid="tx-tag-select"
+                        data-testid="tx-txn-tag-select"
                       >
                         <span>+ Add tag</span>
                       </SelectTrigger>
                       <SelectContent>
-                        {clientTags.map((tag) => (
+                        {txnTags.map((tag) => (
                           <SelectItem
                             key={tag.tag_id}
                             value={tag.name}
-                            disabled={formData.client_tags?.includes(tag.name)}
+                            disabled={formData.transaction_tags?.includes(tag.name)}
                           >
                             <span className="flex items-center gap-2">
                               <span
