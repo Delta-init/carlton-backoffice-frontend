@@ -908,6 +908,8 @@ export default function Transactions() {
       client_bank_currency: "USD",
       client_usdt_address: "",
       client_usdt_network: "",
+      client_tags: [],
+      transaction_tags: [],
     });
     setProofImages([]);
     setProofPreviews([]);
