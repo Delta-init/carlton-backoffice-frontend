@@ -1257,6 +1257,7 @@ export default function Transactions() {
         "Date", "Client", "Email", "Type", "Payment Currency",
         "Amount", "Exchange Rate", "USD Amount",
         "Status", "Destination", "Reference", "CRM Reference", "Description",
+        "Client Tags", "Transaction Tags",
       ];
       const rows = allData.map((tx) => [
         formatDate(tx.transaction_date || tx.created_at),
@@ -1272,6 +1273,8 @@ export default function Transactions() {
         tx.reference || "",
         tx.crm_reference || "",
         tx.description || "",
+        (tx.client_tags || []).join("; "),
+        (tx.transaction_tags || []).join("; "),
       ]);
 
       const csvContent = [
@@ -1303,6 +1306,7 @@ export default function Transactions() {
         "Date", "Client", "Email", "Type", "Payment Currency",
         "Amount", "Exchange Rate", "USD Amount",
         "Status", "Destination", "Reference", "CRM Reference", "Description",
+        "Client Tags", "Transaction Tags",
       ];
       const rows = allData.map((tx) => ({
         "Date": formatDate(tx.transaction_date || tx.created_at),
@@ -1318,6 +1322,8 @@ export default function Transactions() {
         "Reference": tx.reference || "",
         "CRM Reference": tx.crm_reference || "",
         "Description": tx.description || "",
+        "Client Tags": (tx.client_tags || []).join("; "),
+        "Transaction Tags": (tx.transaction_tags || []).join("; "),
       }));
 
       const ws = XLSX.utils.json_to_sheet(rows, { header: headers });
@@ -1334,6 +1340,7 @@ export default function Transactions() {
         { wch: 14 }, { wch: 22 }, { wch: 26 }, { wch: 12 }, { wch: 16 },
         { wch: 12 }, { wch: 14 }, { wch: 12 },
         { wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 22 },
+        { wch: 22 }, { wch: 22 },
       ];
 
       const wb = XLSX.utils.book_new();
@@ -1354,6 +1361,7 @@ export default function Transactions() {
       const headers = [
         "Date", "Client", "Email", "Type", "Payment Currency",
         "Amount", "USD Amount", "Status", "Destination",
+        "Client Tags", "Transaction Tags",
       ];
       const rows = allData.map((tx) => [
         formatDate(tx.transaction_date || tx.created_at),
@@ -1365,6 +1373,8 @@ export default function Transactions() {
         tx.amount,
         tx.status,
         getDestinationDisplay(tx),
+        (tx.client_tags || []).join("; "),
+        (tx.transaction_tags || []).join("; "),
       ]);
 
       const totalDeposits = allData
