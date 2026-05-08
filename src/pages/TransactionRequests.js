@@ -215,6 +215,7 @@ function EditableRequestCard({
   onDelete,
   onProcess,
   clientTags,
+  txnTags,
 }) {
   const [expanded, setExpanded] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -385,6 +386,18 @@ function EditableRequestCard({
                 key={tag}
                 className="px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white whitespace-nowrap"
                 style={{ backgroundColor: tagObj?.color || "#64748B" }}
+              >
+                {tag}
+              </span>
+            );
+          })}
+          {(req.transaction_tags || []).map((tag) => {
+            const tagObj = (txnTags || []).find((t) => t.name === tag);
+            return (
+              <span
+                key={tag}
+                className="px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white whitespace-nowrap border border-white/30"
+                style={{ backgroundColor: tagObj?.color || "#0ea5e9" }}
               >
                 {tag}
               </span>
@@ -909,6 +922,46 @@ function EditableRequestCard({
                     <span className="text-card-foreground font-medium">{v}</span>
                   </div>
                 ))}
+              {/* Client Tags */}
+              {(req.client_tags || []).length > 0 && (
+                <div className="col-span-2 sm:col-span-4">
+                  <span className="text-[10px] text-muted-foreground uppercase block mb-1">Client Tags</span>
+                  <div className="flex flex-wrap gap-1">
+                    {(req.client_tags || []).map((tag) => {
+                      const tagObj = clientTags.find((t) => t.name === tag);
+                      return (
+                        <span
+                          key={tag}
+                          className="px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white"
+                          style={{ backgroundColor: tagObj?.color || "#64748B" }}
+                        >
+                          {tag}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              {/* Transaction Tags */}
+              {(req.transaction_tags || []).length > 0 && (
+                <div className="col-span-2 sm:col-span-4">
+                  <span className="text-[10px] text-muted-foreground uppercase block mb-1">Transaction Tags</span>
+                  <div className="flex flex-wrap gap-1">
+                    {(req.transaction_tags || []).map((tag) => {
+                      const tagObj = (txnTags || []).find((t) => t.name === tag);
+                      return (
+                        <span
+                          key={tag}
+                          className="px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white border border-white/30"
+                          style={{ backgroundColor: tagObj?.color || "#0ea5e9" }}
+                        >
+                          {tag}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
@@ -1586,6 +1639,7 @@ export default function TransactionRequests() {
               onDelete={handleDelete}
               onProcess={openProcess}
               clientTags={clientTags}
+              txnTags={txnTags}
             />
           ))
         )}
