@@ -1515,7 +1515,7 @@ export default function TransactionRequests() {
                 setSearchQuery(e.target.value);
                 setPage(1);
               }}
-              placeholder="Client, reference, CRM ref..."
+              placeholder="Client, email, reference, CRM ref..."
               className="pl-8 h-8 text-sm border"
               data-testid="filter-search"
             />
