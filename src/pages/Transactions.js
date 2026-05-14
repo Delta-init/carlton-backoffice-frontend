@@ -3355,7 +3355,7 @@ export default function Transactions() {
                               tx.transaction_tags.map((tag) => {
                                 const tagObj = txnTags.find(
                                   (t) => t.name === tag,
-                                );
+                                ) || txnTags.find((t) => t.tag_id === tag);
                                 return (
                                   <span
                                     key={tag}
@@ -3365,7 +3365,7 @@ export default function Transactions() {
                                         tagObj?.color || "#F59E0B",
                                     }}
                                   >
-                                    {tag}
+                                    {tagObj?.name || tag}
                                   </span>
                                 );
                               })
