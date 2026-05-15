@@ -380,26 +380,28 @@ function EditableRequestCard({
             </Badge>
           )}
           {(req.client_tags || []).map((tag) => {
-            const tagObj = clientTags.find((t) => t.name === tag);
+            const tagObj = clientTags.find((t) => t.name === tag)
+              || clientTags.find((t) => t.tag_id === tag);
             return (
               <span
                 key={tag}
                 className="px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white whitespace-nowrap"
                 style={{ backgroundColor: tagObj?.color || "#64748B" }}
               >
-                {tag}
+                {tagObj?.name || tag}
               </span>
             );
           })}
           {(req.transaction_tags || []).map((tag) => {
-            const tagObj = (txnTags || []).find((t) => t.name === tag);
+            const tagObj = (txnTags || []).find((t) => t.name === tag)
+              || (txnTags || []).find((t) => t.tag_id === tag);
             return (
               <span
                 key={tag}
                 className="px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white whitespace-nowrap border border-white/30"
                 style={{ backgroundColor: tagObj?.color || "#0ea5e9" }}
               >
-                {tag}
+                {tagObj?.name || tag}
               </span>
             );
           })}
@@ -928,14 +930,15 @@ function EditableRequestCard({
                   <span className="text-[10px] text-muted-foreground uppercase block mb-1">Client Tags</span>
                   <div className="flex flex-wrap gap-1">
                     {(req.client_tags || []).map((tag) => {
-                      const tagObj = clientTags.find((t) => t.name === tag);
+                      const tagObj = clientTags.find((t) => t.name === tag)
+                        || clientTags.find((t) => t.tag_id === tag);
                       return (
                         <span
                           key={tag}
                           className="px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white"
                           style={{ backgroundColor: tagObj?.color || "#64748B" }}
                         >
-                          {tag}
+                          {tagObj?.name || tag}
                         </span>
                       );
                     })}
@@ -948,14 +951,15 @@ function EditableRequestCard({
                   <span className="text-[10px] text-muted-foreground uppercase block mb-1">Transaction Tags</span>
                   <div className="flex flex-wrap gap-1">
                     {(req.transaction_tags || []).map((tag) => {
-                      const tagObj = (txnTags || []).find((t) => t.name === tag);
+                      const tagObj = (txnTags || []).find((t) => t.name === tag)
+                        || (txnTags || []).find((t) => t.tag_id === tag);
                       return (
                         <span
                           key={tag}
                           className="px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white border border-white/30"
                           style={{ backgroundColor: tagObj?.color || "#0ea5e9" }}
                         >
-                          {tag}
+                          {tagObj?.name || tag}
                         </span>
                       );
                     })}
@@ -2078,14 +2082,15 @@ export default function TransactionRequests() {
               </Label>
               <div className="flex flex-wrap gap-1.5 min-h-[36px] p-2 bg-muted/30 border rounded-sm cursor-not-allowed opacity-80">
                 {formTags.length > 0 ? formTags.map((tag) => {
-                  const tagObj = clientTags.find((t) => t.name === tag);
+                  const tagObj = clientTags.find((t) => t.name === tag)
+                    || clientTags.find((t) => t.tag_id === tag);
                   return (
                     <span
                       key={tag}
                       className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium text-white"
                       style={{ backgroundColor: tagObj?.color || "#64748B" }}
                     >
-                      {tag}
+                      {tagObj?.name || tag}
                     </span>
                   );
                 }) : (
