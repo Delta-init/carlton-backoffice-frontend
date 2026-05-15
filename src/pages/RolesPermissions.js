@@ -74,6 +74,7 @@ export default function RolesPermissions() {
   const [loading, setLoading] = useState(true);
   const [mainTab, setMainTab] = useState('roles');
   const [borrowerCompanies, setBorrowerCompanies] = useState([]);
+  const [transactionTags, setTransactionTags] = useState([]);
 
   // Dialogs
   const [isAddRoleOpen, setIsAddRoleOpen] = useState(false);
@@ -87,7 +88,10 @@ export default function RolesPermissions() {
     description: '',
     hierarchy_level: 50,
     permissions: {},
-    borrower_ids: null,         // null = all borrower companies; array = specific only
+    borrower_ids: null,             // null = all borrower companies; array = specific only
+    ie_own_entries_only: false,     // true = data entry team sees only their own entries
+    transaction_type_ids: null,     // null = all types; array = specific types only
+    allowed_transaction_tags: null, // null = all tags; array = specific tag IDs only
   });
 
   const getAuthHeaders = () => {
@@ -146,6 +150,18 @@ export default function RolesPermissions() {
       } catch (e) { console.error('Failed to fetch borrower companies', e); }
     };
     fetchBorrowerCompanies();
+
+    // Fetch all transaction tags for the selector
+    const fetchTransactionTags = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/transaction-tags`, { headers: getAuthHeaders() });
+        if (res.ok) {
+          const data = await res.json();
+          setTransactionTags(Array.isArray(data) ? data : []);
+        }
+      } catch (e) { console.error('Failed to fetch transaction tags', e); }
+    };
+    fetchTransactionTags();
   }, [fetchRoles, fetchModulesAndActions]);
 
   const handleCreateRole = async () => {
@@ -189,6 +205,9 @@ export default function RolesPermissions() {
           permissions: roleForm.permissions,
           hierarchy_level: roleForm.hierarchy_level,
           borrower_ids: roleForm.borrower_ids,
+          ie_own_entries_only: roleForm.ie_own_entries_only,
+          transaction_type_ids: roleForm.transaction_type_ids,
+          allowed_transaction_tags: roleForm.allowed_transaction_tags,
         }),
       });
       
@@ -213,6 +232,9 @@ export default function RolesPermissions() {
       hierarchy_level: role.hierarchy_level || 50,
       permissions: role.permissions || {},
       borrower_ids: role.borrower_ids || null,
+      ie_own_entries_only: role.ie_own_entries_only || false,
+      transaction_type_ids: role.transaction_type_ids || null,
+      allowed_transaction_tags: role.allowed_transaction_tags || null,
     });
     setIsEditRoleOpen(true);
   };
@@ -225,6 +247,9 @@ export default function RolesPermissions() {
       hierarchy_level: 50,
       permissions: {},
       borrower_ids: null,
+      ie_own_entries_only: false,
+      transaction_type_ids: null,
+      allowed_transaction_tags: null,
     });
   };
 
@@ -320,7 +345,10 @@ export default function RolesPermissions() {
           <TableBody>
             {modules.map(module => {
               const isLoans = module.id === 'loans';
+              const isTransactions = module.id === 'transactions';
               const hasLoansPerm = isLoans && (roleForm.permissions['loans']?.length || 0) > 0;
+              const hasTransactionsPerm = isTransactions && (roleForm.permissions['transactions']?.length || 0) > 0;
+              const TRANSACTION_TYPES = ['deposit','withdrawal','transfer','commission','rebate','adjustment'];
               return (
                 <>
                 <TableRow key={module.id} className="border hover:bg-muted/50">
@@ -392,6 +420,93 @@ export default function RolesPermissions() {
                               {company.loan_stats?.active_loans > 0 && (
                                 <span className="ml-1 opacity-60">({company.loan_stats.active_loans} loans)</span>
                               )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+
+                {/* Transactions — allowed transaction types selector */}
+                {hasTransactionsPerm && (
+                  <TableRow key="tx-types" className="bg-amber-50/40 border-slate-200">
+                    <TableCell colSpan={actions.length + 2} className="py-2 px-4">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs font-semibold text-amber-700 shrink-0">Allowed Types:</span>
+                        <button
+                          onClick={() => setRoleForm(prev => ({ ...prev, transaction_type_ids: null }))}
+                          className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${
+                            roleForm.transaction_type_ids === null
+                              ? 'bg-amber-600 text-white border-amber-600'
+                              : 'bg-white text-slate-500 border-slate-300 hover:border-amber-400'
+                          }`}
+                        >All</button>
+                        {TRANSACTION_TYPES.map(type => {
+                          const selected = Array.isArray(roleForm.transaction_type_ids) &&
+                            roleForm.transaction_type_ids.includes(type);
+                          return (
+                            <button
+                              key={type}
+                              onClick={() => {
+                                setRoleForm(prev => {
+                                  const current = Array.isArray(prev.transaction_type_ids) ? prev.transaction_type_ids : [];
+                                  const next = selected
+                                    ? current.filter(t => t !== type)
+                                    : [...current, type];
+                                  return { ...prev, transaction_type_ids: next.length ? next : null };
+                                });
+                              }}
+                              className={`text-xs px-2.5 py-1 rounded-full border font-medium capitalize transition-colors ${
+                                selected
+                                  ? 'bg-amber-100 text-amber-700 border-amber-400'
+                                  : 'bg-white text-slate-500 border-slate-300 hover:border-amber-400 hover:text-amber-600'
+                              }`}
+                            >{type}</button>
+                          );
+                        })}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+
+                {/* Transactions — allowed transaction tags selector */}
+                {hasTransactionsPerm && transactionTags.length > 0 && (
+                  <TableRow key="tx-tags" className="bg-orange-50/40 border-slate-200">
+                    <TableCell colSpan={actions.length + 2} className="py-2 px-4">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs font-semibold text-orange-700 shrink-0">Allowed Tags:</span>
+                        <button
+                          onClick={() => setRoleForm(prev => ({ ...prev, allowed_transaction_tags: null }))}
+                          className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${
+                            roleForm.allowed_transaction_tags === null
+                              ? 'bg-orange-600 text-white border-orange-600'
+                              : 'bg-white text-slate-500 border-slate-300 hover:border-orange-400'
+                          }`}
+                        >All</button>
+                        {transactionTags.map(tag => {
+                          const selected = Array.isArray(roleForm.allowed_transaction_tags) &&
+                            roleForm.allowed_transaction_tags.includes(tag.tag_id);
+                          return (
+                            <button
+                              key={tag.tag_id}
+                              onClick={() => {
+                                setRoleForm(prev => {
+                                  const current = Array.isArray(prev.allowed_transaction_tags) ? prev.allowed_transaction_tags : [];
+                                  const next = selected
+                                    ? current.filter(id => id !== tag.tag_id)
+                                    : [...current, tag.tag_id];
+                                  return { ...prev, allowed_transaction_tags: next.length ? next : null };
+                                });
+                              }}
+                              className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${
+                                selected
+                                  ? 'bg-orange-100 text-orange-700 border-orange-400'
+                                  : 'bg-white text-slate-500 border-slate-300 hover:border-orange-400 hover:text-orange-600'
+                              }`}
+                            >
+                              {tag.color && <span className="inline-block w-2 h-2 rounded-full mr-1" style={{ backgroundColor: tag.color }} />}
+                              {tag.name}
                             </button>
                           );
                         })}
