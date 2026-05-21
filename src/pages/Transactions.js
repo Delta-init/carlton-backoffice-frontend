@@ -1193,18 +1193,27 @@ export default function Transactions() {
   // All filtering is done server-side — use transactions directly
   const filteredTransactions = transactions;
 
-  const formatDate = (dateStr) => {
+  const formatDate = (dateStr, timeStr = null) => {
     if (!dateStr) return "-";
     // Date-only strings like "2024-03-19" must be parsed as local time
     // (new Date("YYYY-MM-DD") treats them as UTC which can shift the day)
     const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(String(dateStr));
     if (isDateOnly) {
       const [year, month, day] = String(dateStr).split("-").map(Number);
-      return new Date(year, month - 1, day).toLocaleDateString("en-US", {
+      const datePart = new Date(year, month - 1, day).toLocaleDateString("en-US", {
         year: "numeric",
         month: "short",
         day: "numeric",
       });
+      if (timeStr) {
+        const timePart = new Date(timeStr).toLocaleString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          timeZone: "Asia/Dubai",
+        });
+        return `${datePart}, ${timePart}`;
+      }
+      return datePart;
     }
     // Full ISO timestamp — show date + time in UAE timezone
     return new Date(dateStr).toLocaleString("en-US", {
@@ -1261,7 +1270,7 @@ export default function Transactions() {
         "Client Tags", "Transaction Tags",
       ];
       const rows = allData.map((tx) => [
-        formatDate(tx.transaction_date || tx.created_at),
+        formatDate(tx.transaction_date || tx.created_at, tx.created_at),
         tx.client_name || getClientName(tx.client_id),
         tx.client_email || "",
         tx.transaction_type,
@@ -1310,7 +1319,7 @@ export default function Transactions() {
         "Client Tags", "Transaction Tags",
       ];
       const rows = allData.map((tx) => ({
-        "Date": formatDate(tx.transaction_date || tx.created_at),
+        "Date": formatDate(tx.transaction_date || tx.created_at, tx.created_at),
         "Client": tx.client_name || getClientName(tx.client_id),
         "Email": tx.client_email || "",
         "Type": tx.transaction_type,
@@ -1365,7 +1374,7 @@ export default function Transactions() {
         "Client Tags", "Transaction Tags",
       ];
       const rows = allData.map((tx) => [
-        formatDate(tx.transaction_date || tx.created_at),
+        formatDate(tx.transaction_date || tx.created_at, tx.created_at),
         tx.client_name || getClientName(tx.client_id),
         tx.client_email || "",
         tx.transaction_type,
@@ -3225,7 +3234,7 @@ export default function Transactions() {
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-                        {formatDate(tx.transaction_date || tx.created_at)}
+                        {formatDate(tx.transaction_date || tx.created_at, tx.created_at)}
                       </TableCell>
                       <TableCell className="font-mono text-xs text-purple-600">
                         {tx.crm_reference || "-"}

@@ -300,16 +300,25 @@ function EditableRequestCard({
     setForm({ ...form, exchange_rate: val, amount: usd });
   };
 
-  const formatDate = (d) => {
+  const formatDate = (d, timeStr = null) => {
     if (!d) return "-";
     const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(String(d));
     if (isDateOnly) {
       const [year, month, day] = String(d).split("-").map(Number);
-      return new Date(year, month - 1, day).toLocaleDateString("en-US", {
+      const datePart = new Date(year, month - 1, day).toLocaleDateString("en-US", {
         year: "numeric",
         month: "short",
         day: "numeric",
       });
+      if (timeStr) {
+        const timePart = new Date(timeStr).toLocaleString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          timeZone: "Asia/Dubai",
+        });
+        return `${datePart}, ${timePart}`;
+      }
+      return datePart;
     }
     return new Date(d).toLocaleString("en-US", {
       year: "numeric",
@@ -418,7 +427,7 @@ function EditableRequestCard({
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <span className="text-xs text-muted-foreground">
-            {formatDate(req.transaction_date || req.created_at)}
+            {formatDate(req.transaction_date || req.created_at, req.created_at)}
           </span>
           {expanded ? (
             <ChevronUp className="w-4 h-4 text-muted-foreground" />
@@ -1300,16 +1309,25 @@ export default function TransactionRequests() {
     setForm({ ...form, exchange_rate: val, amount: usd });
   };
 
-  const formatDate = (d) => {
+  const formatDate = (d, timeStr = null) => {
     if (!d) return "-";
     const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(String(d));
     if (isDateOnly) {
       const [year, month, day] = String(d).split("-").map(Number);
-      return new Date(year, month - 1, day).toLocaleDateString("en-US", {
+      const datePart = new Date(year, month - 1, day).toLocaleDateString("en-US", {
         year: "numeric",
         month: "short",
         day: "numeric",
       });
+      if (timeStr) {
+        const timePart = new Date(timeStr).toLocaleString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          timeZone: "Asia/Dubai",
+        });
+        return `${datePart}, ${timePart}`;
+      }
+      return datePart;
     }
     return new Date(d).toLocaleString("en-US", {
       year: "numeric",
@@ -1342,7 +1360,7 @@ export default function TransactionRequests() {
       "Description",
     ];
     const rows = requests.map((r) => [
-      formatDate(r.transaction_date || r.created_at),
+      formatDate(r.transaction_date || r.created_at, r.created_at),
       r.transaction_type,
       r.client_name,
       r.amount,
@@ -1386,7 +1404,7 @@ export default function TransactionRequests() {
       "Created By",
     ];
     const rows = requests.map((r) => [
-      formatDate(r.transaction_date || r.created_at),
+      formatDate(r.transaction_date || r.created_at, r.created_at),
       r.transaction_type,
       r.client_name,
       `$${r.amount?.toLocaleString()}`,
