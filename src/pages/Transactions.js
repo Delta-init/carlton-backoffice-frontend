@@ -1197,22 +1197,23 @@ export default function Transactions() {
     if (!dateStr) return "-";
     // Date-only strings like "2024-03-19" must be parsed as local time
     // (new Date("YYYY-MM-DD") treats them as UTC which can shift the day)
-    const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(dateStr);
+    const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(String(dateStr));
     if (isDateOnly) {
-      const [year, month, day] = dateStr.split("-").map(Number);
+      const [year, month, day] = String(dateStr).split("-").map(Number);
       return new Date(year, month - 1, day).toLocaleDateString("en-US", {
         year: "numeric",
         month: "short",
         day: "numeric",
       });
     }
-    // Full ISO timestamp — show date + time
-    return new Date(dateStr).toLocaleDateString("en-US", {
+    // Full ISO timestamp — show date + time in UAE timezone
+    return new Date(dateStr).toLocaleString("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+      timeZone: "Asia/Dubai",
     });
   };
 

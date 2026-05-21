@@ -300,16 +300,26 @@ function EditableRequestCard({
     setForm({ ...form, exchange_rate: val, amount: usd });
   };
 
-  const formatDate = (d) =>
-    d
-      ? new Date(d).toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-          // hour: "2-digit",
-          // minute: "2-digit",
-        })
-      : "-";
+  const formatDate = (d) => {
+    if (!d) return "-";
+    const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(String(d));
+    if (isDateOnly) {
+      const [year, month, day] = String(d).split("-").map(Number);
+      return new Date(year, month - 1, day).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    }
+    return new Date(d).toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Asia/Dubai",
+    });
+  };
 
   return (
     <Card
@@ -911,7 +921,7 @@ function EditableRequestCard({
                 req.processed_at
                   ? [
                       "Processed",
-                      new Date(req.processed_at).toLocaleDateString(),
+                      formatDate(req.processed_at),
                     ]
                   : null,
               ]
@@ -1290,14 +1300,26 @@ export default function TransactionRequests() {
     setForm({ ...form, exchange_rate: val, amount: usd });
   };
 
-  const formatDate = (d) =>
-    d
-      ? new Date(d).toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        })
-      : "-";
+  const formatDate = (d) => {
+    if (!d) return "-";
+    const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(String(d));
+    if (isDateOnly) {
+      const [year, month, day] = String(d).split("-").map(Number);
+      return new Date(year, month - 1, day).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    }
+    return new Date(d).toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Asia/Dubai",
+    });
+  };
 
   const downloadExcel = () => {
     if (!requests.length) {

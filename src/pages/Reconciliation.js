@@ -747,7 +747,15 @@ export default function Reconciliation() {
   const formatDate = (d) => {
     if (!d) return '—';
     try {
-      return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+      const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(String(d));
+      if (isDateOnly) {
+        const [year, month, day] = String(d).split('-').map(Number);
+        return new Date(year, month - 1, day).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+      }
+      return new Date(d).toLocaleString('en-US', {
+        year: 'numeric', month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Dubai',
+      });
     } catch { return d; }
   };
 
