@@ -402,7 +402,7 @@ export default function AccountantDashboard() {
       );
       // Pre-select PSP source if transaction destination is PSP
       if (tx.transaction_type === "withdrawal" && tx.destination_type === "psp" && tx.psp_id) {
-        setApprovalSourceAccount(`psp_${tx.psp_id}`);
+        setApprovalSourceAccount(`${tx.psp_id}`);
       } else {
         setApprovalSourceAccount("");
       }
