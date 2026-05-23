@@ -265,6 +265,7 @@ export default function Transactions() {
     destination_type: "",
     vendor_id: "",
     destination_account_id: "",
+    psp_id: "",
     description: "",
     crm_reference: "",
   });
@@ -961,6 +962,7 @@ export default function Transactions() {
       destination_type: tx.destination_type || "",
       vendor_id: tx.vendor_id || "",
       destination_account_id: tx.destination_account_id || "",
+      psp_id: tx.psp_id || "",
       description: tx.description || "",
       crm_reference: tx.crm_reference || "",
     });
@@ -3892,6 +3894,7 @@ export default function Transactions() {
                       ...destForm,
                       destination_type: v,
                       vendor_id: v !== "vendor" ? "" : destForm.vendor_id,
+                      psp_id: v !== "psp" ? "" : destForm.psp_id,
                     })
                   }
                 >
@@ -3969,6 +3972,34 @@ export default function Transactions() {
                           {a.account_name} ({a.currency})
                         </SelectItem>
                       ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {destForm.destination_type === "psp" && (
+                <div>
+                  <Label className="text-xs text-muted-foreground uppercase">
+                    Select PSP *
+                  </Label>
+                  <Select
+                    value={destForm.psp_id}
+                    onValueChange={(v) =>
+                      setDestForm({ ...destForm, psp_id: v })
+                    }
+                  >
+                    <SelectTrigger className="bg-muted/50">
+                      <SelectValue placeholder="Select PSP" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {psps
+                        .filter((p) => p.status === "active")
+                        .map((psp) => (
+                          <SelectItem key={psp.psp_id} value={psp.psp_id}>
+                            {psp.psp_name} ({psp.commission_rate}% commission,
+                            T+{psp.settlement_days})
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
