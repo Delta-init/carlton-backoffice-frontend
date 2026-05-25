@@ -3221,7 +3221,7 @@ export default function AccountantDashboard() {
                                   ({psp.currency || "USD"})
                                 </span>
                                 <span className="text-purple-400 font-mono text-xs">
-                                  {psp.pending_settlement?.toLocaleString() || "0"}
+                                  {psp.available_balance?.toLocaleString() || "0"}
                                 </span>
                               </div>
                             </SelectItem>
