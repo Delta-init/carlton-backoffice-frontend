@@ -1364,8 +1364,8 @@ export default function Reconciliation() {
                               {txs.map((tx, i) => {
                                 const payAmt  = tx.base_amount ?? tx.amount;
                                 const payCur  = tx.base_currency || tx.currency || selectedAccount?.currency;
-                                const isCredit = (Number(tx.amount) || 0) >= 0;
                                 const txType  = tx.type || tx.transaction_type || 'transfer';
+                                const isCredit = !/withdrawal|withdraw|debit|out/i.test(txType);
 
                                 return (
                                   <div
