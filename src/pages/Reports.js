@@ -228,10 +228,19 @@ export default function Reports() {
     return params.toString();
   };
 
+  // /api/transactions uses date_from / date_to (different from report endpoints)
+  const buildTxQueryParams = () => {
+    const params = new URLSearchParams();
+    if (dateFrom) params.append('date_from', dateFrom);
+    if (dateTo) params.append('date_to', dateTo);
+    return params.toString();
+  };
+
   const fetchReports = async () => {
     setLoading(true);
     const queryStr = buildQueryParams();
-    
+    const txQueryStr = buildTxQueryParams();
+
     try {
       const endpoints = {
         transactions: `${API_URL}/api/reports/transactions-detailed${queryStr ? `?${queryStr}` : ''}`,
@@ -248,8 +257,8 @@ export default function Reports() {
         loansData: `${API_URL}/api/loans`,
         dealingPnL: `${API_URL}/api/dealing-pnl?limit=30`,
         dealingPnLSummary: `${API_URL}/api/dealing-pnl/summary?days=30`,
-        // Detailed data endpoints
-        allTransactions: `${API_URL}/api/transactions?page_size=500${queryStr ? `&${queryStr}` : ''}`,
+        // Detailed data endpoints — /api/transactions uses date_from/date_to
+        allTransactions: `${API_URL}/api/transactions?page_size=500${txQueryStr ? `&${txQueryStr}` : ''}`,
         allIE: `${API_URL}/api/income-expenses?limit=500`,
       };
 

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
@@ -49,6 +49,31 @@ export default function Login() {
   const [confirmPassword, setConfirmPassword] = useState('');
 
   const { tiltStyle, onMove, onLeave } = useTilt(8);
+
+  /* ── Root ERP SSO auto-login ── */
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ssoToken = params.get('sso');
+    if (!ssoToken) return;
+    setIsLoading(true);
+    fetch(`${API_URL}/api/auth/sso-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ssoToken }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.access_token) {
+          localStorage.setItem('auth_token', data.access_token);
+          window.history.replaceState({}, '', window.location.pathname);
+          navigate('/dashboard');
+        } else {
+          setIsLoading(false);
+          toast.error('SSO login failed. Please sign in manually.');
+        }
+      })
+      .catch(() => { setIsLoading(false); toast.error('SSO login failed.'); });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── handlers ── */
   const handleSubmit = async (e) => {
