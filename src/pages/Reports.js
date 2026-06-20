@@ -61,6 +61,7 @@ import {
   ChevronDown,
   ChevronRight,
   Calculator,
+  Search,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -126,7 +127,7 @@ export default function Reports() {
   const [expandedAccounts, setExpandedAccounts] = useState({});
 
   // Exchanger transactions drill-down state
-  const [vtFilter, setVtFilter] = useState({ vendor_id: 'all', category: 'all', transaction_type: 'all', status: 'all' });
+  const [vtFilter, setVtFilter] = useState({ vendor_id: 'all', category: 'all', transaction_type: 'all', status: 'all', search: '', destination_id: 'all' });
   const [vtPage, setVtPage] = useState(1);
   const [vtData, setVtData] = useState(null);
   const [vtLoading, setVtLoading] = useState(false);
@@ -142,8 +143,13 @@ export default function Reports() {
       const params = new URLSearchParams({ page, page_size: 25 });
       if (filters.vendor_id !== 'all') params.set('vendor_id', filters.vendor_id);
       if (filters.category !== 'all') params.set('category', filters.category);
+      if (filters.destination_id && filters.destination_id !== 'all') {
+        if (filters.category === 'psp') params.set('psp_id', filters.destination_id);
+        else if (filters.category === 'treasury' || filters.category === 'usdt') params.set('destination_account_id', filters.destination_id);
+      }
       if (filters.transaction_type !== 'all') params.set('transaction_type', filters.transaction_type);
       if (filters.status !== 'all') params.set('status', filters.status);
+      if (filters.search) params.set('search', filters.search);
       if (dateFrom) params.set('start_date', dateFrom);
       if (dateTo) params.set('end_date', dateTo);
       const res = await fetch(`${API_URL}/api/reports/vendor-transactions?${params}`, { headers: getAuthHeaders(), credentials: 'include' });
@@ -157,8 +163,13 @@ export default function Reports() {
     const params = new URLSearchParams({ export: true });
     if (vtFilter.vendor_id !== 'all') params.set('vendor_id', vtFilter.vendor_id);
     if (vtFilter.category !== 'all') params.set('category', vtFilter.category);
+    if (vtFilter.destination_id && vtFilter.destination_id !== 'all') {
+      if (vtFilter.category === 'psp') params.set('psp_id', vtFilter.destination_id);
+      else if (vtFilter.category === 'treasury' || vtFilter.category === 'usdt') params.set('destination_account_id', vtFilter.destination_id);
+    }
     if (vtFilter.transaction_type !== 'all') params.set('transaction_type', vtFilter.transaction_type);
     if (vtFilter.status !== 'all') params.set('status', vtFilter.status);
+    if (vtFilter.search) params.set('search', vtFilter.search);
     if (dateFrom) params.set('start_date', dateFrom);
     if (dateTo) params.set('end_date', dateTo);
     const res = await fetch(`${API_URL}/api/reports/vendor-transactions?${params}`, { headers: getAuthHeaders(), credentials: 'include' });
@@ -946,6 +957,16 @@ export default function Reports() {
                 <CardContent className="space-y-3">
                   {/* Filters */}
                   <div className="flex flex-wrap gap-2">
+                    {/* Search */}
+                    <div className="relative">
+                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+                      <Input
+                        className="pl-7 h-8 text-xs w-48"
+                        placeholder="Search client, reference…"
+                        value={vtFilter.search}
+                        onChange={e => { const f = { ...vtFilter, search: e.target.value }; setVtFilter(f); setVtPage(1); fetchVendorTransactions(f, 1); }}
+                      />
+                    </div>
                     <Select value={vtFilter.vendor_id} onValueChange={v => { const f = { ...vtFilter, vendor_id: v }; setVtFilter(f); setVtPage(1); fetchVendorTransactions(f, 1); }}>
                       <SelectTrigger className="w-40 h-8 text-xs"><SelectValue placeholder="Exchanger" /></SelectTrigger>
                       <SelectContent>
@@ -953,7 +974,7 @@ export default function Reports() {
                         {(vendorReport?.vendors || []).map(v => <SelectItem key={v.vendor_id} value={v.vendor_id}>{v.vendor_name}</SelectItem>)}
                       </SelectContent>
                     </Select>
-                    <Select value={vtFilter.category} onValueChange={v => { const f = { ...vtFilter, category: v }; setVtFilter(f); setVtPage(1); fetchVendorTransactions(f, 1); }}>
+                    <Select value={vtFilter.category} onValueChange={v => { const f = { ...vtFilter, category: v, destination_id: 'all' }; setVtFilter(f); setVtPage(1); fetchVendorTransactions(f, 1); }}>
                       <SelectTrigger className="w-36 h-8 text-xs"><SelectValue placeholder="Category" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Categories</SelectItem>
@@ -964,6 +985,26 @@ export default function Reports() {
                         <SelectItem value="usdt">USDT</SelectItem>
                       </SelectContent>
                     </Select>
+                    {/* Secondary: PSP sub-filter */}
+                    {vtFilter.category === 'psp' && (
+                      <Select value={vtFilter.destination_id} onValueChange={v => { const f = { ...vtFilter, destination_id: v }; setVtFilter(f); setVtPage(1); fetchVendorTransactions(f, 1); }}>
+                        <SelectTrigger className="w-40 h-8 text-xs"><SelectValue placeholder="All PSPs" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All PSPs</SelectItem>
+                          {(pspReport?.psps || []).map(p => <SelectItem key={p.psp_id} value={p.psp_id}>{p.psp_name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    {/* Secondary: Treasury/USDT account sub-filter */}
+                    {(vtFilter.category === 'treasury' || vtFilter.category === 'usdt') && (
+                      <Select value={vtFilter.destination_id} onValueChange={v => { const f = { ...vtFilter, destination_id: v }; setVtFilter(f); setVtPage(1); fetchVendorTransactions(f, 1); }}>
+                        <SelectTrigger className="w-44 h-8 text-xs"><SelectValue placeholder="All Accounts" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Accounts</SelectItem>
+                          {(treasuryReport?.accounts || []).map(a => <SelectItem key={a.account_id} value={a.account_id}>{a.account_name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    )}
                     <Select value={vtFilter.transaction_type} onValueChange={v => { const f = { ...vtFilter, transaction_type: v }; setVtFilter(f); setVtPage(1); fetchVendorTransactions(f, 1); }}>
                       <SelectTrigger className="w-32 h-8 text-xs"><SelectValue placeholder="Type" /></SelectTrigger>
                       <SelectContent>
@@ -982,7 +1023,7 @@ export default function Reports() {
                         <SelectItem value="completed">Completed</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => { const f = { vendor_id: 'all', category: 'all', transaction_type: 'all', status: 'all' }; setVtFilter(f); setVtPage(1); fetchVendorTransactions(f, 1); }}>
+                    <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => { const f = { vendor_id: 'all', category: 'all', transaction_type: 'all', status: 'all', search: '', destination_id: 'all' }; setVtFilter(f); setVtPage(1); fetchVendorTransactions(f, 1); }}>
                       <RefreshCw className="w-3 h-3 mr-1" /> Reset
                     </Button>
                   </div>
