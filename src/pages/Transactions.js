@@ -256,6 +256,7 @@ export default function Transactions() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [destinationFilter, setDestinationFilter] = useState("all");
+  const [destinationIdFilter, setDestinationIdFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -377,6 +378,11 @@ export default function Transactions() {
         params.append("status", statusFilter);
       if (destinationFilter && destinationFilter !== "all")
         params.append("destination_type", destinationFilter);
+      if (destinationIdFilter && destinationIdFilter !== "all") {
+        if (destinationFilter === "vendor") params.append("vendor_id", destinationIdFilter);
+        else if (destinationFilter === "psp") params.append("psp_id", destinationIdFilter);
+        else if (destinationFilter === "treasury" || destinationFilter === "usdt") params.append("destination_account_id", destinationIdFilter);
+      }
       if (searchTerm) params.append("search", searchTerm);
       if (emailFilter) params.append("client_email", emailFilter);
       if (dateFrom) params.append("date_from", dateFrom);
@@ -670,6 +676,7 @@ export default function Transactions() {
     typeFilter,
     statusFilter,
     destinationFilter,
+    destinationIdFilter,
     dateFrom,
     dateTo,
     pageSize,
@@ -1245,6 +1252,11 @@ export default function Transactions() {
     if (typeFilter && typeFilter !== "all") params.append("transaction_type", typeFilter);
     if (statusFilter && statusFilter !== "all") params.append("status", statusFilter);
     if (destinationFilter && destinationFilter !== "all") params.append("destination_type", destinationFilter);
+    if (destinationIdFilter && destinationIdFilter !== "all") {
+      if (destinationFilter === "vendor") params.append("vendor_id", destinationIdFilter);
+      else if (destinationFilter === "psp") params.append("psp_id", destinationIdFilter);
+      else if (destinationFilter === "treasury" || destinationFilter === "usdt") params.append("destination_account_id", destinationIdFilter);
+    }
     if (searchTerm) params.append("search", searchTerm);
     if (emailFilter) params.append("client_email", emailFilter);
     if (dateFrom) params.append("date_from", dateFrom);
@@ -2962,7 +2974,7 @@ export default function Transactions() {
             ))}
           </SelectContent>
         </Select>
-        <Select value={destinationFilter} onValueChange={setDestinationFilter}>
+        <Select value={destinationFilter} onValueChange={(v) => { setDestinationFilter(v); setDestinationIdFilter("all"); }}>
           <SelectTrigger
             className="w-full sm:w-44 bg-card border text-foreground"
             data-testid="filter-tx-destination"
@@ -3008,6 +3020,57 @@ export default function Transactions() {
             </SelectItem>
           </SelectContent>
         </Select>
+
+        {/* Secondary filter: specific account within the selected destination type */}
+        {destinationFilter === "vendor" && (
+          <Select value={destinationIdFilter} onValueChange={setDestinationIdFilter}>
+            <SelectTrigger className="w-full sm:w-48 bg-card border text-foreground">
+              <SelectValue placeholder="All Exchangers" />
+            </SelectTrigger>
+            <SelectContent className="bg-card border">
+              <SelectItem value="all" className="text-foreground hover:bg-muted">All Exchangers</SelectItem>
+              {vendors.map((v) => (
+                <SelectItem key={v.vendor_id} value={v.vendor_id} className="text-foreground hover:bg-muted">
+                  {v.vendor_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {destinationFilter === "psp" && (
+          <Select value={destinationIdFilter} onValueChange={setDestinationIdFilter}>
+            <SelectTrigger className="w-full sm:w-48 bg-card border text-foreground">
+              <SelectValue placeholder="All PSPs" />
+            </SelectTrigger>
+            <SelectContent className="bg-card border">
+              <SelectItem value="all" className="text-foreground hover:bg-muted">All PSPs</SelectItem>
+              {psps.map((p) => (
+                <SelectItem key={p.psp_id} value={p.psp_id} className="text-foreground hover:bg-muted">
+                  {p.psp_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {(destinationFilter === "treasury" || destinationFilter === "usdt") && (
+          <Select value={destinationIdFilter} onValueChange={setDestinationIdFilter}>
+            <SelectTrigger className="w-full sm:w-48 bg-card border text-foreground">
+              <SelectValue placeholder="All Accounts" />
+            </SelectTrigger>
+            <SelectContent className="bg-card border">
+              <SelectItem value="all" className="text-foreground hover:bg-muted">All Accounts</SelectItem>
+              {treasuryAccounts
+                .filter((a) => destinationFilter === "usdt" ? a.account_type === "usdt" : a.account_type !== "usdt")
+                .map((a) => (
+                  <SelectItem key={a.account_id} value={a.account_id} className="text-foreground hover:bg-muted">
+                    {a.account_name}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        )}
 
         <Select value={tagFilter} onValueChange={setTagFilter}>
           <SelectTrigger
@@ -3115,6 +3178,7 @@ export default function Transactions() {
           {(dateFrom ||
             dateTo ||
             destinationFilter !== "all" ||
+            destinationIdFilter !== "all" ||
             tagFilter !== "all" ||
             txnTagFilter !== "all" ||
             emailFilter) && (
@@ -3125,6 +3189,7 @@ export default function Transactions() {
                 setDateFrom("");
                 setDateTo("");
                 setDestinationFilter("all");
+                setDestinationIdFilter("all");
                 setEmailFilter("");
                 setTagFilter("all");
                 setTxnTagFilter("all");
