@@ -125,9 +125,56 @@ export default function Reports() {
   const [allTreasuryTransactions, setAllTreasuryTransactions] = useState([]);
   const [expandedAccounts, setExpandedAccounts] = useState({});
 
+  // Exchanger transactions drill-down state
+  const [vtFilter, setVtFilter] = useState({ vendor_id: 'all', category: 'all', transaction_type: 'all', status: 'all' });
+  const [vtPage, setVtPage] = useState(1);
+  const [vtData, setVtData] = useState(null);
+  const [vtLoading, setVtLoading] = useState(false);
+
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth_token');
     return { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) };
+  };
+
+  const fetchVendorTransactions = async (filters = vtFilter, page = vtPage) => {
+    setVtLoading(true);
+    try {
+      const params = new URLSearchParams({ page, page_size: 25 });
+      if (filters.vendor_id !== 'all') params.set('vendor_id', filters.vendor_id);
+      if (filters.category !== 'all') params.set('category', filters.category);
+      if (filters.transaction_type !== 'all') params.set('transaction_type', filters.transaction_type);
+      if (filters.status !== 'all') params.set('status', filters.status);
+      if (dateFrom) params.set('start_date', dateFrom);
+      if (dateTo) params.set('end_date', dateTo);
+      const res = await fetch(`${API_URL}/api/reports/vendor-transactions?${params}`, { headers: getAuthHeaders(), credentials: 'include' });
+      if (res.ok) setVtData(await res.json());
+    } finally {
+      setVtLoading(false);
+    }
+  };
+
+  const exportVendorTransactions = async () => {
+    const params = new URLSearchParams({ export: true });
+    if (vtFilter.vendor_id !== 'all') params.set('vendor_id', vtFilter.vendor_id);
+    if (vtFilter.category !== 'all') params.set('category', vtFilter.category);
+    if (vtFilter.transaction_type !== 'all') params.set('transaction_type', vtFilter.transaction_type);
+    if (vtFilter.status !== 'all') params.set('status', vtFilter.status);
+    if (dateFrom) params.set('start_date', dateFrom);
+    if (dateTo) params.set('end_date', dateTo);
+    const res = await fetch(`${API_URL}/api/reports/vendor-transactions?${params}`, { headers: getAuthHeaders(), credentials: 'include' });
+    if (!res.ok) { toast.error('Export failed'); return; }
+    const data = await res.json();
+    const cols = [
+      { key: 'transaction_id', label: 'ID' }, { key: 'transaction_date', label: 'Date' },
+      { key: 'client_name', label: 'Client' }, { key: 'vendor_name', label: 'Exchanger' },
+      { key: 'transaction_type', label: 'Type' }, { key: 'destination_type', label: 'Category' },
+      { key: 'destination_account_name', label: 'Destination' }, { key: 'psp_name', label: 'PSP' },
+      { key: 'amount', label: 'Amount (USD)' }, { key: 'currency', label: 'Currency' },
+      { key: 'base_amount', label: 'Base Amount' }, { key: 'base_currency', label: 'Base Currency' },
+      { key: 'vendor_commission_amount', label: 'Commission (USD)' },
+      { key: 'status', label: 'Status' }, { key: 'reference', label: 'Reference' },
+    ];
+    downloadCSV(data.items || [], 'exchanger_transactions', cols);
   };
 
   // Export to Excel function
@@ -320,6 +367,13 @@ export default function Reports() {
   useEffect(() => {
     fetchReports();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'exchangers') {
+      setVtPage(1);
+      fetchVendorTransactions(vtFilter, 1);
+    }
+  }, [activeTab]);
 
   const downloadCSV = (data, filename, headers) => {
     const rows = data.map(row => headers.map(h => `"${row[h.key] ?? ''}"`).join(','));
@@ -878,6 +932,128 @@ export default function Reports() {
                       </TableBody>
                     </Table>
                   </ScrollArea>
+                </CardContent>
+              </Card>
+
+              {/* ===== EXCHANGER TRANSACTIONS DRILL-DOWN ===== */}
+              <Card className="bg-card border shadow-sm">
+                <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                  <CardTitle className="text-lg font-semibold text-foreground">Exchanger Transactions</CardTitle>
+                  <Button size="sm" variant="ghost" className="text-muted-foreground hover:text-card-foreground" onClick={exportVendorTransactions}>
+                    <Download className="w-4 h-4 mr-2" /> Export CSV
+                  </Button>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {/* Filters */}
+                  <div className="flex flex-wrap gap-2">
+                    <Select value={vtFilter.vendor_id} onValueChange={v => { const f = { ...vtFilter, vendor_id: v }; setVtFilter(f); setVtPage(1); fetchVendorTransactions(f, 1); }}>
+                      <SelectTrigger className="w-40 h-8 text-xs"><SelectValue placeholder="Exchanger" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Exchangers</SelectItem>
+                        {(vendorReport?.vendors || []).map(v => <SelectItem key={v.vendor_id} value={v.vendor_id}>{v.vendor_name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Select value={vtFilter.category} onValueChange={v => { const f = { ...vtFilter, category: v }; setVtFilter(f); setVtPage(1); fetchVendorTransactions(f, 1); }}>
+                      <SelectTrigger className="w-36 h-8 text-xs"><SelectValue placeholder="Category" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Categories</SelectItem>
+                        <SelectItem value="vendor">Exchanger</SelectItem>
+                        <SelectItem value="treasury">Treasury</SelectItem>
+                        <SelectItem value="psp">PSP</SelectItem>
+                        <SelectItem value="bank">Bank</SelectItem>
+                        <SelectItem value="usdt">USDT</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={vtFilter.transaction_type} onValueChange={v => { const f = { ...vtFilter, transaction_type: v }; setVtFilter(f); setVtPage(1); fetchVendorTransactions(f, 1); }}>
+                      <SelectTrigger className="w-32 h-8 text-xs"><SelectValue placeholder="Type" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Types</SelectItem>
+                        <SelectItem value="deposit">Deposit</SelectItem>
+                        <SelectItem value="withdrawal">Withdrawal</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={vtFilter.status} onValueChange={v => { const f = { ...vtFilter, status: v }; setVtFilter(f); setVtPage(1); fetchVendorTransactions(f, 1); }}>
+                      <SelectTrigger className="w-32 h-8 text-xs"><SelectValue placeholder="Status" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="approved">Approved</SelectItem>
+                        <SelectItem value="rejected">Rejected</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => { const f = { vendor_id: 'all', category: 'all', transaction_type: 'all', status: 'all' }; setVtFilter(f); setVtPage(1); fetchVendorTransactions(f, 1); }}>
+                      <RefreshCw className="w-3 h-3 mr-1" /> Reset
+                    </Button>
+                  </div>
+
+                  {/* Table */}
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border">
+                          <TableHead className="text-muted-foreground text-xs">Date</TableHead>
+                          <TableHead className="text-muted-foreground text-xs">Client</TableHead>
+                          <TableHead className="text-muted-foreground text-xs">Exchanger</TableHead>
+                          <TableHead className="text-muted-foreground text-xs">Type</TableHead>
+                          <TableHead className="text-muted-foreground text-xs">Category</TableHead>
+                          <TableHead className="text-muted-foreground text-xs">Destination</TableHead>
+                          <TableHead className="text-muted-foreground text-xs text-right">Amount</TableHead>
+                          <TableHead className="text-muted-foreground text-xs text-right">Commission</TableHead>
+                          <TableHead className="text-muted-foreground text-xs">Status</TableHead>
+                          <TableHead className="text-muted-foreground text-xs">Tags</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {vtLoading ? (
+                          <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">Loading...</TableCell></TableRow>
+                        ) : (vtData?.items || []).length === 0 ? (
+                          <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">No transactions found</TableCell></TableRow>
+                        ) : (vtData?.items || []).map(tx => (
+                          <TableRow key={tx.transaction_id} className="border hover:bg-muted/30">
+                            <TableCell className="text-xs text-muted-foreground">{tx.transaction_date || tx.created_at?.slice(0,10)}</TableCell>
+                            <TableCell className="text-xs text-foreground max-w-[120px] truncate">{tx.client_name}</TableCell>
+                            <TableCell className="text-xs text-foreground">{tx.vendor_name}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={`text-xs ${tx.transaction_type === 'deposit' ? 'text-emerald-600 border-emerald-200 bg-emerald-50' : 'text-red-600 border-red-200 bg-red-50'}`}>
+                                {tx.transaction_type === 'deposit' ? '↓ Dep' : '↑ Wdr'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="text-xs text-muted-foreground capitalize">{tx.destination_type}</Badge>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground max-w-[120px] truncate">{tx.psp_name || tx.destination_account_name || '—'}</TableCell>
+                            <TableCell className={`text-xs font-mono text-right ${tx.transaction_type === 'deposit' ? 'text-emerald-500' : 'text-red-500'}`}>
+                              <div>${tx.amount?.toLocaleString()}</div>
+                              {tx.base_currency && tx.base_currency !== 'USD' && <div className="text-[10px] text-muted-foreground">{tx.base_amount?.toLocaleString()} {tx.base_currency}</div>}
+                            </TableCell>
+                            <TableCell className="text-xs font-mono text-right text-amber-500">{tx.vendor_commission_amount ? `$${tx.vendor_commission_amount?.toLocaleString()}` : '—'}</TableCell>
+                            <TableCell>
+                              <Badge className={`text-xs ${tx.status === 'approved' || tx.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : tx.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                                {tx.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-xs">
+                              <div className="flex flex-wrap gap-1">
+                                {(tx.transaction_tags || []).map((tag, i) => <Badge key={i} variant="outline" className={`text-[10px] px-1 ${tag === 'Edited' ? 'border-orange-300 text-orange-600 bg-orange-50' : 'border text-muted-foreground'}`}>{tag}</Badge>)}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Pagination */}
+                  {vtData && vtData.total_pages > 1 && (
+                    <div className="flex items-center justify-between pt-2">
+                      <span className="text-xs text-muted-foreground">Page {vtData.page} of {vtData.total_pages} · {vtData.total} records</span>
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={vtPage <= 1} onClick={() => { const p = vtPage - 1; setVtPage(p); fetchVendorTransactions(vtFilter, p); }}>Prev</Button>
+                        <Button size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={vtPage >= vtData.total_pages} onClick={() => { const p = vtPage + 1; setVtPage(p); fetchVendorTransactions(vtFilter, p); }}>Next</Button>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </>
