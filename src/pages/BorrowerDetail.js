@@ -144,6 +144,14 @@ export default function BorrowerDetail() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
+  // Range filters
+  const [amountMin, setAmountMin] = useState("");
+  const [amountMax, setAmountMax] = useState("");
+  const [outstandingMin, setOutstandingMin] = useState("");
+  const [outstandingMax, setOutstandingMax] = useState("");
+  const [repaidMin, setRepaidMin] = useState("");
+  const [repaidMax, setRepaidMax] = useState("");
+
   const getAuthHeaders = () => {
     const token = localStorage.getItem("auth_token");
     return {
@@ -243,6 +251,12 @@ export default function BorrowerDetail() {
       if (statusFilter && statusFilter !== "all")
         params.append("status", statusFilter);
       if (searchQuery) params.append("search", searchQuery);
+      if (amountMin) params.append("amount_min", amountMin);
+      if (amountMax) params.append("amount_max", amountMax);
+      if (outstandingMin) params.append("outstanding_min", outstandingMin);
+      if (outstandingMax) params.append("outstanding_max", outstandingMax);
+      if (repaidMin) params.append("repaid_min", repaidMin);
+      if (repaidMax) params.append("repaid_max", repaidMax);
 
       const res = await fetch(`${API_URL}/api/loans?${params.toString()}`, {
         headers: getAuthHeaders(),
@@ -260,7 +274,7 @@ export default function BorrowerDetail() {
     } finally {
       setLoansLoading(false);
     }
-  }, [vendorId, page, pageSize, statusFilter, searchQuery]);
+  }, [vendorId, page, pageSize, statusFilter, searchQuery, amountMin, amountMax, outstandingMin, outstandingMax, repaidMin, repaidMax]);
 
   useEffect(() => {
     loadLoans();
@@ -269,7 +283,7 @@ export default function BorrowerDetail() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setPage(1);
-  }, [statusFilter, searchQuery, pageSize]);
+  }, [statusFilter, searchQuery, pageSize, amountMin, amountMax, outstandingMin, outstandingMax, repaidMin, repaidMax]);
 
   // Debounced search
   useEffect(() => {
@@ -494,59 +508,86 @@ export default function BorrowerDetail() {
           </div>
 
           {/* Search + Filter Controls */}
-          <div className="flex flex-col sm:flex-row gap-3 mt-3">
-            {/* Search */}
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Search by borrower name or loan ID…"
-                className="pl-9 pr-9 border focus:border-primary bg-card text-card-foreground placeholder:text-muted-foreground text-sm h-9"
-              />
-              {searchInput && (
+          <div className="flex flex-col gap-3 mt-3">
+            {/* Row 1: Search + Status + Page size */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  placeholder="Search by borrower name or loan ID…"
+                  className="pl-9 pr-9 border focus:border-primary bg-card text-card-foreground placeholder:text-muted-foreground text-sm h-9"
+                />
+                {searchInput && (
+                  <button
+                    onClick={() => { setSearchInput(""); setSearchQuery(""); }}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-card-foreground"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-44 border text-card-foreground bg-card text-sm h-9">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUS_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={pageSize.toString()} onValueChange={(v) => setPageSize(Number(v))}>
+                <SelectTrigger className="w-full sm:w-28 border text-card-foreground bg-card text-sm h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAGE_SIZE_OPTIONS.map((s) => (
+                    <SelectItem key={s} value={s.toString()}>{s} / page</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Row 2: Range filters */}
+            <div className="flex flex-wrap gap-2 items-end">
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Disbursed</span>
+                <div className="flex gap-1">
+                  <Input type="number" placeholder="Min" value={amountMin} onChange={(e) => setAmountMin(e.target.value)}
+                    className="w-24 h-8 text-xs border bg-card text-card-foreground" />
+                  <Input type="number" placeholder="Max" value={amountMax} onChange={(e) => setAmountMax(e.target.value)}
+                    className="w-24 h-8 text-xs border bg-card text-card-foreground" />
+                </div>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Outstanding</span>
+                <div className="flex gap-1">
+                  <Input type="number" placeholder="Min" value={outstandingMin} onChange={(e) => setOutstandingMin(e.target.value)}
+                    className="w-24 h-8 text-xs border bg-card text-card-foreground" />
+                  <Input type="number" placeholder="Max" value={outstandingMax} onChange={(e) => setOutstandingMax(e.target.value)}
+                    className="w-24 h-8 text-xs border bg-card text-card-foreground" />
+                </div>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Repaid</span>
+                <div className="flex gap-1">
+                  <Input type="number" placeholder="Min" value={repaidMin} onChange={(e) => setRepaidMin(e.target.value)}
+                    className="w-24 h-8 text-xs border bg-card text-card-foreground" />
+                  <Input type="number" placeholder="Max" value={repaidMax} onChange={(e) => setRepaidMax(e.target.value)}
+                    className="w-24 h-8 text-xs border bg-card text-card-foreground" />
+                </div>
+              </div>
+              {(amountMin || amountMax || outstandingMin || outstandingMax || repaidMin || repaidMax) && (
                 <button
-                  onClick={() => {
-                    setSearchInput("");
-                    setSearchQuery("");
-                  }}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-card-foreground"
+                  onClick={() => { setAmountMin(""); setAmountMax(""); setOutstandingMin(""); setOutstandingMax(""); setRepaidMin(""); setRepaidMax(""); }}
+                  className="h-8 px-2 text-xs text-muted-foreground hover:text-destructive border rounded flex items-center gap-1 bg-card self-end"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-3 h-3" /> Clear
                 </button>
               )}
             </div>
-
-            {/* Status filter */}
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-44 border text-card-foreground bg-card text-sm h-9">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                {STATUS_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Page size */}
-            <Select
-              value={pageSize.toString()}
-              onValueChange={(v) => setPageSize(Number(v))}
-            >
-              <SelectTrigger className="w-full sm:w-28 border text-card-foreground bg-card text-sm h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PAGE_SIZE_OPTIONS.map((s) => (
-                  <SelectItem key={s} value={s.toString()}>
-                    {s} / page
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
         </CardHeader>
 
