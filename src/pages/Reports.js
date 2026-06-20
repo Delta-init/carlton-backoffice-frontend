@@ -59,6 +59,7 @@ import {
   Building2,
   FileText,
   ChevronDown,
+  ChevronRight,
   Calculator,
 } from 'lucide-react';
 import {
@@ -122,6 +123,7 @@ export default function Reports() {
   const [allTransactions, setAllTransactions] = useState([]);
   const [allIncomeExpenses, setAllIncomeExpenses] = useState([]);
   const [allTreasuryTransactions, setAllTreasuryTransactions] = useState([]);
+  const [expandedAccounts, setExpandedAccounts] = useState({});
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth_token');
@@ -1155,54 +1157,138 @@ export default function Reports() {
                   </Button>
                 </CardHeader>
                 <CardContent>
-                  <ScrollArea className="h-64">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="border">
-                          <TableHead className="text-muted-foreground text-xs">Account</TableHead>
-                          <TableHead className="text-muted-foreground text-xs">Type</TableHead>
-                          <TableHead className="text-muted-foreground text-xs">Currency</TableHead>
-                          <TableHead className="text-muted-foreground text-xs text-right">Balance</TableHead>
-                          <TableHead className="text-muted-foreground text-xs text-right">USD Equiv.</TableHead>
-                          <TableHead className="text-muted-foreground text-xs">Status</TableHead>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border">
+                        <TableHead className="text-muted-foreground text-xs w-6"></TableHead>
+                        <TableHead className="text-muted-foreground text-xs">Account</TableHead>
+                        <TableHead className="text-muted-foreground text-xs">Type</TableHead>
+                        <TableHead className="text-muted-foreground text-xs">Currency</TableHead>
+                        <TableHead className="text-muted-foreground text-xs text-right">Balance</TableHead>
+                        <TableHead className="text-muted-foreground text-xs text-right">USD Equiv.</TableHead>
+                        <TableHead className="text-muted-foreground text-xs">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(treasuryReport.accounts || []).map((acc, i) => {
+                        const accTxs = allTransactions.filter(tx => tx.destination_account_id === acc.account_id);
+                        const isExpanded = !!expandedAccounts[acc.account_id];
+                        const totalIn  = accTxs.filter(t => t.transaction_type === 'deposit').reduce((s, t) => s + (t.amount || 0), 0);
+                        const totalOut = accTxs.filter(t => t.transaction_type === 'withdrawal').reduce((s, t) => s + (t.amount || 0), 0);
+                        return (
+                          <>
+                            {/* Account row */}
+                            <TableRow key={`acc-${i}`} className="border hover:bg-muted/30 cursor-pointer"
+                              onClick={() => setExpandedAccounts(prev => ({ ...prev, [acc.account_id]: !prev[acc.account_id] }))}>
+                              <TableCell className="pr-0 w-6">
+                                {accTxs.length > 0
+                                  ? (isExpanded
+                                      ? <ChevronDown className="w-4 h-4 text-primary" />
+                                      : <ChevronRight className="w-4 h-4 text-muted-foreground" />)
+                                  : <span className="w-4 h-4 block" />}
+                              </TableCell>
+                              <TableCell>
+                                <div>
+                                  <p className="text-foreground font-medium">{acc.account_name}</p>
+                                  <p className="text-xs text-muted-foreground">{acc.bank_name || '-'}</p>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-muted-foreground capitalize">{acc.account_type?.replace('_', ' ')}</TableCell>
+                              <TableCell className="text-foreground font-mono">{acc.currency}</TableCell>
+                              <TableCell className="text-foreground font-mono text-right">{acc.balance?.toLocaleString()}</TableCell>
+                              <TableCell className="text-primary/60 font-mono text-right">${acc.balance_usd?.toLocaleString()}</TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <Badge className={acc.status === 'active' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gray-500/20 text-muted-foreground'}>
+                                    {acc.status}
+                                  </Badge>
+                                  {accTxs.length > 0 && (
+                                    <span className="text-xs text-primary font-medium">{accTxs.length} txn{accTxs.length > 1 ? 's' : ''}</span>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+
+                            {/* Collapsible transactions sub-table */}
+                            {isExpanded && (
+                              <TableRow key={`acc-expand-${i}`} className="bg-muted/20 border">
+                                <TableCell colSpan={7} className="p-0">
+                                  <div className="px-8 py-3 border-l-4 border-primary">
+                                    {/* Summary bar */}
+                                    <div className="flex items-center gap-6 mb-3 text-xs">
+                                      <span className="font-semibold text-muted-foreground">{accTxs.length} transaction{accTxs.length !== 1 ? 's' : ''} {dateFrom || dateTo ? 'in selected period' : ''}</span>
+                                      {totalIn  > 0 && <span className="text-emerald-500 font-mono">+${totalIn.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} in</span>}
+                                      {totalOut > 0 && <span className="text-red-400 font-mono">-${totalOut.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} out</span>}
+                                    </div>
+                                    {accTxs.length === 0 ? (
+                                      <p className="text-xs text-muted-foreground py-2">No transactions for this account{dateFrom || dateTo ? ' in the selected period' : ''}.</p>
+                                    ) : (
+                                      <table className="w-full text-xs">
+                                        <thead>
+                                          <tr className="text-muted-foreground border-b border-border">
+                                            <th className="text-left pb-1 font-medium">Reference</th>
+                                            <th className="text-left pb-1 font-medium">Client</th>
+                                            <th className="text-left pb-1 font-medium">Type</th>
+                                            <th className="text-right pb-1 font-medium">Amount (USD)</th>
+                                            <th className="text-right pb-1 font-medium">Payment</th>
+                                            <th className="text-left pb-1 font-medium">Status</th>
+                                            <th className="text-left pb-1 font-medium">Date</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {accTxs.map((tx, j) => (
+                                            <tr key={j} className="border-b border-border/50 hover:bg-muted/20">
+                                              <td className="py-1.5 font-mono text-muted-foreground truncate max-w-[120px]">{tx.reference || tx.transaction_id?.slice(-8)}</td>
+                                              <td className="py-1.5 text-foreground">{tx.client_name || '-'}</td>
+                                              <td className="py-1.5">
+                                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${tx.transaction_type === 'deposit' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
+                                                  {tx.transaction_type}
+                                                </span>
+                                              </td>
+                                              <td className={`py-1.5 font-mono text-right ${tx.transaction_type === 'deposit' ? 'text-emerald-500' : 'text-red-400'}`}>
+                                                {tx.transaction_type === 'deposit' ? '+' : '-'}${(tx.amount || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}
+                                              </td>
+                                              <td className="py-1.5 font-mono text-right text-muted-foreground">
+                                                {tx.base_amount ? `${tx.base_amount?.toLocaleString()} ${tx.base_currency || ''}` : '-'}
+                                              </td>
+                                              <td className="py-1.5">
+                                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                                  tx.status === 'approved' || tx.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
+                                                  tx.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                                                  tx.status === 'rejected' || tx.status === 'cancelled' ? 'bg-red-100 text-red-600' :
+                                                  'bg-muted text-muted-foreground'}`}>
+                                                  {tx.status}
+                                                </span>
+                                              </td>
+                                              <td className="py-1.5 text-muted-foreground">{tx.transaction_date || tx.created_at?.slice(0,10) || '-'}</td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    )}
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </>
+                        );
+                      })}
+                      {/* Total Row */}
+                      {treasuryReport.accounts?.length > 0 && (
+                        <TableRow className="border-t-2 border-primary bg-primary/10 font-bold">
+                          <TableCell></TableCell>
+                          <TableCell className="text-primary font-bold">TOTAL ({treasuryReport.accounts.length} accounts)</TableCell>
+                          <TableCell></TableCell>
+                          <TableCell></TableCell>
+                          <TableCell className="text-foreground font-mono text-right font-bold">-</TableCell>
+                          <TableCell className="text-primary/60 font-mono text-right font-bold">
+                            ${treasuryReport.accounts.reduce((sum, acc) => sum + (acc.balance_usd || 0), 0).toLocaleString()}
+                          </TableCell>
+                          <TableCell></TableCell>
                         </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {(treasuryReport.accounts || []).map((acc, i) => (
-                          <TableRow key={i} className="border">
-                            <TableCell>
-                              <div>
-                                <p className="text-foreground font-medium">{acc.account_name}</p>
-                                <p className="text-xs text-muted-foreground">{acc.bank_name || '-'}</p>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-muted-foreground capitalize">{acc.account_type?.replace('_', ' ')}</TableCell>
-                            <TableCell className="text-foreground font-mono">{acc.currency}</TableCell>
-                            <TableCell className="text-foreground font-mono text-right">{acc.balance?.toLocaleString()}</TableCell>
-                            <TableCell className="text-primary/60 font-mono text-right">${acc.balance_usd?.toLocaleString()}</TableCell>
-                            <TableCell>
-                              <Badge className={acc.status === 'active' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gray-500/20 text-muted-foreground'}>
-                                {acc.status}
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                        {/* Total Row */}
-                        {treasuryReport.accounts?.length > 0 && (
-                          <TableRow className="border-t-2 border-primary bg-primary/80/10 font-bold">
-                            <TableCell className="text-primary font-bold">TOTAL ({treasuryReport.accounts.length} accounts)</TableCell>
-                            <TableCell></TableCell>
-                            <TableCell></TableCell>
-                            <TableCell className="text-foreground font-mono text-right font-bold">-</TableCell>
-                            <TableCell className="text-primary/60 font-mono text-right font-bold">
-                              ${treasuryReport.accounts.reduce((sum, acc) => sum + (acc.balance_usd || 0), 0).toLocaleString()}
-                            </TableCell>
-                            <TableCell></TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </ScrollArea>
+                      )}
+                    </TableBody>
+                  </Table>
                 </CardContent>
               </Card>
             </>
