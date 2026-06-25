@@ -691,6 +691,28 @@ export default function PSPs() {
   };
 
 
+  // Cancel a PENDING settlement
+  const handleCancelSettlement = async (settlement) => {
+    if (!window.confirm(`Cancel this settlement (${settlement.settlement_id})?\n\nThis will unmark all ${settlement.transaction_count} transaction(s) and remove the settlement record. It cannot be undone.`)) return;
+    try {
+      const response = await fetch(`${API_URL}/api/psp-settlements/${settlement.settlement_id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+      if (response.ok) {
+        toast.success('Settlement cancelled — transactions are back to unsettled');
+        fetchSettlements(viewPsp.psp_id);
+        fetchPendingTransactions(viewPsp.psp_id);
+        fetchPsps();
+      } else {
+        toast.error(await getApiError(response));
+      }
+    } catch (error) {
+      toast.error(error?.message || 'Something went wrong');
+    }
+  };
+
   // Toggle expanded settlement detail to show included transactions
   const toggleSettlementDetail = async (settlement) => {
     if (expandedSettlement === settlement.settlement_id) {
@@ -1796,6 +1818,7 @@ export default function PSPs() {
                             <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Net Received</TableHead>
                             <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Date</TableHead>
                             <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Status</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs"></TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1881,11 +1904,22 @@ export default function PSPs() {
                               </TableCell>
                               <TableCell className="text-muted-foreground text-xs">{formatDate(settlement.settled_at || settlement.created_at)}</TableCell>
                               <TableCell>{getStatusBadge(settlement.status)}</TableCell>
+                              <TableCell>
+                                {settlement.status === 'pending' && (
+                                  <button
+                                    onClick={() => handleCancelSettlement(settlement)}
+                                    className="text-xs text-red-400 hover:text-red-600 underline"
+                                    title="Cancel this settlement"
+                                  >
+                                    Cancel
+                                  </button>
+                                )}
+                              </TableCell>
                             </TableRow>
                             {/* Expanded detail: individual transactions in compound settlement */}
                             {isExpanded && (
                               <TableRow className="bg-muted/50/80">
-                                <TableCell colSpan={9} className="p-0">
+                                <TableCell colSpan={10} className="p-0">
                                   <div className="px-6 py-3 border-l-2 border-[#66FCF1] ml-4">
                                     <p className="text-xs text-muted-foreground font-bold mb-2 uppercase tracking-wider">
                                       Included Transactions ({expandedTxs.length})
