@@ -203,7 +203,7 @@ export default function AccountantDashboard() {
   const [showApprovalDialog, setShowApprovalDialog] = useState(null);
   const [approvalSourceAccount, setApprovalSourceAccount] = useState("");
   const [approvalProofs, setApprovalProofs] = useState([]);
-
+  const [approvalComment, setApprovalComment] = useState("");
   const [approvalProofPreviews, setApprovalProofPreviews] = useState([]);
   const [bankReceiptDate, setBankReceiptDate] = useState("");
   const [treasuryAccounts, setTreasuryAccounts] = useState([]);
@@ -462,6 +462,7 @@ export default function AccountantDashboard() {
       proofFile: approvalProofs[0],
       proofFiles: approvalProofs,
       bankReceiptDate: bankReceiptDate || null,
+      approvalComment: approvalComment || null,
     });
     setShowApprovalDialog(null);
     setShowCaptcha(true);
@@ -491,6 +492,7 @@ export default function AccountantDashboard() {
           captchaAction.proofFiles ||
             (captchaAction.proofFile ? [captchaAction.proofFile] : []),
           captchaAction.bankReceiptDate,
+          captchaAction.approvalComment,
         );
       }
     } else if (captchaAction.type === "reject") {
@@ -510,6 +512,7 @@ export default function AccountantDashboard() {
     setApprovalSourceAccount("");
     setApprovalProofs([]);
     setApprovalProofPreviews([]);
+    setApprovalComment("");
     setCaptchaAction(null);
   };
 
@@ -518,6 +521,7 @@ export default function AccountantDashboard() {
     sourceAccount = null,
     proofFiles = [],
     bankReceiptDate = null,
+    approvalComment = null,
   ) => {
     setProcessingId(transactionId);
     try {
@@ -548,6 +552,7 @@ export default function AccountantDashboard() {
       const params = new URLSearchParams();
       if (sourceAccount) params.append("source_account_id", sourceAccount);
       if (bankReceiptDate) params.append("bank_receipt_date", bankReceiptDate);
+      if (approvalComment) params.append("approval_comment", approvalComment);
       const queryStr = params.toString() ? `?${params.toString()}` : "";
       const url = `${API_URL}/api/transactions/${transactionId}/approve${queryStr}`;
 
@@ -3008,6 +3013,7 @@ export default function AccountantDashboard() {
           setApprovalProofs([]);
           setApprovalProofPreviews([]);
           setBankReceiptDate("");
+          setApprovalComment("");
         }}
       >
         <DialogContent className="bg-card border text-foreground max-w-lg max-h-[90vh] overflow-y-auto">
@@ -3251,6 +3257,21 @@ export default function AccountantDashboard() {
                 </p>
               </div>
 
+              {/* Approval Comment - Optional */}
+              <div className="space-y-2">
+                <Label className="text-card-foreground text-xs uppercase tracking-wider">
+                  Comment (Optional)
+                </Label>
+                <Textarea
+                  value={approvalComment}
+                  onChange={(e) => setApprovalComment(e.target.value)}
+                  placeholder="Add a note for this approval..."
+                  className="bg-muted/50 border text-foreground resize-none"
+                  rows={2}
+                  data-testid="approval-comment"
+                />
+              </div>
+
               {/* Proof of Payment Upload - Required for both */}
               <div className="space-y-2">
                 <Label className="text-muted-foreground text-xs uppercase tracking-wider">
@@ -3358,6 +3379,7 @@ export default function AccountantDashboard() {
                     setApprovalProofs([]);
                     setApprovalProofPreviews([]);
                     setBankReceiptDate("");
+                    setApprovalComment("");
                   }}
                   className="flex-1 border text-muted-foreground hover:bg-muted/50"
                 >

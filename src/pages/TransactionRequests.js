@@ -1006,6 +1006,7 @@ export default function TransactionRequests() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [dateType, setDateType] = useState("created");
 
   // Create dialog
   const [createOpen, setCreateOpen] = useState(false);
@@ -1083,8 +1084,8 @@ export default function TransactionRequests() {
         if (statusFilter !== "all") params.append("status", statusFilter);
         if (typeFilter !== "all") params.append("transaction_type", typeFilter);
         if (searchQuery) params.append("search", searchQuery);
-        if (dateFrom) params.append("date_from", dateFrom);
-        if (dateTo) params.append("date_to", dateTo);
+        if (dateFrom) params.append(dateType === "processed" ? "processed_date_from" : "date_from", dateFrom);
+        if (dateTo) params.append(dateType === "processed" ? "processed_date_to" : "date_to", dateTo);
         const res = await fetch(
           `${API_URL}/api/transaction-requests?${params}`,
           { headers: authHeaders() },
@@ -1603,6 +1604,19 @@ export default function TransactionRequests() {
             <option value="withdrawal">Withdrawal</option>
           </select>
         </div>
+        <div className="min-w-[120px]">
+          <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider mb-1 block">
+            Date Type
+          </label>
+          <select
+            value={dateType}
+            onChange={(e) => { setDateType(e.target.value); setPage(1); }}
+            className="h-8 text-sm border rounded px-2 bg-card text-foreground w-full"
+          >
+            <option value="created">Created Date</option>
+            <option value="processed">Processed Date</option>
+          </select>
+        </div>
         <div className="min-w-[130px]">
           <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider mb-1 block">
             From
@@ -1647,6 +1661,7 @@ export default function TransactionRequests() {
               setTypeFilter("all");
               setDateFrom("");
               setDateTo("");
+              setDateType("created");
               setPage(1);
             }}
             className="text-muted-foreground hover:text-card-foreground h-8 px-2"

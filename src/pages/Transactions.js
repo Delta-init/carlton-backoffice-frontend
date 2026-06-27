@@ -259,6 +259,7 @@ export default function Transactions() {
   const [destinationIdFilter, setDestinationIdFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [txDateType, setTxDateType] = useState("transaction");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [viewTransaction, setViewTransaction] = useState(null);
   const [destEditTx, setDestEditTx] = useState(null);
@@ -385,8 +386,8 @@ export default function Transactions() {
       }
       if (searchTerm) params.append("search", searchTerm);
       if (emailFilter) params.append("client_email", emailFilter);
-      if (dateFrom) params.append("date_from", dateFrom);
-      if (dateTo) params.append("date_to", dateTo);
+      if (dateFrom) params.append(txDateType === "approved" ? "approved_date_from" : "date_from", dateFrom);
+      if (dateTo) params.append(txDateType === "approved" ? "approved_date_to" : "date_to", dateTo);
       if (tagFilter && tagFilter !== "all")
         params.append("client_tag", tagFilter);
       if (txnTagFilter && txnTagFilter !== "all")
@@ -1259,8 +1260,8 @@ export default function Transactions() {
     }
     if (searchTerm) params.append("search", searchTerm);
     if (emailFilter) params.append("client_email", emailFilter);
-    if (dateFrom) params.append("date_from", dateFrom);
-    if (dateTo) params.append("date_to", dateTo);
+    if (dateFrom) params.append(txDateType === "approved" ? "approved_date_from" : "date_from", dateFrom);
+    if (dateTo) params.append(txDateType === "approved" ? "approved_date_to" : "date_to", dateTo);
     if (tagFilter && tagFilter !== "all") params.append("client_tag", tagFilter);
     if (txnTagFilter && txnTagFilter !== "all") params.append("transaction_tag", txnTagFilter);
 
@@ -3155,6 +3156,14 @@ export default function Transactions() {
         </Button>
 
         <div className="flex items-center gap-2">
+          <select
+            value={txDateType}
+            onChange={(e) => setTxDateType(e.target.value)}
+            className="h-9 text-xs border rounded px-2 bg-card text-foreground"
+          >
+            <option value="transaction">Txn Date</option>
+            <option value="approved">Approved Date</option>
+          </select>
           <div className="flex items-center gap-1">
             <span className="text-xs text-muted-foreground">From:</span>
             <Input
@@ -3188,6 +3197,7 @@ export default function Transactions() {
               onClick={() => {
                 setDateFrom("");
                 setDateTo("");
+                setTxDateType("transaction");
                 setDestinationFilter("all");
                 setDestinationIdFilter("all");
                 setEmailFilter("");
