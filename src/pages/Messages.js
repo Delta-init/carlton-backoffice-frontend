@@ -19,7 +19,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   MessageSquare, Send, Users, User, Search, Plus, Check, CheckCheck,
   Loader2, Paperclip, X, FileText, Image as ImageIcon, FileSpreadsheet, File,
-  Hash, MessageCircle, ChevronRight, Video, ZoomIn, PanelRightOpen,
+  Hash, MessageCircle, ChevronRight, Video, ZoomIn, PanelRightOpen, Settings, Trash2,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -72,6 +72,13 @@ export default function Messages() {
   const [channelDesc, setChannelDesc] = useState('');
   const [channelMembers, setChannelMembers] = useState([]);
   const [creatingChannel, setCreatingChannel] = useState(false);
+
+  // Edit channel dialog
+  const [editChannelDialog, setEditChannelDialog] = useState(false);
+  const [editChannelName, setEditChannelName] = useState('');
+  const [editChannelDesc, setEditChannelDesc] = useState('');
+  const [editChannelMembers, setEditChannelMembers] = useState([]);
+  const [savingChannel, setSavingChannel] = useState(false);
 
   // Lightbox
   const [lightboxUrl, setLightboxUrl] = useState(null);
@@ -452,6 +459,49 @@ export default function Messages() {
     } catch (e) { toast.error(e?.message || 'Something went wrong'); } finally { setCreatingChannel(false); }
   };
 
+  const openEditDialog = () => {
+    if (!selectedChannel) return;
+    setEditChannelName(selectedChannel.name || '');
+    setEditChannelDesc(selectedChannel.description || '');
+    setEditChannelMembers(selectedChannel.members || []);
+    setEditChannelDialog(true);
+  };
+
+  const handleEditChannel = async () => {
+    if (!editChannelName.trim()) { toast.error('Channel name is required'); return; }
+    setSavingChannel(true);
+    try {
+      const headers = { ...getAuthHeaders(), 'Content-Type': 'application/json' };
+      const r = await fetch(`${API_URL}/api/channels/${selectedChannel.channel_id}`, {
+        method: 'PATCH', headers,
+        body: JSON.stringify({ name: editChannelName.trim(), description: editChannelDesc, members: editChannelMembers }),
+      });
+      if (r.ok) {
+        const updated = await r.json();
+        setEditChannelDialog(false);
+        setSelectedChannel(updated);
+        setChannels(prev => prev.map(ch => ch.channel_id === updated.channel_id ? { ...ch, ...updated } : ch));
+        toast.success('Channel updated');
+      } else toast.error(await getApiError(r));
+    } catch (e) { toast.error(e?.message || 'Something went wrong'); } finally { setSavingChannel(false); }
+  };
+
+  const handleDeleteChannel = async () => {
+    if (!selectedChannel) return;
+    if (!window.confirm(`Delete #${selectedChannel.name}? This cannot be undone.`)) return;
+    try {
+      const r = await fetch(`${API_URL}/api/channels/${selectedChannel.channel_id}`, { method: 'DELETE', headers: getAuthHeaders() });
+      if (r.ok) {
+        setEditChannelDialog(false);
+        setSelectedChannel(null);
+        setChannelMessages([]);
+        setActiveSection('dm');
+        setChannels(prev => prev.filter(ch => ch.channel_id !== selectedChannel.channel_id));
+        toast.success('Channel deleted');
+      } else toast.error(await getApiError(r));
+    } catch (e) { toast.error(e?.message || 'Something went wrong'); }
+  };
+
   // ── File handlers ──────────────────────────────────────────────────────────
   const handleDmFileSelect = (e) => {
     const f = e.target.files[0]; if (!f) return;
@@ -782,11 +832,14 @@ export default function Messages() {
                       <h3 className="font-semibold text-foreground leading-tight">{selectedChannel.name}</h3>
                       {selectedChannel.description && <p className="text-xs text-muted-foreground truncate">{selectedChannel.description}</p>}
                     </div>
-                    <div className="flex items-center gap-2 text-muted-foreground shrink-0">
+                    <div className="flex items-center gap-1.5 text-muted-foreground shrink-0">
                       <Users className="w-4 h-4" />
-                      <span className="text-xs font-medium">{selectedChannel.members?.length || 0}</span>
+                      <span className="text-xs font-medium mr-1">{selectedChannel.members?.length || 0}</span>
+                      <button className="p-1 hover:bg-muted rounded transition-colors" onClick={openEditDialog} title="Edit channel">
+                        <Settings className="w-4 h-4 text-muted-foreground hover:text-foreground/80" />
+                      </button>
                       {threadMsg && (
-                        <button className="ml-1 p-1 hover:bg-muted rounded" onClick={() => { setThreadMsg(null); setThreadReplies([]); }}>
+                        <button className="p-1 hover:bg-muted rounded" onClick={() => { setThreadMsg(null); setThreadReplies([]); }}>
                           <PanelRightOpen className="w-4 h-4 text-muted-foreground" />
                         </button>
                       )}
@@ -1176,6 +1229,55 @@ export default function Messages() {
             <Button onClick={handleCreateChannel} disabled={!channelName.trim() || creatingChannel}>
               {creatingChannel ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Hash className="w-4 h-4 mr-2" />}
               Create Channel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Channel dialog */}
+      <Dialog open={editChannelDialog} onOpenChange={v => { setEditChannelDialog(v); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Settings className="w-5 h-5" /> Edit Channel</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Channel Name *</Label>
+              <Input className="mt-1" placeholder="e.g. general, ops-team"
+                value={editChannelName}
+                onChange={e => setEditChannelName(e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''))} />
+            </div>
+            <div>
+              <Label>Description</Label>
+              <Input className="mt-1" placeholder="What's this channel about?" value={editChannelDesc} onChange={e => setEditChannelDesc(e.target.value)} />
+            </div>
+            <div>
+              <Label>Members</Label>
+              <div className="mt-1 max-h-40 overflow-y-auto border rounded-md p-2 space-y-0.5">
+                {users.map(u => (
+                  <label key={u.user_id} className="flex items-center gap-2 cursor-pointer p-1.5 hover:bg-muted/50 rounded">
+                    <input type="checkbox" className="rounded"
+                      checked={editChannelMembers.includes(u.user_id)}
+                      onChange={e => setEditChannelMembers(prev => e.target.checked ? [...prev, u.user_id] : prev.filter(id => id !== u.user_id))} />
+                    <span className="text-sm">{u.name}</span>
+                    <Badge variant="outline" className="text-xs ml-auto">{u.role}</Badge>
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Uncheck to remove members.</p>
+            </div>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <button
+              onClick={handleDeleteChannel}
+              className="flex items-center gap-1.5 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-md transition-colors mr-auto"
+            >
+              <Trash2 className="w-4 h-4" /> Delete Channel
+            </button>
+            <Button variant="outline" onClick={() => setEditChannelDialog(false)}>Cancel</Button>
+            <Button onClick={handleEditChannel} disabled={!editChannelName.trim() || savingChannel}>
+              {savingChannel ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Settings className="w-4 h-4 mr-2" />}
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
