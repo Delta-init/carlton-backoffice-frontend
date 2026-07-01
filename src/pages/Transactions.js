@@ -3162,7 +3162,7 @@ export default function Transactions() {
             className="h-9 text-xs border rounded px-2 bg-card text-foreground"
           >
             <option value="transaction">Txn Date</option>
-            <option value="approved">Approved Date</option>
+            <option value="approved">Processed Date</option>
           </select>
           <div className="flex items-center gap-1">
             <span className="text-xs text-muted-foreground">From:</span>
