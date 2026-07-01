@@ -57,6 +57,7 @@ export default function Messages() {
   const [channelFiles, setChannelFiles] = useState([]);
   const [sendingChannel, setSendingChannel] = useState(false);
   const channelFileInputRef = useRef(null);
+  const channelTextareaRef = useRef(null);
 
   // Thread state
   const [threadMsg, setThreadMsg] = useState(null);
@@ -65,6 +66,7 @@ export default function Messages() {
   const [threadFiles, setThreadFiles] = useState([]);
   const [sendingThread, setSendingThread] = useState(false);
   const threadFileInputRef = useRef(null);
+  const threadTextareaRef = useRef(null);
 
   // Channel dialog
   const [newChannelDialog, setNewChannelDialog] = useState(false);
@@ -418,6 +420,7 @@ export default function Messages() {
       if (r.ok) {
         const msg = await r.json();
         setChannelMsg(''); setChannelFiles([]);
+        if (channelTextareaRef.current) channelTextareaRef.current.style.height = 'auto';
         setChannelMessages(prev => prev.some(m => m.msg_id === msg.msg_id) ? prev : [...prev, msg]);
         setChannels(prev => prev.map(ch => ch.channel_id === selectedChannel.channel_id
           ? { ...ch, last_message: msg.content || '📎 Media', last_message_at: msg.created_at } : ch));
@@ -437,6 +440,7 @@ export default function Messages() {
       if (r.ok) {
         const reply = await r.json();
         setThreadText(''); setThreadFiles([]);
+        if (threadTextareaRef.current) threadTextareaRef.current.style.height = 'auto';
         setThreadReplies(prev => prev.some(m => m.msg_id === reply.msg_id) ? prev : [...prev, reply]);
         setChannelMessages(prev => prev.map(m => m.msg_id === threadMsg.msg_id
           ? { ...m, reply_count: (m.reply_count || 0) + 1 } : m));
@@ -855,79 +859,100 @@ export default function Messages() {
                         <p className="text-sm mt-1">Be the first to say something in #{selectedChannel.name}</p>
                       </div>
                     ) : (
-                      groupedChannelMessages.map(msg => (
-                        <div key={msg.msg_id}>
-                          {msg.showDateDivider && <DateDivider date={msg.created_at} />}
-                          <div className="group flex gap-3 px-4 hover:bg-muted/50/80 py-0.5 transition-colors">
-                            {/* Avatar or spacer */}
-                            <div className="w-9 shrink-0 mt-0.5">
-                              {!msg.isGrouped ? (
-                                <Avatar className="w-9 h-9">
-                                  <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white text-xs font-medium">
-                                    {getInitials(msg.sender_name)}
-                                  </AvatarFallback>
-                                </Avatar>
-                              ) : (
-                                <span className="text-[10px] text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity pt-1 block text-center leading-none">
-                                  {formatFullTime(msg.created_at)}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0 pb-0.5">
-                              {!msg.isGrouped && (
-                                <div className="flex items-baseline gap-2 mb-0.5">
-                                  <span className="text-sm font-bold text-foreground">{msg.sender_id === user?.user_id ? 'You' : msg.sender_name}</span>
-                                  <span className="text-xs text-muted-foreground">{formatFullTime(msg.created_at)}</span>
-                                  <button
-                                    onClick={() => { setThreadMsg(msg); if (selectedChannel) fetchThreadReplies(selectedChannel.channel_id, msg.msg_id); }}
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity ml-1 flex items-center gap-1 text-xs text-muted-foreground hover:text-primary bg-white hover:bg-primary/10 rounded px-2 py-0.5 border border-border hover:border-primary/50 shadow-sm"
-                                  >
+                      groupedChannelMessages.map(msg => {
+                        const isSelf = msg.sender_id === user?.user_id;
+                        const openThread = () => { setThreadMsg(msg); if (selectedChannel) fetchThreadReplies(selectedChannel.channel_id, msg.msg_id); };
+                        return (
+                          <div key={msg.msg_id}>
+                            {msg.showDateDivider && <DateDivider date={msg.created_at} />}
+                            <div className="group flex gap-3 px-4 hover:bg-muted/30 py-0.5 transition-colors">
+                              {/* Avatar or grouped spacer */}
+                              <div className="w-9 shrink-0 mt-1">
+                                {!msg.isGrouped ? (
+                                  <Avatar className="w-9 h-9">
+                                    <AvatarFallback className={`text-xs font-medium text-white ${isSelf ? 'bg-gradient-to-br from-blue-500 to-blue-700' : 'bg-gradient-to-br from-indigo-500 to-purple-600'}`}>
+                                      {getInitials(msg.sender_name)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                ) : (
+                                  <span className="text-[10px] text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity block text-right leading-none pt-2">
+                                    {formatFullTime(msg.created_at)}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0 pb-1">
+                                {/* Name + time header (first in group only) */}
+                                {!msg.isGrouped && (
+                                  <div className="flex items-baseline gap-2 mb-1">
+                                    <span className="text-sm font-bold text-foreground">{isSelf ? 'You' : msg.sender_name}</span>
+                                    <span className="text-xs text-muted-foreground">{formatFullTime(msg.created_at)}</span>
+                                    <button onClick={openThread}
+                                      className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs text-muted-foreground hover:text-primary bg-white hover:bg-primary/10 rounded px-2 py-0.5 border border-border hover:border-primary/50 shadow-sm">
+                                      <MessageCircle className="w-3 h-3" /> Reply
+                                    </button>
+                                  </div>
+                                )}
+                                {/* Grouped reply button on hover */}
+                                {msg.isGrouped && (
+                                  <button onClick={openThread}
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity float-right flex items-center gap-1 text-xs text-muted-foreground hover:text-primary bg-white hover:bg-primary/10 rounded px-2 py-0.5 border border-border hover:border-primary/50 shadow-sm">
                                     <MessageCircle className="w-3 h-3" /> Reply
                                   </button>
-                                </div>
-                              )}
-                              {msg.isGrouped && (
-                                <button
-                                  onClick={() => { setThreadMsg(msg); if (selectedChannel) fetchThreadReplies(selectedChannel.channel_id, msg.msg_id); }}
-                                  className="opacity-0 group-hover:opacity-100 transition-opacity float-right flex items-center gap-1 text-xs text-muted-foreground hover:text-primary bg-white hover:bg-primary/10 rounded px-2 py-0.5 border border-border hover:border-primary/50 shadow-sm -mt-0.5"
-                                >
-                                  <MessageCircle className="w-3 h-3" /> Reply
-                                </button>
-                              )}
-                              {msg.content && <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{msg.content}</p>}
-                              {renderAttachments(msg.attachments, msg.sender_id === user?.user_id)}
-                              {msg.reply_count > 0 && (
-                                <button
-                                  onClick={() => { setThreadMsg(msg); if (selectedChannel) fetchThreadReplies(selectedChannel.channel_id, msg.msg_id); }}
-                                  className="flex items-center gap-1.5 mt-1.5 text-xs text-primary hover:underline font-medium">
-                                  <MessageCircle className="w-3.5 h-3.5" />
-                                  {msg.reply_count} {msg.reply_count === 1 ? 'reply' : 'replies'}
-                                  <ChevronRight className="w-3 h-3" />
-                                </button>
-                              )}
+                                )}
+                                {/* Bubble (text + attachments together) */}
+                                {(msg.content || msg.attachments?.length > 0) && (
+                                  <div className={`inline-block rounded-2xl px-4 py-2.5 max-w-lg ${
+                                    isSelf
+                                      ? 'bg-primary text-white rounded-tl-sm'
+                                      : 'bg-muted text-foreground rounded-tl-sm'
+                                  }`}>
+                                    {msg.content && (
+                                      <p className={`text-sm whitespace-pre-wrap leading-relaxed ${isSelf ? 'text-white' : 'text-foreground'}`}>
+                                        {msg.content}
+                                      </p>
+                                    )}
+                                    {msg.attachments?.length > 0 && renderAttachments(msg.attachments, isSelf)}
+                                  </div>
+                                )}
+                                {/* Thread reply count */}
+                                {msg.reply_count > 0 && (
+                                  <button onClick={openThread}
+                                    className="flex items-center gap-1.5 mt-1.5 text-xs text-primary hover:underline font-medium clear-both">
+                                    <MessageCircle className="w-3.5 h-3.5" />
+                                    {msg.reply_count} {msg.reply_count === 1 ? 'reply' : 'replies'}
+                                    <ChevronRight className="w-3 h-3" />
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
 
                   {/* Channel compose */}
                   <div className="px-4 py-3 border-t shrink-0">
                     <FilePreviewStrip files={channelFiles} onRemove={i => setChannelFiles(prev => prev.filter((_, idx) => idx !== i))} />
-                    <div className="flex items-end gap-2 border border-border rounded-xl px-3 py-2 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/10 transition-all bg-white">
+                    <div className="flex items-end gap-2 bg-muted/70 rounded-xl px-3 py-2 focus-within:bg-white focus-within:ring-2 focus-within:ring-primary/40 transition-all border border-transparent focus-within:border-primary/50">
                       <input ref={channelFileInputRef} type="file" className="hidden" multiple accept="image/*,video/*,.pdf,.xlsx,.xls,.csv,.doc,.docx" onChange={handleChannelFileSelect} />
                       <button className="text-muted-foreground hover:text-primary transition-colors shrink-0" onClick={() => channelFileInputRef.current?.click()} title="Attach files">
                         <Paperclip className="w-5 h-5" />
                       </button>
                       <Textarea
+                        ref={channelTextareaRef}
                         value={channelMsg}
-                        onChange={e => setChannelMsg(e.target.value)}
+                        onChange={e => {
+                          setChannelMsg(e.target.value);
+                          e.target.style.height = 'auto';
+                          e.target.style.height = Math.min(e.target.scrollHeight, 128) + 'px';
+                        }}
                         onPaste={handleChannelPaste}
                         onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendChannelMessage(); } }}
                         placeholder={`Message #${selectedChannel.name}`}
-                        className="flex-1 resize-none text-sm border-0 p-0 focus-visible:ring-0 shadow-none min-h-[22px] max-h-32"
+                        className="flex-1 resize-none text-sm border-0 p-0 focus-visible:ring-0 shadow-none bg-transparent overflow-y-hidden"
                         rows={1}
+                        style={{ minHeight: 22, maxHeight: 128 }}
                       />
                       <button
                         onClick={handleSendChannelMessage}
@@ -1039,7 +1064,7 @@ export default function Messages() {
                         </button>
                       </div>
                     )}
-                    <div className="flex items-end gap-2 border border-border rounded-xl px-3 py-2 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/10 transition-all bg-white">
+                    <div className="flex items-end gap-2 bg-muted/70 rounded-xl px-3 py-2 focus-within:bg-white focus-within:ring-2 focus-within:ring-primary/40 transition-all border border-transparent focus-within:border-primary/50">
                       <input ref={fileInputRef} type="file" className="hidden"
                         accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.xlsx,.xls,.csv,.doc,.docx"
                         onChange={handleDmFileSelect} />
@@ -1051,7 +1076,7 @@ export default function Messages() {
                         onChange={e => setNewMessage(e.target.value)}
                         placeholder={`Message ${selectedConversation.name}`}
                         onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                        className="flex-1 border-0 p-0 focus-visible:ring-0 shadow-none text-sm"
+                        className="flex-1 border-0 p-0 focus-visible:ring-0 shadow-none text-sm bg-transparent"
                       />
                       <button
                         onClick={handleSendMessage}
@@ -1135,19 +1160,25 @@ export default function Messages() {
                 {/* Thread compose */}
                 <div className="px-3 py-3 border-t shrink-0">
                   <FilePreviewStrip files={threadFiles} onRemove={i => setThreadFiles(prev => prev.filter((_, idx) => idx !== i))} />
-                  <div className="flex items-end gap-2 border border-border rounded-xl px-2.5 py-1.5 focus-within:border-primary transition-all bg-white">
+                  <div className="flex items-end gap-2 bg-muted/70 rounded-xl px-2.5 py-1.5 focus-within:bg-white focus-within:ring-2 focus-within:ring-primary/40 transition-all border border-transparent focus-within:border-primary/50">
                     <input ref={threadFileInputRef} type="file" className="hidden" multiple accept="image/*,video/*,.pdf,.xlsx,.xls,.csv,.doc,.docx" onChange={handleThreadFileSelect} />
                     <button className="text-muted-foreground hover:text-primary shrink-0" onClick={() => threadFileInputRef.current?.click()}>
                       <Paperclip className="w-4 h-4" />
                     </button>
                     <Textarea
+                      ref={threadTextareaRef}
                       value={threadText}
-                      onChange={e => setThreadText(e.target.value)}
+                      onChange={e => {
+                        setThreadText(e.target.value);
+                        e.target.style.height = 'auto';
+                        e.target.style.height = Math.min(e.target.scrollHeight, 96) + 'px';
+                      }}
                       onPaste={handleThreadPaste}
                       onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendThreadReply(); } }}
                       placeholder="Reply in thread…"
-                      className="flex-1 resize-none text-sm border-0 p-0 focus-visible:ring-0 shadow-none min-h-[20px] max-h-24"
+                      className="flex-1 resize-none text-sm border-0 p-0 focus-visible:ring-0 shadow-none bg-transparent overflow-y-hidden"
                       rows={1}
+                      style={{ minHeight: 20, maxHeight: 96 }}
                     />
                     <button onClick={handleSendThreadReply} disabled={(!threadText.trim() && !threadFiles.length) || sendingThread}
                       className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg bg-primary hover:bg-primary/90 disabled:opacity-40 text-white transition-colors">
