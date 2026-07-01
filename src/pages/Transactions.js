@@ -386,8 +386,8 @@ export default function Transactions() {
       }
       if (searchTerm) params.append("search", searchTerm);
       if (emailFilter) params.append("client_email", emailFilter);
-      if (dateFrom) params.append(txDateType === "approved" ? "approved_date_from" : "date_from", dateFrom);
-      if (dateTo) params.append(txDateType === "approved" ? "approved_date_to" : "date_to", dateTo);
+      if (dateFrom) params.append(txDateType === "approved" ? "approved_date_from" : txDateType === "bank_receipt" ? "bank_receipt_date_from" : "date_from", dateFrom);
+      if (dateTo) params.append(txDateType === "approved" ? "approved_date_to" : txDateType === "bank_receipt" ? "bank_receipt_date_to" : "date_to", dateTo);
       if (tagFilter && tagFilter !== "all")
         params.append("client_tag", tagFilter);
       if (txnTagFilter && txnTagFilter !== "all")
@@ -1260,8 +1260,8 @@ export default function Transactions() {
     }
     if (searchTerm) params.append("search", searchTerm);
     if (emailFilter) params.append("client_email", emailFilter);
-    if (dateFrom) params.append(txDateType === "approved" ? "approved_date_from" : "date_from", dateFrom);
-    if (dateTo) params.append(txDateType === "approved" ? "approved_date_to" : "date_to", dateTo);
+    if (dateFrom) params.append(txDateType === "approved" ? "approved_date_from" : txDateType === "bank_receipt" ? "bank_receipt_date_from" : "date_from", dateFrom);
+    if (dateTo) params.append(txDateType === "approved" ? "approved_date_to" : txDateType === "bank_receipt" ? "bank_receipt_date_to" : "date_to", dateTo);
     if (tagFilter && tagFilter !== "all") params.append("client_tag", tagFilter);
     if (txnTagFilter && txnTagFilter !== "all") params.append("transaction_tag", txnTagFilter);
 
@@ -3163,6 +3163,7 @@ export default function Transactions() {
           >
             <option value="transaction">Txn Date</option>
             <option value="approved">Processed Date</option>
+            <option value="bank_receipt">Approved Date</option>
           </select>
           <div className="flex items-center gap-1">
             <span className="text-xs text-muted-foreground">From:</span>
