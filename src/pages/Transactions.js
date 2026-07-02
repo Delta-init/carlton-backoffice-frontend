@@ -3227,6 +3227,12 @@ export default function Transactions() {
                     Date
                   </TableHead>
                   <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
+                    Processed Date
+                  </TableHead>
+                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
+                    Approved Date
+                  </TableHead>
+                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                     CRM Ref
                   </TableHead>
                   <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
@@ -3264,14 +3270,14 @@ export default function Transactions() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={13} className="text-center py-8">
+                    <TableCell colSpan={15} className="text-center py-8">
                       <div className="w-6 h-6 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
                 ) : filteredTransactions.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={13}
+                      colSpan={15}
                       className="text-center py-8 text-muted-foreground"
                     >
                       No transactions found
@@ -3313,6 +3319,12 @@ export default function Transactions() {
                       </TableCell>
                       <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
                         {formatDate(tx.transaction_date || tx.created_at, tx.created_at)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
+                        {tx.processed_at ? formatDate(tx.processed_at) : "-"}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
+                        {tx.bank_receipt_date ? formatDate(tx.bank_receipt_date) : "-"}
                       </TableCell>
                       <TableCell className="font-mono text-xs text-purple-600">
                         {tx.crm_reference || "-"}
