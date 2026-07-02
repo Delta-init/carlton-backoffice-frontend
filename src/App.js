@@ -35,6 +35,7 @@ import Profile from "./pages/Profile";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
 import { usePermissions } from "./context/usePermissions";
+import { ChatNotificationProvider } from "./context/ChatNotificationContext";
 
 const ProtectedRoute = ({ children, requiredModule }) => {
   const { user, loading } = useAuth();
@@ -94,6 +95,7 @@ function AppRouter() {
   }
 
   return (
+    <ChatNotificationProvider>
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
@@ -205,6 +207,7 @@ function AppRouter() {
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
+    </ChatNotificationProvider>
   );
 }
 
