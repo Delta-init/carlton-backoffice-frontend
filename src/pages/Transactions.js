@@ -680,6 +680,7 @@ export default function Transactions() {
     destinationIdFilter,
     dateFrom,
     dateTo,
+    txDateType,
     pageSize,
     tagFilter,
     txnTagFilter,
