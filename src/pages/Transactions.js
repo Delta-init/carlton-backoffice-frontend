@@ -63,6 +63,8 @@ import {
 } from "../components/ui/command";
 import { toast } from "sonner";
 import { getApiError } from "../lib/utils";
+import { useColumnPreferences } from "../hooks/useColumnPreferences";
+import { ColumnToggleDropdown } from "../components/ColumnToggleDropdown";
 import {
   ArrowLeftRight,
   Plus,
@@ -243,6 +245,26 @@ function ClientServerSearch({
   );
 }
 
+// Transaction Summary table columns (order + visibility controlled via useColumnPreferences)
+const TX_SUMMARY_COLUMNS = [
+  { id: "reference",        label: "Reference",           defaultVisible: true, alwaysVisible: true },
+  { id: "date",             label: "Date",                defaultVisible: true },
+  { id: "processed_date",   label: "Processed Date",      defaultVisible: true },
+  { id: "approved_date",    label: "Approved Date",       defaultVisible: true },
+  { id: "req_processed",    label: "Req. Processed Date", defaultVisible: true },
+  { id: "crm_ref",          label: "CRM Ref",             defaultVisible: true },
+  { id: "client",           label: "Client",              defaultVisible: true },
+  { id: "email",            label: "Email",               defaultVisible: true },
+  { id: "type",             label: "Type",                defaultVisible: true },
+  { id: "amount",           label: "Amount (USD)",        defaultVisible: true },
+  { id: "payment_currency", label: "Payment Currency",    defaultVisible: true },
+  { id: "destination",      label: "Destination",         defaultVisible: true },
+  { id: "client_tags",      label: "Client Tags",         defaultVisible: true },
+  { id: "txn_tags",         label: "Txn Tags",            defaultVisible: true, headClass: "text-amber-500 font-bold uppercase tracking-wider text-xs" },
+  { id: "status",           label: "Status",              defaultVisible: true },
+  { id: "actions",          label: "Actions",             defaultVisible: true, alwaysVisible: true, headClass: "text-muted-foreground font-bold uppercase tracking-wider text-xs text-right" },
+];
+
 export default function Transactions() {
   const [transactions, setTransactions] = useState([]);
   const [clients, setClients] = useState([]);
@@ -322,6 +344,284 @@ export default function Transactions() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [pageSize, setPageSize] = useState(10);
+
+  // ── Column visibility + reorder (persists to localStorage "carlton_tx_summary_*") ──
+  const colPrefs = useColumnPreferences(TX_SUMMARY_COLUMNS, "carlton_tx_summary");
+  const { orderedColumns, isVisible } = colPrefs;
+  const visibleColCount = orderedColumns.filter(
+    (c) => c.alwaysVisible || isVisible(c.id),
+  ).length;
+
+  function renderTxHead(col) {
+    if (!col.alwaysVisible && !isVisible(col.id)) return null;
+    return (
+      <TableHead
+        key={col.id}
+        className={col.headClass || "text-muted-foreground font-bold uppercase tracking-wider text-xs"}
+      >
+        {col.label}
+      </TableHead>
+    );
+  }
+
+  function renderTxCell(colId, tx) {
+    const col = TX_SUMMARY_COLUMNS.find((c) => c.id === colId);
+    if (!col || (!col.alwaysVisible && !isVisible(colId))) return null;
+    switch (colId) {
+      case "reference":
+        return (
+          <TableCell key="reference">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-foreground">{tx.reference}</span>
+              {tx.proof_image && (
+                <span title="Client Proof">
+                  <ImageIcon className="w-4 h-4 text-muted-foreground" />
+                </span>
+              )}
+              {tx.accountant_proof_image && (
+                <span title="Accountant Approval Proof" className="flex items-center">
+                  <ImageIcon className="w-4 h-4 text-primary" />
+                </span>
+              )}
+              {tx.vendor_proof_image && (
+                <span title="Exchanger Proof" className="flex items-center">
+                  <ImageIcon className="w-4 h-4 text-orange-400" />
+                </span>
+              )}
+            </div>
+          </TableCell>
+        );
+      case "date":
+        return (
+          <TableCell key="date" className="text-muted-foreground text-xs whitespace-nowrap">
+            {formatDate(tx.transaction_date || tx.created_at, tx.created_at)}
+          </TableCell>
+        );
+      case "processed_date":
+        return (
+          <TableCell key="processed_date" className="text-muted-foreground text-xs whitespace-nowrap">
+            {tx.processed_at ? formatDate(tx.processed_at) : "-"}
+          </TableCell>
+        );
+      case "approved_date":
+        return (
+          <TableCell key="approved_date" className="text-muted-foreground text-xs whitespace-nowrap">
+            {tx.bank_receipt_date ? formatDate(tx.bank_receipt_date) : "-"}
+          </TableCell>
+        );
+      case "req_processed":
+        return (
+          <TableCell key="req_processed" className="text-muted-foreground text-xs whitespace-nowrap">
+            {tx.request_processed_at ? formatDate(tx.request_processed_at) : "-"}
+          </TableCell>
+        );
+      case "crm_ref":
+        return (
+          <TableCell key="crm_ref" className="font-mono text-xs text-primary">
+            {tx.crm_reference || "-"}
+          </TableCell>
+        );
+      case "client":
+        return (
+          <TableCell key="client" className="text-foreground">
+            {tx.client_name || getClientName(tx.client_id)}
+          </TableCell>
+        );
+      case "email":
+        return (
+          <TableCell key="email" className="text-muted-foreground text-sm">
+            {tx.client_email || "-"}
+          </TableCell>
+        );
+      case "type":
+        return <TableCell key="type">{getTypeBadge(tx.transaction_type)}</TableCell>;
+      case "amount":
+        return (
+          <TableCell
+            key="amount"
+            className={`font-mono font-medium ${["deposit", "rebate"].includes(tx.transaction_type) ? "text-green-400" : "text-red-400"}`}
+          >
+            {["deposit", "rebate"].includes(tx.transaction_type) ? "+" : "-"}
+            ${tx.amount?.toLocaleString()} {tx.currency}
+          </TableCell>
+        );
+      case "payment_currency":
+        return (
+          <TableCell key="payment_currency" className="text-muted-foreground">
+            {tx.base_currency && tx.base_currency !== "USD" && tx.base_amount ? (
+              <div className="flex flex-col">
+                <span className="font-mono font-medium">
+                  {tx.base_amount?.toLocaleString()} {tx.base_currency}
+                </span>
+                <span className="text-xs text-muted-foreground/60">@ {tx.exchange_rate || "-"}</span>
+              </div>
+            ) : (
+              <span className="text-muted-foreground/60">USD</span>
+            )}
+          </TableCell>
+        );
+      case "destination":
+        return (
+          <TableCell key="destination" className="text-muted-foreground">
+            {tx.destination_type === "vendor" && tx.vendor_name ? (
+              <span className="text-orange-500">
+                {tx.vendor_name}
+                <br />
+                <span className="text-xs text-orange-400">Exchanger</span>
+              </span>
+            ) : tx.destination_type === "psp" && tx.psp_name ? (
+              <span className="text-purple-500">
+                {tx.psp_name}
+                <br />
+                <span className="text-xs text-purple-400">PSP</span>
+              </span>
+            ) : tx.destination_bank_name ? (
+              <span>
+                {tx.destination_account_name}
+                <br />
+                <span className="text-xs">{tx.destination_bank_name}</span>
+              </span>
+            ) : tx.destination_account_name ? (
+              <span>{tx.destination_account_name}</span>
+            ) : tx.client_bank_name ? (
+              <span>
+                {tx.client_bank_name}
+                <br />
+                <span className="text-xs text-muted-foreground/60">{tx.client_bank_account_name}</span>
+              </span>
+            ) : tx.client_usdt_address ? (
+              <span className="text-xs font-mono">
+                {tx.client_usdt_address.slice(0, 10)}...
+                <br />
+                <span className="text-xs text-muted-foreground/60">{tx.client_usdt_network || "USDT"}</span>
+              </span>
+            ) : tx.destination_type ? (
+              <span className="text-xs capitalize text-muted-foreground/60">{tx.destination_type}</span>
+            ) : (
+              "-"
+            )}
+          </TableCell>
+        );
+      case "client_tags":
+        return (
+          <TableCell key="client_tags">
+            <div className="flex items-center gap-1">
+              <div className="flex flex-wrap gap-0.5 flex-1 min-w-0">
+                {(tx.client_tags || []).length > 0 ? (
+                  tx.client_tags.map((tag) => {
+                    // tag may be a name OR a legacy tag_id — try both
+                    const tagObj = clientTags.find((t) => t.name === tag)
+                      || clientTags.find((t) => t.tag_id === tag);
+                    const displayName = tagObj ? tagObj.name : tag;
+                    return (
+                      <span
+                        key={tag}
+                        className="px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white whitespace-nowrap"
+                        style={{ backgroundColor: tagObj?.color || "#64748B" }}
+                      >
+                        {displayName}
+                      </span>
+                    );
+                  })
+                ) : (
+                  <span className="text-xs text-muted-foreground/60">-</span>
+                )}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => openTagEdit(tx)}
+                className="text-muted-foreground/60 hover:text-primary hover:bg-primary/5 h-6 w-6 p-0 shrink-0"
+                title="Edit Client Tags"
+                data-testid={`tx-tag-edit-${tx.transaction_id}`}
+              >
+                <Pencil className="w-3 h-3" />
+              </Button>
+            </div>
+          </TableCell>
+        );
+      case "txn_tags":
+        return (
+          <TableCell key="txn_tags">
+            <div className="flex items-center gap-1">
+              <div className="flex flex-wrap gap-0.5 flex-1 min-w-0">
+                {(tx.transaction_tags || []).length > 0 ? (
+                  tx.transaction_tags.map((tag) => {
+                    const tagObj = txnTags.find((t) => t.name === tag)
+                      || txnTags.find((t) => t.tag_id === tag);
+                    return (
+                      <span
+                        key={tag}
+                        className="px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white whitespace-nowrap"
+                        style={{ backgroundColor: tagObj?.color || "#F59E0B" }}
+                      >
+                        {tagObj?.name || tag}
+                      </span>
+                    );
+                  })
+                ) : (
+                  <span className="text-xs text-muted-foreground/60">-</span>
+                )}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => openTxnTagEdit(tx)}
+                className="text-muted-foreground/60 hover:text-amber-600 hover:bg-amber-50 h-6 w-6 p-0 shrink-0"
+                title="Edit Transaction Tags"
+                data-testid={`tx-txntag-edit-${tx.transaction_id}`}
+              >
+                <Pencil className="w-3 h-3" />
+              </Button>
+            </div>
+          </TableCell>
+        );
+      case "status":
+        return <TableCell key="status">{getStatusBadge(tx.status)}</TableCell>;
+      case "actions":
+        return (
+          <TableCell key="actions" className="text-right">
+            <div className="flex gap-1 justify-end">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setViewTransaction(tx)}
+                className="text-muted-foreground hover:text-foreground hover:bg-muted h-7 w-7 p-0"
+                data-testid={`tx-view-${tx.transaction_id}`}
+              >
+                <Eye className="w-4 h-4" />
+              </Button>
+              {tx.status === "pending" && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => openFieldEdit(tx)}
+                    className="text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 h-7 w-7 p-0"
+                    title="Edit Details"
+                    data-testid={`tx-field-edit-${tx.transaction_id}`}
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => openDestEdit(tx)}
+                    className="text-blue-500 hover:text-blue-700 hover:bg-primary/5 h-7 w-7 p-0"
+                    title="Edit Destination"
+                    data-testid={`tx-dest-edit-${tx.transaction_id}`}
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                </>
+              )}
+            </div>
+          </TableCell>
+        );
+      default:
+        return null;
+    }
+  }
 
   const [formData, setFormData] = useState({
     client_id: "",
@@ -3213,6 +3513,7 @@ export default function Transactions() {
               Clear
             </Button>
           )}
+          <ColumnToggleDropdown prefs={colPrefs} />
         </div>
       </div>
 
@@ -3223,67 +3524,20 @@ export default function Transactions() {
             <Table>
               <TableHeader>
                 <TableRow className="border-border hover:bg-transparent">
-                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
-                    Reference
-                  </TableHead>
-                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
-                    Date
-                  </TableHead>
-                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
-                    Processed Date
-                  </TableHead>
-                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
-                    Approved Date
-                  </TableHead>
-                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
-                    Req. Processed Date
-                  </TableHead>
-                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
-                    CRM Ref
-                  </TableHead>
-                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
-                    Client
-                  </TableHead>
-                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
-                    Email
-                  </TableHead>
-                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
-                    Type
-                  </TableHead>
-                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
-                    Amount (USD)
-                  </TableHead>
-                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
-                    Payment Currency
-                  </TableHead>
-                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
-                    Destination
-                  </TableHead>
-                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
-                    Client Tags
-                  </TableHead>
-                  <TableHead className="text-amber-500 font-bold uppercase tracking-wider text-xs">
-                    Txn Tags
-                  </TableHead>
-                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
-                    Status
-                  </TableHead>
-                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">
-                    Actions
-                  </TableHead>
+                  {orderedColumns.map((col) => renderTxHead(col))}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={16} className="text-center py-8">
+                    <TableCell colSpan={visibleColCount} className="text-center py-8">
                       <div className="w-6 h-6 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
                 ) : filteredTransactions.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={16}
+                      colSpan={visibleColCount}
                       className="text-center py-8 text-muted-foreground"
                     >
                       No transactions found
@@ -3295,243 +3549,7 @@ export default function Transactions() {
                       key={tx.transaction_id}
                       className="border-border hover:bg-muted"
                     >
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-foreground">
-                            {tx.reference}
-                          </span>
-                          {tx.proof_image && (
-                            <span title="Client Proof">
-                              <ImageIcon className="w-4 h-4 text-muted-foreground" />
-                            </span>
-                          )}
-                          {tx.accountant_proof_image && (
-                            <span
-                              title="Accountant Approval Proof"
-                              className="flex items-center"
-                            >
-                              <ImageIcon className="w-4 h-4 text-primary" />
-                            </span>
-                          )}
-                          {tx.vendor_proof_image && (
-                            <span
-                              title="Exchanger Proof"
-                              className="flex items-center"
-                            >
-                              <ImageIcon className="w-4 h-4 text-orange-400" />
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-                        {formatDate(tx.transaction_date || tx.created_at, tx.created_at)}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-                        {tx.processed_at ? formatDate(tx.processed_at) : "-"}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-                        {tx.bank_receipt_date ? formatDate(tx.bank_receipt_date) : "-"}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-                        {tx.request_processed_at ? formatDate(tx.request_processed_at) : "-"}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs text-primary">
-                        {tx.crm_reference || "-"}
-                      </TableCell>
-                      <TableCell className="text-foreground">
-                        {tx.client_name || getClientName(tx.client_id)}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {tx.client_email || "-"}
-                      </TableCell>
-                      <TableCell>{getTypeBadge(tx.transaction_type)}</TableCell>
-                      <TableCell
-                        className={`font-mono font-medium ${["deposit", "rebate"].includes(tx.transaction_type) ? "text-green-400" : "text-red-400"}`}
-                      >
-                        {["deposit", "rebate"].includes(tx.transaction_type)
-                          ? "+"
-                          : "-"}
-                        ${tx.amount?.toLocaleString()} {tx.currency}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {tx.base_currency &&
-                        tx.base_currency !== "USD" &&
-                        tx.base_amount ? (
-                          <div className="flex flex-col">
-                            <span className="font-mono font-medium">
-                              {tx.base_amount?.toLocaleString()}{" "}
-                              {tx.base_currency}
-                            </span>
-                            <span className="text-xs text-muted-foreground/60">
-                              @ {tx.exchange_rate || "-"}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground/60">USD</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {tx.destination_type === "vendor" && tx.vendor_name ? (
-                          <span className="text-orange-500">
-                            {tx.vendor_name}
-                            <br />
-                            <span className="text-xs text-orange-400">
-                              Exchanger
-                            </span>
-                          </span>
-                        ) : tx.destination_type === "psp" && tx.psp_name ? (
-                          <span className="text-purple-500">
-                            {tx.psp_name}
-                            <br />
-                            <span className="text-xs text-purple-400">PSP</span>
-                          </span>
-                        ) : tx.destination_bank_name ? (
-                          <span>
-                            {tx.destination_account_name}
-                            <br />
-                            <span className="text-xs">
-                              {tx.destination_bank_name}
-                            </span>
-                          </span>
-                        ) : tx.destination_account_name ? (
-                          <span>{tx.destination_account_name}</span>
-                        ) : tx.client_bank_name ? (
-                          <span>
-                            {tx.client_bank_name}
-                            <br />
-                            <span className="text-xs text-muted-foreground/60">
-                              {tx.client_bank_account_name}
-                            </span>
-                          </span>
-                        ) : tx.client_usdt_address ? (
-                          <span className="text-xs font-mono">
-                            {tx.client_usdt_address.slice(0, 10)}...
-                            <br />
-                            <span className="text-xs text-muted-foreground/60">
-                              {tx.client_usdt_network || "USDT"}
-                            </span>
-                          </span>
-                        ) : tx.destination_type ? (
-                          <span className="text-xs capitalize text-muted-foreground/60">
-                            {tx.destination_type}
-                          </span>
-                        ) : (
-                          "-"
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <div className="flex flex-wrap gap-0.5 flex-1 min-w-0">
-                            {(tx.client_tags || []).length > 0 ? (
-                              tx.client_tags.map((tag) => {
-                                // tag may be a name OR a legacy tag_id — try both
-                                const tagObj = clientTags.find(t => t.name === tag)
-                                  || clientTags.find(t => t.tag_id === tag);
-                                const displayName = tagObj ? tagObj.name : tag;
-                                return (
-                                  <span
-                                    key={tag}
-                                    className="px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white whitespace-nowrap"
-                                    style={{
-                                      backgroundColor:
-                                        tagObj?.color || "#64748B",
-                                    }}
-                                  >
-                                    {displayName}
-                                  </span>
-                                );
-                              })
-                            ) : (
-                              <span className="text-xs text-muted-foreground/60">-</span>
-                            )}
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openTagEdit(tx)}
-                            className="text-muted-foreground/60 hover:text-primary hover:bg-primary/5 h-6 w-6 p-0 shrink-0"
-                            title="Edit Client Tags"
-                            data-testid={`tx-tag-edit-${tx.transaction_id}`}
-                          >
-                            <Pencil className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <div className="flex flex-wrap gap-0.5 flex-1 min-w-0">
-                            {(tx.transaction_tags || []).length > 0 ? (
-                              tx.transaction_tags.map((tag) => {
-                                const tagObj = txnTags.find(
-                                  (t) => t.name === tag,
-                                ) || txnTags.find((t) => t.tag_id === tag);
-                                return (
-                                  <span
-                                    key={tag}
-                                    className="px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white whitespace-nowrap"
-                                    style={{
-                                      backgroundColor:
-                                        tagObj?.color || "#F59E0B",
-                                    }}
-                                  >
-                                    {tagObj?.name || tag}
-                                  </span>
-                                );
-                              })
-                            ) : (
-                              <span className="text-xs text-muted-foreground/60">-</span>
-                            )}
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openTxnTagEdit(tx)}
-                            className="text-muted-foreground/60 hover:text-amber-600 hover:bg-amber-50 h-6 w-6 p-0 shrink-0"
-                            title="Edit Transaction Tags"
-                            data-testid={`tx-txntag-edit-${tx.transaction_id}`}
-                          >
-                            <Pencil className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                      <TableCell>{getStatusBadge(tx.status)}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex gap-1 justify-end">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setViewTransaction(tx)}
-                            className="text-muted-foreground hover:text-foreground hover:bg-muted h-7 w-7 p-0"
-                            data-testid={`tx-view-${tx.transaction_id}`}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          {tx.status === "pending" && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => openFieldEdit(tx)}
-                                className="text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 h-7 w-7 p-0"
-                                title="Edit Details"
-                                data-testid={`tx-field-edit-${tx.transaction_id}`}
-                              >
-                                <Pencil className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => openDestEdit(tx)}
-                                className="text-blue-500 hover:text-blue-700 hover:bg-primary/5 h-7 w-7 p-0"
-                                title="Edit Destination"
-                                data-testid={`tx-dest-edit-${tx.transaction_id}`}
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
+                      {orderedColumns.map((col) => renderTxCell(col.id, tx))}
                     </TableRow>
                   ))
                 )}
