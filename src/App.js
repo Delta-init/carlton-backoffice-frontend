@@ -17,6 +17,7 @@ import PSPs from "./pages/PSPs";
 import Vendors from "./pages/Vendors";
 import VendorDashboard from "./pages/VendorDashboard";
 import Reports from "./pages/Reports";
+import DailyPnL from "./pages/DailyPnL";
 import Settings from "./pages/Settings";
 import RolesPermissions from "./pages/RolesPermissions";
 import AccountantDashboard from "./pages/AccountantDashboard";
@@ -132,6 +133,7 @@ function AppRouter() {
         />
         <Route path="vendor-portal" element={<VendorDashboard />} />
         <Route path="reports" element={<Reports />} />
+        <Route path="daily-pnl" element={<DailyPnL />} />
         <Route path="reconciliation" element={<Reconciliation />} />
         <Route path="messages" element={<Messages />} />
         <Route path="settings" element={<Settings />} />
