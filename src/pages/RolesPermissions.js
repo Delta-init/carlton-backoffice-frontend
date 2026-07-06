@@ -74,6 +74,7 @@ export default function RolesPermissions() {
   const [loading, setLoading] = useState(true);
   const [mainTab, setMainTab] = useState('roles');
   const [borrowerCompanies, setBorrowerCompanies] = useState([]);
+  const [treasuryAccounts, setTreasuryAccounts] = useState([]);
   const [clientTags, setClientTags] = useState([]);
 
   // Dialogs
@@ -88,6 +89,7 @@ export default function RolesPermissions() {
     description: '',
     hierarchy_level: 50,
     permissions: {},
+    treasury_account_ids: null,     // null = all accounts; array = specific only
     borrower_ids: null,             // null = all borrower companies; array = specific only
     ie_own_entries_only: false,     // true = data entry team sees only their own entries
     transaction_type_ids: null,     // null = all types; array = specific types only
@@ -151,6 +153,18 @@ export default function RolesPermissions() {
     };
     fetchBorrowerCompanies();
 
+    // Fetch all treasury accounts for the selector
+    const fetchTreasuryAccounts = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/treasury?page_size=200`, { headers: getAuthHeaders() });
+        if (res.ok) {
+          const data = await res.json();
+          setTreasuryAccounts(data.items || (Array.isArray(data) ? data : []));
+        }
+      } catch (e) { console.error('Failed to fetch treasury accounts', e); }
+    };
+    fetchTreasuryAccounts();
+
     // Fetch all transaction tags for the selector
     const fetchTransactionTags = async () => {
       try {
@@ -204,6 +218,7 @@ export default function RolesPermissions() {
           description: roleForm.description,
           permissions: roleForm.permissions,
           hierarchy_level: roleForm.hierarchy_level,
+          treasury_account_ids: roleForm.treasury_account_ids,
           borrower_ids: roleForm.borrower_ids,
           ie_own_entries_only: roleForm.ie_own_entries_only,
           transaction_type_ids: roleForm.transaction_type_ids,
@@ -231,6 +246,7 @@ export default function RolesPermissions() {
       description: role.description || '',
       hierarchy_level: role.hierarchy_level || 50,
       permissions: role.permissions || {},
+      treasury_account_ids: role.treasury_account_ids || null,
       borrower_ids: role.borrower_ids || null,
       ie_own_entries_only: role.ie_own_entries_only || false,
       transaction_type_ids: role.transaction_type_ids || null,
@@ -246,6 +262,7 @@ export default function RolesPermissions() {
       description: '',
       hierarchy_level: 50,
       permissions: {},
+      treasury_account_ids: null,
       borrower_ids: null,
       ie_own_entries_only: false,
       transaction_type_ids: null,
@@ -344,8 +361,10 @@ export default function RolesPermissions() {
           </TableHeader>
           <TableBody>
             {modules.map(module => {
+              const isTreasury = module.id === 'treasury';
               const isLoans = module.id === 'loans';
               const isTransactions = module.id === 'transactions';
+              const hasTreasuryPerm = isTreasury && (roleForm.permissions['treasury']?.length || 0) > 0;
               const hasLoansPerm = isLoans && (roleForm.permissions['loans']?.length || 0) > 0;
               const hasTransactionsPerm = isTransactions && (roleForm.permissions['transactions']?.length || 0) > 0;
               const TRANSACTION_TYPES = ['deposit','withdrawal','transfer','commission','rebate','adjustment'];
@@ -380,6 +399,51 @@ export default function RolesPermissions() {
                     />
                   </TableCell>
                 </TableRow>
+
+                {/* Treasury account selector — shows when treasury perms are enabled */}
+                {hasTreasuryPerm && treasuryAccounts.length > 0 && (
+                  <TableRow key="treasury-accounts" className="bg-blue-50/40 border-slate-200">
+                    <TableCell colSpan={actions.length + 2} className="py-2 px-4">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs font-semibold text-blue-700 shrink-0">Allowed Accounts:</span>
+                        <button
+                          onClick={() => setRoleForm(prev => ({ ...prev, treasury_account_ids: null }))}
+                          className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${
+                            roleForm.treasury_account_ids === null
+                              ? 'bg-blue-600 text-white border-blue-600'
+                              : 'bg-white text-slate-500 border-slate-300 hover:border-blue-400'
+                          }`}
+                        >All</button>
+                        {treasuryAccounts.map(acc => {
+                          const selected = Array.isArray(roleForm.treasury_account_ids) &&
+                            roleForm.treasury_account_ids.includes(acc.account_id);
+                          return (
+                            <button
+                              key={acc.account_id}
+                              onClick={() => {
+                                setRoleForm(prev => {
+                                  const current = Array.isArray(prev.treasury_account_ids) ? prev.treasury_account_ids : [];
+                                  const next = selected
+                                    ? current.filter(id => id !== acc.account_id)
+                                    : [...current, acc.account_id];
+                                  return { ...prev, treasury_account_ids: next.length ? next : null };
+                                });
+                              }}
+                              className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${
+                                selected
+                                  ? 'bg-blue-100 text-blue-700 border-blue-400'
+                                  : 'bg-white text-slate-500 border-slate-300 hover:border-blue-400 hover:text-blue-600'
+                              }`}
+                            >
+                              {acc.account_name}
+                              {acc.currency && <span className="ml-1 opacity-60">({acc.currency})</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
 
                 {/* Loans borrower company selector — shows when loans perms are enabled */}
                 {hasLoansPerm && borrowerCompanies.length > 0 && (
