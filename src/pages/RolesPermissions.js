@@ -361,10 +361,10 @@ export default function RolesPermissions() {
           </TableHeader>
           <TableBody>
             {modules.map(module => {
-              const isTreasury = module.id === 'treasury';
+              const isApprovals = module.id === 'approvals';
               const isLoans = module.id === 'loans';
               const isTransactions = module.id === 'transactions';
-              const hasTreasuryPerm = isTreasury && (roleForm.permissions['treasury']?.length || 0) > 0;
+              const hasApprovalsPerm = isApprovals && (roleForm.permissions['approvals']?.length || 0) > 0;
               const hasLoansPerm = isLoans && (roleForm.permissions['loans']?.length || 0) > 0;
               const hasTransactionsPerm = isTransactions && (roleForm.permissions['transactions']?.length || 0) > 0;
               const TRANSACTION_TYPES = ['deposit','withdrawal','transfer','commission','rebate','adjustment'];
@@ -400,8 +400,8 @@ export default function RolesPermissions() {
                   </TableCell>
                 </TableRow>
 
-                {/* Treasury account selector — shows when treasury perms are enabled */}
-                {hasTreasuryPerm && treasuryAccounts.length > 0 && (
+                {/* Treasury account selector — shows under Pending Approvals when its perms are enabled */}
+                {hasApprovalsPerm && treasuryAccounts.length > 0 && (
                   <TableRow key="treasury-accounts" className="bg-blue-50/40 border-slate-200">
                     <TableCell colSpan={actions.length + 2} className="py-2 px-4">
                       <div className="flex flex-wrap items-center gap-2">
