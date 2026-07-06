@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -32,11 +32,12 @@ function monthStart() {
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
-const fmtMoney = (v) =>
-  `$${Number(v || 0).toLocaleString(undefined, {
+const fmtNum = (v) =>
+  Number(v || 0).toLocaleString(undefined, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  })}`;
+  });
+const fmtCur = (v, code) => `${code} ${fmtNum(v)}`;
 const fmtDate = (d) => {
   try {
     return new Date(`${d}T00:00:00`).toLocaleDateString("en-US", {
@@ -53,8 +54,10 @@ export default function DailyPnL() {
   const [dateFrom, setDateFrom] = useState(monthStart());
   const [dateTo, setDateTo] = useState(todayISO());
   const [rows, setRows] = useState([]);
-  const [totals, setTotals] = useState({ income: 0, expenses: 0, net: 0 });
+  const [currencyTotals, setCurrencyTotals] = useState([]);
+  const [grandUsd, setGrandUsd] = useState({ income: 0, expenses: 0, net: 0 });
   const [loading, setLoading] = useState(true);
+  const [currency, setCurrency] = useState("all");
 
   const fetchReport = useCallback(async () => {
     setLoading(true);
@@ -69,11 +72,13 @@ export default function DailyPnL() {
       if (!res.ok) throw new Error("Failed to load daily P&L");
       const data = await res.json();
       setRows(Array.isArray(data.rows) ? data.rows : []);
-      setTotals(data.totals || { income: 0, expenses: 0, net: 0 });
+      setCurrencyTotals(Array.isArray(data.currency_totals) ? data.currency_totals : []);
+      setGrandUsd(data.grand_total_usd || { income: 0, expenses: 0, net: 0 });
     } catch (e) {
       toast.error(e.message || "Failed to load daily P&L");
       setRows([]);
-      setTotals({ income: 0, expenses: 0, net: 0 });
+      setCurrencyTotals([]);
+      setGrandUsd({ income: 0, expenses: 0, net: 0 });
     } finally {
       setLoading(false);
     }
@@ -83,27 +88,38 @@ export default function DailyPnL() {
     fetchReport();
   }, [fetchReport]);
 
+  const currencies = useMemo(() => currencyTotals.map((c) => c.currency), [currencyTotals]);
+  const displayRows = useMemo(
+    () => (currency === "all" ? rows : rows.filter((r) => r.currency === currency)),
+    [rows, currency],
+  );
+  // Summary reflects the selector: All → USD grand total; a currency → its native total
+  const active = useMemo(() => {
+    if (currency === "all")
+      return { code: "USD", income: grandUsd.income, expenses: grandUsd.expenses, net: grandUsd.net };
+    const t = currencyTotals.find((c) => c.currency === currency) || { income: 0, expenses: 0, net: 0 };
+    return { code: currency, income: t.income, expenses: t.expenses, net: t.net };
+  }, [currency, grandUsd, currencyTotals]);
+
   const exportToExcel = () => {
-    if (!rows.length) {
+    if (!displayRows.length) {
       toast.error("Nothing to export");
       return;
     }
-    const exportData = rows.map((r) => ({
+    const data = displayRows.map((r) => ({
       Date: r.date,
+      Currency: r.currency,
       Income: r.income,
       Expenses: r.expenses,
-      "Net P&L": r.net,
+      Net: r.net,
+      "Income (USD)": r.income_usd,
+      "Expenses (USD)": r.expenses_usd,
+      "Net (USD)": r.net_usd,
     }));
-    exportData.push({
-      Date: "TOTAL",
-      Income: totals.income,
-      Expenses: totals.expenses,
-      "Net P&L": totals.net,
-    });
-    const ws = XLSX.utils.json_to_sheet(exportData);
+    const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Daily P&L");
-    XLSX.writeFile(wb, `daily_pnl_${dateFrom}_to_${dateTo}.xlsx`);
+    XLSX.writeFile(wb, `daily_pnl_${currency}_${dateFrom}_to_${dateTo}.xlsx`);
     toast.success("Excel file downloaded");
   };
 
@@ -114,10 +130,10 @@ export default function DailyPnL() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Daily P&amp;L</h1>
           <p className="text-sm text-muted-foreground">
-            Day-by-day income, expenses and net profit / loss
+            Day-by-day income, expenses and net — by transaction currency
           </p>
         </div>
-        <Button onClick={exportToExcel} disabled={loading || !rows.length} className="gap-2">
+        <Button onClick={exportToExcel} disabled={loading || !displayRows.length} className="gap-2">
           <Download className="w-4 h-4" /> Export Excel
         </Button>
       </div>
@@ -127,90 +143,80 @@ export default function DailyPnL() {
         <CardContent className="p-4 flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1">
             <span className="text-xs text-muted-foreground">From</span>
-            <Input
-              type="date"
-              value={dateFrom}
-              max={dateTo || undefined}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="w-[160px] bg-muted/50 border-border text-foreground"
-            />
+            <Input type="date" value={dateFrom} max={dateTo || undefined} onChange={(e) => setDateFrom(e.target.value)} className="w-[160px] bg-muted/50 border-border text-foreground" />
           </div>
           <div className="flex flex-col gap-1">
             <span className="text-xs text-muted-foreground">To</span>
-            <Input
-              type="date"
-              value={dateTo}
-              min={dateFrom || undefined}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="w-[160px] bg-muted/50 border-border text-foreground"
-            />
+            <Input type="date" value={dateTo} min={dateFrom || undefined} onChange={(e) => setDateTo(e.target.value)} className="w-[160px] bg-muted/50 border-border text-foreground" />
           </div>
-          <Button variant="outline" size="sm" onClick={fetchReport} disabled={loading}>
-            Apply
-          </Button>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-muted-foreground">Currency</span>
+            <select
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+              className="h-9 text-sm border border-border rounded px-2 bg-muted/50 text-foreground"
+            >
+              <option value="all">All (USD total)</option>
+              {currencies.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+          <Button variant="outline" size="sm" onClick={fetchReport} disabled={loading}>Apply</Button>
         </CardContent>
       </Card>
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <SummaryCard label="Total Income" value={fmtMoney(totals.income)} icon={TrendingUp} tone="green" />
-        <SummaryCard label="Total Expenses" value={fmtMoney(totals.expenses)} icon={TrendingDown} tone="red" />
-        <SummaryCard
-          label="Net P&L"
-          value={fmtMoney(totals.net)}
-          icon={Wallet}
-          tone={totals.net >= 0 ? "green" : "red"}
-          subtitle={totals.net >= 0 ? "Profit" : "Loss"}
-        />
+        <SummaryCard label={`Total Income (${active.code})`} value={fmtCur(active.income, active.code)} icon={TrendingUp} tone="green" />
+        <SummaryCard label={`Total Expenses (${active.code})`} value={fmtCur(active.expenses, active.code)} icon={TrendingDown} tone="red" />
+        <SummaryCard label={`Net P&L (${active.code})`} value={fmtCur(active.net, active.code)} icon={Wallet} tone={active.net >= 0 ? "green" : "red"} subtitle={active.net >= 0 ? "Profit" : "Loss"} />
       </div>
 
-      {/* Table */}
+      {/* Daily table */}
       <Card className="bg-card border-border">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-            Daily breakdown
+            Daily breakdown{currency !== "all" ? ` — ${currency}` : ""}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <ScrollArea className="h-[520px]">
+          <ScrollArea className="h-[480px]">
             <Table>
               <TableHeader>
                 <TableRow className="border-border hover:bg-transparent">
                   <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Date</TableHead>
+                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Currency</TableHead>
                   <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">Income</TableHead>
                   <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">Expenses</TableHead>
-                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">Net P&L</TableHead>
+                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">Net</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-10">
-                      <Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" />
-                    </TableCell>
-                  </TableRow>
-                ) : rows.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-10 text-muted-foreground">
-                      No data for this range
-                    </TableCell>
-                  </TableRow>
+                  <TableRow><TableCell colSpan={5} className="text-center py-10"><Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
+                ) : displayRows.length === 0 ? (
+                  <TableRow><TableCell colSpan={5} className="text-center py-10 text-muted-foreground">No data for this range</TableCell></TableRow>
                 ) : (
                   <>
-                    {rows.map((r) => (
-                      <TableRow key={r.date} className="border-border hover:bg-muted">
+                    {displayRows.map((r) => (
+                      <TableRow key={`${r.date}-${r.currency}`} className="border-border hover:bg-muted">
                         <TableCell className="text-foreground text-sm whitespace-nowrap">{fmtDate(r.date)}</TableCell>
-                        <TableCell className="text-right font-mono text-emerald-500">{fmtMoney(r.income)}</TableCell>
-                        <TableCell className="text-right font-mono text-red-400">{fmtMoney(r.expenses)}</TableCell>
-                        <TableCell className={`text-right font-mono font-semibold ${r.net >= 0 ? "text-emerald-500" : "text-red-400"}`}>{fmtMoney(r.net)}</TableCell>
+                        <TableCell><span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">{r.currency}</span></TableCell>
+                        <TableCell className="text-right font-mono text-emerald-500">{fmtNum(r.income)}</TableCell>
+                        <TableCell className="text-right font-mono text-red-400">{fmtNum(r.expenses)}</TableCell>
+                        <TableCell className={`text-right font-mono font-semibold ${r.net >= 0 ? "text-emerald-500" : "text-red-400"}`}>{fmtNum(r.net)}</TableCell>
                       </TableRow>
                     ))}
-                    <TableRow className="border-border bg-muted font-semibold">
-                      <TableCell className="text-foreground text-sm">Total</TableCell>
-                      <TableCell className="text-right font-mono text-emerald-500">{fmtMoney(totals.income)}</TableCell>
-                      <TableCell className="text-right font-mono text-red-400">{fmtMoney(totals.expenses)}</TableCell>
-                      <TableCell className={`text-right font-mono ${totals.net >= 0 ? "text-emerald-500" : "text-red-400"}`}>{fmtMoney(totals.net)}</TableCell>
-                    </TableRow>
+                    {currency !== "all" && (
+                      <TableRow className="border-border bg-muted font-semibold">
+                        <TableCell className="text-foreground text-sm">Total</TableCell>
+                        <TableCell><span className="text-[11px] text-muted-foreground">{active.code}</span></TableCell>
+                        <TableCell className="text-right font-mono text-emerald-500">{fmtNum(active.income)}</TableCell>
+                        <TableCell className="text-right font-mono text-red-400">{fmtNum(active.expenses)}</TableCell>
+                        <TableCell className={`text-right font-mono ${active.net >= 0 ? "text-emerald-500" : "text-red-400"}`}>{fmtNum(active.net)}</TableCell>
+                      </TableRow>
+                    )}
                   </>
                 )}
               </TableBody>
@@ -218,6 +224,43 @@ export default function DailyPnL() {
           </ScrollArea>
         </CardContent>
       </Card>
+
+      {/* Totals by currency (All view) */}
+      {currency === "all" && currencyTotals.length > 0 && (
+        <Card className="bg-card border-border">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Totals by currency</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border hover:bg-transparent">
+                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Currency</TableHead>
+                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">Income</TableHead>
+                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">Expenses</TableHead>
+                  <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">Net</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {currencyTotals.map((t) => (
+                  <TableRow key={t.currency} className="border-border hover:bg-muted">
+                    <TableCell><span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">{t.currency}</span></TableCell>
+                    <TableCell className="text-right font-mono text-emerald-500">{fmtNum(t.income)}</TableCell>
+                    <TableCell className="text-right font-mono text-red-400">{fmtNum(t.expenses)}</TableCell>
+                    <TableCell className={`text-right font-mono font-semibold ${t.net >= 0 ? "text-emerald-500" : "text-red-400"}`}>{fmtNum(t.net)}</TableCell>
+                  </TableRow>
+                ))}
+                <TableRow className="border-border bg-muted font-semibold">
+                  <TableCell className="text-foreground text-sm">USD equivalent (all)</TableCell>
+                  <TableCell className="text-right font-mono text-emerald-500">{fmtNum(grandUsd.income)}</TableCell>
+                  <TableCell className="text-right font-mono text-red-400">{fmtNum(grandUsd.expenses)}</TableCell>
+                  <TableCell className={`text-right font-mono ${grandUsd.net >= 0 ? "text-emerald-500" : "text-red-400"}`}>{fmtNum(grandUsd.net)}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
@@ -237,7 +280,7 @@ function SummaryCard({ label, value, icon: Icon, tone, subtitle }) {
         </div>
         <div>
           <p className="text-xs text-muted-foreground">{label}</p>
-          <p className="text-xl font-bold text-foreground">{value}</p>
+          <p className="text-lg font-bold text-foreground">{value}</p>
           {subtitle && <p className="text-xs text-muted-foreground/60">{subtitle}</p>}
         </div>
       </CardContent>
