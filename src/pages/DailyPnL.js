@@ -14,7 +14,9 @@ import {
 } from "../components/ui/table";
 import { ScrollArea } from "../components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
-import { Download, TrendingUp, TrendingDown, Wallet, Loader2 } from "lucide-react";
+import { Download, FileText, TrendingUp, TrendingDown, Wallet, Loader2 } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -179,6 +181,74 @@ export default function DailyPnL() {
     toast.success("Excel file downloaded");
   };
 
+  const exportToPDF = async () => {
+    if (!displayRows.length) {
+      toast.error("Nothing to export");
+      return;
+    }
+    const doc = new jsPDF({ orientation: "landscape" });
+    const HEAD = [30, 41, 59];
+    doc.setFontSize(16);
+    doc.text("Daily P&L", 14, 15);
+    doc.setFontSize(10);
+    doc.setTextColor(110);
+    doc.text(`${dateFrom} to ${dateTo}   ·   Currency: ${currency === "all" ? "All" : currency}`, 14, 21);
+    doc.setTextColor(0);
+
+    // Summary table
+    autoTable(doc, {
+      startY: 26,
+      head: [["Date", "Currency", "Income", "Expenses", "Net", "Net (USD)"]],
+      body: displayRows.map((r) => [r.date, r.currency, fmtNum(r.income), fmtNum(r.expenses), fmtNum(r.net), fmtNum(r.net_usd)]),
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: HEAD },
+      columnStyles: { 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" }, 5: { halign: "right" } },
+    });
+    doc.setFontSize(9);
+    doc.setTextColor(80);
+    doc.text(`Totals (${active.code})    Income ${fmtNum(active.income)}    Expenses ${fmtNum(active.expenses)}    Net ${fmtNum(active.net)}`, 14, doc.lastAutoTable.finalY + 6);
+    doc.setTextColor(0);
+
+    // Transactions table (fetch the range's entries)
+    try {
+      const params = new URLSearchParams();
+      if (dateFrom) params.set("start_date", dateFrom);
+      if (dateTo) params.set("end_date", dateTo);
+      if (currency !== "all") params.set("currency", currency);
+      const res = await fetch(
+        `${API_URL}/api/reports/daily-pnl/entries?${params.toString()}`,
+        { headers: getAuthHeaders(), credentials: "include" },
+      );
+      if (res.ok) {
+        const d = await res.json();
+        const entries = Array.isArray(d.entries) ? d.entries : [];
+        if (entries.length) {
+          doc.setFontSize(12);
+          doc.text("Transactions", 14, doc.lastAutoTable.finalY + 16);
+          autoTable(doc, {
+            startY: doc.lastAutoTable.finalY + 20,
+            head: [["Date", "Currency", "Type", "Description", "Category", "Amount", "Amount (USD)", "By"]],
+            body: entries.map((e) => [
+              e.date, e.currency, e.entry_type === "income" ? "Income" : "Expense",
+              e.description, e.category, fmtNum(e.amount), fmtNum(e.amount_usd), e.created_by_name,
+            ]),
+            styles: { fontSize: 7 },
+            headStyles: { fillColor: HEAD },
+            columnStyles: { 5: { halign: "right" }, 6: { halign: "right" } },
+            didParseCell: (data) => {
+              if (data.section === "body" && data.column.index === 2) {
+                data.cell.styles.textColor = data.cell.raw === "Income" ? [16, 122, 87] : [190, 60, 60];
+              }
+            },
+          });
+        }
+      }
+    } catch (e) { /* still export the summary */ }
+
+    doc.save(`daily_pnl_${currency}_${dateFrom}_to_${dateTo}.pdf`);
+    toast.success("PDF downloaded");
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-6">
       {/* Header */}
@@ -189,9 +259,14 @@ export default function DailyPnL() {
             Day-by-day income, expenses and net — by transaction currency
           </p>
         </div>
-        <Button onClick={exportToExcel} disabled={loading || !displayRows.length} className="gap-2">
-          <Download className="w-4 h-4" /> Export Excel
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={exportToPDF} disabled={loading || !displayRows.length} variant="outline" className="gap-2">
+            <FileText className="w-4 h-4" /> Export PDF
+          </Button>
+          <Button onClick={exportToExcel} disabled={loading || !displayRows.length} className="gap-2">
+            <Download className="w-4 h-4" /> Export Excel
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
