@@ -855,17 +855,24 @@ export default function IncomeExpenses() {
         "Status",
         "Amount",
         "Currency",
+        "Amount (USD)",
       ],
-      ...data.map((e) => [
-        formatDate(e.date),
-        e.entry_type,
-        getCategoryLabel(e),
-        e.description || "",
-        e.vendor_name || e.treasury_account_name || "",
-        e.status || "",
-        e.entry_type === "income" ? e.amount : -e.amount,
-        e.currency,
-      ]),
+      ...data.map((e) => {
+        const native = (e.base_amount == null || e.base_amount === "") ? (e.amount || 0) : e.base_amount;
+        const payCur = e.base_currency || e.currency || "USD";
+        const sign = e.entry_type === "income" ? 1 : -1;
+        return [
+          formatDate(e.date),
+          e.entry_type,
+          getCategoryLabel(e),
+          e.description || "",
+          e.vendor_name || e.treasury_account_name || "",
+          e.status || "",
+          sign * Number(native),
+          payCur,
+          sign * ((e.amount_usd ?? e.amount) || 0),
+        ];
+      }),
     ];
     const ws = XLSX.utils.aoa_to_sheet(ws_data);
     const wb = XLSX.utils.book_new();
@@ -886,15 +893,21 @@ export default function IncomeExpenses() {
     doc.text("Income & Expenses Report", 14, 15);
     doc.setFontSize(9);
     doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 22);
-    const tableData = data.map((e) => [
-      formatDate(e.date),
-      e.entry_type,
-      getCategoryLabel(e),
-      (e.description || "").substring(0, 30),
-      e.vendor_name || e.treasury_account_name || "",
-      e.status || "",
-      `${e.entry_type === "income" ? "+" : "-"}${e.amount?.toLocaleString()} ${e.currency}`,
-    ]);
+    const tableData = data.map((e) => {
+      const native = (e.base_amount == null || e.base_amount === "") ? (e.amount || 0) : e.base_amount;
+      const payCur = e.base_currency || e.currency || "USD";
+      const sign = e.entry_type === "income" ? "+" : "-";
+      return [
+        formatDate(e.date),
+        e.entry_type,
+        getCategoryLabel(e),
+        (e.description || "").substring(0, 30),
+        e.vendor_name || e.treasury_account_name || "",
+        e.status || "",
+        `${sign}${Number(native).toLocaleString()} ${payCur}`,
+        `${sign}${((e.amount_usd ?? e.amount) || 0).toLocaleString()}`,
+      ];
+    });
     autoTable(doc, {
       head: [
         [
@@ -905,6 +918,7 @@ export default function IncomeExpenses() {
           "Account",
           "Status",
           "Amount",
+          "Amount (USD)",
         ],
       ],
       body: tableData,
