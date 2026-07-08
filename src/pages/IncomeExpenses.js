@@ -814,17 +814,24 @@ export default function IncomeExpenses() {
       "Status",
       "Amount",
       "Currency",
+      "Amount (USD)",
     ];
-    const rows = data.map((e) => [
-      formatDate(e.date),
-      e.entry_type,
-      getCategoryLabel(e),
-      e.description || "",
-      e.vendor_name || e.treasury_account_name || "",
-      e.status || "",
-      e.entry_type === "income" ? e.amount : -e.amount,
-      e.currency,
-    ]);
+    const rows = data.map((e) => {
+      const native = (e.base_amount == null || e.base_amount === "") ? (e.amount || 0) : e.base_amount;
+      const payCur = e.base_currency || e.currency || "USD";
+      const sign = e.entry_type === "income" ? 1 : -1;
+      return [
+        formatDate(e.date),
+        e.entry_type,
+        getCategoryLabel(e),
+        e.description || "",
+        e.vendor_name || e.treasury_account_name || "",
+        e.status || "",
+        sign * Number(native),
+        payCur,
+        sign * ((e.amount_usd ?? e.amount) || 0),
+      ];
+    });
     const csv = [
       headers.join(","),
       ...rows.map((r) => r.map((v) => `"${v}"`).join(",")),
