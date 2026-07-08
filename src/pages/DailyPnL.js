@@ -125,12 +125,13 @@ export default function DailyPnL() {
     return { code: currency, income: t.income, expenses: t.expenses, net: t.net };
   }, [currency, grandUsd, currencyTotals]);
 
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
     if (!displayRows.length) {
       toast.error("Nothing to export");
       return;
     }
-    const data = displayRows.map((r) => ({
+    // Sheet 1 — daily summary
+    const summary = displayRows.map((r) => ({
       Date: r.date,
       Currency: r.currency,
       Income: r.income,
@@ -140,9 +141,40 @@ export default function DailyPnL() {
       "Expenses (USD)": r.expenses_usd,
       "Net (USD)": r.net_usd,
     }));
-    const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Daily P&L");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summary), "Daily P&L");
+
+    // Sheet 2 — individual income/expense transactions for the range
+    try {
+      const params = new URLSearchParams();
+      if (dateFrom) params.set("start_date", dateFrom);
+      if (dateTo) params.set("end_date", dateTo);
+      if (currency !== "all") params.set("currency", currency);
+      const res = await fetch(
+        `${API_URL}/api/reports/daily-pnl/entries?${params.toString()}`,
+        { headers: getAuthHeaders(), credentials: "include" },
+      );
+      if (res.ok) {
+        const d = await res.json();
+        const txns = (Array.isArray(d.entries) ? d.entries : []).map((e) => ({
+          Date: e.date,
+          Currency: e.currency,
+          Type: e.entry_type === "income" ? "Income" : "Expense",
+          Description: e.description,
+          Category: e.category,
+          Amount: e.amount,
+          "Amount (USD)": e.amount_usd,
+          By: e.created_by_name,
+        }));
+        const txWs = XLSX.utils.json_to_sheet(
+          txns.length
+            ? txns
+            : [{ Date: "", Currency: "", Type: "", Description: "No transactions", Category: "", Amount: "", "Amount (USD)": "", By: "" }],
+        );
+        XLSX.utils.book_append_sheet(wb, txWs, "Transactions");
+      }
+    } catch (e) { /* still export the summary sheet */ }
+
     XLSX.writeFile(wb, `daily_pnl_${currency}_${dateFrom}_to_${dateTo}.xlsx`);
     toast.success("Excel file downloaded");
   };
