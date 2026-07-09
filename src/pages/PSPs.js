@@ -66,7 +66,12 @@ import {
   ChevronDown,
   ArrowLeft,
   ImageIcon,
+  FileSpreadsheet,
+  FileText,
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -213,6 +218,91 @@ export default function PSPs() {
       }
     } catch (error) {
       console.error('Error fetching pending transactions:', error);
+    }
+  };
+
+  // Export ALL deposits (every page) to a single Excel or PDF via server-side full fetch
+  const exportDeposits = async (format) => {
+    if (!viewPsp) return;
+    try {
+      const params = new URLSearchParams({ fetch_all: 'true' });
+      if (depDateFrom) params.append('date_from', depDateFrom);
+      if (depDateTo) params.append('date_to', depDateTo);
+      const response = await fetch(`${API_URL}/api/psp/${viewPsp.psp_id}/pending-transactions?${params}`, { headers: getAuthHeaders(), credentials: 'include' });
+      if (!response.ok) { toast.error('Failed to fetch deposits'); return; }
+      const data = await response.json();
+      const txs = data.items || [];
+      if (txs.length === 0) { toast.error('No deposits to export'); return; }
+
+      const rows = txs.map((tx) => {
+        const gross = tx.amount || 0;
+        const commission = tx.psp_commission_amount || 0;
+        const reserve = tx.psp_reserve_fund_amount || tx.psp_chargeback_amount || 0;
+        const extraCharges = tx.psp_extra_charges || 0;
+        const extraComm = tx.psp_extra_commission || 0;
+        const net = gross - commission - reserve - extraCharges - extraComm;
+        const holdingDays = tx.psp_holding_days || viewPsp?.holding_days || 0;
+        const released = tx.psp_holding_release_date && new Date(tx.psp_holding_release_date) <= new Date();
+        const status = tx.settlement_status === 'awaiting' ? 'Awaiting' : (released ? 'Ready' : 'Holding');
+        const payCurrency = (tx.base_currency && tx.base_currency !== 'USD' && tx.base_currency !== tx.currency) ? tx.base_currency : (tx.currency || 'USD');
+        return {
+          reference: tx.reference || '',
+          client: tx.client_name || '',
+          txDate: (tx.transaction_date || tx.created_at) ? new Date(tx.transaction_date || tx.created_at).toLocaleDateString() : '-',
+          payCurrency, gross, commission, reserve, extraComm, net,
+          holding: `${holdingDays} days`,
+          releaseDate: tx.psp_holding_release_date ? new Date(tx.psp_holding_release_date).toLocaleDateString() : '-',
+          status,
+        };
+      });
+
+      const totals = rows.reduce((a, r) => ({
+        gross: a.gross + r.gross, commission: a.commission + r.commission,
+        reserve: a.reserve + r.reserve, extraComm: a.extraComm + r.extraComm, net: a.net + r.net,
+      }), { gross: 0, commission: 0, reserve: 0, extraComm: 0, net: 0 });
+
+      const pspName = viewPsp.psp_name || viewPsp.name || 'PSP';
+      const rangeLabel = (depDateFrom || depDateTo) ? `${depDateFrom || 'start'}_${depDateTo || 'end'}` : 'all';
+      const fname = `${pspName}_deposits_${rangeLabel}`.replace(/[^a-z0-9_-]/gi, '_');
+      const num = (n) => (n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+      if (format === 'excel') {
+        const sheet = rows.map((r) => ({
+          Reference: r.reference, Client: r.client, 'Tx Date': r.txDate, 'Pay Currency': r.payCurrency,
+          'Gross (USD)': r.gross, Commission: r.commission, Reserve: r.reserve, 'Extra Comm.': r.extraComm,
+          'Net (USD)': r.net, Holding: r.holding, 'Release Date': r.releaseDate, Status: r.status,
+        }));
+        sheet.push({
+          Reference: 'TOTAL', Client: '', 'Tx Date': '', 'Pay Currency': '',
+          'Gross (USD)': totals.gross, Commission: totals.commission, Reserve: totals.reserve,
+          'Extra Comm.': totals.extraComm, 'Net (USD)': totals.net, Holding: '', 'Release Date': '', Status: '',
+        });
+        const ws = XLSX.utils.json_to_sheet(sheet);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Deposits');
+        XLSX.writeFile(wb, `${fname}.xlsx`);
+        toast.success(`Exported ${rows.length} deposits to Excel`);
+      } else {
+        const doc = new jsPDF({ orientation: 'landscape' });
+        doc.setFontSize(13);
+        doc.text(`${pspName} - Deposits (${rows.length})`, 14, 14);
+        doc.setFontSize(9);
+        doc.text((depDateFrom || depDateTo) ? `Range: ${depDateFrom || 'start'} to ${depDateTo || 'end'}` : 'All pending deposits', 14, 20);
+        autoTable(doc, {
+          startY: 24,
+          head: [['Reference', 'Client', 'Tx Date', 'Cur', 'Gross', 'Comm.', 'Reserve', 'Extra C.', 'Net', 'Holding', 'Release', 'Status']],
+          body: rows.map((r) => [r.reference, r.client, r.txDate, r.payCurrency, num(r.gross), num(r.commission), num(r.reserve), num(r.extraComm), num(r.net), r.holding, r.releaseDate, r.status]),
+          foot: [['TOTAL', '', '', '', num(totals.gross), num(totals.commission), num(totals.reserve), num(totals.extraComm), num(totals.net), '', '', '']],
+          styles: { fontSize: 7, cellPadding: 1.5 },
+          headStyles: { fillColor: [102, 252, 241], textColor: [11, 12, 16] },
+          footStyles: { fillColor: [230, 230, 230], textColor: [0, 0, 0], fontStyle: 'bold' },
+        });
+        doc.save(`${fname}.pdf`);
+        toast.success(`Exported ${rows.length} deposits to PDF`);
+      }
+    } catch (e) {
+      console.error('Export deposits failed:', e);
+      toast.error('Export failed');
     }
   };
 
@@ -1301,7 +1391,9 @@ export default function PSPs() {
                     <span className="text-muted-foreground text-xs">to</span>
                     <Input type="date" value={depDateTo} onChange={e => setDepDateTo(e.target.value)} className="w-36 h-8 text-xs bg-card border text-foreground" placeholder="To" data-testid="dep-date-to" />
                     {(depDateFrom || depDateTo) && <Button variant="ghost" size="sm" onClick={() => { setDepDateFrom(''); setDepDateTo(''); }} className="text-muted-foreground hover:text-red-500 h-8 text-xs">Clear</Button>}
-                    <span className="text-xs text-muted-foreground ml-auto">{depTotal} deposits</span>
+                    <span className="text-xs text-muted-foreground ml-auto mr-1">{depTotal} deposits</span>
+                    <Button variant="outline" size="sm" onClick={() => exportDeposits('excel')} disabled={depTotal === 0} className="h-8 text-xs gap-1" data-testid="export-deposits-excel"><FileSpreadsheet className="w-3 h-3" /> Excel</Button>
+                    <Button variant="outline" size="sm" onClick={() => exportDeposits('pdf')} disabled={depTotal === 0} className="h-8 text-xs gap-1" data-testid="export-deposits-pdf"><FileText className="w-3 h-3" /> PDF</Button>
                   </div>
                   <ScrollArea className="h-[calc(100vh-480px)]">
                     {pendingTransactions.length === 0 ? (
