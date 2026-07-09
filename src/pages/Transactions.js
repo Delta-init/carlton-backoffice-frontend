@@ -3738,12 +3738,12 @@ export default function Transactions() {
                             ? ` / ${t.base_amount.toLocaleString()} ${t.base_currency}`
                             : "";
                         const text = [
+                          `CRM Reference: ${t.crm_reference || ""}`,
                           `Account Holder Name: ${t.client_bank_account_name || ""}`,
                           `Bank Name: ${t.client_bank_name || ""}`,
                           `Account Number: ${t.client_bank_account_number || ""}`,
                           `IBAN/ IFSC : ${t.client_bank_swift_iban || ""}`,
                           `Branch: ${t.client_bank_branch || ""}`,
-                          `CRM Reference: ${t.crm_reference || ""}`,
                           `Amount: ${amt}${nativeAmt}`,
                         ].join("\n");
                         navigator.clipboard.writeText(text);
