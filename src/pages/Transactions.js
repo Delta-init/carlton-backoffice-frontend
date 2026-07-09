@@ -92,6 +92,7 @@ import {
   Pencil,
   Tag,
   Trash2,
+  Copy,
 } from "lucide-react";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -647,6 +648,7 @@ export default function Transactions() {
     client_bank_account_name: "",
     client_bank_account_number: "",
     client_bank_swift_iban: "",
+    client_bank_branch: "",
     client_bank_currency: "USD",
     // Client USDT details (for withdrawal to USDT)
     client_usdt_address: "",
@@ -1096,6 +1098,10 @@ export default function Transactions() {
             formData.client_bank_swift_iban,
           );
           formDataToSend.append(
+            "client_bank_branch",
+            formData.client_bank_branch,
+          );
+          formDataToSend.append(
             "client_bank_currency",
             formData.client_bank_currency,
           );
@@ -1115,6 +1121,10 @@ export default function Transactions() {
         formDataToSend.append(
           "client_bank_swift_iban",
           formData.client_bank_swift_iban,
+        );
+        formDataToSend.append(
+          "client_bank_branch",
+          formData.client_bank_branch,
         );
         formDataToSend.append(
           "client_bank_currency",
@@ -1219,6 +1229,7 @@ export default function Transactions() {
       client_bank_account_name: "",
       client_bank_account_number: "",
       client_bank_swift_iban: "",
+      client_bank_branch: "",
       client_bank_currency: "USD",
       client_usdt_address: "",
       client_usdt_network: "",
@@ -2178,6 +2189,7 @@ export default function Transactions() {
                                       bank.account_number,
                                     client_bank_swift_iban:
                                       bank.swift_iban || "",
+                                    client_bank_branch: bank.branch || "",
                                     client_bank_currency:
                                       bank.currency || "USD",
                                   });
@@ -2189,6 +2201,7 @@ export default function Transactions() {
                                   client_bank_account_name: "",
                                   client_bank_account_number: "",
                                   client_bank_swift_iban: "",
+                                  client_bank_branch: "",
                                   client_bank_currency: "USD",
                                 });
                               }
@@ -2285,6 +2298,22 @@ export default function Transactions() {
                             }
                             className="bg-white border-border text-foreground focus:border-[#66FCF1] font-mono"
                             placeholder="SWIFT or IBAN code"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-muted-foreground text-xs uppercase tracking-wider">
+                            Branch
+                          </Label>
+                          <Input
+                            value={formData.client_bank_branch}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                client_bank_branch: e.target.value,
+                              })
+                            }
+                            className="bg-white border-border text-foreground focus:border-[#66FCF1]"
+                            placeholder="Branch name / code"
                           />
                         </div>
                       </div>
@@ -2571,6 +2600,7 @@ export default function Transactions() {
                                       client_bank_account_name: "",
                                       client_bank_account_number: "",
                                       client_bank_swift_iban: "",
+                                      client_bank_branch: "",
                                       client_bank_currency: "USD",
                                     });
                                   } else {
@@ -2587,6 +2617,7 @@ export default function Transactions() {
                                           bank.account_number,
                                         client_bank_swift_iban:
                                           bank.swift_iban || "",
+                                        client_bank_branch: bank.branch || "",
                                         client_bank_currency:
                                           bank.currency || "USD",
                                       });
@@ -2687,6 +2718,22 @@ export default function Transactions() {
                                 }
                                 className="bg-white border-border text-foreground focus:border-[#66FCF1] font-mono"
                                 placeholder="SWIFT code (optional)"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-muted-foreground text-xs uppercase tracking-wider">
+                                Branch
+                              </Label>
+                              <Input
+                                value={formData.client_bank_branch}
+                                onChange={(e) =>
+                                  setFormData({
+                                    ...formData,
+                                    client_bank_branch: e.target.value,
+                                  })
+                                }
+                                className="bg-white border-border text-foreground focus:border-[#66FCF1]"
+                                placeholder="Branch name / code"
                               />
                             </div>
                           </div>
@@ -3675,9 +3722,39 @@ export default function Transactions() {
                   className="pt-4 border-t border-border"
                   data-testid="tx-bank-details"
                 >
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
-                    Client Bank Details
-                  </p>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">
+                      Client Bank Details
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const t = viewTransaction;
+                        const amt = `$${(t.amount ?? 0).toLocaleString()} ${t.currency || "USD"}`;
+                        const nativeAmt =
+                          t.base_currency &&
+                          t.base_currency !== "USD" &&
+                          t.base_amount
+                            ? ` / ${t.base_amount.toLocaleString()} ${t.base_currency}`
+                            : "";
+                        const text = [
+                          `Account Holder Name: ${t.client_bank_account_name || ""}`,
+                          `Bank Name: ${t.client_bank_name || ""}`,
+                          `Account Number: ${t.client_bank_account_number || ""}`,
+                          `IBAN/ IFSC : ${t.client_bank_swift_iban || ""}`,
+                          `Branch: ${t.client_bank_branch || ""}`,
+                          `CRM Reference: ${t.crm_reference || ""}`,
+                          `Amount: ${amt}${nativeAmt}`,
+                        ].join("\n");
+                        navigator.clipboard.writeText(text);
+                        toast.success("Bank details copied");
+                      }}
+                      className="flex items-center gap-1 text-xs text-primary hover:opacity-80"
+                      data-testid="copy-bank-details"
+                    >
+                      <Copy className="w-3 h-3" /> Copy
+                    </button>
+                  </div>
                   <div className="grid grid-cols-2 gap-3 p-3 bg-muted/50 rounded-sm border border-border">
                     <div>
                       <p className="text-xs text-muted-foreground">Bank Name</p>
@@ -3701,6 +3778,12 @@ export default function Transactions() {
                       <p className="text-xs text-muted-foreground">SWIFT / IBAN</p>
                       <p className="text-foreground text-sm font-mono">
                         {viewTransaction.client_bank_swift_iban || "-"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Branch</p>
+                      <p className="text-foreground text-sm font-medium">
+                        {viewTransaction.client_bank_branch || "-"}
                       </p>
                     </div>
                     {viewTransaction.client_bank_currency && (

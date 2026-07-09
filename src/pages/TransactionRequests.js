@@ -242,6 +242,7 @@ function EditableRequestCard({
     client_bank_account_name: req.client_bank_account_name || "",
     client_bank_account_number: req.client_bank_account_number || "",
     client_bank_swift_iban: req.client_bank_swift_iban || "",
+    client_bank_branch: req.client_bank_branch || "",
     client_bank_currency: req.client_bank_currency || "",
     client_usdt_address: req.client_usdt_address || "",
     client_usdt_network: req.client_usdt_network || "",
@@ -766,6 +767,17 @@ function EditableRequestCard({
                       className="bg-card border font-mono"
                     />
                     <Input
+                      placeholder="Branch"
+                      value={form.client_bank_branch}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          client_bank_branch: e.target.value,
+                        })
+                      }
+                      className="bg-card border"
+                    />
+                    <Input
                       placeholder="Currency (e.g. INR)"
                       value={form.client_bank_currency}
                       onChange={(e) =>
@@ -1031,6 +1043,7 @@ export default function TransactionRequests() {
     client_bank_account_name: "",
     client_bank_account_number: "",
     client_bank_swift_iban: "",
+    client_bank_branch: "",
     client_bank_currency: "",
     client_usdt_address: "",
     client_usdt_network: "",
@@ -2039,6 +2052,17 @@ export default function TransactionRequests() {
                         setForm({
                           ...form,
                           client_bank_swift_iban: e.target.value,
+                        })
+                      }
+                      className="bg-card"
+                    />
+                    <Input
+                      placeholder="Branch"
+                      value={form.client_bank_branch}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          client_bank_branch: e.target.value,
                         })
                       }
                       className="bg-card"
