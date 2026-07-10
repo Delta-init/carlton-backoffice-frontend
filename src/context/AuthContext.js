@@ -79,10 +79,22 @@ export const AuthProvider = ({ children }) => {
     if (!response.ok) {
       throw new Error(data.detail || "Login failed");
     }
+    // Forced MFA enrollment (first login / after an admin reset)
+    if (data.requires_setup) {
+      return {
+        requires_setup: true,
+        mfa_setup_token: data.mfa_setup_token,
+        email,
+        message: data.message,
+        user: data.user,
+      };
+    }
+
     // Check if 2FA is required
     if (data.requires_2fa) {
       return {
         requires_2fa: true,
+        mfa_method: data.mfa_method || "email",
         email,
         message: data.message,
         user: data.user,
@@ -110,6 +122,47 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem("auth_token", data.access_token);
     setUser(data.user);
     return data.user;
+  };
+
+  // Start authenticator setup — during login (setupToken) or from Profile (JWT)
+  const mfaSetup = async (setupToken) => {
+    const token = localStorage.getItem("auth_token");
+    const response = await fetch(`${API_URL}/api/auth/mfa/setup`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(setupToken ? {} : token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(setupToken ? { setup_token: setupToken } : {}),
+      credentials: "include",
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || "Setup failed");
+    return data;
+  };
+
+  // Confirm an authenticator code — issues a JWT when done during login enrollment
+  const mfaConfirm = async (setupToken, code) => {
+    const token = localStorage.getItem("auth_token");
+    const response = await fetch(`${API_URL}/api/auth/mfa/confirm`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(setupToken ? {} : token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(
+        setupToken ? { setup_token: setupToken, code } : { code },
+      ),
+      credentials: "include",
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || "Verification failed");
+    if (data.access_token) {
+      localStorage.setItem("auth_token", data.access_token);
+      setUser(data.user);
+      return data.user;
+    }
+    return data;
   };
 
   const loginWithGoogle = () => {
@@ -277,6 +330,8 @@ export const AuthProvider = ({ children }) => {
         loading,
         login,
         verifyOtp,
+        mfaSetup,
+        mfaConfirm,
         loginWithGoogle,
         processGoogleSession,
         logout,

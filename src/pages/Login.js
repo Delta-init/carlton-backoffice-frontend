@@ -39,7 +39,14 @@ export default function Login() {
   const [otpCode, setOtpCode]     = useState('');
   const [otpEmail, setOtpEmail]   = useState('');
   const [otpMessage, setOtpMessage] = useState('');
-  const { login, verifyOtp }      = useAuth();
+  const [otpMethod, setOtpMethod] = useState('email');
+  // Forced authenticator enrollment (set up on the login screen)
+  const [setupStep, setSetupStep]     = useState(false);
+  const [setupToken, setSetupToken]   = useState('');
+  const [setupQr, setSetupQr]         = useState('');
+  const [setupSecret, setSetupSecret] = useState('');
+  const [setupCode, setSetupCode]     = useState('');
+  const { login, verifyOtp, mfaSetup, mfaConfirm } = useAuth();
   const navigate                  = useNavigate();
 
   const [forgotStep, setForgotStep]           = useState('');
@@ -80,10 +87,27 @@ export default function Login() {
     e.preventDefault(); setIsLoading(true);
     try {
       const result = await login(email, password);
-      if (result?.requires_2fa) {
+      if (result?.requires_setup) {
+        // First login / after reset — force authenticator enrollment here
+        setOtpEmail(email);
+        setSetupToken(result.mfa_setup_token);
+        const data = await mfaSetup(result.mfa_setup_token);
+        setSetupQr(data.qr_image); setSetupSecret(data.secret);
+        setSetupStep(true);
+        toast.info('Set up two-factor authentication to continue');
+      } else if (result?.requires_2fa) {
         setOtpStep(true); setOtpEmail(email);
-        setOtpMessage(result.message || 'Verification code sent to your email');
-        toast.success(result.message || 'Check your email for the verification code');
+        setOtpMethod(result.mfa_method || 'email');
+        setOtpMessage(
+          result.mfa_method === 'totp'
+            ? 'Enter the 6-digit code from your authenticator app'
+            : (result.message || 'Verification code sent to your email')
+        );
+        toast.success(
+          result.mfa_method === 'totp'
+            ? 'Enter your authenticator code'
+            : (result.message || 'Check your email for the verification code')
+        );
       } else {
         toast.success('Login successful');
         navigate(result?.role === 'vendor' ? '/exchanger-portal' : '/dashboard');
@@ -97,6 +121,16 @@ export default function Login() {
     try {
       const userData = await verifyOtp(otpEmail, otpCode);
       toast.success('Login successful');
+      navigate(userData?.role === 'vendor' ? '/exchanger-portal' : '/dashboard');
+    } catch (err) { toast.error(err.message || 'Verification failed'); }
+    finally { setIsLoading(false); }
+  };
+
+  const handleEnrollSubmit = async (e) => {
+    e.preventDefault(); setIsLoading(true);
+    try {
+      const userData = await mfaConfirm(setupToken, setupCode);
+      toast.success('Two-factor authentication enabled');
       navigate(userData?.role === 'vendor' ? '/exchanger-portal' : '/dashboard');
     } catch (err) { toast.error(err.message || 'Verification failed'); }
     finally { setIsLoading(false); }
@@ -284,6 +318,48 @@ export default function Login() {
       </div>
     );
 
+    /* Forced authenticator enrollment step */
+    if (setupStep) return (
+      <div className="space-y-6">
+        <div>
+          <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mb-4
+            shadow-[0_8px_20px_hsl(var(--primary)/0.25)] transform-gpu">
+            <ShieldCheck className="w-6 h-6 text-primary" />
+          </div>
+          <h2 className="text-2xl font-bold text-foreground mb-1">Set up two-factor authentication</h2>
+          <p className="text-muted-foreground text-sm">Scan the QR code with Google Authenticator, Authy, or any TOTP app — then enter the 6-digit code to finish.</p>
+        </div>
+        <div className="flex flex-col items-center gap-3">
+          {setupQr && <img src={setupQr} alt="Authenticator QR code" className="w-44 h-44 rounded-xl border border-border bg-white p-2" data-testid="mfa-setup-qr" />}
+          {setupSecret && (
+            <div className="text-center">
+              <p className="text-xs text-muted-foreground">Or enter this key manually</p>
+              <p className="font-mono text-sm text-foreground tracking-wider break-all max-w-[16rem]">{setupSecret}</p>
+            </div>
+          )}
+        </div>
+        <form onSubmit={handleEnrollSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="setup-otp" className="text-sm font-medium text-card-foreground">6-digit code</Label>
+            <Input id="setup-otp" type="text" placeholder="• • • • • •" value={setupCode}
+              onChange={(e) => setSetupCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              className="text-center text-2xl tracking-[0.5em] font-mono h-14 bg-card border border
+                text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl transition-all
+                shadow-[inset_0_1px_3px_rgba(0,0,0,0.06)]"
+              data-testid="mfa-setup-input" maxLength={6} autoFocus required />
+          </div>
+          <Button type="submit" disabled={isLoading || setupCode.length !== 6} className={btnCls} data-testid="mfa-setup-submit">
+            {isLoading ? 'Verifying…' : 'Verify & Finish'}
+          </Button>
+          <Button type="button" variant="ghost"
+            className="w-full text-muted-foreground hover:text-card-foreground hover:bg-muted/50 rounded-xl"
+            onClick={() => { setSetupStep(false); setSetupCode(''); setSetupToken(''); }}>
+            <ArrowLeft className="w-4 h-4 mr-2" /> Back to Sign In
+          </Button>
+        </form>
+      </div>
+    );
+
     /* OTP step */
     return (
       <div className="space-y-7">
@@ -294,7 +370,7 @@ export default function Login() {
           </div>
           <h2 className="text-3xl font-bold text-foreground mb-1">Verify Identity</h2>
           <p className="text-muted-foreground text-sm">{otpMessage}</p>
-          <p className="text-xs text-muted-foreground mt-1">Expires in 5 minutes · 3 attempts max</p>
+          <p className="text-xs text-muted-foreground mt-1">{otpMethod === 'totp' ? 'From your authenticator app' : 'Expires in 5 minutes · 3 attempts max'}</p>
         </div>
         <form onSubmit={handleOtpSubmit} className="space-y-5">
           <div className="space-y-1.5">
