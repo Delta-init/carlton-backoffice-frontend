@@ -357,8 +357,8 @@ export default function Exchangers() {
           entry.reference || entry.entry_id || '',
           entry.entry_type || '',
           entry.ie_category_name || entry.category || '',
-          entry.amount ?? 0,
-          entry.currency || 'USD',
+          entry.base_amount ?? entry.amount ?? 0,
+          entry.base_currency || entry.currency || 'USD',
           entry.vendor_commission_base_amount
             ? `${entry.vendor_commission_base_amount} ${entry.vendor_commission_base_currency || ''}`
             : '',
@@ -1232,10 +1232,10 @@ export default function Exchangers() {
                                 </TableCell>
                                 <TableCell className="text-card-foreground text-xs capitalize">{entry.category?.replace('_', ' ') || '-'}</TableCell>
                                 <TableCell className={`font-mono text-xs ${isIncome ? 'text-green-600' : 'text-red-500'}`}>
-                                  {isIncome ? '+' : '-'}{entry.amount?.toLocaleString()}
+                                  {isIncome ? '+' : '-'}{(entry.base_amount ?? entry.amount)?.toLocaleString()}
                                 </TableCell>
                                 <TableCell>
-                                  <Badge className="text-[10px] bg-muted text-card-foreground">{entry.currency || 'USD'}</Badge>
+                                  <Badge className="text-[10px] bg-muted text-card-foreground">{entry.base_currency || entry.currency || 'USD'}</Badge>
                                 </TableCell>
                                 <TableCell>
                                   {entry.vendor_commission_base_amount ? (
