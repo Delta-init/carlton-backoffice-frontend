@@ -72,6 +72,9 @@ import {
   Upload,
   ExternalLink,
 } from "lucide-react";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 import PaginationControls from "../components/PaginationControls";
 
@@ -822,6 +825,101 @@ export default function Loans() {
     outstandingMaxFilter ||
     activeTab !== "all";
 
+  // ---- Client-side table export helper (Excel / PDF) ----
+  const downloadTable = (format, { title, head, body, fname }) => {
+    if (!body.length) {
+      toast.error("Nothing to export");
+      return;
+    }
+    if (format === "excel") {
+      const ws = XLSX.utils.aoa_to_sheet([head, ...body]);
+      ws["!cols"] = head.map((h, i) => ({
+        wch: Math.min(
+          45,
+          Math.max(h.length + 2, 10, ...body.slice(0, 200).map((r) => String(r[i] ?? "").length + 2)),
+        ),
+      }));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, title.slice(0, 31));
+      XLSX.writeFile(wb, `${fname}.xlsx`);
+    } else {
+      const doc = new jsPDF({ orientation: "landscape" });
+      doc.setFontSize(14);
+      doc.text(`${title} (${body.length} records)`, 14, 14);
+      doc.setFontSize(9);
+      doc.setTextColor(120);
+      doc.text(`Generated ${new Date().toLocaleString()}`, 14, 20);
+      autoTable(doc, {
+        head: [head],
+        body,
+        startY: 25,
+        styles: { fontSize: 7, cellPadding: 1.5 },
+        headStyles: { fillColor: [30, 41, 59] },
+      });
+      doc.save(`${fname}.pdf`);
+    }
+    toast.success(`Exported ${body.length} rows`);
+  };
+
+  // Loan Transactions Log — full data via fetch_all
+  const exportLoanTransactions = async (format) => {
+    try {
+      const res = await fetch(`${API_URL}/api/loans/transactions?fetch_all=true`, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        toast.error("Failed to fetch transactions");
+        return;
+      }
+      const data = await res.json();
+      const rows = data.items || [];
+      const dest = (tx) =>
+        tx.transaction_type === "disbursement"
+          ? tx.treasury_account_name || tx.source_vendor_name || "-"
+          : tx.transaction_type === "repayment"
+            ? tx.treasury_account_name || tx.credit_vendor_name || "-"
+            : "-";
+      downloadTable(format, {
+        title: "Loan Transactions",
+        head: ["Date", "Type", "Description", "Source/Destination", "Payment Amount", "Amount (USD)", "Status", "By"],
+        body: rows.map((tx) => [
+          formatDate(tx.created_at),
+          (tx.transaction_type || "").replace(/_/g, " "),
+          tx.description || "",
+          dest(tx),
+          `${tx.amount ?? 0} ${tx.currency || "USD"}`,
+          tx.amount_usd ?? tx.amount ?? 0,
+          tx.status || "completed",
+          tx.created_by_name || "",
+        ]),
+        fname: `loan_transactions_${new Date().toISOString().split("T")[0]}`,
+      });
+    } catch (e) {
+      console.error("Export failed:", e);
+      toast.error("Export failed");
+    }
+  };
+
+  // Borrowers list — from already-loaded vendors
+  const exportBorrowers = (format) => {
+    downloadTable(format, {
+      title: "Borrowers",
+      head: ["Company", "Email", "Total Loans", "Disbursed (USD)", "Currencies", "Outstanding (USD)", "Active Loans", "Status"],
+      body: (vendors || []).map((v) => [
+        v.name || v.vendor_name || "",
+        v.email || "",
+        v.loan_stats?.total_loans ?? 0,
+        v.loan_stats?.total_disbursed_usd ?? 0,
+        (v.loan_stats?.currencies || []).join(", "),
+        v.loan_stats?.total_outstanding_usd ?? 0,
+        v.loan_stats?.active_loans ?? 0,
+        v.status || "",
+      ]),
+      fname: `borrowers_${new Date().toISOString().split("T")[0]}`,
+    });
+  };
+
   const handleExportExcel = async () => {
     try {
       const token = localStorage.getItem("auth_token");
@@ -1269,14 +1367,34 @@ export default function Loans() {
                 <Users className="w-5 h-5 text-primary" /> Borrower Companies
                 (Exchangers)
               </CardTitle>
-              <Button
-                onClick={() => setIsBorrowerDialogOpen(true)}
-                className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm text-xs"
-                data-testid="add-borrower-btn"
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                Add Borrower
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => exportBorrowers("excel")}
+                  className="border-green-200 text-green-600 hover:bg-green-50 h-8 px-3"
+                  data-testid="export-borrowers-excel"
+                >
+                  <Download className="w-3.5 h-3.5 mr-1" /> Excel
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => exportBorrowers("pdf")}
+                  className="border-red-200 text-red-600 hover:bg-red-50 h-8 px-3"
+                  data-testid="export-borrowers-pdf"
+                >
+                  <FileText className="w-3.5 h-3.5 mr-1" /> PDF
+                </Button>
+                <Button
+                  onClick={() => setIsBorrowerDialogOpen(true)}
+                  className="bg-[#66FCF1] text-[#0B0C10] hover:bg-[#45A29E] font-bold uppercase tracking-wider rounded-sm text-xs"
+                  data-testid="add-borrower-btn"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Borrower
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
@@ -1834,11 +1952,31 @@ export default function Loans() {
         {/* Transactions Tab */}
         <TabsContent value="transactions">
           <Card className="bg-card border">
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between">
               <CardTitle className="text-foreground text-lg flex items-center gap-2">
                 <History className="w-5 h-5 text-primary" /> Loan Transactions
                 Log
               </CardTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => exportLoanTransactions("excel")}
+                  className="border-green-200 text-green-600 hover:bg-green-50 h-8 px-3"
+                  data-testid="export-loan-txns-excel"
+                >
+                  <Download className="w-3.5 h-3.5 mr-1" /> Excel
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => exportLoanTransactions("pdf")}
+                  className="border-red-200 text-red-600 hover:bg-red-50 h-8 px-3"
+                  data-testid="export-loan-txns-pdf"
+                >
+                  <FileText className="w-3.5 h-3.5 mr-1" /> PDF
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[500px]">
