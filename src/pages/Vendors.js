@@ -48,6 +48,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '../components/ui/pagination';
+import PaginationControls from '../components/PaginationControls';
 import { toast } from 'sonner';
 import { getApiError } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
@@ -102,6 +103,33 @@ export default function Exchangers() {
   const [viewExchanger, setViewExchanger] = useState(null);
   const [detailTab, setDetailTab] = useState('transactions');
   const [exporting, setExporting] = useState(false);
+  // Transactions tab: pagination + filters
+  const [txPage, setTxPage] = useState(1);
+  const [txPageSize, setTxPageSize] = useState(20);
+  const [txTotalPages, setTxTotalPages] = useState(1);
+  const [txTotal, setTxTotal] = useState(0);
+  const [txSearch, setTxSearch] = useState('');
+  const [txStatus, setTxStatus] = useState('all');
+  const [txDateFrom, setTxDateFrom] = useState('');
+  const [txDateTo, setTxDateTo] = useState('');
+  // Income/Expenses tab: pagination + filters
+  const [iePage, setIePage] = useState(1);
+  const [iePageSize, setIePageSize] = useState(20);
+  const [ieTotalPages, setIeTotalPages] = useState(1);
+  const [ieTotal, setIeTotal] = useState(0);
+  const [ieSearch, setIeSearch] = useState('');
+  const [ieType, setIeType] = useState('all');
+  const [ieDateFrom, setIeDateFrom] = useState('');
+  const [ieDateTo, setIeDateTo] = useState('');
+  // Loan Transactions tab: pagination + filters
+  const [ltPage, setLtPage] = useState(1);
+  const [ltPageSize, setLtPageSize] = useState(20);
+  const [ltTotalPages, setLtTotalPages] = useState(1);
+  const [ltTotal, setLtTotal] = useState(0);
+  const [ltSearch, setLtSearch] = useState('');
+  const [ltType, setLtType] = useState('all');
+  const [ltDateFrom, setLtDateFrom] = useState('');
+  const [ltDateTo, setLtDateTo] = useState('');
   const [proofGallery, setProofGallery] = useState(null);
   const [settleDialogOpen, setSettleDialogOpen] = useState(false);
   const [statementData, setStatementData] = useState(null);
@@ -194,12 +222,19 @@ export default function Exchangers() {
     }
   };
 
-  const fetchExchangerTransactions = async (vendorId) => {
+  const fetchExchangerTransactions = async (vendorId, page = 1) => {
     try {
-      const response = await fetch(`${API_URL}/api/vendors/${vendorId}/transactions`, { headers: getAuthHeaders(), credentials: 'include' });
+      const p = new URLSearchParams({ page, page_size: txPageSize });
+      if (txSearch) p.set('search', txSearch);
+      if (txStatus && txStatus !== 'all') p.set('status', txStatus);
+      if (txDateFrom) p.set('date_from', txDateFrom);
+      if (txDateTo) p.set('date_to', txDateTo);
+      const response = await fetch(`${API_URL}/api/vendors/${vendorId}/transactions?${p}`, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
         setPendingTransactions(Array.isArray(data) ? data : (data.items || []));
+        setTxTotalPages(data.total_pages || 1);
+        setTxTotal(data.total ?? (data.items || []).length);
       }
     } catch (error) {
       console.error('Error fetching vendor transactions:', error);
@@ -217,13 +252,20 @@ export default function Exchangers() {
     }
   };
 
-  const fetchVendorIeEntries = async (vendorId) => {
+  const fetchVendorIeEntries = async (vendorId, page = 1) => {
     try {
-      const response = await fetch(`${API_URL}/api/income-expenses?vendor_id=${vendorId}&page_size=100`, { headers: getAuthHeaders(), credentials: 'include' });
+      const p = new URLSearchParams({ vendor_id: vendorId, page, page_size: iePageSize });
+      if (ieSearch) p.set('search', ieSearch);
+      if (ieType && ieType !== 'all') p.set('entry_type', ieType);
+      if (ieDateFrom) p.set('start_date', ieDateFrom);
+      if (ieDateTo) p.set('end_date', ieDateTo);
+      const response = await fetch(`${API_URL}/api/income-expenses?${p}`, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
         // Handle paginated response
         setVendorIeEntries(Array.isArray(data) ? data : (data.items || []));
+        setIeTotalPages(data.total_pages || 1);
+        setIeTotal(data.total ?? (data.items || []).length);
       }
     } catch (error) {
       console.error('Error fetching vendor I&E entries:', error);
@@ -231,13 +273,20 @@ export default function Exchangers() {
     }
   };
 
-  const fetchVendorLoanTransactions = async (vendorId) => {
+  const fetchVendorLoanTransactions = async (vendorId, page = 1) => {
     try {
-      const response = await fetch(`${API_URL}/api/loans/transactions?vendor_id=${vendorId}&page_size=100`, { headers: getAuthHeaders(), credentials: 'include' });
+      const p = new URLSearchParams({ vendor_id: vendorId, page, page_size: ltPageSize });
+      if (ltSearch) p.set('search', ltSearch);
+      if (ltType && ltType !== 'all') p.set('transaction_type', ltType);
+      if (ltDateFrom) p.set('date_from', ltDateFrom);
+      if (ltDateTo) p.set('date_to', ltDateTo);
+      const response = await fetch(`${API_URL}/api/loans/transactions?${p}`, { headers: getAuthHeaders(), credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
         // Handle paginated response
         setVendorLoanTxs(Array.isArray(data) ? data : (data.items || data.transactions || []));
+        setLtTotalPages(data.total_pages || 1);
+        setLtTotal(data.total ?? (data.items || []).length);
       }
     } catch (error) {
       console.error('Error fetching vendor loan transactions:', error);
@@ -397,6 +446,12 @@ export default function Exchangers() {
     }
   };
 
+  const resetDetailTabFilters = () => {
+    setTxPage(1); setTxSearch(''); setTxStatus('all'); setTxDateFrom(''); setTxDateTo('');
+    setIePage(1); setIeSearch(''); setIeType('all'); setIeDateFrom(''); setIeDateTo('');
+    setLtPage(1); setLtSearch(''); setLtType('all'); setLtDateFrom(''); setLtDateTo('');
+  };
+
   const openExchangerView = async (vendor) => {
     setViewExchanger(vendor);
     setDetailLoading(true);
@@ -404,13 +459,11 @@ export default function Exchangers() {
     setSettlements([]);
     setVendorIeEntries([]);
     setVendorLoanTxs([]);
-    
+    resetDetailTabFilters();
+
     try {
       await Promise.all([
         fetchExchangerDetails(vendor.vendor_id),
-        fetchVendorIeEntries(vendor.vendor_id),
-        fetchVendorLoanTransactions(vendor.vendor_id),
-        fetchExchangerTransactions(vendor.vendor_id),
         fetchExchangerSettlements(vendor.vendor_id)
       ]);
     } catch (error) {
@@ -485,10 +538,34 @@ export default function Exchangers() {
 
   useEffect(() => {
     if (viewExchanger) {
-      fetchExchangerTransactions(viewExchanger.vendor_id);
       fetchExchangerSettlements(viewExchanger.vendor_id);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewExchanger?.vendor_id]);
+
+  // Transactions tab: refetch on page/filter change (debounced for typing)
+  useEffect(() => {
+    if (!viewExchanger?.vendor_id) return;
+    const t = setTimeout(() => fetchExchangerTransactions(viewExchanger.vendor_id, txPage), 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewExchanger?.vendor_id, txPage, txPageSize, txSearch, txStatus, txDateFrom, txDateTo]);
+
+  // Income/Expenses tab
+  useEffect(() => {
+    if (!viewExchanger?.vendor_id) return;
+    const t = setTimeout(() => fetchVendorIeEntries(viewExchanger.vendor_id, iePage), 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewExchanger?.vendor_id, iePage, iePageSize, ieSearch, ieType, ieDateFrom, ieDateTo]);
+
+  // Loan Transactions tab
+  useEffect(() => {
+    if (!viewExchanger?.vendor_id) return;
+    const t = setTimeout(() => fetchVendorLoanTransactions(viewExchanger.vendor_id, ltPage), 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewExchanger?.vendor_id, ltPage, ltPageSize, ltSearch, ltType, ltDateFrom, ltDateTo]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -666,7 +743,7 @@ export default function Exchangers() {
       if (response.ok) {
         toast.success('Settlement submitted for approval');
         resetSettleDialog();
-        fetchExchangerTransactions(viewExchanger.vendor_id);
+        fetchExchangerTransactions(viewExchanger.vendor_id, txPage);
         fetchExchangerSettlements(viewExchanger.vendor_id);
         fetchExchangers(currentPage, searchTerm);
       } else {
@@ -854,16 +931,16 @@ export default function Exchangers() {
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <TabsList className="bg-muted/50 border border">
                     <TabsTrigger value="transactions" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
-                      Transactions ({pendingTransactions.length})
+                      Transactions ({txTotal})
                     </TabsTrigger>
                     <TabsTrigger value="history" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
                       Settlement History
                     </TabsTrigger>
                     <TabsTrigger value="ie" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
-                      Income/Expenses ({vendorIeEntries.length})
+                      Income/Expenses ({ieTotal})
                     </TabsTrigger>
                     <TabsTrigger value="loans" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
-                      Loan Transactions ({vendorLoanTxs.length})
+                      Loan Transactions ({ltTotal})
                     </TabsTrigger>
                   </TabsList>
                   <DropdownMenu>
@@ -891,6 +968,34 @@ export default function Exchangers() {
                 </div>
                 
                 <TabsContent value="transactions" className="mt-4">
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        value={txSearch}
+                        onChange={(e) => { setTxSearch(e.target.value); setTxPage(1); }}
+                        placeholder="Search ref / client / id…"
+                        className="pl-8 h-8 w-56 bg-card border"
+                      />
+                    </div>
+                    <Select value={txStatus} onValueChange={(v) => { setTxStatus(v); setTxPage(1); }}>
+                      <SelectTrigger className="h-8 w-36 bg-card border"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-card border">
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="approved">Approved</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input type="date" value={txDateFrom} onChange={(e) => { setTxDateFrom(e.target.value); setTxPage(1); }} className="h-8 w-36 bg-card border" />
+                    <span className="text-muted-foreground text-xs">to</span>
+                    <Input type="date" value={txDateTo} onChange={(e) => { setTxDateTo(e.target.value); setTxPage(1); }} className="h-8 w-36 bg-card border" />
+                    {(txSearch || txStatus !== 'all' || txDateFrom || txDateTo) && (
+                      <Button variant="ghost" size="sm" onClick={() => { setTxSearch(''); setTxStatus('all'); setTxDateFrom(''); setTxDateTo(''); setTxPage(1); }} className="h-8 text-muted-foreground hover:text-foreground">
+                        <X className="w-3.5 h-3.5 mr-1" /> Clear
+                      </Button>
+                    )}
+                  </div>
                   <ScrollArea className="h-[500px]">
                     {pendingTransactions.length === 0 ? (
                       <div className="text-center py-8 text-muted-foreground">
@@ -986,8 +1091,16 @@ export default function Exchangers() {
                       </Table>
                     )}
                   </ScrollArea>
+                  <PaginationControls
+                    currentPage={txPage}
+                    totalPages={txTotalPages}
+                    totalItems={txTotal}
+                    pageSize={txPageSize}
+                    onPageChange={setTxPage}
+                    onPageSizeChange={(s) => { setTxPageSize(s); setTxPage(1); }}
+                  />
                 </TabsContent>
-                
+
                 <TabsContent value="history" className="mt-4">
                   <ScrollArea className="h-[500px]">
                     {settlements.length === 0 ? (
@@ -1058,6 +1171,33 @@ export default function Exchangers() {
                 </TabsContent>
 
                 <TabsContent value="ie" className="mt-4">
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        value={ieSearch}
+                        onChange={(e) => { setIeSearch(e.target.value); setIePage(1); }}
+                        placeholder="Search ref / description…"
+                        className="pl-8 h-8 w-56 bg-card border"
+                      />
+                    </div>
+                    <Select value={ieType} onValueChange={(v) => { setIeType(v); setIePage(1); }}>
+                      <SelectTrigger className="h-8 w-36 bg-card border"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-card border">
+                        <SelectItem value="all">All Types</SelectItem>
+                        <SelectItem value="income">Income</SelectItem>
+                        <SelectItem value="expense">Expense</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input type="date" value={ieDateFrom} onChange={(e) => { setIeDateFrom(e.target.value); setIePage(1); }} className="h-8 w-36 bg-card border" />
+                    <span className="text-muted-foreground text-xs">to</span>
+                    <Input type="date" value={ieDateTo} onChange={(e) => { setIeDateTo(e.target.value); setIePage(1); }} className="h-8 w-36 bg-card border" />
+                    {(ieSearch || ieType !== 'all' || ieDateFrom || ieDateTo) && (
+                      <Button variant="ghost" size="sm" onClick={() => { setIeSearch(''); setIeType('all'); setIeDateFrom(''); setIeDateTo(''); setIePage(1); }} className="h-8 text-muted-foreground hover:text-foreground">
+                        <X className="w-3.5 h-3.5 mr-1" /> Clear
+                      </Button>
+                    )}
+                  </div>
                   <ScrollArea className="h-[500px]">
                     {vendorIeEntries.length === 0 ? (
                       <div className="text-center py-8 text-muted-foreground">
@@ -1131,10 +1271,45 @@ export default function Exchangers() {
                       </Table>
                     )}
                   </ScrollArea>
+                  <PaginationControls
+                    currentPage={iePage}
+                    totalPages={ieTotalPages}
+                    totalItems={ieTotal}
+                    pageSize={iePageSize}
+                    onPageChange={setIePage}
+                    onPageSizeChange={(s) => { setIePageSize(s); setIePage(1); }}
+                  />
                 </TabsContent>
 
                 {/* Loan Transactions Tab */}
                 <TabsContent value="loans" className="mt-4">
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        value={ltSearch}
+                        onChange={(e) => { setLtSearch(e.target.value); setLtPage(1); }}
+                        placeholder="Search borrower / description…"
+                        className="pl-8 h-8 w-56 bg-card border"
+                      />
+                    </div>
+                    <Select value={ltType} onValueChange={(v) => { setLtType(v); setLtPage(1); }}>
+                      <SelectTrigger className="h-8 w-40 bg-card border"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-card border">
+                        <SelectItem value="all">All Types</SelectItem>
+                        <SelectItem value="disbursement">Disbursement</SelectItem>
+                        <SelectItem value="repayment">Repayment</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input type="date" value={ltDateFrom} onChange={(e) => { setLtDateFrom(e.target.value); setLtPage(1); }} className="h-8 w-36 bg-card border" />
+                    <span className="text-muted-foreground text-xs">to</span>
+                    <Input type="date" value={ltDateTo} onChange={(e) => { setLtDateTo(e.target.value); setLtPage(1); }} className="h-8 w-36 bg-card border" />
+                    {(ltSearch || ltType !== 'all' || ltDateFrom || ltDateTo) && (
+                      <Button variant="ghost" size="sm" onClick={() => { setLtSearch(''); setLtType('all'); setLtDateFrom(''); setLtDateTo(''); setLtPage(1); }} className="h-8 text-muted-foreground hover:text-foreground">
+                        <X className="w-3.5 h-3.5 mr-1" /> Clear
+                      </Button>
+                    )}
+                  </div>
                   <ScrollArea className="h-[500px]">
                     {vendorLoanTxs.length === 0 ? (
                       <div className="text-center py-8 text-muted-foreground">
@@ -1193,6 +1368,14 @@ export default function Exchangers() {
                       </Table>
                     )}
                   </ScrollArea>
+                  <PaginationControls
+                    currentPage={ltPage}
+                    totalPages={ltTotalPages}
+                    totalItems={ltTotal}
+                    pageSize={ltPageSize}
+                    onPageChange={setLtPage}
+                    onPageSizeChange={(s) => { setLtPageSize(s); setLtPage(1); }}
+                  />
                 </TabsContent>
               </Tabs>
             </div>
