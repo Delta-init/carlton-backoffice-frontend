@@ -79,7 +79,11 @@ import {
   Archive,
   ArchiveRestore,
   Coins,
+  Download,
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -96,6 +100,8 @@ export default function Exchangers() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedExchanger, setSelectedExchanger] = useState(null);
   const [viewExchanger, setViewExchanger] = useState(null);
+  const [detailTab, setDetailTab] = useState('transactions');
+  const [exporting, setExporting] = useState(false);
   const [proofGallery, setProofGallery] = useState(null);
   const [settleDialogOpen, setSettleDialogOpen] = useState(false);
   const [statementData, setStatementData] = useState(null);
@@ -236,6 +242,146 @@ export default function Exchangers() {
     } catch (error) {
       console.error('Error fetching vendor loan transactions:', error);
       setVendorLoanTxs([]);
+    }
+  };
+
+  // ---- Full-data export (Excel/PDF) for the active detail tab ----
+  const fetchAllForExport = async (tab, vendorId) => {
+    const urls = {
+      transactions: `${API_URL}/api/vendors/${vendorId}/transactions?fetch_all=true`,
+      history: `${API_URL}/api/vendors/${vendorId}/settlements`,
+      ie: `${API_URL}/api/income-expenses?vendor_id=${vendorId}&fetch_all=true`,
+      loans: `${API_URL}/api/loans/transactions?vendor_id=${vendorId}&fetch_all=true`,
+    };
+    const res = await fetch(urls[tab], { headers: getAuthHeaders(), credentials: 'include' });
+    if (!res.ok) throw new Error('Failed to fetch export data');
+    const data = await res.json();
+    return Array.isArray(data) ? data : (data.items || []);
+  };
+
+  const buildExportTable = (tab, rows) => {
+    if (tab === 'transactions') {
+      return {
+        title: 'Transactions',
+        head: ['Date', 'Reference', 'CRM Ref', 'Client', 'Type', 'Amount (USD)', 'Payment Amount', 'Commission', 'Mode', 'Status'],
+        body: rows.map((tx) => [
+          formatDate(tx.transaction_date || tx.created_at),
+          tx.reference || '',
+          tx.crm_reference || '',
+          tx.client_name || '',
+          tx.transaction_type || '',
+          tx.amount ?? 0,
+          tx.base_amount ? `${tx.base_amount} ${tx.base_currency || ''}` : '',
+          tx.vendor_commission_base_amount
+            ? `${tx.vendor_commission_base_amount} ${tx.vendor_commission_base_currency || ''}`
+            : '',
+          tx.transaction_mode || '',
+          tx.status || '',
+        ]),
+      };
+    }
+    if (tab === 'history') {
+      return {
+        title: 'Settlement History',
+        head: ['Date', 'Type', 'Status', 'Gross', 'Settled Amount', 'Rate', 'Commission', 'Charges', 'Destination', 'Txns', 'Notes'],
+        body: rows.map((s) => [
+          formatDate(s.settled_at || s.created_at),
+          s.settlement_type || '',
+          s.status || '',
+          s.gross_amount != null ? `${s.gross_amount} ${s.source_currency || ''}` : '',
+          s.settlement_amount != null ? `${s.settlement_amount} ${s.destination_currency || s.source_currency || ''}` : '',
+          s.exchange_rate ?? '',
+          s.commission_amount ?? '',
+          s.charges_amount ?? '',
+          s.settlement_destination_name || '',
+          s.transaction_count ?? '',
+          s.notes || '',
+        ]),
+      };
+    }
+    if (tab === 'ie') {
+      return {
+        title: 'Income & Expenses',
+        head: ['Date', 'Reference', 'Type', 'Category', 'Amount', 'Currency', 'Commission', 'Mode', 'Status'],
+        body: rows.map((entry) => [
+          entry.date || '',
+          entry.reference || entry.entry_id || '',
+          entry.entry_type || '',
+          entry.ie_category_name || entry.category || '',
+          entry.amount ?? 0,
+          entry.currency || 'USD',
+          entry.vendor_commission_base_amount
+            ? `${entry.vendor_commission_base_amount} ${entry.vendor_commission_base_currency || ''}`
+            : '',
+          entry.transaction_mode || '',
+          entry.status || '',
+        ]),
+      };
+    }
+    return {
+      title: 'Loan Transactions',
+      head: ['Date', 'Ref ID', 'Direction', 'Type', 'Borrower', 'Amount', 'Currency', 'Status'],
+      body: rows.map((tx) => {
+        const isVendorSource = tx.source_vendor_id === viewExchanger?.vendor_id;
+        return [
+          formatDate(tx.created_at),
+          tx.transaction_id ? tx.transaction_id.slice(-12).toUpperCase() : '',
+          isVendorSource ? 'OUT (Disbursement)' : 'IN (Repayment)',
+          tx.transaction_type || '',
+          tx.borrower_name || '',
+          tx.amount ?? 0,
+          tx.currency || 'USD',
+          tx.status === 'pending_vendor' ? 'Pending' : (tx.status || ''),
+        ];
+      }),
+    };
+  };
+
+  const exportDetailTab = async (format) => {
+    if (!viewExchanger || exporting) return;
+    setExporting(true);
+    try {
+      const rows = await fetchAllForExport(detailTab, viewExchanger.vendor_id);
+      if (!rows.length) {
+        toast.error('Nothing to export');
+        return;
+      }
+      const { title, head, body } = buildExportTable(detailTab, rows);
+      const safeName = (viewExchanger.vendor_name || 'exchanger').replace(/[^\w-]+/g, '_');
+      const fname = `${safeName}_${detailTab}_${new Date().toISOString().split('T')[0]}`;
+      if (format === 'excel') {
+        const ws = XLSX.utils.aoa_to_sheet([head, ...body]);
+        ws['!cols'] = head.map((h, i) => ({
+          wch: Math.min(
+            40,
+            Math.max(h.length + 2, 10, ...body.slice(0, 200).map((r) => String(r[i] ?? '').length + 2)),
+          ),
+        }));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, title.slice(0, 31));
+        XLSX.writeFile(wb, `${fname}.xlsx`);
+      } else {
+        const doc = new jsPDF({ orientation: 'landscape' });
+        doc.setFontSize(14);
+        doc.text(`${viewExchanger.vendor_name || 'Exchanger'} — ${title} (${body.length} records)`, 14, 14);
+        doc.setFontSize(9);
+        doc.setTextColor(120);
+        doc.text(`Generated ${new Date().toLocaleString()}`, 14, 20);
+        autoTable(doc, {
+          head: [head],
+          body,
+          startY: 25,
+          styles: { fontSize: 7, cellPadding: 1.5 },
+          headStyles: { fillColor: [30, 41, 59] },
+        });
+        doc.save(`${fname}.pdf`);
+      }
+      toast.success(`Exported ${body.length} rows`);
+    } catch (e) {
+      console.error('Export failed:', e);
+      toast.error('Export failed');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -704,21 +850,45 @@ export default function Exchangers() {
               )}
 
               {/* Tabs */}
-              <Tabs defaultValue="transactions" className="w-full">
-                <TabsList className="bg-muted/50 border border">
-                  <TabsTrigger value="transactions" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
-                    Transactions ({pendingTransactions.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="history" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
-                    Settlement History
-                  </TabsTrigger>
-                  <TabsTrigger value="ie" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
-                    Income/Expenses ({vendorIeEntries.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="loans" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
-                    Loan Transactions ({vendorLoanTxs.length})
-                  </TabsTrigger>
-                </TabsList>
+              <Tabs value={detailTab} onValueChange={setDetailTab} className="w-full">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <TabsList className="bg-muted/50 border border">
+                    <TabsTrigger value="transactions" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
+                      Transactions ({pendingTransactions.length})
+                    </TabsTrigger>
+                    <TabsTrigger value="history" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
+                      Settlement History
+                    </TabsTrigger>
+                    <TabsTrigger value="ie" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
+                      Income/Expenses ({vendorIeEntries.length})
+                    </TabsTrigger>
+                    <TabsTrigger value="loans" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
+                      Loan Transactions ({vendorLoanTxs.length})
+                    </TabsTrigger>
+                  </TabsList>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={exporting}
+                        className="border text-muted-foreground hover:bg-muted"
+                        data-testid="export-detail-tab"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        {exporting ? 'Exporting…' : 'Export'}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-card border">
+                      <DropdownMenuItem onClick={() => exportDetailTab('excel')} className="cursor-pointer hover:bg-muted">
+                        <Download className="w-4 h-4 mr-2" /> Excel (.xlsx)
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => exportDetailTab('pdf')} className="cursor-pointer hover:bg-muted">
+                        <FileText className="w-4 h-4 mr-2" /> PDF
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
                 
                 <TabsContent value="transactions" className="mt-4">
                   <ScrollArea className="h-[500px]">
