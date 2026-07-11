@@ -107,6 +107,10 @@ export default function Loans() {
   const [vendors, setExchangers] = useState([]);
   const [dashboard, setDashboard] = useState(null);
   const [loanTransactions, setLoanTransactions] = useState([]);
+  const [loanTxPage, setLoanTxPage] = useState(1);
+  const [loanTxPageSize, setLoanTxPageSize] = useState(20);
+  const [loanTxTotalPages, setLoanTxTotalPages] = useState(1);
+  const [loanTxTotal, setLoanTxTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -285,17 +289,20 @@ export default function Loans() {
     }
   };
 
-  const fetchLoanTransactions = async (loanId = null) => {
+  const fetchLoanTransactions = async (page = 1, size = loanTxPageSize) => {
     try {
-      let url = `${API_URL}/api/loans/transactions?limit=100`;
-      if (loanId) url += `&loan_id=${loanId}`;
-      const response = await fetch(url, {
-        headers: getAuthHeaders(),
-        credentials: "include",
-      });
+      const response = await fetch(
+        `${API_URL}/api/loans/transactions?page=${page}&page_size=${size}`,
+        {
+          headers: getAuthHeaders(),
+          credentials: "include",
+        },
+      );
       if (response.ok) {
         const data = await response.json();
-        setLoanTransactions(Array.isArray(data) ? data : data.items || []);
+        setLoanTransactions(data.items || []);
+        setLoanTxTotalPages(data.total_pages || 1);
+        setLoanTxTotal(data.total || 0);
       }
     } catch (error) {
       console.error("Error fetching transactions:", error);
@@ -329,8 +336,12 @@ export default function Loans() {
     fetchSummary();
     fetchDashboard();
     fetchExchangers();
-    fetchLoanTransactions();
   }, []);
+
+  useEffect(() => {
+    fetchLoanTransactions(loanTxPage, loanTxPageSize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loanTxPage, loanTxPageSize]);
 
   useEffect(() => {
     fetchLoans();
@@ -407,7 +418,7 @@ export default function Loans() {
         fetchSummary();
         fetchDashboard();
         fetchTreasuryAccounts();
-        fetchLoanTransactions();
+        fetchLoanTransactions(loanTxPage);
       } else {
         toast.error(await getApiError(response));
       }
@@ -460,7 +471,7 @@ export default function Loans() {
         });
         fetchLoans();
         fetchDashboard();
-        fetchLoanTransactions();
+        fetchLoanTransactions(loanTxPage);
       } else {
         toast.error(await getApiError(response));
       }
@@ -492,7 +503,7 @@ export default function Loans() {
         toast.success("Loan written off successfully");
         fetchLoans();
         fetchDashboard();
-        fetchLoanTransactions();
+        fetchLoanTransactions(loanTxPage);
       } else {
         toast.error(await getApiError(response));
       }
@@ -2021,6 +2032,20 @@ export default function Loans() {
         />
       )}
 
+      {mainTab === "transactions" && (
+        <PaginationControls
+          currentPage={loanTxPage}
+          totalPages={loanTxTotalPages}
+          totalItems={loanTxTotal}
+          pageSize={loanTxPageSize}
+          onPageChange={setLoanTxPage}
+          onPageSizeChange={(s) => {
+            setLoanTxPageSize(s);
+            setLoanTxPage(1);
+          }}
+        />
+      )}
+
       {/* Create Loan Dialog */}
       <Dialog
         open={isLoanDialogOpen}
@@ -3060,7 +3085,7 @@ export default function Loans() {
                             );
                             if (updated.ok)
                               setSelectedLoan(await updated.json());
-                            fetchLoanTransactions();
+                            fetchLoanTransactions(loanTxPage);
                           } else {
                             toast.error(await getApiError(resp));
                           }
