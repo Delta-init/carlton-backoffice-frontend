@@ -33,6 +33,7 @@ import {
 } from "../components/ui/tabs";
 import { toast } from "sonner";
 import { usePasteFiles } from "../hooks/usePasteFiles";
+import { PasteButton } from "../components/PasteButton";
 import { getApiError } from '../lib/utils';
 import { useAutoRefresh } from "../hooks/useAutoRefresh";
 import { useAuth } from "../context/AuthContext";
@@ -2819,6 +2820,11 @@ export default function ExchangerDashboard() {
                                 <p className="text-xs text-muted-foreground/60">
                                   PNG, JPG up to 5MB · multiple · or paste (Ctrl/Cmd+V)
                                 </p>
+                                <PasteButton
+                                  onFiles={(files) =>
+                                    handleImageChange({ target: { files } })
+                                  }
+                                />
                               </div>
                             )}
                           </label>

@@ -49,6 +49,7 @@ import {
 } from "../components/ui/pagination";
 import { toast } from "sonner";
 import { usePasteFiles } from "../hooks/usePasteFiles";
+import { PasteButton } from "../components/PasteButton";
 import { getApiError } from "../lib/utils";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -2999,6 +3000,10 @@ export default function IncomeExpenses() {
                         <p className="text-xs text-muted-foreground mt-1">
                           PDF, Images, or Documents · or paste (Ctrl/Cmd+V)
                         </p>
+                        <PasteButton
+                          onFiles={(files) => setInvoiceFile(files[0])}
+                          className="mt-2"
+                        />
                       </>
                     )}
                   </label>

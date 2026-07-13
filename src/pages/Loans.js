@@ -41,6 +41,7 @@ import { Textarea } from "../components/ui/textarea";
 import { ScrollArea } from "../components/ui/scroll-area";
 import { toast } from "sonner";
 import { usePasteFiles } from "../hooks/usePasteFiles";
+import { PasteButton } from "../components/PasteButton";
 import { getApiError } from "../lib/utils";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -2777,6 +2778,12 @@ export default function Loans() {
                   <span className="text-[10px] text-muted-foreground">
                     PDF, Excel, Images (max 10MB each) · or paste (Ctrl/Cmd+V)
                   </span>
+                  <PasteButton
+                    onFiles={(files) =>
+                      setLoanFiles((prev) => [...prev, ...files])
+                    }
+                    className="mt-1"
+                  />
                 </label>
               </div>
               {loanFiles.length > 0 && (

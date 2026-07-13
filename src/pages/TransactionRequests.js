@@ -39,6 +39,7 @@ import {
 } from "../components/ui/command";
 import { toast } from "sonner";
 import { usePasteFiles } from "../hooks/usePasteFiles";
+import { PasteButton } from "../components/PasteButton";
 import { getApiError } from "../lib/utils";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -2293,6 +2294,12 @@ export default function TransactionRequests() {
                       <Upload className="w-8 h-8 mx-auto text-muted-foreground" />
                       <p className="text-sm text-muted-foreground">Click to upload proof of payment</p>
                       <p className="text-xs text-muted-foreground/60">PNG, JPG, PDF up to 10MB · multiple · or paste (Ctrl/Cmd+V)</p>
+                      <PasteButton
+                        onFiles={(files) =>
+                          handleImageChange({ target: { files } })
+                        }
+                        className="mt-2"
+                      />
                     </div>
                   )}
                 </label>

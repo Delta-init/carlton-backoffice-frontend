@@ -39,6 +39,7 @@ import {
 import { Checkbox } from "../components/ui/checkbox";
 import { toast } from "sonner";
 import { usePasteFiles } from "../hooks/usePasteFiles";
+import { PasteButton } from "../components/PasteButton";
 import { getApiError } from "../lib/utils";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -3109,6 +3110,10 @@ export default function AccountantDashboard() {
                   >
                     Choose File
                   </Label>
+                  <PasteButton
+                    onFiles={(files) => handleProofUpload({ target: { files } })}
+                    className="ml-2 align-middle"
+                  />
                 </div>
               )}
 
@@ -3488,6 +3493,12 @@ export default function AccountantDashboard() {
                     >
                       Choose File(s)
                     </Label>
+                    <PasteButton
+                      onFiles={(files) =>
+                        handleApprovalProofChange({ target: { files } })
+                      }
+                      className="ml-2 align-middle"
+                    />
                   </div>
                 )}
               </div>
