@@ -21,7 +21,7 @@ import {
   MessageSquare, Send, Users, User, Search, Plus, Check, CheckCheck,
   Loader2, Paperclip, X, FileText, Image as ImageIcon, FileSpreadsheet, File,
   Hash, MessageCircle, ChevronRight, Video, ZoomIn, PanelRightOpen, Settings, Trash2,
-  Bell, BellOff, Pencil, Search as SearchIcon,
+  Bell, BellOff, Pencil, Search as SearchIcon, PhoneCall,
 } from 'lucide-react';
 import { useChatNotification } from '../context/ChatNotificationContext';
 
@@ -110,6 +110,45 @@ export default function Messages() {
   useEffect(() => { selectedConvRef.current = selectedConversation; }, [selectedConversation]);
   useEffect(() => { selectedChannelRef.current = selectedChannel; }, [selectedChannel]);
   useEffect(() => { threadMsgRef.current = threadMsg; }, [threadMsg]);
+
+  // Send a buzz ("missed-call" ring) to a channel's members or a DM peer
+  const sendBuzz = async (scope, id, label) => {
+    try {
+      const headers = { ...getAuthHeaders(), 'Content-Type': 'application/json' };
+      const url = scope === 'channel'
+        ? `${API_URL}/api/channels/${id}/buzz`
+        : `${API_URL}/api/messages/${id}/buzz`;
+      const r = await fetch(url, { method: 'POST', headers, body: JSON.stringify({}) });
+      if (r.ok) toast.success(`📞 Buzzing ${label}…`);
+      else if (r.status === 429) toast.error((await r.json().catch(() => ({})))?.detail || 'Please wait before buzzing again');
+      else toast.error('Could not send buzz');
+    } catch { toast.error('Could not send buzz'); }
+  };
+
+  // Deep-link from a buzz "Answer": ?open=channel:<id> or ?open=dm:<peerId>
+  const consumedOpenRef = useRef(false);
+  useEffect(() => {
+    if (consumedOpenRef.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const open = params.get('open');
+    if (!open) return;
+    const [kind, id] = open.split(':');
+    let done = false;
+    if (kind === 'channel') {
+      const ch = channels.find(c => c.channel_id === id);
+      if (ch) { setSelectedChannel(ch); setActiveSection('channels'); setSelectedConversation(null); setThreadMsg(null); done = true; }
+    } else if (kind === 'dm') {
+      const conv = conversations.find(c => c.user_id === id) || users.find(u => u.user_id === id);
+      if (conv) { setSelectedConversation({ user_id: conv.user_id, name: conv.name, email: conv.email, role: conv.role }); setActiveSection('dm'); setSelectedChannel(null); setThreadMsg(null); done = true; }
+    }
+    if (done) {
+      consumedOpenRef.current = true;
+      params.delete('open');
+      const qs = params.toString();
+      window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channels, conversations, users]);
 
   const { registerHandler, soundEnabled, toggleSound, trackThreadParticipation, hasParticipated, resetUnread } = useChatNotification();
 
@@ -1001,6 +1040,9 @@ export default function Messages() {
                     <div className="flex items-center gap-1.5 text-muted-foreground/60 shrink-0">
                       <Users className="w-4 h-4" />
                       <span className="text-xs font-medium mr-1">{selectedChannel.members?.length || 0}</span>
+                      <button className="p-1 hover:bg-muted rounded transition-colors" onClick={() => sendBuzz('channel', selectedChannel.channel_id, `# ${selectedChannel.name}`)} title="Buzz everyone in this channel">
+                        <PhoneCall className="w-4 h-4 text-muted-foreground hover:text-primary" />
+                      </button>
                       <button className="p-1 hover:bg-muted rounded transition-colors" onClick={openEditDialog} title="Edit channel">
                         <Settings className="w-4 h-4 text-muted-foreground/60 hover:text-muted-foreground" />
                       </button>
@@ -1201,6 +1243,9 @@ export default function Messages() {
                       <h3 className="font-semibold text-foreground leading-tight">{selectedConversation.name}</h3>
                       <p className="text-xs text-muted-foreground/60">{selectedConversation.email}</p>
                     </div>
+                    <button className="p-1.5 hover:bg-muted rounded-full transition-colors shrink-0" onClick={() => sendBuzz('dm', selectedConversation.user_id, selectedConversation.name)} title={`Buzz ${selectedConversation.name}`}>
+                      <PhoneCall className="w-4 h-4 text-muted-foreground hover:text-primary" />
+                    </button>
                     <Badge variant="outline" className="text-xs shrink-0">{selectedConversation.role}</Badge>
                   </div>
 

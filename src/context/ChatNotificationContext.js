@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from './AuthContext';
 
+const API = process.env.REACT_APP_BACKEND_URL;
+
 const defaultCtx = {
   totalUnread: 0,
   setTotalUnread: () => {},
@@ -37,6 +39,12 @@ export function ChatNotificationProvider({ children }) {
   // Track which threads the current user has replied in: "channelId:parentMsgId"
   const threadParticipationsRef = useRef(new Set());
 
+  // Incoming buzz ("missed-call" ring) — owned here so it rings on any page
+  const [incomingBuzz, setIncomingBuzz] = useState(null);
+  const ringCtxRef = useRef(null);
+  const ringTimerRef = useRef(null);
+  const buzzTimeoutRef = useRef(null);
+
   // ── Audio ──────────────────────────────────────────────────────────────────
   const playPing = useCallback(() => {
     if (!soundEnabledRef.current) return;
@@ -54,6 +62,68 @@ export function ChatNotificationProvider({ children }) {
       osc.stop(ctx.currentTime + 0.25);
     } catch { /* AudioContext unavailable */ }
   }, []);
+
+  // ── Buzz ring ("missed-call") — loops until answered/declined; overrides mute ─
+  const stopRing = useCallback(() => {
+    if (ringTimerRef.current) { clearInterval(ringTimerRef.current); ringTimerRef.current = null; }
+  }, []);
+
+  const startRing = useCallback(() => {
+    try {
+      if (!ringCtxRef.current) ringCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      const ctx = ringCtxRef.current;
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+      const tone = () => {
+        const t0 = ctx.currentTime;
+        [0, 0.4].forEach(off => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain); gain.connect(ctx.destination);
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(520, t0 + off);
+          osc.frequency.setValueAtTime(660, t0 + off + 0.12);
+          gain.gain.setValueAtTime(0.0001, t0 + off);
+          gain.gain.exponentialRampToValueAtTime(0.4, t0 + off + 0.03);
+          gain.gain.exponentialRampToValueAtTime(0.0001, t0 + off + 0.34);
+          osc.start(t0 + off);
+          osc.stop(t0 + off + 0.36);
+        });
+      };
+      stopRing();
+      tone();
+      ringTimerRef.current = setInterval(tone, 2400);
+    } catch { /* AudioContext unavailable */ }
+  }, [stopRing]);
+
+  const ackBuzz = useCallback((b, action) => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      fetch(`${API}/api/buzz/ack`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ from_id: b.from_id, action, scope: b.scope, channel_name: b.channel_name || '' }),
+      }).catch(() => {});
+    } catch { /* ignore */ }
+  }, []);
+
+  const answerBuzz = useCallback(() => {
+    setIncomingBuzz(b => {
+      if (b) {
+        ackBuzz(b, 'answered');
+        const open = b.scope === 'channel' ? `channel:${b.channel_id}` : `dm:${b.dm_peer_id}`;
+        navigate(`/messages?open=${encodeURIComponent(open)}`);
+      }
+      return null;
+    });
+    stopRing();
+    if (buzzTimeoutRef.current) { clearTimeout(buzzTimeoutRef.current); buzzTimeoutRef.current = null; }
+  }, [ackBuzz, navigate, stopRing]);
+
+  const declineBuzz = useCallback(() => {
+    setIncomingBuzz(b => { if (b) ackBuzz(b, 'declined'); return null; });
+    stopRing();
+    if (buzzTimeoutRef.current) { clearTimeout(buzzTimeoutRef.current); buzzTimeoutRef.current = null; }
+  }, [ackBuzz, stopRing]);
 
   // ── Notification dispatcher ────────────────────────────────────────────────
   // Sound: always.
@@ -107,9 +177,35 @@ export function ChatNotificationProvider({ children }) {
         fireNotification(`↩ ${reply.sender_name} replied`, reply.content || '📎 Attachment', () => navigate('/messages'));
         break;
       }
+      case 'buzz': {
+        if (data.from_id === me?.user_id) break;
+        stopRing();
+        if (buzzTimeoutRef.current) clearTimeout(buzzTimeoutRef.current);
+        setIncomingBuzz(data);
+        startRing();
+        const where = data.scope === 'channel' ? `# ${data.channel_name}` : 'Direct message';
+        if (document.visibilityState !== 'visible' && 'Notification' in window && Notification.permission === 'granted') {
+          try {
+            const n = new Notification(`📞 ${data.from_name} is buzzing`, { body: where, icon: '/logo192.png', tag: 'chat-buzz', requireInteraction: true });
+            n.onclick = () => { window.focus(); n.close(); };
+          } catch { /* ignore */ }
+        }
+        buzzTimeoutRef.current = setTimeout(() => {
+          stopRing();
+          setIncomingBuzz(null);
+          buzzTimeoutRef.current = null;
+          toast(`📞 Missed buzz from ${data.from_name}`, { description: where, duration: 8000 });
+        }, 30000);
+        break;
+      }
+      case 'buzz_ack': {
+        if (data.action === 'answered') toast(`✅ ${data.by_name} answered your buzz`, { duration: 5000 });
+        else toast(`🚫 ${data.by_name} declined your buzz`, { duration: 5000 });
+        break;
+      }
       default: break;
     }
-  }, [fireNotification, navigate]);
+  }, [fireNotification, navigate, startRing, stopRing]);
 
   // ── WebSocket (single global connection) ───────────────────────────────────
   useEffect(() => {
@@ -184,6 +280,26 @@ export function ChatNotificationProvider({ children }) {
       registerHandler, trackThreadParticipation, hasParticipated,
     }}>
       {children}
+      {incomingBuzz && (
+        <div className="fixed inset-0 z-[9999] flex items-start justify-center pt-6 px-4 pointer-events-none">
+          <div className="pointer-events-auto w-full max-w-sm rounded-2xl border bg-card shadow-2xl overflow-hidden">
+            <div className="flex items-center gap-3 px-4 pt-4">
+              <div className="w-11 h-11 rounded-full bg-primary/10 text-primary flex items-center justify-center animate-pulse shrink-0">
+                <span className="text-xl">📞</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-foreground leading-tight truncate">{incomingBuzz.from_name} is buzzing…</p>
+                <p className="text-xs text-muted-foreground truncate">{incomingBuzz.scope === 'channel' ? `# ${incomingBuzz.channel_name}` : 'Direct message'}</p>
+              </div>
+            </div>
+            {incomingBuzz.reason && <p className="px-4 pt-2 text-sm text-muted-foreground italic break-words">"{incomingBuzz.reason}"</p>}
+            <div className="flex gap-2 p-4">
+              <button onClick={declineBuzz} className="flex-1 h-9 rounded-lg bg-muted text-muted-foreground text-sm font-medium hover:bg-muted/80 transition-colors">Decline</button>
+              <button onClick={answerBuzz} className="flex-1 h-9 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors">Answer</button>
+            </div>
+          </div>
+        </div>
+      )}
     </ChatNotificationContext.Provider>
   );
 }
