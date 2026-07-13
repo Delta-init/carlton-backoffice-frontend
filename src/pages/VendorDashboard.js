@@ -320,6 +320,16 @@ export default function ExchangerDashboard() {
     return `${currency} ${(amount || 0).toLocaleString()}`;
   };
 
+  // Loan term (loan date → due date), date-only, UTC to avoid off-by-one
+  const fmtDay = (d) =>
+    d
+      ? new Date(d).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })
+      : "";
+  const fmtTerm = (item) =>
+    item?._isLoan && item.loan_date
+      ? `${fmtDay(item.loan_date)} → ${fmtDay(item.due_date) || "—"}`
+      : "-";
+
   useEffect(() => {
     fetchExchangerInfo();
   }, []);
@@ -914,14 +924,15 @@ export default function ExchangerDashboard() {
         commission: item.vendor_commission_base_amount || 0,
         status: item.status === "pending_vendor" ? "Pending" : item.status,
         date: (item.date || item.created_at || "").slice(0, 10),
+        term: fmtTerm(item),
       };
     });
     if (format === "csv") {
       const headers =
-        "Reference,Source,Type,Category,Amount,Currency,Commission,Status,Date";
+        "Reference,Source,Type,Category,Amount,Currency,Commission,Status,Date,Term";
       const rows = items.map(
         (r) =>
-          `${r.reference},${r.source},${r.type},"${r.category}",${r.amount},${r.currency},${r.commission},${r.status},${r.date}`,
+          `${r.reference},${r.source},${r.type},"${r.category}",${r.amount},${r.currency},${r.commission},${r.status},${r.date},"${r.term}"`,
       );
       const csv = [headers, ...rows].join("\n");
       const blob = new Blob([csv], { type: "text/csv" });
@@ -943,10 +954,10 @@ export default function ExchangerDashboard() {
         td { padding: 6px 8px; border-bottom: 1px solid #eee; }
         tr:nth-child(even) td { background: #f8f8f8; }
       </style></head><body><h1>Other Transactions - ${vendorInfo?.vendor_name || "Exchanger"}</h1>
-      <table><tr><th>Ref</th><th>Source</th><th>Type</th><th>Category</th><th>Amount</th><th>Currency</th><th>Commission</th><th>Status</th><th>Date</th></tr>`);
+      <table><tr><th>Ref</th><th>Source</th><th>Type</th><th>Category</th><th>Amount</th><th>Currency</th><th>Commission</th><th>Status</th><th>Date</th><th>Term</th></tr>`);
       items.forEach((r) => {
         win.document.write(
-          `<tr><td>${r.reference}</td><td>${r.source}</td><td>${r.type}</td><td>${r.category}</td><td>${r.amount.toLocaleString()}</td><td>${r.currency}</td><td>${r.commission.toLocaleString()}</td><td>${r.status}</td><td>${r.date}</td></tr>`,
+          `<tr><td>${r.reference}</td><td>${r.source}</td><td>${r.type}</td><td>${r.category}</td><td>${r.amount.toLocaleString()}</td><td>${r.currency}</td><td>${r.commission.toLocaleString()}</td><td>${r.status}</td><td>${r.date}</td><td>${r.term}</td></tr>`,
         );
       });
       win.document.write("</table></body></html>");
@@ -1829,6 +1840,9 @@ export default function ExchangerDashboard() {
                         <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                           Date
                         </TableHead>
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
+                          Term
+                        </TableHead>
                         <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">
                           Actions
                         </TableHead>
@@ -1920,6 +1934,9 @@ export default function ExchangerDashboard() {
                                 {formatDate(
                                   tx.transaction_date || tx.created_at,
                                 )}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
+                                {fmtTerm(tx)}
                               </TableCell>
                               <TableCell className="text-right">
                                 {isPending && (
@@ -2037,6 +2054,9 @@ export default function ExchangerDashboard() {
                               </TableCell>
                               <TableCell className="text-muted-foreground text-xs">
                                 {formatDate(entry.date || entry.created_at)}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-xs">
+                                -
                               </TableCell>
                               <TableCell className="text-right">
                                 {isPending && (
