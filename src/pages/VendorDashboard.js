@@ -139,6 +139,7 @@ export default function ExchangerDashboard() {
   const [otSourceFilter, setOtSourceFilter] = useState("all");
   const [otDateFrom, setOtDateFrom] = useState("");
   const [otDateTo, setOtDateTo] = useState("");
+  const [otDateField, setOtDateField] = useState("created"); // created | approved | loan_date | due_date
   // Other Transactions is a client-side merge of ALL I&E + ALL loans, paginated locally
   const [otPage, setOtPage] = useState(1);
   const [otPageSize, setOtPageSize] = useState(20);
@@ -329,6 +330,23 @@ export default function ExchangerDashboard() {
     item?._isLoan && item.loan_date
       ? `${fmtDay(item.loan_date)} → ${fmtDay(item.due_date) || "—"}`
       : "-";
+
+  // Approved/Completed date: I&E uses approved_at/approval_date; loans fall back to the parent loan's approval
+  const approvedRaw = (item) =>
+    item?._isLoan
+      ? item.approved_at || item.loan_approved_at || ""
+      : item?.approved_at || item?.approval_date || "";
+  const fmtApproved = (item) => {
+    const d = approvedRaw(item);
+    return d ? formatDate(d) : "-";
+  };
+  // The date a row is filtered on (YYYY-MM-DD) for the selected "Filter by" field
+  const otRowFilterDate = (item, field) => {
+    if (field === "approved") return (approvedRaw(item) || "").slice(0, 10);
+    if (field === "loan_date") return (item.loan_date || "").slice(0, 10);
+    if (field === "due_date") return (item.due_date || "").slice(0, 10);
+    return (item.created_at || "").slice(0, 10); // created
+  };
 
   useEffect(() => {
     fetchExchangerInfo();
@@ -858,13 +876,10 @@ export default function ExchangerDashboard() {
     }
     if (otSourceFilter === "ie" && item._isLoan) return false;
     if (otSourceFilter === "loan" && !item._isLoan) return false;
-    if (otDateFrom) {
-      const itemDate = (item.date || item.created_at || "").slice(0, 10);
-      if (itemDate < otDateFrom) return false;
-    }
-    if (otDateTo) {
-      const itemDate = (item.date || item.created_at || "").slice(0, 10);
-      if (itemDate > otDateTo) return false;
+    if (otDateFrom || otDateTo) {
+      const d = otRowFilterDate(item, otDateField);
+      if (otDateFrom && (!d || d < otDateFrom)) return false;
+      if (otDateTo && (!d || d > otDateTo)) return false;
     }
     if (q) {
       return (
@@ -923,16 +938,17 @@ export default function ExchangerDashboard() {
         currency: item.base_currency || item.currency || "USD",
         commission: item.vendor_commission_base_amount || 0,
         status: item.status === "pending_vendor" ? "Pending" : item.status,
-        date: (item.date || item.created_at || "").slice(0, 10),
+        created: (item.created_at || "").slice(0, 10),
+        approved: (approvedRaw(item) || "").slice(0, 10),
         term: fmtTerm(item),
       };
     });
     if (format === "csv") {
       const headers =
-        "Reference,Source,Type,Category,Amount,Currency,Commission,Status,Date,Term";
+        "Reference,Source,Type,Category,Amount,Currency,Commission,Status,Created,Approved,Term";
       const rows = items.map(
         (r) =>
-          `${r.reference},${r.source},${r.type},"${r.category}",${r.amount},${r.currency},${r.commission},${r.status},${r.date},"${r.term}"`,
+          `${r.reference},${r.source},${r.type},"${r.category}",${r.amount},${r.currency},${r.commission},${r.status},${r.created},${r.approved},"${r.term}"`,
       );
       const csv = [headers, ...rows].join("\n");
       const blob = new Blob([csv], { type: "text/csv" });
@@ -954,10 +970,10 @@ export default function ExchangerDashboard() {
         td { padding: 6px 8px; border-bottom: 1px solid #eee; }
         tr:nth-child(even) td { background: #f8f8f8; }
       </style></head><body><h1>Other Transactions - ${vendorInfo?.vendor_name || "Exchanger"}</h1>
-      <table><tr><th>Ref</th><th>Source</th><th>Type</th><th>Category</th><th>Amount</th><th>Currency</th><th>Commission</th><th>Status</th><th>Date</th><th>Term</th></tr>`);
+      <table><tr><th>Ref</th><th>Source</th><th>Type</th><th>Category</th><th>Amount</th><th>Currency</th><th>Commission</th><th>Status</th><th>Created</th><th>Approved</th><th>Term</th></tr>`);
       items.forEach((r) => {
         win.document.write(
-          `<tr><td>${r.reference}</td><td>${r.source}</td><td>${r.type}</td><td>${r.category}</td><td>${r.amount.toLocaleString()}</td><td>${r.currency}</td><td>${r.commission.toLocaleString()}</td><td>${r.status}</td><td>${r.date}</td><td>${r.term}</td></tr>`,
+          `<tr><td>${r.reference}</td><td>${r.source}</td><td>${r.type}</td><td>${r.category}</td><td>${r.amount.toLocaleString()}</td><td>${r.currency}</td><td>${r.commission.toLocaleString()}</td><td>${r.status}</td><td>${r.created}</td><td>${r.approved}</td><td>${r.term}</td></tr>`,
         );
       });
       win.document.write("</table></body></html>");
@@ -1705,6 +1721,22 @@ export default function ExchangerDashboard() {
                 <option value="loan">Loan</option>
               </select>
             </div>
+            <div className="min-w-[130px]">
+              <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider mb-1 block">
+                Filter by
+              </label>
+              <select
+                value={otDateField}
+                onChange={(e) => setOtDateField(e.target.value)}
+                className="w-full px-2 py-1.5 text-sm border border rounded-md bg-card text-foreground"
+                data-testid="ot-date-field"
+              >
+                <option value="created">Created date</option>
+                <option value="approved">Approved date</option>
+                <option value="loan_date">Loan date</option>
+                <option value="due_date">Due date</option>
+              </select>
+            </div>
             <div className="min-w-[120px]">
               <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider mb-1 block">
                 From
@@ -1838,7 +1870,10 @@ export default function ExchangerDashboard() {
                           Status
                         </TableHead>
                         <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
-                          Date
+                          Created
+                        </TableHead>
+                        <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
+                          Approved / Completed
                         </TableHead>
                         <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                           Term
@@ -1930,10 +1965,11 @@ export default function ExchangerDashboard() {
                                     : tx.status?.toUpperCase()}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="text-muted-foreground text-xs">
-                                {formatDate(
-                                  tx.transaction_date || tx.created_at,
-                                )}
+                              <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
+                                {formatDate(tx.created_at)}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
+                                {fmtApproved(tx)}
                               </TableCell>
                               <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
                                 {fmtTerm(tx)}
@@ -2052,8 +2088,11 @@ export default function ExchangerDashboard() {
                                   </Badge>
                                 )}
                               </TableCell>
-                              <TableCell className="text-muted-foreground text-xs">
-                                {formatDate(entry.date || entry.created_at)}
+                              <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
+                                {formatDate(entry.created_at)}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
+                                {fmtApproved(entry)}
                               </TableCell>
                               <TableCell className="text-muted-foreground text-xs">
                                 -
