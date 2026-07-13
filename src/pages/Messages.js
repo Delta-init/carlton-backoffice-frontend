@@ -60,6 +60,8 @@ export default function Messages() {
   const [editText, setEditText] = useState('');
   const [msgSearch, setMsgSearch] = useState('');
   const [msgFilter, setMsgFilter] = useState('all');  // all | media | links
+  const [msgDateFrom, setMsgDateFrom] = useState('');  // YYYY-MM-DD (IST)
+  const [msgDateTo, setMsgDateTo] = useState('');
   const [activeSection, setActiveSection] = useState('dm');
   const [channelMsg, setChannelMsg] = useState('');
   const [channelFiles, setChannelFiles] = useState([]);
@@ -254,6 +256,12 @@ export default function Messages() {
     if (msgFilter === 'media' && !(m.attachment || (m.attachments && m.attachments.length))) return false;
     if (msgFilter === 'links' && !/https?:\/\//i.test(m.content || '')) return false;
     if (msgSearch && !((m.content || '').toLowerCase().includes(msgSearch.toLowerCase()))) return false;
+    if (msgDateFrom || msgDateTo) {
+      // Compare on the IST calendar day so it matches the timestamps shown in chat
+      const day = m.created_at ? new Date(m.created_at).toLocaleDateString('en-CA', { timeZone: IST }) : '';
+      if (msgDateFrom && day < msgDateFrom) return false;
+      if (msgDateTo && day > msgDateTo) return false;
+    }
     return true;
   };
 
@@ -1017,8 +1025,15 @@ export default function Messages() {
                       <option value="media">Media</option>
                       <option value="links">Links</option>
                     </select>
-                    {(msgSearch || msgFilter !== 'all') && (
-                      <button onClick={() => { setMsgSearch(''); setMsgFilter('all'); }} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-0.5"><X className="w-3.5 h-3.5" />Clear</button>
+                    <div className="flex items-center gap-1">
+                      <input type="date" value={msgDateFrom} onChange={e => setMsgDateFrom(e.target.value)} max={msgDateTo || undefined}
+                        title="From date" className="h-8 text-xs rounded-md border bg-card px-2 text-muted-foreground" />
+                      <span className="text-muted-foreground text-xs">–</span>
+                      <input type="date" value={msgDateTo} onChange={e => setMsgDateTo(e.target.value)} min={msgDateFrom || undefined}
+                        title="To date" className="h-8 text-xs rounded-md border bg-card px-2 text-muted-foreground" />
+                    </div>
+                    {(msgSearch || msgFilter !== 'all' || msgDateFrom || msgDateTo) && (
+                      <button onClick={() => { setMsgSearch(''); setMsgFilter('all'); setMsgDateFrom(''); setMsgDateTo(''); }} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-0.5"><X className="w-3.5 h-3.5" />Clear</button>
                     )}
                   </div>
 
@@ -1202,8 +1217,15 @@ export default function Messages() {
                       <option value="media">Media</option>
                       <option value="links">Links</option>
                     </select>
-                    {(msgSearch || msgFilter !== 'all') && (
-                      <button onClick={() => { setMsgSearch(''); setMsgFilter('all'); }} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-0.5"><X className="w-3.5 h-3.5" />Clear</button>
+                    <div className="flex items-center gap-1">
+                      <input type="date" value={msgDateFrom} onChange={e => setMsgDateFrom(e.target.value)} max={msgDateTo || undefined}
+                        title="From date" className="h-8 text-xs rounded-md border bg-card px-2 text-muted-foreground" />
+                      <span className="text-muted-foreground text-xs">–</span>
+                      <input type="date" value={msgDateTo} onChange={e => setMsgDateTo(e.target.value)} min={msgDateFrom || undefined}
+                        title="To date" className="h-8 text-xs rounded-md border bg-card px-2 text-muted-foreground" />
+                    </div>
+                    {(msgSearch || msgFilter !== 'all' || msgDateFrom || msgDateTo) && (
+                      <button onClick={() => { setMsgSearch(''); setMsgFilter('all'); setMsgDateFrom(''); setMsgDateTo(''); }} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-0.5"><X className="w-3.5 h-3.5" />Clear</button>
                     )}
                   </div>
 
