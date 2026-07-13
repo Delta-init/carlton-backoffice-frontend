@@ -143,6 +143,17 @@ export default function Loans() {
   const [principalMaxFilter, setPrincipalMaxFilter] = useState("");
   const [outstandingMinFilter, setOutstandingMinFilter] = useState("");
   const [outstandingMaxFilter, setOutstandingMaxFilter] = useState("");
+  // Currency + date range filters (All Loans)
+  const [currencyFilter, setCurrencyFilter] = useState("");
+  const [loanDateFrom, setLoanDateFrom] = useState("");
+  const [loanDateTo, setLoanDateTo] = useState("");
+  // Transactions tab filters
+  const [txSearch, setTxSearch] = useState("");
+  const [txType, setTxType] = useState("");
+  const [txCurrency, setTxCurrency] = useState("");
+  const [txDateFrom, setTxDateFrom] = useState("");
+  const [txDateTo, setTxDateTo] = useState("");
+  const CURRENCY_OPTIONS = ["USD", "AED", "INR", "USDT"];
 
   // Borrower form (for creating new vendor/borrower)
   const [borrowerForm, setBorrowerForm] = useState({
@@ -215,6 +226,9 @@ export default function Loans() {
       if (statusFilter) url += `&status=${statusFilter}`;
       if (borrowerFilter) url += `&borrower=${encodeURIComponent(borrowerFilter)}`;
       if (loanSearch) url += `&search=${encodeURIComponent(loanSearch)}`;
+      if (currencyFilter) url += `&currency=${encodeURIComponent(currencyFilter)}`;
+      if (loanDateFrom) url += `&date_from=${loanDateFrom}`;
+      if (loanDateTo) url += `&date_to=${loanDateTo}`;
 
       const response = await fetch(url, {
         headers: getAuthHeaders(),
@@ -232,7 +246,7 @@ export default function Loans() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, borrowerFilter, loanSearch, currentPage, pageSize]);
+  }, [statusFilter, borrowerFilter, loanSearch, currencyFilter, loanDateFrom, loanDateTo, currentPage, pageSize]);
 
   const fetchTreasuryAccounts = async () => {
     try {
@@ -294,13 +308,16 @@ export default function Loans() {
 
   const fetchLoanTransactions = async (page = 1, size = loanTxPageSize) => {
     try {
-      const response = await fetch(
-        `${API_URL}/api/loans/transactions?page=${page}&page_size=${size}`,
-        {
-          headers: getAuthHeaders(),
-          credentials: "include",
-        },
-      );
+      let url = `${API_URL}/api/loans/transactions?page=${page}&page_size=${size}`;
+      if (txSearch) url += `&search=${encodeURIComponent(txSearch)}`;
+      if (txType) url += `&transaction_type=${encodeURIComponent(txType)}`;
+      if (txCurrency) url += `&currency=${encodeURIComponent(txCurrency)}`;
+      if (txDateFrom) url += `&date_from=${txDateFrom}`;
+      if (txDateTo) url += `&date_to=${txDateTo}`;
+      const response = await fetch(url, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
       if (response.ok) {
         const data = await response.json();
         setLoanTransactions(data.items || []);
@@ -345,6 +362,12 @@ export default function Loans() {
     fetchLoanTransactions(loanTxPage, loanTxPageSize);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loanTxPage, loanTxPageSize]);
+
+  useEffect(() => {
+    setLoanTxPage(1);
+    fetchLoanTransactions(1, loanTxPageSize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [txSearch, txType, txCurrency, txDateFrom, txDateTo]);
 
   useEffect(() => {
     fetchLoans();
@@ -810,6 +833,10 @@ export default function Loans() {
 
   const clearAllFilters = () => {
     setBorrowerFilter("");
+    setLoanSearch("");
+    setCurrencyFilter("");
+    setLoanDateFrom("");
+    setLoanDateTo("");
     setPrincipalMinFilter("");
     setPrincipalMaxFilter("");
     setOutstandingMinFilter("");
@@ -819,6 +846,10 @@ export default function Loans() {
 
   const hasActiveFilters =
     borrowerFilter ||
+    loanSearch ||
+    currencyFilter ||
+    loanDateFrom ||
+    loanDateTo ||
     principalMinFilter ||
     principalMaxFilter ||
     outstandingMinFilter ||
@@ -1686,6 +1717,46 @@ export default function Loans() {
                     </div>
                   </div>
 
+                  {/* Currency Filter */}
+                  <div>
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">
+                      Currency
+                    </Label>
+                    <select
+                      value={currencyFilter}
+                      onChange={(e) => { setCurrencyFilter(e.target.value); setCurrentPage(1); }}
+                      className="w-full h-9 border rounded-md text-sm px-2 bg-card text-foreground"
+                      data-testid="loan-currency-filter"
+                    >
+                      <option value="">All currencies</option>
+                      {CURRENCY_OPTIONS.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {/* Loan Date Range Filter */}
+                  <div>
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">
+                      Loan Date
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="date"
+                        value={loanDateFrom}
+                        onChange={(e) => { setLoanDateFrom(e.target.value); setCurrentPage(1); }}
+                        className="h-9 border text-sm"
+                        data-testid="loan-date-from"
+                      />
+                      <Input
+                        type="date"
+                        value={loanDateTo}
+                        onChange={(e) => { setLoanDateTo(e.target.value); setCurrentPage(1); }}
+                        className="h-9 border text-sm"
+                        data-testid="loan-date-to"
+                      />
+                    </div>
+                  </div>
+
                   {/* Principal Range Filter */}
                   <div>
                     <Label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">
@@ -1979,6 +2050,57 @@ export default function Loans() {
               </div>
             </CardHeader>
             <CardContent>
+              {/* Transaction Filters */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search description / borrower / ID…"
+                    value={txSearch}
+                    onChange={(e) => setTxSearch(e.target.value)}
+                    className="pl-8 h-9 border text-sm"
+                    data-testid="tx-search"
+                  />
+                </div>
+                <select
+                  value={txType}
+                  onChange={(e) => setTxType(e.target.value)}
+                  className="h-9 border rounded-md text-sm px-2 bg-card text-foreground"
+                  data-testid="tx-type-filter"
+                >
+                  <option value="">All types</option>
+                  <option value="disbursement">Disbursement</option>
+                  <option value="repayment">Repayment</option>
+                  <option value="swap_in">Swap In</option>
+                  <option value="swap_out">Swap Out</option>
+                  <option value="write_off">Write-off</option>
+                </select>
+                <select
+                  value={txCurrency}
+                  onChange={(e) => setTxCurrency(e.target.value)}
+                  className="h-9 border rounded-md text-sm px-2 bg-card text-foreground"
+                  data-testid="tx-currency-filter"
+                >
+                  <option value="">All currencies</option>
+                  {CURRENCY_OPTIONS.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+                <Input
+                  type="date"
+                  value={txDateFrom}
+                  onChange={(e) => setTxDateFrom(e.target.value)}
+                  className="h-9 border text-sm"
+                  data-testid="tx-date-from"
+                />
+                <Input
+                  type="date"
+                  value={txDateTo}
+                  onChange={(e) => setTxDateTo(e.target.value)}
+                  className="h-9 border text-sm"
+                  data-testid="tx-date-to"
+                />
+              </div>
               <ScrollArea className="h-[500px]">
                 <Table>
                   <TableHeader>
