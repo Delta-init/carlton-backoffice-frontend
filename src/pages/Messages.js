@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -114,6 +115,7 @@ export default function Messages() {
   useEffect(() => () => registerHandler(null), [registerHandler]);
 
   const isAdmin = user?.role === 'admin';
+  const navigate = useNavigate();
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   // All chat times are shown in IST (Asia/Kolkata)
@@ -1099,6 +1101,22 @@ export default function Messages() {
                                       </p>
                                     )}
                                     {msg.attachments?.length > 0 && renderAttachments(msg.attachments, isSelf)}
+                                    {msg.is_tx_bot && (
+                                      <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+                                        <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-full ${
+                                          msg.tx_status === 'approved' ? 'bg-green-100 text-green-700'
+                                          : msg.tx_status === 'rejected' ? 'bg-red-100 text-red-700'
+                                          : 'bg-amber-100 text-amber-700'}`}>
+                                          {msg.tx_status === 'approved' ? '✅ Approved' : msg.tx_status === 'rejected' ? '❌ Rejected' : '⏳ Pending'}
+                                        </span>
+                                        {msg.tx_reference && (
+                                          <button type="button" onClick={() => navigate(`/transactions?search=${encodeURIComponent(msg.tx_reference)}`)}
+                                            className={`text-[11px] underline ${isSelf ? 'text-white/90' : 'text-primary'} hover:opacity-80`}>
+                                            View transaction →
+                                          </button>
+                                        )}
+                                      </div>
+                                    )}
                                     {msg.edited && <span className={`text-[10px] ml-1 ${isSelf ? 'text-white/70' : 'text-muted-foreground'}`}>(edited)</span>}
                                   </div>
                                 )}

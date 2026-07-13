@@ -275,6 +275,12 @@ export default function Transactions() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  // Deep-link from the #deposite_only/#withdraw_only chat cards: ?search=<crm ref>
+  useEffect(() => {
+    const s = new URLSearchParams(window.location.search).get("search");
+    if (s) setSearchTerm(s);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [emailFilter, setEmailFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
