@@ -52,6 +52,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Settings as SettingsIcon,
   Users,
+  Search,
   Plus,
   MoreVertical,
   Edit,
@@ -81,6 +82,7 @@ export default function Settings() {
   const { user, startImpersonation } = useAuth();
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
+  const [userSearch, setUserSearch] = useState("");
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -559,6 +561,17 @@ export default function Settings() {
 
   const isCurrentUserAdmin = user?.role === "admin";
 
+  const filteredUsers = users.filter((u) => {
+    const q = userSearch.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (u.name || "").toLowerCase().includes(q) ||
+      (u.email || "").toLowerCase().includes(q) ||
+      (u.role || "").toLowerCase().includes(q) ||
+      (u.role_display_name || "").toLowerCase().includes(q)
+    );
+  });
+
   return (
     <div className="space-y-6 animate-fade-in" data-testid="settings-page">
       {/* Header */}
@@ -846,6 +859,18 @@ export default function Settings() {
                 </div>
               </CardHeader>
               <CardContent className="p-0">
+                <div className="px-6 py-3 border-b border-border">
+                  <div className="relative max-w-sm">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={userSearch}
+                      onChange={(e) => setUserSearch(e.target.value)}
+                      placeholder="Search users by name, email, or role…"
+                      className="pl-9 bg-background border-border text-foreground"
+                      data-testid="user-search"
+                    />
+                  </div>
+                </div>
                 <ScrollArea className="h-[400px]">
                   <Table>
                     <TableHeader>
@@ -874,17 +899,17 @@ export default function Settings() {
                             <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
                           </TableCell>
                         </TableRow>
-                      ) : users.length === 0 ? (
+                      ) : filteredUsers.length === 0 ? (
                         <TableRow>
                           <TableCell
                             colSpan={5}
                             className="text-center py-8 text-card-foreground"
                           >
-                            No users found
+                            {users.length === 0 ? "No users found" : "No users match your search"}
                           </TableCell>
                         </TableRow>
                       ) : (
-                        users.map((userItem) => (
+                        filteredUsers.map((userItem) => (
                           <TableRow
                             key={userItem.user_id}
                             className="border hover:bg-muted/50"
