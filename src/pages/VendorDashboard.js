@@ -137,6 +137,10 @@ export default function ExchangerDashboard() {
   const [otSourceFilter, setOtSourceFilter] = useState("all");
   const [otDateFrom, setOtDateFrom] = useState("");
   const [otDateTo, setOtDateTo] = useState("");
+  // Other Transactions is a client-side merge of ALL I&E + ALL loans, paginated locally
+  const [otPage, setOtPage] = useState(1);
+  const [otPageSize, setOtPageSize] = useState(20);
+  useEffect(() => { setOtPage(1); }, [otSearchQuery, otStatusFilter, otSourceFilter, otDateFrom, otDateTo]);
 
   // Settlement History filter state
   const [stSearchQuery, setStSearchQuery] = useState("");
@@ -227,11 +231,11 @@ export default function ExchangerDashboard() {
     }
   };
 
-  const fetchIeEntries = async (pg, size) => {
+  // Load the FULL I&E history (Other Transactions merges everything client-side)
+  const fetchIeEntries = async () => {
     try {
-      const p = pg || iePage;
       const response = await fetch(
-        `${API_URL}/api/vendor/income-expenses?page=${p}&page_size=${size ?? iePageSize}`,
+        `${API_URL}/api/vendor/income-expenses?fetch_all=true`,
         {
           headers: getAuthHeaders(),
           credentials: "include",
@@ -239,20 +243,20 @@ export default function ExchangerDashboard() {
       );
       if (response.ok) {
         const data = await response.json();
-        setIeEntries(data.items || data);
-        setIeTotalPages(data.total_pages || 1);
-        setIeTotal(data.total || 0);
+        const items = data.items || data;
+        setIeEntries(items);
+        setIeTotal(data.total ?? items.length);
       }
     } catch (error) {
       console.error("Error fetching IE entries:", error);
     }
   };
 
-  const fetchLoanTransactions = async (pg) => {
+  // Load the FULL loan-transaction history
+  const fetchLoanTransactions = async () => {
     try {
-      const p = pg || loanTxPage;
       const response = await fetch(
-        `${API_URL}/api/vendor/loan-transactions?page=${p}&page_size=${loanTxPageSize}`,
+        `${API_URL}/api/vendor/loan-transactions?fetch_all=true`,
         {
           headers: getAuthHeaders(),
           credentials: "include",
@@ -260,9 +264,9 @@ export default function ExchangerDashboard() {
       );
       if (response.ok) {
         const data = await response.json();
-        setLoanTransactions(data.items || data);
-        setLoanTxTotalPages(data.total_pages || 1);
-        setLoanTxTotal(data.total || 0);
+        const items = data.items || data;
+        setLoanTransactions(items);
+        setLoanTxTotal(data.total ?? items.length);
       }
     } catch (error) {
       console.error("Error fetching loan transactions:", error);
@@ -1824,7 +1828,9 @@ export default function ExchangerDashboard() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredOtherTransactions.map((item) => {
+                      {filteredOtherTransactions
+                        .slice((otPage - 1) * otPageSize, otPage * otPageSize)
+                        .map((item) => {
                         const isLoan = item._isLoan;
                         if (isLoan) {
                           const tx = item;
@@ -2064,18 +2070,14 @@ export default function ExchangerDashboard() {
             </CardContent>
           </Card>
           <PaginationControls
-            currentPage={iePage}
-            totalPages={ieTotalPages}
-            totalItems={ieTotal}
-            pageSize={iePageSize}
-            onPageChange={(p) => {
-              setIePage(p);
-              fetchIeEntries(p);
-            }}
+            currentPage={otPage}
+            totalPages={Math.max(1, Math.ceil(filteredOtherTransactions.length / otPageSize))}
+            totalItems={filteredOtherTransactions.length}
+            pageSize={otPageSize}
+            onPageChange={setOtPage}
             onPageSizeChange={(s) => {
-              setIePageSize(s);
-              setIePage(1);
-              fetchIeEntries(1, s);
+              setOtPageSize(s);
+              setOtPage(1);
             }}
           />
         </TabsContent>
