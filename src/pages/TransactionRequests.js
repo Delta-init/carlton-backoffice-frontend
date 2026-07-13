@@ -38,6 +38,7 @@ import {
   CommandList,
 } from "../components/ui/command";
 import { toast } from "sonner";
+import { usePasteFiles } from "../hooks/usePasteFiles";
 import { getApiError } from "../lib/utils";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -1068,6 +1069,8 @@ export default function TransactionRequests() {
       setProofPreviews(prev => [...prev, ...files.map(f => URL.createObjectURL(f))]);
     }
   };
+  // Clipboard paste (Cmd/Ctrl+V) — add pasted files/screenshots as proof
+  usePasteFiles((files) => handleImageChange({ target: { files } }), createOpen);
   const isFilePdf = (file) => file?.type === 'application/pdf' || file?.name?.toLowerCase().endsWith('.pdf');
   const isPdfUrl = (url) => url && url.toLowerCase().includes('.pdf');
   const removeProofImage = (idx) => {

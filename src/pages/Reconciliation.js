@@ -19,6 +19,7 @@ import {
 } from '../components/ui/tabs';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { toast } from 'sonner';
+import { usePasteFiles } from "../hooks/usePasteFiles";
 import { getApiError } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -273,6 +274,8 @@ export default function Reconciliation() {
   // Upload
   const [statementDate, setStatementDate] = useState('');
   const [uploadFile, setUploadFile] = useState(null);
+  // Clipboard paste (Cmd/Ctrl+V) — stage a pasted statement file for upload
+  usePasteFiles((files) => setUploadFile(files[0]), true);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
 

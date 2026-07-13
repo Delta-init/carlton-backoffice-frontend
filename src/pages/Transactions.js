@@ -62,6 +62,7 @@ import {
   CommandList,
 } from "../components/ui/command";
 import { toast } from "sonner";
+import { usePasteFiles } from "../hooks/usePasteFiles";
 import { getApiError } from "../lib/utils";
 import { useColumnPreferences } from "../hooks/useColumnPreferences";
 import { ColumnToggleDropdown } from "../components/ColumnToggleDropdown";
@@ -1024,6 +1025,11 @@ export default function Transactions() {
       ]);
     }
   };
+  // Clipboard paste (Cmd/Ctrl+V) — add pasted files/screenshots as proof
+  usePasteFiles(
+    (files) => handleImageChange({ target: { files } }),
+    isDialogOpen || bulkOpen,
+  );
   const removeProofImage = (idx) => {
     setProofImages((prev) => prev.filter((_, i) => i !== idx));
     setProofPreviews((prev) => prev.filter((_, i) => i !== idx));

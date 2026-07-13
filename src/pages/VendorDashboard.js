@@ -32,6 +32,7 @@ import {
   TabsTrigger,
 } from "../components/ui/tabs";
 import { toast } from "sonner";
+import { usePasteFiles } from "../hooks/usePasteFiles";
 import { getApiError } from '../lib/utils';
 import { useAutoRefresh } from "../hooks/useAutoRefresh";
 import { useAuth } from "../context/AuthContext";
@@ -371,6 +372,11 @@ export default function ExchangerDashboard() {
       });
     }
   };
+  // Clipboard paste (Cmd/Ctrl+V) — add pasted files/screenshots as proof
+  usePasteFiles(
+    (files) => handleImageChange({ target: { files } }),
+    actionDialogOpen || ieActionDialog.open || loanTxActionDialog.open,
+  );
   const removeProofImage = (idx) => {
     setProofImages((prev) => prev.filter((_, i) => i !== idx));
     setProofPreviews((prev) => prev.filter((_, i) => i !== idx));

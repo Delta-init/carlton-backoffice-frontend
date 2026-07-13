@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from "../components/ui/select";
 import { toast } from "sonner";
+import { usePasteFiles } from "../hooks/usePasteFiles";
 import { getApiError } from "../lib/utils";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -181,6 +182,11 @@ export default function AccountantDashboard() {
   const [processingId, setProcessingId] = useState(null);
   const [activeTab, setActiveTab] = useState("transactions");
   const [uploadingProof, setUploadingProof] = useState(null);
+  // Clipboard paste (Cmd/Ctrl+V) — upload a pasted screenshot as proof
+  usePasteFiles(
+    (files) => handleProofUpload({ target: { files } }),
+    !!uploadingProof,
+  );
   const [proofPreview, setProofPreview] = useState(null);
 
   // Filters

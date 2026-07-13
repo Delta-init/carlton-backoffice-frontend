@@ -40,6 +40,7 @@ import {
 import { Textarea } from "../components/ui/textarea";
 import { ScrollArea } from "../components/ui/scroll-area";
 import { toast } from "sonner";
+import { usePasteFiles } from "../hooks/usePasteFiles";
 import { getApiError } from "../lib/utils";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -209,6 +210,11 @@ export default function Loans() {
   });
 
   const [loanFiles, setLoanFiles] = useState([]);
+  // Clipboard paste (Cmd/Ctrl+V) — attach pasted files to a new loan
+  usePasteFiles(
+    (files) => setLoanFiles((prev) => [...prev, ...files]),
+    isLoanDialogOpen,
+  );
 
   const isAdmin = user?.role === "admin";
 

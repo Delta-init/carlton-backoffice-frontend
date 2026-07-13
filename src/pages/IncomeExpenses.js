@@ -48,6 +48,7 @@ import {
   PaginationPrevious,
 } from "../components/ui/pagination";
 import { toast } from "sonner";
+import { usePasteFiles } from "../hooks/usePasteFiles";
 import { getApiError } from "../lib/utils";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -146,6 +147,9 @@ export default function IncomeExpenses() {
     entry: null,
   });
   const [invoiceFile, setInvoiceFile] = useState(null);
+  // Clipboard paste (Cmd/Ctrl+V) — drop a pasted file into the import / invoice dialogs
+  usePasteFiles((files) => setImportFile(files[0]), importDialog);
+  usePasteFiles((files) => setInvoiceFile(files[0]), invoiceDialog.open);
   const [uploadingInvoice, setUploadingInvoice] = useState(false);
   const [viewInvoiceDialog, setViewInvoiceDialog] = useState({
     open: false,
