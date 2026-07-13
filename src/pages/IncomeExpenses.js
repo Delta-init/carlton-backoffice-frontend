@@ -2912,7 +2912,7 @@ export default function IncomeExpenses() {
                     </p>
                   ) : (
                     <p className="text-sm text-muted-foreground">
-                      Click to select Excel file
+                      Click or paste (Ctrl/Cmd+V) to select Excel file
                     </p>
                   )}
                 </label>
@@ -2997,7 +2997,7 @@ export default function IncomeExpenses() {
                           Click to select file
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          PDF, Images, or Documents
+                          PDF, Images, or Documents · or paste (Ctrl/Cmd+V)
                         </p>
                       </>
                     )}

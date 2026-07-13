@@ -2817,7 +2817,7 @@ export default function ExchangerDashboard() {
                                   Click to upload proof screenshot
                                 </p>
                                 <p className="text-xs text-muted-foreground/60">
-                                  PNG, JPG up to 5MB · multiple allowed
+                                  PNG, JPG up to 5MB · multiple · or paste (Ctrl/Cmd+V)
                                 </p>
                               </div>
                             )}

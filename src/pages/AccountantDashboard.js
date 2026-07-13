@@ -31,6 +31,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "../components/ui/popover";
+import { Checkbox } from "../components/ui/checkbox";
 import { toast } from "sonner";
 import { usePasteFiles } from "../hooks/usePasteFiles";
 import { getApiError } from "../lib/utils";
@@ -60,6 +66,7 @@ import {
   ReceiptText,
   Landmark,
   FileText,
+  ChevronDown,
 } from "lucide-react";
 import { useAutoRefresh } from "../hooks/useAutoRefresh";
 
@@ -214,6 +221,8 @@ export default function AccountantDashboard() {
   const [bankReceiptDate, setBankReceiptDate] = useState("");
   const [treasuryAccounts, setTreasuryAccounts] = useState([]);
   const [psps, setPsps] = useState([]);
+  const [vendors, setVendors] = useState([]);
+  const [destIds, setDestIds] = useState([]);
 
   // Captcha states
   const [showCaptcha, setShowCaptcha] = useState(false);
@@ -247,6 +256,20 @@ export default function AccountantDashboard() {
     }
   };
 
+  const fetchVendors = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/vendors?page_size=500`, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
+      if (response.ok) {
+        const d = await response.json();
+        setVendors(Array.isArray(d) ? d : d.items || []);
+      }
+    } catch (error) {
+      console.error("Error fetching vendors:", error);
+    }
+  };
   const fetchPsps = async () => {
     try {
       const response = await fetch(`${API_URL}/api/psp`, {
@@ -272,6 +295,13 @@ export default function AccountantDashboard() {
         params.append("transaction_type", typeFilter);
       if (destFilter && destFilter !== "all")
         params.append("destination_type", destFilter);
+      if (destIds.length > 0) {
+        if (destFilter === "psp") params.append("psp_ids", destIds.join(","));
+        else if (destFilter === "vendor")
+          params.append("vendor_ids", destIds.join(","));
+        else if (destFilter === "treasury" || destFilter === "usdt")
+          params.append("destination_account_ids", destIds.join(","));
+      }
       if (clientFilter) params.append("search", clientFilter);
       if (emailFilter) params.append("client_email", emailFilter);
       if (dateFrom) params.append("date_from", dateFrom);
@@ -351,6 +381,7 @@ export default function AccountantDashboard() {
         fetchPendingApprovals(),
         fetchTreasuryAccounts(),
         fetchPsps(),
+        fetchVendors(),
         fetchClientTags(),
       ]);
       setLoading(false);
@@ -368,7 +399,7 @@ export default function AccountantDashboard() {
   useEffect(() => {
     setCurrentPage(1);
     fetchPendingTransactions(1);
-  }, [typeFilter, statusFilter, destFilter, dateFrom, dateTo, pageSize]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [typeFilter, statusFilter, destFilter, destIds, dateFrom, dateTo, pageSize]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Debounced re-fetch for text inputs
   useEffect(() => {
@@ -1084,7 +1115,7 @@ export default function AccountantDashboard() {
               </Select>
 
               {/* Destination filter */}
-              <Select value={destFilter} onValueChange={setDestFilter}>
+              <Select value={destFilter} onValueChange={(v) => { setDestFilter(v); setDestIds([]); }}>
                 <SelectTrigger className="w-[155px] bg-muted/50 border text-foreground h-9">
                   <SelectValue placeholder="Destination" />
                 </SelectTrigger>
@@ -1128,6 +1159,91 @@ export default function AccountantDashboard() {
                 </SelectContent>
               </Select>
 
+              {/* Multi-select specific destinations */}
+              {["treasury", "usdt", "psp", "vendor"].includes(destFilter) &&
+                (() => {
+                  const opts =
+                    destFilter === "psp"
+                      ? psps.map((p) => ({ id: p.psp_id, name: p.psp_name }))
+                      : destFilter === "vendor"
+                        ? vendors.map((v) => ({
+                            id: v.vendor_id,
+                            name: v.vendor_name || v.name,
+                          }))
+                        : treasuryAccounts.map((a) => ({
+                            id: a.account_id,
+                            name: a.account_name,
+                          }));
+                  const toggle = (id) =>
+                    setDestIds((prev) =>
+                      prev.includes(id)
+                        ? prev.filter((x) => x !== id)
+                        : [...prev, id],
+                    );
+                  const noun =
+                    destFilter === "psp"
+                      ? "PSPs"
+                      : destFilter === "vendor"
+                        ? "Exchangers"
+                        : "Accounts";
+                  return (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="w-[185px] justify-between bg-card border-border text-foreground h-9 font-normal"
+                          data-testid="dest-multi-select"
+                        >
+                          <span className="truncate">
+                            {destIds.length === 0
+                              ? `All ${noun}`
+                              : `${destIds.length} selected`}
+                          </span>
+                          <ChevronDown className="w-4 h-4 opacity-60 shrink-0" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="w-[240px] p-0 bg-card border-border"
+                        align="start"
+                      >
+                        <div className="max-h-64 overflow-y-auto p-1">
+                          {opts.length === 0 ? (
+                            <p className="text-xs text-muted-foreground p-3">
+                              No {noun.toLowerCase()} available
+                            </p>
+                          ) : (
+                            opts.map((o) => (
+                              <label
+                                key={o.id}
+                                className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer"
+                              >
+                                <Checkbox
+                                  checked={destIds.includes(o.id)}
+                                  onCheckedChange={() => toggle(o.id)}
+                                />
+                                <span className="text-sm text-foreground truncate">
+                                  {o.name}
+                                </span>
+                              </label>
+                            ))
+                          )}
+                        </div>
+                        {destIds.length > 0 && (
+                          <div className="border-t border-border p-1">
+                            <button
+                              type="button"
+                              onClick={() => setDestIds([])}
+                              className="w-full text-xs text-muted-foreground hover:text-red-500 py-1"
+                            >
+                              Clear selection
+                            </button>
+                          </div>
+                        )}
+                      </PopoverContent>
+                    </Popover>
+                  );
+                })()}
+
               {/* Date range */}
               <div className="flex items-center gap-1.5">
                 <span className="text-xs text-muted-foreground">From:</span>
@@ -1163,6 +1279,7 @@ export default function AccountantDashboard() {
                     setTypeFilter("all");
                     setStatusFilter("pending");
                     setDestFilter("all");
+                    setDestIds([]);
                     setClientFilter("");
                     setEmailFilter("");
                     setDateFrom("");
@@ -2977,7 +3094,7 @@ export default function AccountantDashboard() {
                 <div className="border-2 border-dashed border rounded-sm p-8 text-center">
                   <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
                   <p className="text-muted-foreground mb-2">
-                    Upload screenshot or PDF of completed payment
+                    Upload screenshot or PDF of completed payment · or paste (Ctrl/Cmd+V)
                   </p>
                   <Input
                     type="file"
@@ -3355,7 +3472,7 @@ export default function AccountantDashboard() {
                       {showApprovalDialog.transaction_type === "deposit"
                         ? "deposit confirmation"
                         : "payment confirmation"}{" "}
-                      (screenshot or PDF)
+                      (screenshot or PDF) · or paste (Ctrl/Cmd+V)
                     </p>
                     <Input
                       type="file"
