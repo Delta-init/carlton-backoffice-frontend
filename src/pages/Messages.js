@@ -218,6 +218,35 @@ export default function Messages() {
     } catch { toast.error('Delete failed'); }
   };
 
+  const saveEditReply = async (msg_id) => {
+    const content = editText.trim();
+    if (!selectedChannel) return;
+    try {
+      const r = await fetch(`${API_URL}/api/channels/${selectedChannel.channel_id}/messages/${msg_id}`, {
+        method: 'PUT',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ content }),
+      });
+      if (r.ok) {
+        const u = await r.json();
+        setThreadReplies(prev => prev.map(m => m.msg_id === msg_id ? { ...m, ...u } : m));
+        cancelEdit();
+      } else { toast.error((await r.json().catch(() => ({})))?.detail || 'Edit failed'); }
+    } catch { toast.error('Edit failed'); }
+  };
+
+  const deleteReply = async (msg_id) => {
+    if (!selectedChannel || !window.confirm('Delete this reply?')) return;
+    try {
+      const r = await fetch(`${API_URL}/api/channels/${selectedChannel.channel_id}/messages/${msg_id}`, {
+        method: 'DELETE', headers: getAuthHeaders(), credentials: 'include',
+      });
+      if (r.ok) setThreadReplies(prev => prev.map(m => m.msg_id === msg_id ? { ...m, deleted: true, content: '', attachments: [] } : m));
+      else toast.error('Delete failed');
+    } catch { toast.error('Delete failed'); }
+  };
+
   // In-chat search + filter predicate
   const msgMatches = (m) => {
     if (msgFilter === 'media' && !(m.attachment || (m.attachments && m.attachments.length))) return false;
@@ -419,6 +448,7 @@ export default function Messages() {
       case 'channel_delete': {
         const m = data.message;
         setChannelMessages(prev => prev.map(x => x.msg_id === m.msg_id ? { ...x, ...m } : x));
+        setThreadReplies(prev => prev.map(x => x.msg_id === m.msg_id ? { ...x, ...m } : x));
         break;
       }
       default: break;
@@ -1341,13 +1371,35 @@ export default function Messages() {
                           {getInitials(r.sender_name)}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 group/rep">
                         <div className="flex items-baseline gap-2">
                           <span className="text-xs font-bold text-foreground">{r.sender_id === user?.user_id ? 'You' : r.sender_name}</span>
-                          <span className="text-xs text-muted-foreground/60">{formatFullTime(r.created_at)}</span>
+                          <span className="text-xs text-muted-foreground/60" title={formatISTFull(r.created_at)}>{formatFullTime(r.created_at)}</span>
+                          {r.edited && !r.deleted && <span className="text-[10px] text-muted-foreground/60">(edited)</span>}
+                          {(r.sender_id === user?.user_id || isAdmin) && !r.deleted && (
+                            <span className="opacity-0 group-hover/rep:opacity-100 transition-opacity flex gap-0.5">
+                              {r.sender_id === user?.user_id && <button title="Edit" onClick={() => startEdit(r.msg_id, r.content)} className="p-0.5 text-muted-foreground hover:text-primary"><Pencil className="w-3 h-3" /></button>}
+                              <button title="Delete" onClick={() => deleteReply(r.msg_id)} className="p-0.5 text-muted-foreground hover:text-red-500"><Trash2 className="w-3 h-3" /></button>
+                            </span>
+                          )}
                         </div>
-                        {r.content && <p className="text-sm text-foreground mt-0.5 whitespace-pre-wrap leading-relaxed">{r.content}</p>}
-                        {renderAttachments(r.attachments, r.sender_id === user?.user_id)}
+                        {r.deleted ? (
+                          <p className="text-sm text-muted-foreground italic mt-0.5">🚫 This message was deleted</p>
+                        ) : editingId === r.msg_id ? (
+                          <div className="flex flex-col gap-1 mt-1">
+                            <textarea value={editText} onChange={e => setEditText(e.target.value)} rows={2}
+                              className="text-sm rounded-lg border border-primary/40 bg-card px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary" autoFocus />
+                            <div className="flex gap-2">
+                              <button onClick={() => saveEditReply(r.msg_id)} className="text-xs bg-primary text-white rounded px-2 py-0.5 hover:opacity-90">Save</button>
+                              <button onClick={cancelEdit} className="text-xs text-muted-foreground hover:text-foreground">Cancel</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            {r.content && <p className="text-sm text-foreground mt-0.5 whitespace-pre-wrap leading-relaxed">{r.content}</p>}
+                            {renderAttachments(r.attachments, r.sender_id === user?.user_id)}
+                          </>
+                        )}
                       </div>
                     </div>
                   ))}
