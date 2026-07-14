@@ -331,26 +331,18 @@ export default function Messages() {
   };
 
   // Approve / reject a pending transaction straight from its #deposite_only/#withdraw_only card
-  const handleTxAction = async (msg, action) => {
-    if (action === 'approve' && msg.tx_type !== 'deposit') {
-      // withdrawals need a source account — do it on the transaction page
-      navigate(`/transactions?search=${encodeURIComponent(msg.tx_reference)}`);
-      return;
-    }
-    let reason = '';
-    if (action === 'reject') {
-      reason = window.prompt('Reason for rejection (optional):');
-      if (reason === null) return;
-    }
+  const handleTxComplete = async (msg) => {
+    const note = window.prompt('Add a completion note (optional):');
+    if (note === null) return;
     try {
       const headers = { ...getAuthHeaders(), 'Content-Type': 'application/json' };
-      const r = await fetch(`${API_URL}/api/chat/tx-action`, {
+      const r = await fetch(`${API_URL}/api/chat/tx-complete`, {
         method: 'POST', headers,
-        body: JSON.stringify({ crm_reference: msg.tx_reference, action, reason }),
+        body: JSON.stringify({ crm_reference: msg.tx_reference, note: note || '' }),
       });
-      if (r.ok) toast.success(action === 'approve' ? '✅ Transaction approved' : '❌ Transaction rejected');
-      else toast.error((await r.json().catch(() => ({})))?.detail || `Could not ${action}`);
-    } catch { toast.error(`Could not ${action}`); }
+      if (r.ok) toast.success('✅ Marked complete');
+      else toast.error((await r.json().catch(() => ({})))?.detail || 'Could not complete');
+    } catch { toast.error('Could not complete'); }
   };
 
   const renderAttachments = (attachments, isSelf) => {
@@ -1195,13 +1187,12 @@ export default function Messages() {
                                             View transaction →
                                           </button>
                                         )}
-                                        {msg.tx_status === 'pending' && isAdmin && (
-                                          <>
-                                            <button type="button" onClick={() => handleTxAction(msg, 'approve')}
-                                              className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-green-600 text-white hover:bg-green-700">Approve</button>
-                                            <button type="button" onClick={() => handleTxAction(msg, 'reject')}
-                                              className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-red-600 text-white hover:bg-red-700">Reject</button>
-                                          </>
+                                        {msg.tx_owner_id === user?.user_id && !msg.tx_completed_by && (
+                                          <button type="button" onClick={() => handleTxComplete(msg)}
+                                            className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-600 text-white hover:bg-blue-700">Complete</button>
+                                        )}
+                                        {msg.tx_completed_by && (
+                                          <span className="text-[11px] text-green-600 font-medium">✅ Completed{msg.tx_completed_by_name ? ` by ${msg.tx_completed_by_name}` : ''}</span>
                                         )}
                                       </div>
                                     )}
@@ -1388,6 +1379,13 @@ export default function Messages() {
                                       className={`text-[11px] underline ${isSelf ? 'text-white/90' : 'text-primary'} hover:opacity-80`}>
                                       View transaction →
                                     </button>
+                                  )}
+                                  {msg.tx_owner_id === user?.user_id && !msg.tx_completed_by && (
+                                    <button type="button" onClick={() => handleTxComplete(msg)}
+                                      className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-600 text-white hover:bg-blue-700">Complete</button>
+                                  )}
+                                  {msg.tx_completed_by && (
+                                    <span className="text-[11px] text-green-600 font-medium">✅ Completed{msg.tx_completed_by_name ? ` by ${msg.tx_completed_by_name}` : ''}</span>
                                   )}
                                 </div>
                               )}
