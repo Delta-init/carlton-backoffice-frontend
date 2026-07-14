@@ -330,6 +330,29 @@ export default function Messages() {
     return <File className="w-4 h-4 text-muted-foreground/60" />;
   };
 
+  // Approve / reject a pending transaction straight from its #deposite_only/#withdraw_only card
+  const handleTxAction = async (msg, action) => {
+    if (action === 'approve' && msg.tx_type !== 'deposit') {
+      // withdrawals need a source account — do it on the transaction page
+      navigate(`/transactions?search=${encodeURIComponent(msg.tx_reference)}`);
+      return;
+    }
+    let reason = '';
+    if (action === 'reject') {
+      reason = window.prompt('Reason for rejection (optional):');
+      if (reason === null) return;
+    }
+    try {
+      const headers = { ...getAuthHeaders(), 'Content-Type': 'application/json' };
+      const r = await fetch(`${API_URL}/api/chat/tx-action`, {
+        method: 'POST', headers,
+        body: JSON.stringify({ crm_reference: msg.tx_reference, action, reason }),
+      });
+      if (r.ok) toast.success(action === 'approve' ? '✅ Transaction approved' : '❌ Transaction rejected');
+      else toast.error((await r.json().catch(() => ({})))?.detail || `Could not ${action}`);
+    } catch { toast.error(`Could not ${action}`); }
+  };
+
   const renderAttachments = (attachments, isSelf) => {
     if (!attachments?.length) return null;
     const imgs = attachments.filter(a => isImage(a.filename, a.content_type));
@@ -1172,6 +1195,14 @@ export default function Messages() {
                                             View transaction →
                                           </button>
                                         )}
+                                        {msg.tx_status === 'pending' && isAdmin && (
+                                          <>
+                                            <button type="button" onClick={() => handleTxAction(msg, 'approve')}
+                                              className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-green-600 text-white hover:bg-green-700">Approve</button>
+                                            <button type="button" onClick={() => handleTxAction(msg, 'reject')}
+                                              className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-red-600 text-white hover:bg-red-700">Reject</button>
+                                          </>
+                                        )}
                                       </div>
                                     )}
                                     {msg.edited && <span className={`text-[10px] ml-1 ${isSelf ? 'text-white/70' : 'text-muted-foreground'}`}>(edited)</span>}
@@ -1343,6 +1374,22 @@ export default function Messages() {
                                     </div>
                                   </a>
                                 )
+                              )}
+                              {msg.is_tx_bot && (
+                                <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+                                  <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-full ${
+                                    msg.tx_status === 'approved' ? 'bg-green-100 text-green-700'
+                                    : msg.tx_status === 'rejected' ? 'bg-red-100 text-red-700'
+                                    : 'bg-amber-100 text-amber-700'}`}>
+                                    {msg.tx_status === 'approved' ? '✅ Approved' : msg.tx_status === 'rejected' ? '❌ Rejected' : '⏳ Pending'}
+                                  </span>
+                                  {msg.tx_reference && (
+                                    <button type="button" onClick={() => navigate(`/transactions?search=${encodeURIComponent(msg.tx_reference)}`)}
+                                      className={`text-[11px] underline ${isSelf ? 'text-white/90' : 'text-primary'} hover:opacity-80`}>
+                                      View transaction →
+                                    </button>
+                                  )}
+                                </div>
                               )}
                               <div className={`flex items-center justify-end gap-1 mt-0.5 ${isSelf ? 'text-blue-200' : 'text-muted-foreground/60'}`}>
                                 {msg.edited && <span className="text-[10px] opacity-80 mr-0.5">(edited)</span>}
