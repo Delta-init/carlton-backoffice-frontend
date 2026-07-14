@@ -345,6 +345,22 @@ export default function Messages() {
     } catch { toast.error('Could not complete'); }
   };
 
+  // Process a withdrawal request from its #withdraw_only card (captcha-gated, really processes it)
+  const handleTxProcess = async (msg) => {
+    const a = Math.floor(Math.random() * 8) + 2, b = Math.floor(Math.random() * 8) + 2;
+    const ans = window.prompt(`Confirm processing — what is ${a} + ${b}?`);
+    if (ans === null) return;
+    try {
+      const headers = { ...getAuthHeaders(), 'Content-Type': 'application/json' };
+      const r = await fetch(`${API_URL}/api/transaction-requests/${msg.tx_request_id}/process`, {
+        method: 'POST', headers,
+        body: JSON.stringify({ captcha_answer: ans, captcha_expected: String(a + b) }),
+      });
+      if (r.ok) toast.success('🟢 Request processed');
+      else toast.error((await r.json().catch(() => ({})))?.detail || 'Could not process');
+    } catch { toast.error('Could not process'); }
+  };
+
   const renderAttachments = (attachments, isSelf) => {
     if (!attachments?.length) return null;
     const imgs = attachments.filter(a => isImage(a.filename, a.content_type));
@@ -1187,7 +1203,14 @@ export default function Messages() {
                                             View transaction →
                                           </button>
                                         )}
-                                        {msg.tx_owner_id === user?.user_id && !msg.tx_completed_by && (
+                                        {msg.tx_type === 'withdrawal' && !msg.tx_processed_by && isAdmin && (
+                                          <button type="button" onClick={() => handleTxProcess(msg)}
+                                            className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-600 text-white hover:bg-amber-700">Process</button>
+                                        )}
+                                        {msg.tx_processed_by && (
+                                          <span className="text-[11px] text-emerald-600 font-medium">🟢 Processed{msg.tx_processed_by_name ? ` by ${msg.tx_processed_by_name}` : ''}</span>
+                                        )}
+                                        {(msg.tx_crm_desk || msg.tx_owner_id === user?.user_id) && !msg.tx_completed_by && (
                                           <button type="button" onClick={() => handleTxComplete(msg)}
                                             className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-600 text-white hover:bg-blue-700">Complete</button>
                                         )}
@@ -1379,6 +1402,9 @@ export default function Messages() {
                                       className={`text-[11px] underline ${isSelf ? 'text-white/90' : 'text-primary'} hover:opacity-80`}>
                                       View transaction →
                                     </button>
+                                  )}
+                                  {msg.tx_processed_by && (
+                                    <span className="text-[11px] text-emerald-600 font-medium">🟢 Processed{msg.tx_processed_by_name ? ` by ${msg.tx_processed_by_name}` : ''}</span>
                                   )}
                                   {msg.tx_owner_id === user?.user_id && !msg.tx_completed_by && (
                                     <button type="button" onClick={() => handleTxComplete(msg)}
