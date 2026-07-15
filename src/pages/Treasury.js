@@ -43,6 +43,7 @@ import {
 import { toast } from 'sonner';
 import { getApiError } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../context/usePermissions';
 import {
   Landmark,
   Plus,
@@ -85,6 +86,7 @@ const statusOptions = [
 
 export default function Treasury() {
   const { user } = useAuth();
+  const { canCreate } = usePermissions();
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -582,7 +584,7 @@ export default function Treasury() {
           <p className="text-muted-foreground">Manage bank accounts and treasury</p>
         </div>
         <div className="flex gap-2">
-          {isAccountantOrAdmin && accounts.length >= 2 && (
+          {(isAccountantOrAdmin || canCreate('treasury')) && accounts.length >= 2 && (
             <Button
               onClick={initiateTransfer}
               variant="outline"
