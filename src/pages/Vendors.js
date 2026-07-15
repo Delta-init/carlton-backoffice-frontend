@@ -369,7 +369,7 @@ export default function Exchangers() {
     }
     return {
       title: 'Loan Transactions',
-      head: ['Date', 'Ref ID', 'Loan ID', 'Direction', 'Type', 'Borrower', 'Amount', 'Currency', 'Status'],
+      head: ['Date', 'Ref ID', 'Loan ID', 'Direction', 'Type', 'Borrower', 'Amount', 'Currency', 'INR Equiv', 'Status'],
       body: rows.map((tx) => {
         const isVendorSource = tx.source_vendor_id === viewExchanger?.vendor_id;
         return [
@@ -381,6 +381,7 @@ export default function Exchangers() {
           tx.borrower_name || '',
           tx.amount ?? 0,
           tx.currency || 'USD',
+          tx.amount_inr ?? '',
           tx.status === 'pending_vendor' ? 'Pending' : (tx.status || ''),
         ];
       }),
@@ -1326,6 +1327,7 @@ export default function Exchangers() {
                             <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Borrower</TableHead>
                             <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Amount</TableHead>
                             <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Currency</TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">≈ INR</TableHead>
                             <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Status</TableHead>
                             <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Date</TableHead>
                           </TableRow>
@@ -1350,6 +1352,9 @@ export default function Exchangers() {
                                 </TableCell>
                                 <TableCell>
                                   <Badge className="bg-green-500/20 text-green-400">{tx.currency || 'USD'}</Badge>
+                                </TableCell>
+                                <TableCell className="font-mono text-muted-foreground text-xs">
+                                  {isVendorSource ? '-' : '+'}{Number(tx.amount_inr ?? 0).toLocaleString()}
                                 </TableCell>
                                 <TableCell>
                                   <Badge className={
