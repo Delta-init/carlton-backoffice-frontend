@@ -421,18 +421,72 @@ export default function Reconciliation() {
           totalCount = data.total ?? null;
         }
       } else if (accountType === 'exchanger') {
-        const qs = buildParams({ status: txStatus });
-        const res = await fetch(`${API_URL}/api/vendors/${accountId}/transactions?${qs}`, { headers: getAuthHeaders() });
-        if (res.ok) {
-          const data = await res.json();
-          list = (data.items || []).map(t => ({
-            ...t,
-            amount: t.base_amount ?? t.amount,
-            currency: t.base_currency || t.currency || 'USD',
-          }));
-          totalPagesCount = data.total_pages || 1;
-          totalCount = data.total ?? null;
+        // An exchanger's reconciliation must reflect everything that feeds the Net
+        // Settlement: regular transactions + income/expense entries + loan transactions.
+        // Fetch all three in full and merge/filter/paginate client-side.
+        const statusQ = (txStatus && txStatus !== 'all') ? `&status=${encodeURIComponent(txStatus)}` : '';
+        const [txRes, ieRes, loanRes] = await Promise.all([
+          fetch(`${API_URL}/api/vendors/${accountId}/transactions?fetch_all=true${statusQ}`, { headers: getAuthHeaders() }),
+          fetch(`${API_URL}/api/income-expenses?vendor_id=${accountId}&fetch_all=true`, { headers: getAuthHeaders() }),
+          fetch(`${API_URL}/api/loans/transactions?vendor_id=${accountId}&fetch_all=true`, { headers: getAuthHeaders() }),
+        ]);
+        const txData   = txRes.ok   ? await txRes.json()   : {};
+        const ieData   = ieRes.ok   ? await ieRes.json()   : {};
+        const loanData = loanRes.ok ? await loanRes.json() : {};
+
+        // Normalise to the row shape the list renders (native amount + currency).
+        const norm = (t) => ({ ...t, amount: t.base_amount ?? t.amount, currency: t.base_currency || t.currency || 'USD' });
+
+        const txRows = (txData.items || []).map(norm);
+
+        // income (money in → deposit/+) / expense (money out → withdrawal/−)
+        const ieRows = (ieData.items || ieData.data || []).map(ie => norm({
+          ...ie,
+          transaction_id: ie.entry_id,
+          reference: ie.description || ie.reference || (ie.entry_type === 'expense' ? 'Expense' : 'Income'),
+          description: ie.ie_category_name || ie.category || '',
+          type: ie.entry_type === 'expense' ? 'expense' : 'income',
+          transaction_type: ie.entry_type === 'expense' ? 'withdrawal' : 'deposit',
+        }));
+
+        // disbursement from vendor (money out → −) / repayment to vendor (money in → +)
+        const loanRows = (loanData.items || loanData.transactions || []).map(lt => {
+          const isOut = lt.source_vendor_id === accountId;
+          return norm({
+            ...lt,
+            reference: (isOut ? 'Loan Disbursement' : 'Loan Repayment') + (lt.borrower_name ? ` — ${lt.borrower_name}` : ''),
+            type: undefined, // fall back to transaction_type for both sign and label
+            transaction_type: isOut ? 'withdrawal' : 'deposit',
+          });
+        });
+
+        // Regular txns are already status-filtered server-side; apply the same rule to IE/loans
+        // so the list matches the Net Settlement (only approved/completed count by default).
+        const keepStatus = (s) => (txStatus && txStatus !== 'all')
+          ? (s || '') === txStatus
+          : ['approved', 'completed'].includes(s || 'approved');
+
+        let merged = [...txRows, ...ieRows.filter(r => keepStatus(r.status)), ...loanRows.filter(r => keepStatus(r.status))];
+
+        // Client-side filters (applied uniformly so IE/loans obey the same filters as txns).
+        const needle = (search || '').trim().toLowerCase();
+        if (needle) {
+          merged = merged.filter(t => [t.reference, t.description, t.client_name, t.borrower_name, t.transaction_id, t.entry_id]
+            .some(v => (v || '').toString().toLowerCase().includes(needle)));
         }
+        if (dateFrom) merged = merged.filter(t => ((t.created_at || t.date || '').split('T')[0]) >= dateFrom);
+        if (dateTo)   merged = merged.filter(t => ((t.created_at || t.date || '').split('T')[0]) <= dateTo);
+        if (amountMin) merged = merged.filter(t => Math.abs(Number(t.base_amount ?? t.amount) || 0) >= Number(amountMin));
+        if (amountMax) merged = merged.filter(t => Math.abs(Number(t.base_amount ?? t.amount) || 0) <= Number(amountMax));
+        if (txType && txType !== 'all') merged = merged.filter(t => (t.transaction_type === txType) || (t.type === txType));
+        if (tags && tags.length > 0) merged = merged.filter(t => (t.client_tags || []).some(id => tags.includes(id)));
+
+        // Newest-first, then paginate client-side.
+        merged.sort((a, b) => (b.created_at || b.date || '').localeCompare(a.created_at || a.date || ''));
+        const PAGE = 20;
+        totalCount = merged.length;
+        totalPagesCount = Math.max(1, Math.ceil(merged.length / PAGE));
+        list = merged.slice(page * PAGE, page * PAGE + PAGE);
       }
 
       setTransactions(list);
