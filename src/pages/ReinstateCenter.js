@@ -368,7 +368,10 @@ const tabConfig = [
       { label: "ID", value: item.entry_id },
       { label: "Type", value: item.entry_type },
       { label: "Description", value: item.description || "-" },
-      { label: "Amount", value: `${item.currency || ""} ${Number(item.amount || 0).toLocaleString()}` },
+      { label: "Amount", value:
+          (item.base_amount != null && item.base_currency && item.base_currency !== item.currency)
+            ? `${item.base_currency} ${Number(item.base_amount).toLocaleString()} (≈ ${item.currency || "USD"} ${Number(item.amount || 0).toLocaleString()})`
+            : `${item.currency || ""} ${Number(item.amount || 0).toLocaleString()}` },
       { label: "Status", value: item.status },
     ],
   },
