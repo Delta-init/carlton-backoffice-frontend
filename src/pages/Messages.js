@@ -338,7 +338,7 @@ export default function Messages() {
       const headers = { ...getAuthHeaders(), 'Content-Type': 'application/json' };
       const r = await fetch(`${API_URL}/api/chat/tx-complete`, {
         method: 'POST', headers,
-        body: JSON.stringify({ crm_reference: msg.tx_reference, note: note || '' }),
+        body: JSON.stringify({ request_id: msg.tx_request_id, note: note || '' }),
       });
       if (r.ok) toast.success('✅ Marked complete');
       else toast.error((await r.json().catch(() => ({})))?.detail || 'Could not complete');
@@ -1210,7 +1210,7 @@ export default function Messages() {
                                         {msg.tx_processed_by && (
                                           <span className="text-[11px] text-emerald-600 font-medium">🟢 Processed{msg.tx_processed_by_name ? ` by ${msg.tx_processed_by_name}` : ''}</span>
                                         )}
-                                        {(msg.tx_crm_desk || msg.tx_owner_id === user?.user_id) && !msg.tx_completed_by && (
+                                        {msg.tx_owner_id === user?.user_id && !msg.tx_completed_by && (
                                           <button type="button" onClick={() => handleTxComplete(msg)}
                                             className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-600 text-white hover:bg-blue-700">Complete</button>
                                         )}
