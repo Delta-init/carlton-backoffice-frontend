@@ -1185,10 +1185,6 @@ export default function TransactionRequests() {
       toast.error("Client and Amount are required");
       return;
     }
-    if (["deposit", "withdrawal"].includes(form.transaction_type) && !form.crm_reference?.trim()) {
-      toast.error("CRM Reference is required for deposits and withdrawals");
-      return;
-    }
     const a = Math.floor(Math.random() * 10) + 1;
     const b = Math.floor(Math.random() * 10) + 1;
     setCreateReqCaptcha({ a, b });
@@ -2136,7 +2132,7 @@ export default function TransactionRequests() {
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground uppercase">
-                  CRM Reference {["deposit", "withdrawal"].includes(form.transaction_type) && <span className="text-red-500">* (Required)</span>}
+                  CRM Reference <span className="text-muted-foreground normal-case">(optional)</span>
                 </Label>
                 <Input
                   value={form.crm_reference}
