@@ -418,6 +418,8 @@ export default function Messages() {
       if (scope === 'channel') {
         setChannelMessages(prev => sortByActivity(prev.map(m =>
           m.msg_id === msg.msg_id ? { ...m, reactions: data.reactions, last_activity_at: data.last_activity_at } : m)));
+        setThreadReplies(prev => prev.map(m =>
+          m.msg_id === msg.msg_id ? { ...m, reactions: data.reactions, last_activity_at: data.last_activity_at } : m));
       } else {
         setMessages(prev => sortByActivity(prev.map(m =>
           m.message_id === msg.message_id ? { ...m, reactions: data.reactions, last_activity_at: data.last_activity_at } : m)));
@@ -615,6 +617,8 @@ export default function Messages() {
         if (data.scope === 'channel') {
           setChannelMessages(prev => sortByActivity(prev.map(x => x.msg_id === data.msg_id
             ? { ...x, reactions: data.reactions, last_activity_at: data.last_activity_at } : x)));
+          setThreadReplies(prev => prev.map(x => x.msg_id === data.msg_id
+            ? { ...x, reactions: data.reactions, last_activity_at: data.last_activity_at } : x));
         } else {
           setMessages(prev => sortByActivity(prev.map(x => x.message_id === data.message_id
             ? { ...x, reactions: data.reactions, last_activity_at: data.last_activity_at } : x)));
@@ -1609,7 +1613,7 @@ export default function Messages() {
                     {threadReplies.length} {threadReplies.length === 1 ? 'reply' : 'replies'}
                   </p>
                   {threadReplies.map(r => (
-                    <div key={r.msg_id} className="flex gap-2.5 mb-3">
+                    <div key={r.msg_id} className="group flex gap-2.5 mb-3">
                       <Avatar className="w-7 h-7 shrink-0">
                         <AvatarFallback className="bg-gradient-to-br from-blue-400 to-cyan-500 text-white text-xs">
                           {getInitials(r.sender_name)}
@@ -1643,6 +1647,10 @@ export default function Messages() {
                             {r.content && <p className="text-sm text-foreground mt-0.5 whitespace-pre-wrap leading-relaxed">{r.content}</p>}
                             {renderAttachments(r.attachments, r.sender_id === user?.user_id)}
                           </>
+                        )}
+                        {!r.deleted && (
+                          <MessageReactions reactions={r.reactions} currentUserId={user?.user_id}
+                            onReact={(emoji) => handleReact(r, emoji, 'channel')} />
                         )}
                       </div>
                     </div>
