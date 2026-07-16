@@ -39,18 +39,12 @@ function TxBadge({ msg }) {
   return <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-full ${cls}`}>{label}</span>;
 }
 
-// Order messages so a reacted one bumps to the latest (last_activity_at, else created_at).
-const sortByActivity = (list) => [...list].sort((a, b) =>
-  (a.last_activity_at || a.created_at || '').localeCompare(b.last_activity_at || b.created_at || ''));
-
-const QUICK_REACTIONS = ['✅', '⏳', '❌', '👍', '❤️', '🎉'];
-
-// Reaction chips (always shown) + a hover quick-react bar with a full emoji picker ("+").
-function MessageReactions({ reactions, onReact, currentUserId }) {
-  const [pickerOpen, setPickerOpen] = useState(false);
+// Reaction chips — shown ABOVE the message; click a chip to toggle your reaction.
+function ReactionChips({ reactions, onReact, currentUserId }) {
   const entries = Object.entries(reactions || {}).filter(([, arr]) => (arr || []).length);
+  if (!entries.length) return null;
   return (
-    <div className="flex items-center gap-1 mt-1 flex-wrap clear-both">
+    <div className="flex items-center gap-1 mb-1 flex-wrap">
       {entries.map(([emoji, arr]) => {
         const mine = (arr || []).some(r => r.user_id === currentUserId);
         return (
@@ -63,24 +57,29 @@ function MessageReactions({ reactions, onReact, currentUserId }) {
           </button>
         );
       })}
-      <div className="relative flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-        {QUICK_REACTIONS.map(e => (
-          <button key={e} type="button" title={`React ${e}`} onClick={() => onReact(e)}
-            className="text-[13px] leading-none px-1 py-0.5 rounded hover:bg-muted">{e}</button>
-        ))}
-        <button type="button" title="More emojis" onClick={() => setPickerOpen(o => !o)}
-          className="w-5 h-5 flex items-center justify-center rounded-full border border-border text-muted-foreground hover:bg-muted text-xs leading-none">＋</button>
-        {pickerOpen && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={() => setPickerOpen(false)} />
-            <div className="absolute bottom-7 left-0 z-50">
-              <EmojiPicker onEmojiClick={(ed) => { onReact(ed.emoji); setPickerOpen(false); }}
-                theme="auto" lazyLoadEmojis width={300} height={380}
-                previewConfig={{ showPreview: false }} skinTonesDisabled />
-            </div>
-          </>
-        )}
-      </div>
+    </div>
+  );
+}
+
+// Single "add reaction" button — shown BELOW the message; opens the full emoji picker.
+function ReactionAdder({ onReact }) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  return (
+    <div className="relative mt-0.5 clear-both">
+      <button type="button" title="Add reaction" onClick={() => setPickerOpen(o => !o)}
+        className="opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground border border-border hover:bg-muted rounded-full px-2 py-0.5">
+        <span className="text-[13px] leading-none">🙂</span> React
+      </button>
+      {pickerOpen && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setPickerOpen(false)} />
+          <div className="absolute bottom-8 left-0 z-50">
+            <EmojiPicker onEmojiClick={(ed) => { onReact(ed.emoji); setPickerOpen(false); }}
+              theme="auto" lazyLoadEmojis width={300} height={380}
+              previewConfig={{ showPreview: false }} skinTonesDisabled />
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -416,13 +415,13 @@ export default function Messages() {
       if (!r.ok) return;
       const data = await r.json();
       if (scope === 'channel') {
-        setChannelMessages(prev => sortByActivity(prev.map(m =>
-          m.msg_id === msg.msg_id ? { ...m, reactions: data.reactions, last_activity_at: data.last_activity_at } : m)));
+        setChannelMessages(prev => prev.map(m =>
+          m.msg_id === msg.msg_id ? { ...m, reactions: data.reactions } : m));
         setThreadReplies(prev => prev.map(m =>
-          m.msg_id === msg.msg_id ? { ...m, reactions: data.reactions, last_activity_at: data.last_activity_at } : m));
+          m.msg_id === msg.msg_id ? { ...m, reactions: data.reactions } : m));
       } else {
-        setMessages(prev => sortByActivity(prev.map(m =>
-          m.message_id === msg.message_id ? { ...m, reactions: data.reactions, last_activity_at: data.last_activity_at } : m)));
+        setMessages(prev => prev.map(m =>
+          m.message_id === msg.message_id ? { ...m, reactions: data.reactions } : m));
       }
     } catch { /* */ }
   };
@@ -615,13 +614,13 @@ export default function Messages() {
       }
       case 'reaction': {
         if (data.scope === 'channel') {
-          setChannelMessages(prev => sortByActivity(prev.map(x => x.msg_id === data.msg_id
-            ? { ...x, reactions: data.reactions, last_activity_at: data.last_activity_at } : x)));
+          setChannelMessages(prev => prev.map(x => x.msg_id === data.msg_id
+            ? { ...x, reactions: data.reactions } : x));
           setThreadReplies(prev => prev.map(x => x.msg_id === data.msg_id
-            ? { ...x, reactions: data.reactions, last_activity_at: data.last_activity_at } : x));
+            ? { ...x, reactions: data.reactions } : x));
         } else {
-          setMessages(prev => sortByActivity(prev.map(x => x.message_id === data.message_id
-            ? { ...x, reactions: data.reactions, last_activity_at: data.last_activity_at } : x)));
+          setMessages(prev => prev.map(x => x.message_id === data.message_id
+            ? { ...x, reactions: data.reactions } : x));
         }
         break;
       }
@@ -1253,6 +1252,10 @@ export default function Messages() {
                                     <MessageCircle className="w-3 h-3" /> Reply
                                   </button>
                                 )}
+                                {!msg.deleted && (
+                                  <ReactionChips reactions={msg.reactions} currentUserId={user?.user_id}
+                                    onReact={(emoji) => handleReact(msg, emoji, 'channel')} />
+                                )}
                                 {/* Bubble (text + attachments together) */}
                                 {msg.deleted ? (
                                   <div className="inline-block rounded-2xl px-4 py-2 max-w-lg bg-muted text-muted-foreground italic text-sm">🚫 This message was deleted</div>
@@ -1312,8 +1315,7 @@ export default function Messages() {
                                   </div>
                                 )}
                                 {!msg.deleted && (
-                                  <MessageReactions reactions={msg.reactions} currentUserId={user?.user_id}
-                                    onReact={(emoji) => handleReact(msg, emoji, 'channel')} />
+                                  <ReactionAdder onReact={(emoji) => handleReact(msg, emoji, 'channel')} />
                                 )}
                                 {/* Thread reply count */}
                                 {msg.reply_count > 0 && (
@@ -1436,6 +1438,11 @@ export default function Messages() {
                                 </AvatarFallback>
                               </Avatar>
                             )}
+                            <div className={`flex flex-col min-w-0 ${isSelf ? 'items-end' : 'items-start'}`}>
+                            {!msg.deleted && (
+                              <ReactionChips reactions={msg.reactions} currentUserId={user?.user_id}
+                                onReact={(emoji) => handleReact(msg, emoji, 'dm')} />
+                            )}
                             {msg.deleted ? (
                               <div className="max-w-[70%] rounded-2xl px-4 py-2 bg-muted text-muted-foreground italic text-sm">🚫 This message was deleted</div>
                             ) : editingId === msg.message_id ? (
@@ -1515,9 +1522,9 @@ export default function Messages() {
                             </div>
                             )}
                             {!msg.deleted && (
-                              <MessageReactions reactions={msg.reactions} currentUserId={user?.user_id}
-                                onReact={(emoji) => handleReact(msg, emoji, 'dm')} />
+                              <ReactionAdder onReact={(emoji) => handleReact(msg, emoji, 'dm')} />
                             )}
+                            </div>
                           </div>
                         </div>
                       );
@@ -1631,6 +1638,10 @@ export default function Messages() {
                             </span>
                           )}
                         </div>
+                        {!r.deleted && (
+                          <ReactionChips reactions={r.reactions} currentUserId={user?.user_id}
+                            onReact={(emoji) => handleReact(r, emoji, 'channel')} />
+                        )}
                         {r.deleted ? (
                           <p className="text-sm text-muted-foreground italic mt-0.5">🚫 This message was deleted</p>
                         ) : editingId === r.msg_id ? (
@@ -1649,8 +1660,7 @@ export default function Messages() {
                           </>
                         )}
                         {!r.deleted && (
-                          <MessageReactions reactions={r.reactions} currentUserId={user?.user_id}
-                            onReact={(emoji) => handleReact(r, emoji, 'channel')} />
+                          <ReactionAdder onReact={(emoji) => handleReact(r, emoji, 'channel')} />
                         )}
                       </div>
                     </div>
