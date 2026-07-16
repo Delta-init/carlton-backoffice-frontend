@@ -43,7 +43,7 @@ function TxBadge({ msg }) {
 const sortByActivity = (list) => [...list].sort((a, b) =>
   (a.last_activity_at || a.created_at || '').localeCompare(b.last_activity_at || b.created_at || ''));
 
-const QUICK_REACTIONS = ['✅', '⏳', '❌', '👍'];
+const QUICK_REACTIONS = ['✅', '⏳', '❌', '👍', '❤️', '🎉'];
 
 // Reaction chips (always shown) + a hover quick-react bar with a full emoji picker ("+").
 function MessageReactions({ reactions, onReact, currentUserId }) {

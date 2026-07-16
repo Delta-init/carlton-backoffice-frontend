@@ -63,6 +63,26 @@ export function ChatNotificationProvider({ children }) {
     } catch { /* AudioContext unavailable */ }
   }, []);
 
+  // Distinct two-note chime for reactions (so they don't sound like a new message).
+  const playReactionPing = useCallback(() => {
+    if (!soundEnabledRef.current) return;
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [[523.25, 0], [783.99, 0.09]].forEach(([freq, at]) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = 'triangle';
+        osc.frequency.value = freq;
+        const t0 = ctx.currentTime + at;
+        gain.gain.setValueAtTime(0.25, t0);
+        gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.16);
+        osc.start(t0);
+        osc.stop(t0 + 0.18);
+      });
+    } catch { /* AudioContext unavailable */ }
+  }, []);
+
   // ── Buzz ring ("missed-call") — loops until answered/declined; overrides mute ─
   const stopRing = useCallback(() => {
     if (ringTimerRef.current) { clearInterval(ringTimerRef.current); ringTimerRef.current = null; }
@@ -129,8 +149,8 @@ export function ChatNotificationProvider({ children }) {
   // Sound: always.
   // OS notification: when tab is hidden.
   // Toast: when tab is visible but user is NOT on /messages (Messages.js handles in-page toasts).
-  const fireNotification = useCallback((title, body, onNavigate) => {
-    playPing();
+  const fireNotification = useCallback((title, body, onNavigate, ping) => {
+    (ping || playPing)();
     if (document.visibilityState !== 'visible') {
       if (Notification.permission === 'granted') {
         const n = new Notification(title, { body, icon: '/logo192.png', tag: 'chat-msg' });
@@ -205,20 +225,27 @@ export function ChatNotificationProvider({ children }) {
       }
       case 'reaction': {
         const n = data.notify;
-        if (!n || n.by_id === me?.user_id) break; // only status reactions (✅/⏳/❌), not your own
+        if (!n || n.by_id === me?.user_id) break; // notify on others' reactions, not your own
         const isOwner = n.owner_id && n.owner_id === me?.user_id;
         setTotalUnread(x => x + 1);
-        const label = n.state ? n.state.charAt(0).toUpperCase() + n.state.slice(1) : n.emoji;
-        const title = isOwner
-          ? `${n.emoji} Your transaction — ${label}`
-          : (data.channel_name ? `# ${data.channel_name}` : '💬 Reaction');
-        const body = `${n.by} marked ${n.ref ? n.ref + ' ' : ''}${label} ${n.emoji}`;
-        fireNotification(title, body, () => navigate('/messages'));
+        const ref = n.ref ? ` ${n.ref}` : '';
+        let title, body;
+        if (n.state) {
+          const label = n.state.charAt(0).toUpperCase() + n.state.slice(1);
+          title = isOwner ? `${n.emoji} Your transaction — ${label}`
+            : (data.channel_name ? `# ${data.channel_name}` : `${n.emoji} ${label}`);
+          body = `${n.by} marked${ref} ${label} ${n.emoji}`;
+        } else {
+          title = isOwner ? `${n.emoji} ${n.by} reacted to your transaction`
+            : (data.channel_name ? `# ${data.channel_name}` : '💬 Reaction');
+          body = `${n.by} reacted ${n.emoji}${ref}`;
+        }
+        fireNotification(title, body, () => navigate('/messages'), playReactionPing);
         break;
       }
       default: break;
     }
-  }, [fireNotification, navigate, startRing, stopRing]);
+  }, [fireNotification, navigate, startRing, stopRing, playReactionPing]);
 
   // ── WebSocket (single global connection) ───────────────────────────────────
   useEffect(() => {
