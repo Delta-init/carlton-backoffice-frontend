@@ -203,6 +203,19 @@ export function ChatNotificationProvider({ children }) {
         else toast(`🚫 ${data.by_name} declined your buzz`, { duration: 5000 });
         break;
       }
+      case 'reaction': {
+        const n = data.notify;
+        if (!n || n.by_id === me?.user_id) break; // only status reactions (✅/⏳/❌), not your own
+        const isOwner = n.owner_id && n.owner_id === me?.user_id;
+        setTotalUnread(x => x + 1);
+        const label = n.state ? n.state.charAt(0).toUpperCase() + n.state.slice(1) : n.emoji;
+        const title = isOwner
+          ? `${n.emoji} Your transaction — ${label}`
+          : (data.channel_name ? `# ${data.channel_name}` : '💬 Reaction');
+        const body = `${n.by} marked ${n.ref ? n.ref + ' ' : ''}${label} ${n.emoji}`;
+        fireNotification(title, body, () => navigate('/messages'));
+        break;
+      }
       default: break;
     }
   }, [fireNotification, navigate, startRing, stopRing]);
