@@ -84,6 +84,38 @@ function ReactionAdder({ onReact }) {
   );
 }
 
+// Nudge shown inside Messages when browser notifications aren't enabled yet.
+function NotifyBanner({ onEnable }) {
+  const [perm, setPerm] = useState(() => ('Notification' in window) ? Notification.permission : 'unsupported');
+  useEffect(() => {
+    const check = () => { if ('Notification' in window) setPerm(Notification.permission); };
+    window.addEventListener('focus', check);
+    document.addEventListener('visibilitychange', check);
+    return () => { window.removeEventListener('focus', check); document.removeEventListener('visibilitychange', check); };
+  }, []);
+  if (perm === 'granted' || perm === 'unsupported') return null;
+  const blocked = perm === 'denied';
+  const enable = async () => {
+    if (perm === 'default') { try { setPerm(await Notification.requestPermission()); } catch { /* */ } }
+    onEnable?.();
+  };
+  return (
+    <div className={`shrink-0 mb-3 flex items-center gap-3 rounded-lg border px-3 py-2 text-sm ${blocked ? 'bg-red-50 border-red-200 text-red-700' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>
+      <span className="text-lg leading-none">🔔</span>
+      <span className="flex-1">
+        {blocked
+          ? 'Notifications are blocked. Enable them for this site in your browser settings (address-bar 🔒/ⓘ → Notifications → Allow) to get message alerts.'
+          : 'Turn on browser notifications so you never miss a new message.'}
+      </span>
+      {!blocked && (
+        <button onClick={enable} className="shrink-0 rounded-md bg-amber-600 text-white text-xs font-semibold px-3 py-1.5 hover:bg-amber-700">
+          Turn on
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function Messages({ fullscreen = false }) {
   const { user, getAuthHeaders } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -1001,6 +1033,8 @@ export default function Messages({ fullscreen = false }) {
         )}
         </div>
       </div>
+
+      <NotifyBanner onEnable={testNotification} />
 
       {/* Admin all-comms view */}
       {isAdmin && viewMode === 'all' ? (
