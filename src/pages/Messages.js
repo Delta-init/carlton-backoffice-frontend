@@ -27,6 +27,17 @@ import { useChatNotification } from '../context/ChatNotificationContext';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
+// Status badge for auto-posted transaction cards — reflects the furthest state reached.
+function TxBadge({ msg }) {
+  const st = msg.tx_status;
+  let label = '⏳ Pending', cls = 'bg-amber-100 text-amber-700';
+  if (st === 'rejected') { label = '❌ Rejected'; cls = 'bg-red-100 text-red-700'; }
+  else if (st === 'completed' || msg.tx_completed_by) { label = '✅ Completed'; cls = 'bg-emerald-100 text-emerald-700'; }
+  else if (st === 'approved') { label = '✅ Approved'; cls = 'bg-green-100 text-green-700'; }
+  else if (msg.tx_processed_by) { label = '⚙️ Processing'; cls = 'bg-blue-100 text-blue-700'; }
+  return <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-full ${cls}`}>{label}</span>;
+}
+
 export default function Messages() {
   const { user, getAuthHeaders } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -1191,12 +1202,7 @@ export default function Messages() {
                                     {msg.attachments?.length > 0 && renderAttachments(msg.attachments, isSelf)}
                                     {msg.is_tx_bot && (
                                       <div className="mt-1.5 flex items-center gap-2 flex-wrap">
-                                        <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-full ${
-                                          msg.tx_status === 'approved' ? 'bg-green-100 text-green-700'
-                                          : msg.tx_status === 'rejected' ? 'bg-red-100 text-red-700'
-                                          : 'bg-amber-100 text-amber-700'}`}>
-                                          {msg.tx_status === 'approved' ? '✅ Approved' : msg.tx_status === 'rejected' ? '❌ Rejected' : '⏳ Pending'}
-                                        </span>
+                                        <TxBadge msg={msg} />
                                         {msg.tx_reference && (
                                           <button type="button" onClick={() => navigate(`/transactions?search=${encodeURIComponent(msg.tx_reference)}`)}
                                             className={`text-[11px] underline ${isSelf ? 'text-white/90' : 'text-primary'} hover:opacity-80`}>
@@ -1391,12 +1397,7 @@ export default function Messages() {
                               )}
                               {msg.is_tx_bot && (
                                 <div className="mt-1.5 flex items-center gap-2 flex-wrap">
-                                  <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-full ${
-                                    msg.tx_status === 'approved' ? 'bg-green-100 text-green-700'
-                                    : msg.tx_status === 'rejected' ? 'bg-red-100 text-red-700'
-                                    : 'bg-amber-100 text-amber-700'}`}>
-                                    {msg.tx_status === 'approved' ? '✅ Approved' : msg.tx_status === 'rejected' ? '❌ Rejected' : '⏳ Pending'}
-                                  </span>
+                                  <TxBadge msg={msg} />
                                   {msg.tx_reference && (
                                     <button type="button" onClick={() => navigate(`/transactions?search=${encodeURIComponent(msg.tx_reference)}`)}
                                       className={`text-[11px] underline ${isSelf ? 'text-white/90' : 'text-primary'} hover:opacity-80`}>
