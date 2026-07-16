@@ -574,6 +574,28 @@ export default function RolesPermissions() {
                             </button>
                           );
                         })}
+                        {(() => {
+                          const UNTAG = '__untagged__';
+                          const selected = Array.isArray(roleForm.allowed_client_tags) && roleForm.allowed_client_tags.includes(UNTAG);
+                          return (
+                            <button
+                              onClick={() => setRoleForm(prev => {
+                                const current = Array.isArray(prev.allowed_client_tags) ? prev.allowed_client_tags : [];
+                                const next = selected ? current.filter(id => id !== UNTAG) : [...current, UNTAG];
+                                return { ...prev, allowed_client_tags: next.length ? next : null };
+                              })}
+                              title="Include transactions/clients that have no tag"
+                              className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${
+                                selected
+                                  ? 'bg-orange-100 text-orange-700 border-orange-400'
+                                  : 'bg-white text-slate-500 border-slate-300 hover:border-orange-400 hover:text-orange-600'
+                              }`}
+                            >
+                              <span className="inline-block w-2 h-2 rounded-full mr-1 bg-slate-400" />
+                              Untagged
+                            </button>
+                          );
+                        })()}
                       </div>
                     </TableCell>
                   </TableRow>
