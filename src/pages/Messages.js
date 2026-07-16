@@ -24,6 +24,7 @@ import {
   Bell, BellOff, Pencil, Search as SearchIcon, PhoneCall,
 } from 'lucide-react';
 import { useChatNotification } from '../context/ChatNotificationContext';
+import EmojiPicker from 'emoji-picker-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -36,6 +37,52 @@ function TxBadge({ msg }) {
   else if (st === 'approved') { label = '✅ Approved'; cls = 'bg-green-100 text-green-700'; }
   else if (msg.tx_processed_by) { label = '⚙️ Processing'; cls = 'bg-blue-100 text-blue-700'; }
   return <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-full ${cls}`}>{label}</span>;
+}
+
+// Order messages so a reacted one bumps to the latest (last_activity_at, else created_at).
+const sortByActivity = (list) => [...list].sort((a, b) =>
+  (a.last_activity_at || a.created_at || '').localeCompare(b.last_activity_at || b.created_at || ''));
+
+const QUICK_REACTIONS = ['✅', '⏳', '❌', '👍'];
+
+// Reaction chips (always shown) + a hover quick-react bar with a full emoji picker ("+").
+function MessageReactions({ reactions, onReact, currentUserId }) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const entries = Object.entries(reactions || {}).filter(([, arr]) => (arr || []).length);
+  return (
+    <div className="flex items-center gap-1 mt-1 flex-wrap clear-both">
+      {entries.map(([emoji, arr]) => {
+        const mine = (arr || []).some(r => r.user_id === currentUserId);
+        return (
+          <button key={emoji} type="button" onClick={() => onReact(emoji)}
+            title={(arr || []).map(r => r.name).filter(Boolean).join(', ')}
+            className={`text-[11px] px-1.5 py-0.5 rounded-full border transition-colors ${mine
+              ? 'bg-primary/20 border-primary/40 text-primary'
+              : 'bg-muted border-border text-muted-foreground hover:bg-muted/70'}`}>
+            {emoji} {(arr || []).length}
+          </button>
+        );
+      })}
+      <div className="relative flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        {QUICK_REACTIONS.map(e => (
+          <button key={e} type="button" title={`React ${e}`} onClick={() => onReact(e)}
+            className="text-[13px] leading-none px-1 py-0.5 rounded hover:bg-muted">{e}</button>
+        ))}
+        <button type="button" title="More emojis" onClick={() => setPickerOpen(o => !o)}
+          className="w-5 h-5 flex items-center justify-center rounded-full border border-border text-muted-foreground hover:bg-muted text-xs leading-none">＋</button>
+        {pickerOpen && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setPickerOpen(false)} />
+            <div className="absolute bottom-7 left-0 z-50">
+              <EmojiPicker onEmojiClick={(ed) => { onReact(ed.emoji); setPickerOpen(false); }}
+                theme="auto" lazyLoadEmojis width={300} height={380}
+                previewConfig={{ showPreview: false }} skinTonesDisabled />
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export default function Messages() {
@@ -356,6 +403,28 @@ export default function Messages() {
     } catch { toast.error('Could not complete'); }
   };
 
+  // Toggle an emoji reaction on a message (channel or DM); the server bumps it to the latest.
+  const handleReact = async (msg, emoji, scope) => {
+    try {
+      const url = scope === 'channel'
+        ? `${API_URL}/api/channels/${selectedChannel?.channel_id}/messages/${msg.msg_id}/react`
+        : `${API_URL}/api/messages/${msg.message_id}/react`;
+      const r = await fetch(url, {
+        method: 'POST', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emoji }),
+      });
+      if (!r.ok) return;
+      const data = await r.json();
+      if (scope === 'channel') {
+        setChannelMessages(prev => sortByActivity(prev.map(m =>
+          m.msg_id === msg.msg_id ? { ...m, reactions: data.reactions, last_activity_at: data.last_activity_at } : m)));
+      } else {
+        setMessages(prev => sortByActivity(prev.map(m =>
+          m.message_id === msg.message_id ? { ...m, reactions: data.reactions, last_activity_at: data.last_activity_at } : m)));
+      }
+    } catch { /* */ }
+  };
+
   // Process a withdrawal request from its #withdraw_only card (captcha-gated, really processes it)
   const handleTxProcess = async (msg) => {
     const a = Math.floor(Math.random() * 8) + 2, b = Math.floor(Math.random() * 8) + 2;
@@ -540,6 +609,16 @@ export default function Messages() {
         const m = data.message;
         setChannelMessages(prev => prev.map(x => x.msg_id === m.msg_id ? { ...x, ...m } : x));
         setThreadReplies(prev => prev.map(x => x.msg_id === m.msg_id ? { ...x, ...m } : x));
+        break;
+      }
+      case 'reaction': {
+        if (data.scope === 'channel') {
+          setChannelMessages(prev => sortByActivity(prev.map(x => x.msg_id === data.msg_id
+            ? { ...x, reactions: data.reactions, last_activity_at: data.last_activity_at } : x)));
+        } else {
+          setMessages(prev => sortByActivity(prev.map(x => x.message_id === data.message_id
+            ? { ...x, reactions: data.reactions, last_activity_at: data.last_activity_at } : x)));
+        }
         break;
       }
       default: break;
@@ -1228,6 +1307,10 @@ export default function Messages() {
                                     {msg.edited && <span className={`text-[10px] ml-1 ${isSelf ? 'text-white/70' : 'text-muted-foreground'}`}>(edited)</span>}
                                   </div>
                                 )}
+                                {!msg.deleted && (
+                                  <MessageReactions reactions={msg.reactions} currentUserId={user?.user_id}
+                                    onReact={(emoji) => handleReact(msg, emoji, 'channel')} />
+                                )}
                                 {/* Thread reply count */}
                                 {msg.reply_count > 0 && (
                                   <button onClick={openThread}
@@ -1426,6 +1509,10 @@ export default function Messages() {
                                 )}
                               </div>
                             </div>
+                            )}
+                            {!msg.deleted && (
+                              <MessageReactions reactions={msg.reactions} currentUserId={user?.user_id}
+                                onReact={(emoji) => handleReact(msg, emoji, 'dm')} />
                             )}
                           </div>
                         </div>
