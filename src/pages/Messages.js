@@ -21,7 +21,7 @@ import {
   MessageSquare, Send, Users, User, Search, Plus, Check, CheckCheck,
   Loader2, Paperclip, X, FileText, Image as ImageIcon, FileSpreadsheet, File,
   Hash, MessageCircle, ChevronRight, Video, ZoomIn, PanelRightOpen, Settings, Trash2,
-  Bell, BellOff, Pencil, Search as SearchIcon, PhoneCall,
+  Bell, BellOff, BellRing, Pencil, Search as SearchIcon, PhoneCall,
 } from 'lucide-react';
 import { useChatNotification } from '../context/ChatNotificationContext';
 import EmojiPicker from 'emoji-picker-react';
@@ -207,7 +207,7 @@ export default function Messages() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channels, conversations, users]);
 
-  const { registerHandler, soundEnabled, toggleSound, trackThreadParticipation, hasParticipated, resetUnread } = useChatNotification();
+  const { registerHandler, soundEnabled, toggleSound, testNotification, trackThreadParticipation, hasParticipated, resetUnread } = useChatNotification();
 
   // Clear handler on unmount so context doesn't call into a dead component
   useEffect(() => () => registerHandler(null), [registerHandler]);
@@ -966,6 +966,13 @@ export default function Messages() {
           <p className="text-muted-foreground mt-0.5 text-sm">Direct messages &amp; group channels</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={testNotification}
+            title="Test notification (sound + browser alert)"
+            className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground/80 transition-colors"
+          >
+            <BellRing className="w-4 h-4" /> Test
+          </button>
           <button
             onClick={toggleSound}
             title={soundEnabled ? 'Mute notifications' : 'Unmute notifications'}

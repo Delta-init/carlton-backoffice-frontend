@@ -11,6 +11,7 @@ const defaultCtx = {
   resetUnread: () => {},
   soundEnabled: true,
   toggleSound: () => {},
+  testNotification: () => {},
   registerHandler: () => {},
   trackThreadParticipation: () => {},
   hasParticipated: () => false,
@@ -163,6 +164,34 @@ export function ChatNotificationProvider({ children }) {
     }
   }, [playPing]);
 
+  // Manual test (🔔 button in the Messages header): play the sound (ignoring mute),
+  // request permission if needed, then show a sample browser notification.
+  const testNotification = useCallback(async () => {
+    try {
+      const a = soundRef.current?.cloneNode();
+      if (a) { a.volume = 1.0; a.play().catch(() => {}); }
+    } catch { /* audio unavailable */ }
+    let perm = ('Notification' in window) ? Notification.permission : 'denied';
+    if (perm === 'default') {
+      try { perm = await Notification.requestPermission(); } catch { /* */ }
+    }
+    if (perm === 'granted') {
+      try {
+        const n = new Notification('🔔 Notifications are on', {
+          body: 'This is how a new message will alert you.', icon: '/logo192.png', tag: 'chat-test',
+        });
+        n.onclick = () => { window.focus(); n.close(); };
+        toast.success('Test sent — sound + browser notification are working.');
+      } catch {
+        toast('Sound played, but the browser notification could not be shown.');
+      }
+    } else if (perm === 'denied') {
+      toast.error('Notifications are blocked — enable them in your browser site settings.');
+    } else {
+      toast('Sound played. Allow notifications to also get browser alerts.');
+    }
+  }, []);
+
   // ── Central WS message handler ─────────────────────────────────────────────
   const handleWsData = useCallback((data) => {
     const me = userRef.current;
@@ -314,7 +343,7 @@ export function ChatNotificationProvider({ children }) {
   return (
     <ChatNotificationContext.Provider value={{
       totalUnread, setTotalUnread, resetUnread,
-      soundEnabled, toggleSound,
+      soundEnabled, toggleSound, testNotification,
       registerHandler, trackThreadParticipation, hasParticipated,
     }}>
       {children}
