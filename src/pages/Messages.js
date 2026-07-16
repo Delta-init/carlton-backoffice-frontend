@@ -1292,7 +1292,7 @@ export default function Messages() {
                                             View transaction →
                                           </button>
                                         )}
-                                        {msg.tx_type === 'withdrawal' && !msg.tx_processed_by && isAdmin && (
+                                        {msg.tx_type === 'withdrawal' && !msg.tx_processed_by && !msg.tx_direct && isAdmin && (
                                           <button type="button" onClick={() => handleTxProcess(msg)}
                                             className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-600 text-white hover:bg-amber-700">Process</button>
                                         )}
