@@ -84,6 +84,68 @@ function ReactionAdder({ onReact }) {
   );
 }
 
+// Status tags for workflow channels (e.g. #scalping-check). Rendered as colored
+// pills like TxBadge; multiple can be active at once.
+const TAG_CHANNELS = ['scalping-check'];
+const TAG_META = [
+  { key: 'Approved',  icon: '✅', cls: 'bg-emerald-100 text-emerald-700' },
+  { key: 'Processed', icon: '⚙️', cls: 'bg-blue-100 text-blue-700' },
+  { key: 'Hold',      icon: '✋', cls: 'bg-amber-100 text-amber-700' },
+  { key: 'Rejected',  icon: '❌', cls: 'bg-red-100 text-red-700' },
+  { key: 'Pending',   icon: '⏳', cls: 'bg-slate-100 text-slate-600' },
+  { key: 'Query',     icon: '❓', cls: 'bg-purple-100 text-purple-700' },
+];
+
+// Active tag pills — shown ABOVE the message (styled like the status badge). Click to remove.
+function TagChips({ tags, onTag }) {
+  const active = TAG_META.filter(t => tags && tags[t.key]);
+  if (!active.length) return null;
+  return (
+    <div className="flex items-center gap-1 mb-1 flex-wrap">
+      {active.map(t => {
+        const by = tags[t.key]?.by;
+        return (
+          <button key={t.key} type="button" onClick={() => onTag(t.key)}
+            title={`${t.key}${by ? ' — by ' + by : ''} · click to remove`}
+            className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-full ${t.cls} hover:opacity-75 transition-opacity`}>
+            {t.icon} {t.key}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// "Tag" button — shown BELOW the message; opens a menu of all status tags (multi-select toggle).
+function TagBar({ tags, onTag }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative mt-0.5 inline-block clear-both align-top">
+      <button type="button" title="Set status tags" onClick={() => setOpen(o => !o)}
+        className="opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground border border-border hover:bg-muted rounded-full px-2 py-0.5">
+        <span className="text-[13px] leading-none">🏷</span> Tag
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute bottom-8 left-0 z-50 bg-card border border-border rounded-lg shadow-lg p-1.5 flex flex-col gap-1 w-40">
+            {TAG_META.map(t => {
+              const on = !!(tags && tags[t.key]);
+              return (
+                <button key={t.key} type="button" onClick={() => onTag(t.key)}
+                  className={`flex items-center justify-between text-[12px] font-semibold px-2 py-1 rounded-md transition-colors ${on ? t.cls : 'text-muted-foreground hover:bg-muted'}`}>
+                  <span>{t.icon} {t.key}</span>
+                  {on && <span className="text-[11px] leading-none">✓</span>}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // Nudge shown inside Messages when browser notifications aren't enabled yet.
 function NotifyBanner({ onEnable }) {
   const [perm, setPerm] = useState(() => ('Notification' in window) ? Notification.permission : 'unsupported');
@@ -187,6 +249,7 @@ export default function Messages({ fullscreen = false }) {
   // Scroll refs
   const dmScrollRef = useRef(null);
   const channelScrollRef = useRef(null);
+  const [highlightMsgId, setHighlightMsgId] = useState(null);  // briefly flash a message when its thread is opened
   const threadScrollRef = useRef(null);
   const atDmBottomRef = useRef(true);
   const atChannelBottomRef = useRef(true);
@@ -458,6 +521,30 @@ export default function Messages({ fullscreen = false }) {
     } catch { /* */ }
   };
 
+  // Toggle a status tag on a channel message (scalping-check workflow); syncs live to all viewers.
+  const handleTag = async (msg, tag) => {
+    try {
+      const r = await fetch(`${API_URL}/api/channels/${selectedChannel?.channel_id}/messages/${msg.msg_id}/tag`, {
+        method: 'POST', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tag }),
+      });
+      if (!r.ok) return;
+      const data = await r.json();
+      setChannelMessages(prev => prev.map(m => m.msg_id === msg.msg_id ? { ...m, tags: data.tags } : m));
+      setThreadReplies(prev => prev.map(m => m.msg_id === msg.msg_id ? { ...m, tags: data.tags } : m));
+      setThreadMsg(prev => (prev && prev.msg_id === msg.msg_id) ? { ...prev, tags: data.tags } : prev);
+    } catch { /* */ }
+  };
+
+  // Scroll the main channel list to a message and briefly flash it (used when opening its thread).
+  const scrollToChannelMessage = (msgId) => {
+    setHighlightMsgId(msgId);
+    setTimeout(() => {
+      document.getElementById(`chmsg-${msgId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 60);
+    setTimeout(() => setHighlightMsgId(cur => (cur === msgId ? null : cur)), 2400);
+  };
+
   // Process a withdrawal request from its #withdraw_only card (captcha-gated, really processes it)
   const handleTxProcess = async (msg) => {
     const a = Math.floor(Math.random() * 8) + 2, b = Math.floor(Math.random() * 8) + 2;
@@ -654,6 +741,15 @@ export default function Messages({ fullscreen = false }) {
           setMessages(prev => prev.map(x => x.message_id === data.message_id
             ? { ...x, reactions: data.reactions } : x));
         }
+        break;
+      }
+      case 'tag': {
+        setChannelMessages(prev => prev.map(x => x.msg_id === data.msg_id
+          ? { ...x, tags: data.tags } : x));
+        setThreadReplies(prev => prev.map(x => x.msg_id === data.msg_id
+          ? { ...x, tags: data.tags } : x));
+        setThreadMsg(prev => (prev && prev.msg_id === data.msg_id)
+          ? { ...prev, tags: data.tags } : prev);
         break;
       }
       default: break;
@@ -1264,11 +1360,15 @@ export default function Messages({ fullscreen = false }) {
                     ) : (
                       groupedChannelMessages.filter(msgMatches).map(msg => {
                         const isSelf = msg.sender_id === user?.user_id;
-                        const openThread = () => { setThreadMsg(msg); if (selectedChannel) fetchThreadReplies(selectedChannel.channel_id, msg.msg_id); };
+                        const openThread = () => {
+                          setThreadMsg(msg);
+                          if (selectedChannel) fetchThreadReplies(selectedChannel.channel_id, msg.msg_id);
+                          scrollToChannelMessage(msg.msg_id);
+                        };
                         return (
-                          <div key={msg.msg_id}>
+                          <div key={msg.msg_id} id={`chmsg-${msg.msg_id}`} className="scroll-mt-4">
                             {msg.showDateDivider && <DateDivider date={msg.created_at} />}
-                            <div className="group flex gap-3 px-4 hover:bg-muted/50/60 py-0.5 transition-colors">
+                            <div className={`group flex gap-3 px-4 py-0.5 transition-colors duration-700 ${highlightMsgId === msg.msg_id ? 'bg-primary/15' : 'hover:bg-muted/50/60'}`}>
                               {/* Avatar or grouped spacer */}
                               <div className="w-9 shrink-0 mt-1">
                                 {!msg.isGrouped ? (
@@ -1305,6 +1405,9 @@ export default function Messages({ fullscreen = false }) {
                                 {!msg.deleted && (
                                   <ReactionChips reactions={msg.reactions} currentUserId={user?.user_id}
                                     onReact={(emoji) => handleReact(msg, emoji, 'channel')} />
+                                )}
+                                {!msg.deleted && TAG_CHANNELS.includes(selectedChannel?.name) && (
+                                  <TagChips tags={msg.tags} onTag={(tag) => handleTag(msg, tag)} />
                                 )}
                                 {/* Bubble (text + attachments together) */}
                                 {msg.deleted ? (
@@ -1366,6 +1469,9 @@ export default function Messages({ fullscreen = false }) {
                                 )}
                                 {!msg.deleted && (
                                   <ReactionAdder onReact={(emoji) => handleReact(msg, emoji, 'channel')} />
+                                )}
+                                {!msg.deleted && TAG_CHANNELS.includes(selectedChannel?.name) && (
+                                  <TagBar tags={msg.tags} onTag={(tag) => handleTag(msg, tag)} />
                                 )}
                                 {/* Thread reply count */}
                                 {msg.reply_count > 0 && (
@@ -1648,7 +1754,7 @@ export default function Messages({ fullscreen = false }) {
                 <div ref={threadScrollRef} className="flex-1 overflow-y-auto p-4">
                   {/* Root message */}
                   <div className="mb-4 pb-4 border-b">
-                    <div className="flex gap-2.5">
+                    <div className="group flex gap-2.5">
                       <Avatar className="w-8 h-8 shrink-0">
                         <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white text-xs">
                           {getInitials(threadMsg.sender_name)}
@@ -1659,8 +1765,14 @@ export default function Messages({ fullscreen = false }) {
                           <span className="text-sm font-bold text-foreground">{threadMsg.sender_id === user?.user_id ? 'You' : threadMsg.sender_name}</span>
                           <span className="text-xs text-muted-foreground/60">{formatFullTime(threadMsg.created_at)}</span>
                         </div>
+                        {TAG_CHANNELS.includes(selectedChannel?.name) && (
+                          <TagChips tags={threadMsg.tags} onTag={(tag) => handleTag(threadMsg, tag)} />
+                        )}
                         {threadMsg.content && <p className="text-sm text-foreground mt-0.5 whitespace-pre-wrap leading-relaxed">{threadMsg.content}</p>}
                         {renderAttachments(threadMsg.attachments, threadMsg.sender_id === user?.user_id)}
+                        {TAG_CHANNELS.includes(selectedChannel?.name) && (
+                          <TagBar tags={threadMsg.tags} onTag={(tag) => handleTag(threadMsg, tag)} />
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1692,6 +1804,9 @@ export default function Messages({ fullscreen = false }) {
                           <ReactionChips reactions={r.reactions} currentUserId={user?.user_id}
                             onReact={(emoji) => handleReact(r, emoji, 'channel')} />
                         )}
+                        {!r.deleted && TAG_CHANNELS.includes(selectedChannel?.name) && (
+                          <TagChips tags={r.tags} onTag={(tag) => handleTag(r, tag)} />
+                        )}
                         {r.deleted ? (
                           <p className="text-sm text-muted-foreground italic mt-0.5">🚫 This message was deleted</p>
                         ) : editingId === r.msg_id ? (
@@ -1711,6 +1826,9 @@ export default function Messages({ fullscreen = false }) {
                         )}
                         {!r.deleted && (
                           <ReactionAdder onReact={(emoji) => handleReact(r, emoji, 'channel')} />
+                        )}
+                        {!r.deleted && TAG_CHANNELS.includes(selectedChannel?.name) && (
+                          <TagBar tags={r.tags} onTag={(tag) => handleTag(r, tag)} />
                         )}
                       </div>
                     </div>
