@@ -3030,7 +3030,7 @@ export default function Transactions() {
 
                 <div className="space-y-2">
                   <Label className="text-muted-foreground text-xs uppercase tracking-wider">
-                    CRM Reference {["deposit", "withdrawal"].includes(formData.transaction_type) ? <span className="text-red-500">* (Required)</span> : "(Optional, Unique)"}
+                    CRM Reference <span className="text-muted-foreground normal-case">(optional, unique)</span>
                   </Label>
                   <Input
                     value={formData.crm_reference || ""}
