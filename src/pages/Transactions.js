@@ -613,29 +613,29 @@ export default function Transactions() {
               >
                 <Eye className="w-4 h-4" />
               </Button>
+              {(tx.status === "pending" || tx.status === "approved") && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => openFieldEdit(tx)}
+                  className="text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 h-7 w-7 p-0"
+                  title={tx.status === "pending" ? "Edit Details" : "Edit Reference / CRM ID"}
+                  data-testid={`tx-field-edit-${tx.transaction_id}`}
+                >
+                  <Pencil className="w-4 h-4" />
+                </Button>
+              )}
               {tx.status === "pending" && (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => openFieldEdit(tx)}
-                    className="text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 h-7 w-7 p-0"
-                    title="Edit Details"
-                    data-testid={`tx-field-edit-${tx.transaction_id}`}
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => openDestEdit(tx)}
-                    className="text-blue-500 hover:text-blue-700 hover:bg-primary/5 h-7 w-7 p-0"
-                    title="Edit Destination"
-                    data-testid={`tx-dest-edit-${tx.transaction_id}`}
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                </>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => openDestEdit(tx)}
+                  className="text-blue-500 hover:text-blue-700 hover:bg-primary/5 h-7 w-7 p-0"
+                  title="Edit Destination"
+                  data-testid={`tx-dest-edit-${tx.transaction_id}`}
+                >
+                  <Edit className="w-4 h-4" />
+                </Button>
               )}
             </div>
           </TableCell>
@@ -4373,6 +4373,8 @@ export default function Transactions() {
                   data-testid="field-edit-reference"
                 />
               </div>
+              {fieldEditTx?.status === "pending" ? (
+              <>
               <div>
                 <Label className="text-xs text-muted-foreground uppercase">
                   Transaction Date
@@ -4507,6 +4509,12 @@ export default function Transactions() {
                   </div>
                 )}
               </div>
+              </>
+              ) : (
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
+                  🔒 This transaction is {fieldEditTx?.status} — only CRM Reference &amp; Reference can be edited. Amount, currency and date are locked.
+                </p>
+              )}
 
               <Button
                 onClick={handleSaveFieldEdit}
