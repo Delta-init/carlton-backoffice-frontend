@@ -148,14 +148,16 @@ export function ChatNotificationProvider({ children }) {
   // (On /messages, Messages.js shows its own in-page toast for other conversations.)
   const fireNotification = useCallback((title, body, onNavigate, ping) => {
     (ping || playPing)();
-    if (window.location.pathname === '/messages') return;
+    // Browser (OS) notification for EVERY message, on any page, whenever permission is granted.
     const canOS = 'Notification' in window && Notification.permission === 'granted';
     if (canOS) {
       try {
-        const n = new Notification(title, { body, icon: '/logo192.png', tag: 'chat-msg' });
+        const n = new Notification(title, { body, icon: '/logo192.png' });
         n.onclick = () => { window.focus(); onNavigate?.(); n.close(); };
       } catch { /* OS notification failed */ }
-    } else if (document.visibilityState === 'visible') {
+    }
+    // In-app toast fallback when we can't show an OS notification (permission not granted).
+    if (!canOS && document.visibilityState === 'visible' && window.location.pathname !== '/messages') {
       toast(title, {
         description: body,
         action: { label: 'View', onClick: () => onNavigate?.() },
@@ -171,24 +173,26 @@ export function ChatNotificationProvider({ children }) {
       const a = soundRef.current?.cloneNode();
       if (a) { a.volume = 1.0; a.play().catch(() => {}); }
     } catch { /* audio unavailable */ }
-    let perm = ('Notification' in window) ? Notification.permission : 'denied';
+    if (!('Notification' in window)) { toast.error('This browser does not support notifications.'); return; }
+    let perm = Notification.permission;
     if (perm === 'default') {
       try { perm = await Notification.requestPermission(); } catch { /* */ }
     }
     if (perm === 'granted') {
       try {
-        const n = new Notification('🔔 Notifications are on', {
-          body: 'This is how a new message will alert you.', icon: '/logo192.png', tag: 'chat-test',
+        const n = new Notification('🔔 Test notification', {
+          body: 'Browser notifications are working — this is how new messages will alert you.',
+          icon: '/logo192.png', requireInteraction: true,
         });
         n.onclick = () => { window.focus(); n.close(); };
-        toast.success('Test sent — sound + browser notification are working.');
-      } catch {
-        toast('Sound played, but the browser notification could not be shown.');
+        toast.success('Browser notification sent.');
+      } catch (e) {
+        toast.error('Could not show a browser notification: ' + (e?.message || 'unknown error'));
       }
     } else if (perm === 'denied') {
-      toast.error('Notifications are blocked — enable them in your browser site settings.');
+      toast.error('Notifications are blocked. Enable them for this site in your browser settings, then click Test again.');
     } else {
-      toast('Sound played. Allow notifications to also get browser alerts.');
+      toast('Please allow notifications when prompted, then click Test again.');
     }
   }, []);
 
