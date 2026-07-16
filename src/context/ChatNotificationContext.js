@@ -46,41 +46,36 @@ export function ChatNotificationProvider({ children }) {
   const buzzTimeoutRef = useRef(null);
 
   // ── Audio ──────────────────────────────────────────────────────────────────
+  // Notification sound: a WAV served from /public, preloaded once and replayed
+  // (cloned so rapid notifications can overlap). Respects the mute toggle.
+  const soundRef = useRef(null);
+  useEffect(() => {
+    const a = new Audio('/notification.wav');
+    a.preload = 'auto';
+    soundRef.current = a;
+  }, []);
+
   const playPing = useCallback(() => {
     if (!soundEnabledRef.current) return;
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.frequency.value = 880;
-      osc.type = 'sine';
-      gain.gain.setValueAtTime(0.3, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.25);
-    } catch { /* AudioContext unavailable */ }
+      const base = soundRef.current;
+      if (!base) return;
+      const a = base.cloneNode();
+      a.volume = 1.0;
+      a.play().catch(() => { /* blocked until first user gesture */ });
+    } catch { /* audio unavailable */ }
   }, []);
 
-  // Distinct two-note chime for reactions (so they don't sound like a new message).
-  const playReactionPing = useCallback(() => {
-    if (!soundEnabledRef.current) return;
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      [[523.25, 0], [783.99, 0.09]].forEach(([freq, at]) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain); gain.connect(ctx.destination);
-        osc.type = 'triangle';
-        osc.frequency.value = freq;
-        const t0 = ctx.currentTime + at;
-        gain.gain.setValueAtTime(0.25, t0);
-        gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.16);
-        osc.start(t0);
-        osc.stop(t0 + 0.18);
-      });
-    } catch { /* AudioContext unavailable */ }
+  // Reactions use the same notification sound.
+  const playReactionPing = playPing;
+
+  // Ask for notification permission on the first user gesture (some browsers require
+  // a gesture) — complements the on-connect request in the WS effect below.
+  useEffect(() => {
+    if (!('Notification' in window) || Notification.permission !== 'default') return;
+    const ask = () => { Notification.requestPermission().catch(() => {}); };
+    window.addEventListener('pointerdown', ask, { once: true });
+    return () => window.removeEventListener('pointerdown', ask);
   }, []);
 
   // ── Buzz ring ("missed-call") — loops until answered/declined; overrides mute ─
@@ -146,17 +141,20 @@ export function ChatNotificationProvider({ children }) {
   }, [ackBuzz, stopRing]);
 
   // ── Notification dispatcher ────────────────────────────────────────────────
-  // Sound: always.
-  // OS notification: when tab is hidden.
-  // Toast: when tab is visible but user is NOT on /messages (Messages.js handles in-page toasts).
+  // Sound: always. Browser (OS) notification: whenever the user is NOT on the
+  // messages page (hidden tab or a different page). Toast: fallback when the OS
+  // notification can't be shown (permission not granted) and the tab is visible.
+  // (On /messages, Messages.js shows its own in-page toast for other conversations.)
   const fireNotification = useCallback((title, body, onNavigate, ping) => {
     (ping || playPing)();
-    if (document.visibilityState !== 'visible') {
-      if (Notification.permission === 'granted') {
+    if (window.location.pathname === '/messages') return;
+    const canOS = 'Notification' in window && Notification.permission === 'granted';
+    if (canOS) {
+      try {
         const n = new Notification(title, { body, icon: '/logo192.png', tag: 'chat-msg' });
         n.onclick = () => { window.focus(); onNavigate?.(); n.close(); };
-      }
-    } else if (window.location.pathname !== '/messages') {
+      } catch { /* OS notification failed */ }
+    } else if (document.visibilityState === 'visible') {
       toast(title, {
         description: body,
         action: { label: 'View', onClick: () => onNavigate?.() },
