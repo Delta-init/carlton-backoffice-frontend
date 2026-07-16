@@ -100,6 +100,15 @@ function AppRouter() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
+      {/* Full-screen chat (opens in a new tab — no app sidebar, more space) */}
+      <Route
+        path="/messages/full"
+        element={
+          <ProtectedRoute>
+            <Messages fullscreen />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/"
         element={

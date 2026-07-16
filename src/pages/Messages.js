@@ -21,7 +21,7 @@ import {
   MessageSquare, Send, Users, User, Search, Plus, Check, CheckCheck,
   Loader2, Paperclip, X, FileText, Image as ImageIcon, FileSpreadsheet, File,
   Hash, MessageCircle, ChevronRight, Video, ZoomIn, PanelRightOpen, Settings, Trash2,
-  Bell, BellOff, BellRing, Pencil, Search as SearchIcon, PhoneCall,
+  Bell, BellOff, BellRing, Maximize2, Pencil, Search as SearchIcon, PhoneCall,
 } from 'lucide-react';
 import { useChatNotification } from '../context/ChatNotificationContext';
 import EmojiPicker from 'emoji-picker-react';
@@ -84,7 +84,7 @@ function ReactionAdder({ onReact }) {
   );
 }
 
-export default function Messages() {
+export default function Messages({ fullscreen = false }) {
   const { user, getAuthHeaders } = useAuth();
   const [loading, setLoading] = useState(true);
 
@@ -958,7 +958,7 @@ export default function Messages() {
 
   // ── JSX ────────────────────────────────────────────────────────────────────
   return (
-    <div className="h-[calc(100vh-120px)] flex flex-col">
+    <div className={fullscreen ? "h-screen flex flex-col p-3 bg-background" : "h-[calc(100vh-120px)] flex flex-col"}>
       {/* Header */}
       <div className="flex items-center justify-between mb-4 shrink-0">
         <div>
@@ -966,6 +966,15 @@ export default function Messages() {
           <p className="text-muted-foreground mt-0.5 text-sm">Direct messages &amp; group channels</p>
         </div>
         <div className="flex items-center gap-2">
+          {!fullscreen && (
+            <button
+              onClick={() => window.open('/messages/full', '_blank')}
+              title="Open full-screen in a new tab"
+              className="p-2 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground/80 transition-colors"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
+          )}
           <button
             onClick={testNotification}
             title="Test notification (sound + browser alert)"
