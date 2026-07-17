@@ -436,11 +436,34 @@ export default function Transactions() {
       case "completed":
         return (
           <TableCell key="completed" className="text-xs whitespace-nowrap">
-            {["deposit", "withdrawal"].includes(tx.transaction_type)
-              ? (tx.completed
-                  ? <span className="text-green-600 font-medium">✅ Completed</span>
-                  : <span className="text-muted-foreground">⚪ Not completed</span>)
-              : <span className="text-muted-foreground">-</span>}
+            {["deposit", "withdrawal"].includes(tx.transaction_type) ? (
+              <div className="flex items-center gap-1">
+                <span className="flex-1 min-w-0">
+                  {tx.completed ? (
+                    <span
+                      className="text-green-600 font-medium"
+                      title={tx.completed_by_name ? `Completed by ${tx.completed_by_name}` : undefined}
+                    >
+                      ✅ Completed
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">⚪ Not completed</span>
+                  )}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleToggleCompleted(tx)}
+                  className="text-muted-foreground/60 hover:text-green-600 hover:bg-green-50 h-6 w-6 p-0 shrink-0"
+                  title={tx.completed ? "Mark as not completed" : "Mark as completed"}
+                  data-testid={`tx-completed-toggle-${tx.transaction_id}`}
+                >
+                  <Pencil className="w-3 h-3" />
+                </Button>
+              </div>
+            ) : (
+              <span className="text-muted-foreground">-</span>
+            )}
           </TableCell>
         );
       case "client":
@@ -1463,6 +1486,34 @@ export default function Transactions() {
       toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setTagEditSaving(false);
+    }
+  };
+
+  // Flip a deposit/withdrawal between Completed and Not completed (also syncs the chat card badge).
+  const handleToggleCompleted = async (tx) => {
+    const next = !tx.completed;
+    try {
+      const response = await fetch(
+        `${API_URL}/api/transactions/${tx.transaction_id}/completed`,
+        {
+          method: "PATCH",
+          headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+          body: JSON.stringify({ completed: next }),
+        },
+      );
+      if (!response.ok) {
+        toast.error(await getApiError(response));
+        return;
+      }
+      const updated = await response.json();
+      setTransactions((prev) =>
+        prev.map((t) =>
+          t.transaction_id === tx.transaction_id ? { ...t, ...updated } : t,
+        ),
+      );
+      toast.success(next ? "✅ Marked completed" : "⚪ Marked not completed");
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
     }
   };
 
