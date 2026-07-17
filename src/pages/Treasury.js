@@ -101,6 +101,9 @@ export default function Treasury() {
   const [proofGallery, setProofGallery] = useState(null);
   const [historyAccount, setHistoryAccount] = useState(null);
   const [historyData, setHistoryData] = useState([]);
+  // Statement totals for the whole filtered range, from the API — historyData is
+  // only one page, so totalling it would under/over-report the range.
+  const [historySummary, setHistorySummary] = useState(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyPage, setHistoryPage] = useState(1);
   const [historyPageSize] = useState(100);
@@ -199,6 +202,7 @@ export default function Treasury() {
       if (response.ok) {
         const data = await response.json();
         setHistoryData(Array.isArray(data) ? data : data.items || []);
+        setHistorySummary(data.summary || null);
         setHistoryTotalPages(data.total_pages || 1);
         setHistoryTotal(data.total || 0);
       }
@@ -218,11 +222,11 @@ export default function Treasury() {
     const dateStr = new Date().toISOString().split('T')[0];
     const headers = ['Date', 'Type', 'Reference', 'Description', 'Debit', 'Credit', 'Running Balance', 'Currency'];
 
-    // Calculate summary from history
-    const totalCredit = historyData.filter(tx => tx.amount > 0).reduce((s, tx) => s + tx.amount, 0);
-    const totalDebit = historyData.filter(tx => tx.amount < 0).reduce((s, tx) => s + Math.abs(tx.amount), 0);
-    const closingBalance = historyData.length > 0 ? historyData[0].running_balance : historyAccount.balance;
-    const openingBalance = historyData.length > 0 ? (historyData[historyData.length - 1].running_balance - (historyData[historyData.length - 1].amount || 0)) : historyAccount.balance;
+    // Summary for the whole selected range, from the API (historyData is one page).
+    const totalCredit = historySummary?.total_credits ?? 0;
+    const totalDebit = historySummary?.total_debits ?? 0;
+    const closingBalance = historySummary?.closing_balance ?? historyAccount.balance;
+    const openingBalance = historySummary?.opening_balance ?? historyAccount.balance;
 
     const buildRows = () => historyData.map(tx => {
       const isCredit = tx.amount > 0;
@@ -1204,28 +1208,25 @@ export default function Treasury() {
                   <div className="p-3 bg-muted/50 rounded-sm border border">
                     <p className="text-xs text-muted-foreground uppercase tracking-wider">Opening Balance</p>
                     <p className="text-lg font-mono font-bold text-foreground" data-testid="opening-balance">
-                      {(() => {
-                        const last = historyData[historyData.length - 1];
-                        return ((last?.running_balance || 0) - (last?.amount || 0)).toLocaleString();
-                      })()} {historyAccount.currency}
+                      {(historySummary?.opening_balance ?? 0).toLocaleString()} {historyAccount.currency}
                     </p>
                   </div>
                   <div className="p-3 bg-green-50 rounded-sm border border-green-200">
                     <p className="text-xs text-green-600 uppercase tracking-wider">Total Credits</p>
                     <p className="text-lg font-mono font-bold text-green-700" data-testid="total-credits">
-                      +{historyData.filter(tx => tx.amount > 0).reduce((s, tx) => s + tx.amount, 0).toLocaleString()} {historyAccount.currency}
+                      +{(historySummary?.total_credits ?? 0).toLocaleString()} {historyAccount.currency}
                     </p>
                   </div>
                   <div className="p-3 bg-red-50 rounded-sm border border-red-200">
                     <p className="text-xs text-red-600 uppercase tracking-wider">Total Debits</p>
                     <p className="text-lg font-mono font-bold text-red-700" data-testid="total-debits">
-                      -{historyData.filter(tx => tx.amount < 0).reduce((s, tx) => s + Math.abs(tx.amount), 0).toLocaleString()} {historyAccount.currency}
+                      -{(historySummary?.total_debits ?? 0).toLocaleString()} {historyAccount.currency}
                     </p>
                   </div>
                   <div className="p-3 bg-primary/10 rounded-sm border border-primary/30">
                     <p className="text-xs text-primary uppercase tracking-wider">Closing Balance</p>
                     <p className="text-lg font-mono font-bold text-primary" data-testid="closing-balance">
-                      {(historyData[0]?.running_balance || historyAccount.balance || 0).toLocaleString()} {historyAccount.currency}
+                      {(historySummary?.closing_balance ?? historyAccount.balance ?? 0).toLocaleString()} {historyAccount.currency}
                     </p>
                   </div>
                 </div>
