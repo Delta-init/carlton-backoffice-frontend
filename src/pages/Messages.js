@@ -334,6 +334,12 @@ export default function Messages({ fullscreen = false }) {
     return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: IST });
   };
 
+  // Compact IST date for the narrow grouped-message gutter: "17 Jul"
+  const formatShortDate = (d) => {
+    if (!d) return '';
+    return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', timeZone: IST });
+  };
+
   // Full IST date + time (for tooltips): "11 Jul 2026, 08:46 PM IST"
   const formatISTFull = (d) => {
     if (!d) return '';
@@ -1378,8 +1384,9 @@ export default function Messages({ fullscreen = false }) {
                                     </AvatarFallback>
                                   </Avatar>
                                 ) : (
-                                  <span className="text-[10px] text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity block text-right leading-none pt-2">
-                                    {formatFullTime(msg.created_at)}
+                                  <span title={formatISTFull(msg.created_at)}
+                                    className="text-[9px] text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity block text-right leading-tight pt-2 whitespace-nowrap -ml-3">
+                                    {formatShortDate(msg.created_at)}<br />{formatFullTime(msg.created_at)}
                                   </span>
                                 )}
                               </div>
@@ -1388,7 +1395,7 @@ export default function Messages({ fullscreen = false }) {
                                 {!msg.isGrouped && (
                                   <div className="flex items-baseline gap-2 mb-1">
                                     <span className="text-sm font-bold text-foreground">{isSelf ? 'You' : msg.sender_name}</span>
-                                    <span className="text-xs text-muted-foreground/60">{formatFullTime(msg.created_at)}</span>
+                                    <span className="text-xs text-muted-foreground/60 whitespace-nowrap" title={formatISTFull(msg.created_at)}>{formatDate(msg.created_at)}</span>
                                     <button onClick={openThread}
                                       className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-primary bg-white hover:bg-primary/5 rounded px-2 py-0.5 border border-border hover:border-primary/40 shadow-sm">
                                       <MessageCircle className="w-3 h-3" /> Reply
@@ -1468,10 +1475,12 @@ export default function Messages({ fullscreen = false }) {
                                   </div>
                                 )}
                                 {!msg.deleted && (
-                                  <ReactionAdder onReact={(emoji) => handleReact(msg, emoji, 'channel')} />
-                                )}
-                                {!msg.deleted && TAG_CHANNELS.includes(selectedChannel?.name) && (
-                                  <TagBar tags={msg.tags} onTag={(tag) => handleTag(msg, tag)} />
+                                  <div className="flex items-center gap-1.5 clear-both">
+                                    <ReactionAdder onReact={(emoji) => handleReact(msg, emoji, 'channel')} />
+                                    {TAG_CHANNELS.includes(selectedChannel?.name) && (
+                                      <TagBar tags={msg.tags} onTag={(tag) => handleTag(msg, tag)} />
+                                    )}
+                                  </div>
                                 )}
                                 {/* Thread reply count */}
                                 {msg.reply_count > 0 && (
@@ -1761,14 +1770,20 @@ export default function Messages({ fullscreen = false }) {
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-baseline gap-2">
+                        <div className="flex items-baseline gap-2 cursor-pointer" title="Jump to this message in the channel"
+                          onClick={() => scrollToChannelMessage(threadMsg.msg_id)}>
                           <span className="text-sm font-bold text-foreground">{threadMsg.sender_id === user?.user_id ? 'You' : threadMsg.sender_name}</span>
-                          <span className="text-xs text-muted-foreground/60">{formatFullTime(threadMsg.created_at)}</span>
+                          <span className="text-xs text-muted-foreground/60 whitespace-nowrap" title={formatISTFull(threadMsg.created_at)}>{formatDate(threadMsg.created_at)}</span>
                         </div>
                         {TAG_CHANNELS.includes(selectedChannel?.name) && (
                           <TagChips tags={threadMsg.tags} onTag={(tag) => handleTag(threadMsg, tag)} />
                         )}
-                        {threadMsg.content && <p className="text-sm text-foreground mt-0.5 whitespace-pre-wrap leading-relaxed">{threadMsg.content}</p>}
+                        {threadMsg.content && (
+                          <p title="Jump to this message in the channel" onClick={() => scrollToChannelMessage(threadMsg.msg_id)}
+                            className="text-sm text-foreground mt-0.5 whitespace-pre-wrap leading-relaxed cursor-pointer rounded hover:bg-muted transition-colors">
+                            {threadMsg.content}
+                          </p>
+                        )}
                         {renderAttachments(threadMsg.attachments, threadMsg.sender_id === user?.user_id)}
                         {TAG_CHANNELS.includes(selectedChannel?.name) && (
                           <TagBar tags={threadMsg.tags} onTag={(tag) => handleTag(threadMsg, tag)} />
@@ -1791,7 +1806,7 @@ export default function Messages({ fullscreen = false }) {
                       <div className="flex-1 min-w-0 group/rep">
                         <div className="flex items-baseline gap-2">
                           <span className="text-xs font-bold text-foreground">{r.sender_id === user?.user_id ? 'You' : r.sender_name}</span>
-                          <span className="text-xs text-muted-foreground/60" title={formatISTFull(r.created_at)}>{formatFullTime(r.created_at)}</span>
+                          <span className="text-xs text-muted-foreground/60 whitespace-nowrap" title={formatISTFull(r.created_at)}>{formatDate(r.created_at)}</span>
                           {r.edited && !r.deleted && <span className="text-[10px] text-muted-foreground/60">(edited)</span>}
                           {(r.sender_id === user?.user_id || isAdmin) && !r.deleted && (
                             <span className="opacity-0 group-hover/rep:opacity-100 transition-opacity flex gap-0.5">
@@ -1825,10 +1840,12 @@ export default function Messages({ fullscreen = false }) {
                           </>
                         )}
                         {!r.deleted && (
-                          <ReactionAdder onReact={(emoji) => handleReact(r, emoji, 'channel')} />
-                        )}
-                        {!r.deleted && TAG_CHANNELS.includes(selectedChannel?.name) && (
-                          <TagBar tags={r.tags} onTag={(tag) => handleTag(r, tag)} />
+                          <div className="flex items-center gap-1.5 clear-both">
+                            <ReactionAdder onReact={(emoji) => handleReact(r, emoji, 'channel')} />
+                            {TAG_CHANNELS.includes(selectedChannel?.name) && (
+                              <TagBar tags={r.tags} onTag={(tag) => handleTag(r, tag)} />
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
