@@ -407,7 +407,7 @@ export default function Reconciliation() {
           totalCount = data.total ?? null;
         }
       } else if (accountType === 'psp') {
-        const qs = buildParams({ transaction_type: txType, status: txStatus, settled_only: 'true' });
+        const qs = buildParams({ transaction_type: txType, status: txStatus, exclude_rejected: 'true' });
         const res = await fetch(`${API_URL}/api/psp/${accountId}/all-transactions?${qs}`, { headers: getAuthHeaders() });
         if (res.ok) {
           const data = await res.json();
