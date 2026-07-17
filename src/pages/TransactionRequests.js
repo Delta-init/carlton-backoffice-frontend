@@ -1017,6 +1017,7 @@ export default function TransactionRequests() {
   const [total, setTotal] = useState(0);
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [baseCurrencyFilter, setBaseCurrencyFilter] = useState("all"); // base_currency (the real payment currency)
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -1100,6 +1101,7 @@ export default function TransactionRequests() {
         const params = new URLSearchParams({ page: p, page_size: pageSize });
         if (statusFilter !== "all") params.append("status", statusFilter);
         if (typeFilter !== "all") params.append("transaction_type", typeFilter);
+        if (baseCurrencyFilter !== "all") params.append("base_currency", baseCurrencyFilter);
         if (searchQuery) params.append("search", searchQuery);
         if (dateFrom) params.append(dateType === "processed" ? "processed_date_from" : "date_from", dateFrom);
         if (dateTo) params.append(dateType === "processed" ? "processed_date_to" : "date_to", dateTo);
@@ -1124,6 +1126,7 @@ export default function TransactionRequests() {
       pageSize,
       statusFilter,
       typeFilter,
+      baseCurrencyFilter,
       searchQuery,
       dateFrom,
       dateTo,
@@ -1621,6 +1624,25 @@ export default function TransactionRequests() {
             <option value="withdrawal">Withdrawal</option>
           </select>
         </div>
+        <div className="min-w-[110px]">
+          <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider mb-1 block">
+            Currency
+          </label>
+          <select
+            value={baseCurrencyFilter}
+            onChange={(e) => {
+              setBaseCurrencyFilter(e.target.value);
+              setPage(1);
+            }}
+            className="w-full px-2 py-1.5 text-sm border border rounded-md bg-card text-foreground h-8"
+            data-testid="filter-base-currency"
+          >
+            <option value="all">All</option>
+            {currencies.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </div>
         <div className="min-w-[120px]">
           <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider mb-1 block">
             Date Type
@@ -1667,6 +1689,7 @@ export default function TransactionRequests() {
         {(searchQuery ||
           statusFilter !== "all" ||
           typeFilter !== "all" ||
+          baseCurrencyFilter !== "all" ||
           dateFrom ||
           dateTo) && (
           <Button
@@ -1676,6 +1699,7 @@ export default function TransactionRequests() {
               setSearchQuery("");
               setStatusFilter("all");
               setTypeFilter("all");
+              setBaseCurrencyFilter("all");
               setDateFrom("");
               setDateTo("");
               setDateType("created");

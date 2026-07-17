@@ -199,6 +199,8 @@ export default function AccountantDashboard() {
 
   // Filters
   const [typeFilter, setTypeFilter] = useState("all");
+  const [baseCurrencyFilter, setBaseCurrencyFilter] = useState("all"); // base_currency (the real payment currency)
+  const currencies = ["USD", "EUR", "GBP", "AED", "SAR", "INR", "JPY", "USDT"];
   const [statusFilter, setStatusFilter] = useState("pending");
   const [destFilter, setDestFilter] = useState("all");
   const [clientFilter, setClientFilter] = useState("");
@@ -294,6 +296,8 @@ export default function AccountantDashboard() {
       if (statusFilter) params.append("status", statusFilter);
       if (typeFilter && typeFilter !== "all")
         params.append("transaction_type", typeFilter);
+      if (baseCurrencyFilter && baseCurrencyFilter !== "all")
+        params.append("base_currency", baseCurrencyFilter);
       if (destFilter && destFilter !== "all")
         params.append("destination_type", destFilter);
       if (destIds.length > 0) {
@@ -400,7 +404,7 @@ export default function AccountantDashboard() {
   useEffect(() => {
     setCurrentPage(1);
     fetchPendingTransactions(1);
-  }, [typeFilter, statusFilter, destFilter, destIds, dateFrom, dateTo, pageSize]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [typeFilter, baseCurrencyFilter, statusFilter, destFilter, destIds, dateFrom, dateTo, pageSize]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Debounced re-fetch for text inputs
   useEffect(() => {
@@ -1115,6 +1119,23 @@ export default function AccountantDashboard() {
                 </SelectContent>
               </Select>
 
+              {/* Currency filter (base_currency) */}
+              <Select value={baseCurrencyFilter} onValueChange={setBaseCurrencyFilter}>
+                <SelectTrigger className="w-[140px] bg-muted/50 border text-foreground h-9">
+                  <SelectValue placeholder="Currency" />
+                </SelectTrigger>
+                <SelectContent className="bg-card border">
+                  <SelectItem value="all" className="text-foreground hover:bg-muted">
+                    All Currencies
+                  </SelectItem>
+                  {currencies.map((c) => (
+                    <SelectItem key={c} value={c} className="text-foreground hover:bg-muted">
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
               {/* Destination filter */}
               <Select value={destFilter} onValueChange={(v) => { setDestFilter(v); setDestIds([]); }}>
                 <SelectTrigger className="w-[155px] bg-muted/50 border text-foreground h-9">
@@ -1267,6 +1288,7 @@ export default function AccountantDashboard() {
 
               {/* Clear all */}
               {(typeFilter !== "all" ||
+                baseCurrencyFilter !== "all" ||
                 statusFilter !== "pending" ||
                 destFilter !== "all" ||
                 clientFilter ||
@@ -1278,6 +1300,7 @@ export default function AccountantDashboard() {
                   size="sm"
                   onClick={() => {
                     setTypeFilter("all");
+                    setBaseCurrencyFilter("all");
                     setStatusFilter("pending");
                     setDestFilter("all");
                     setDestIds([]);
