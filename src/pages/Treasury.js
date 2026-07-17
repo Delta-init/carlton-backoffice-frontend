@@ -214,9 +214,41 @@ export default function Treasury() {
     }
   };
 
-  const downloadStatement = (format = 'csv') => {
+  // Pull EVERY row in the selected range. historyData only holds the page on
+  // screen, so exporting from it produced a statement whose rows didn't add up
+  // to its own totals once a range spanned more than one page.
+  const fetchAllHistoryRows = async () => {
+    if (!historyAccount) return [];
+    const params = new URLSearchParams({ page_size: '200' });
+    if (historyFilters.startDate) params.append('start_date', historyFilters.startDate);
+    if (historyFilters.endDate) params.append('end_date', historyFilters.endDate);
+    if (historyFilters.transactionType) params.append('transaction_type', historyFilters.transactionType);
+    const all = [];
+    let page = 1;
+    let totalPages = 1;
+    try {
+      do {
+        params.set('page', String(page));
+        const res = await fetch(
+          `${API_URL}/api/treasury/${historyAccount.account_id}/history?${params.toString()}`,
+          { headers: getAuthHeaders(), credentials: 'include' },
+        );
+        if (!res.ok) break;
+        const data = await res.json();
+        all.push(...(data.items || []));
+        totalPages = data.total_pages || 1;
+        page += 1;
+      } while (page <= totalPages && page <= 50); // safety cap: 50 x 200 = 10k rows
+    } catch (error) {
+      console.error('Error loading statement rows:', error);
+      return [];
+    }
+    return all;
+  };
+
+  const downloadStatement = async (format = 'csv') => {
     if (!historyAccount || historyData.length === 0) return;
-    
+
     const acctName = historyAccount.account_name;
     const acctCurrency = historyAccount.currency || 'USD';
     const dateStr = new Date().toISOString().split('T')[0];
@@ -228,7 +260,14 @@ export default function Treasury() {
     const closingBalance = historySummary?.closing_balance ?? historyAccount.balance;
     const openingBalance = historySummary?.opening_balance ?? historyAccount.balance;
 
-    const buildRows = () => historyData.map(tx => {
+    // Every transaction in the range, so the listed rows match the totals above.
+    const allTx = await fetchAllHistoryRows();
+    if (allTx.length === 0) {
+      toast.error('Could not load the transactions for this statement');
+      return;
+    }
+
+    const buildRows = () => allTx.map(tx => {
       const isCredit = tx.amount > 0;
       return [
         new Date(tx.created_at).toLocaleDateString(),
@@ -329,7 +368,7 @@ export default function Treasury() {
             <tbody>${rows.map(row => `<tr>${row.map((cell, i) => `<td style="${i === 4 ? 'color:#ef4444;' : ''}${i === 5 ? 'color:#22c55e;' : ''}">${cell}</td>`).join('')}</tr>`).join('')}</tbody>
           </table>
           <div class="footer">
-            <p>Carlton - Treasury Statement | Generated: ${new Date().toLocaleString()} | ${historyData.length} transactions</p>
+            <p>Carlton - Treasury Statement | Generated: ${new Date().toLocaleString()} | ${allTx.length} transactions</p>
           </div>
           <button class="no-print" onclick="window.print()" style="margin-top:15px;padding:8px 20px;background:#1F2833;color:white;border:none;cursor:pointer;border-radius:4px;">Print / Save as PDF</button>
         </body>
