@@ -24,6 +24,7 @@ import {
   Bell, BellOff, BellRing, Maximize2, Pencil, Search as SearchIcon, PhoneCall,
 } from 'lucide-react';
 import { useChatNotification } from '../context/ChatNotificationContext';
+import { usePermissions } from '../context/usePermissions';
 import EmojiPicker from 'emoji-picker-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -319,6 +320,10 @@ export default function Messages({ fullscreen = false }) {
   useEffect(() => () => registerHandler(null), [registerHandler]);
 
   const isAdmin = user?.role === 'admin';
+  // The Process button follows the permission the backend actually enforces
+  // (transaction_requests:approve), not the raw admin role — otherwise everyone
+  // else who is allowed to process withdrawals never sees the button.
+  const { canApprove } = usePermissions();
   const navigate = useNavigate();
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -1487,7 +1492,7 @@ export default function Messages({ fullscreen = false }) {
                                             View transaction →
                                           </button>
                                         )}
-                                        {msg.tx_type === 'withdrawal' && !msg.tx_processed_by && !msg.tx_direct && isAdmin && (
+                                        {msg.tx_type === 'withdrawal' && !msg.tx_processed_by && !msg.tx_direct && canApprove('transaction_requests') && (
                                           <button type="button" onClick={() => handleTxProcess(msg)}
                                             className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-600 text-white hover:bg-amber-700">Process</button>
                                         )}
