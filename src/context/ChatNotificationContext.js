@@ -196,6 +196,34 @@ export function ChatNotificationProvider({ children }) {
     }
   }, []);
 
+  // Deep-link to one specific message: opens the channel/DM, and Messages.js then
+  // scrolls to + flashes that message (and opens its thread when asked).
+  const goToMessage = useCallback((target = {}) => {
+    const q = new URLSearchParams();
+    if (target.channel_id) {
+      q.set('open', `channel:${target.channel_id}${target.msg_id ? `:${target.msg_id}` : ''}`);
+    } else if (target.dm_user_id) {
+      q.set('open', `dm:${target.dm_user_id}${target.message_id ? `:${target.message_id}` : ''}`);
+    }
+    if (target.thread) q.set('thread', '1');
+    const qs = q.toString();
+    navigate(`/messages${qs ? `?${qs}` : ''}`);
+  }, [navigate]);
+
+  // One status change updates the channel card AND the creator's DM card, so the
+  // owner would get two notifications for a single event. Collapse repeats by key.
+  const recentNotifyRef = useRef(new Map());
+  const notifyOnce = useCallback((key, fn) => {
+    const now = Date.now();
+    const seen = recentNotifyRef.current;
+    if (key && now - (seen.get(key) || 0) < 5000) return;
+    if (key) seen.set(key, now);
+    fn();
+  }, []);
+
+  // Tag changes are high-frequency, so they notify silently (no chime).
+  const noPing = useCallback(() => {}, []);
+
   // ── Central WS message handler ─────────────────────────────────────────────
   const handleWsData = useCallback((data) => {
     const me = userRef.current;
@@ -208,7 +236,14 @@ export function ChatNotificationProvider({ children }) {
         if (msg.sender_id === me?.user_id) break;
         setTotalUnread(n => n + 1);
         const preview = msg.content || (msg.attachments?.length ? '📎 Attachment' : '');
-        fireNotification(`💬 ${msg.sender_name}`, preview, () => navigate('/messages'));
+        // A reply-DM carries link_* — send the click straight to the thread it's about.
+        const target = msg.link_channel_id
+          ? { channel_id: msg.link_channel_id, msg_id: msg.link_msg_id, thread: msg.link_thread }
+          : { dm_user_id: msg.sender_id, message_id: msg.message_id };
+        // Reply-DMs share a key with their thread_reply event so the author is
+        // notified once, not twice. Ordinary DMs pass a null key and always notify.
+        notifyOnce(msg.link_reply_id ? `reply:${msg.link_reply_id}` : null, () =>
+          fireNotification(`💬 ${msg.sender_name}`, preview, () => goToMessage(target)));
         break;
       }
       case 'channel_message': {
@@ -216,7 +251,8 @@ export function ChatNotificationProvider({ children }) {
         if (msg.sender_id === me?.user_id) break;
         setTotalUnread(n => n + 1);
         const chName = data.channel_name || 'Channel';
-        fireNotification(`# ${chName}`, `${msg.sender_name}: ${msg.content || '📎'}`, () => navigate('/messages'));
+        fireNotification(`# ${chName}`, `${msg.sender_name}: ${msg.content || '📎'}`,
+          () => goToMessage({ channel_id: msg.channel_id, msg_id: msg.msg_id }));
         break;
       }
       case 'thread_reply': {
@@ -225,7 +261,11 @@ export function ChatNotificationProvider({ children }) {
         const isParent = data.parent_sender_id === me?.user_id;
         const participated = threadParticipationsRef.current.has(`${reply.channel_id}:${reply.thread_root_id}`);
         if (!isParent && !participated) break;
-        fireNotification(`↩ ${reply.sender_name} replied`, reply.content || '📎 Attachment', () => navigate('/messages'));
+        // The author also gets a real DM (sent from the replier); dedupe so they don't
+        // get both that and this for the same reply.
+        notifyOnce(`reply:${reply.msg_id}`, () =>
+          fireNotification(`↩ ${reply.sender_name} replied`, reply.content || '📎 Attachment',
+            () => goToMessage({ channel_id: reply.channel_id, msg_id: reply.thread_root_id, thread: true })));
         break;
       }
       case 'buzz': {
@@ -271,12 +311,50 @@ export function ChatNotificationProvider({ children }) {
             : (data.channel_name ? `# ${data.channel_name}` : '💬 Reaction');
           body = `${n.by} reacted ${n.emoji}${ref}`;
         }
-        fireNotification(title, body, () => navigate('/messages'), playReactionPing);
+        fireNotification(title, body, () => (data.scope === 'channel'
+          ? goToMessage({ channel_id: data.channel_id, msg_id: data.msg_id })
+          : goToMessage({ dm_user_id: n.by_id, message_id: data.message_id })), playReactionPing);
+        break;
+      }
+      case 'tag': {
+        const n = data.notify;
+        if (!n || n.by_id === me?.user_id) break;          // never your own action
+        if (!n.owner_id || n.owner_id !== me?.user_id) break; // the message AUTHOR only
+        setTotalUnread(x => x + 1);
+        const ref = n.ref ? ` ${n.ref}` : '';
+        const verb = n.added ? 'tagged' : 'removed the tag';
+        fireNotification(
+          data.channel_name ? `# ${data.channel_name}` : '🏷 Tag',
+          `${n.by} ${verb} ${n.tag}${ref ? ` on${ref}` : ' on your message'}`,
+          () => goToMessage({ channel_id: data.channel_id, msg_id: data.msg_id }),
+          noPing,   // silent: tagging is high-frequency
+        );
+        break;
+      }
+      // Transaction status changes ride along on the card edits. The same change
+      // touches the channel card and the creator's DM card, hence notifyOnce.
+      case 'channel_edit':
+      case 'dm_edit': {
+        const n = data.notify;
+        if (!n || n.kind !== 'status') break;
+        if (!n.owner_id || n.owner_id !== me?.user_id) break; // the owner only
+        const label = (n.status || '').charAt(0).toUpperCase() + (n.status || '').slice(1);
+        const ref = n.ref ? ` ${n.ref}` : '';
+        notifyOnce(`status:${n.request_id}:${n.status}`, () => {
+          setTotalUnread(x => x + 1);
+          fireNotification(
+            `Transaction ${label}`,
+            `Your transaction${ref} is now ${label}`,
+            () => (data.type === 'channel_edit'
+              ? goToMessage({ channel_id: n.channel_id, msg_id: n.msg_id })
+              : goToMessage({ dm_user_id: n.dm_user_id, message_id: n.message_id })),
+          );
+        });
         break;
       }
       default: break;
     }
-  }, [fireNotification, navigate, startRing, stopRing, playReactionPing]);
+  }, [fireNotification, goToMessage, notifyOnce, noPing, startRing, stopRing, playReactionPing]);
 
   // ── WebSocket (single global connection) ───────────────────────────────────
   useEffect(() => {

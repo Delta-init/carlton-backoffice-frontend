@@ -279,12 +279,17 @@ export default function Messages({ fullscreen = false }) {
 
   // Deep-link from a buzz "Answer": ?open=channel:<id> or ?open=dm:<peerId>
   const consumedOpenRef = useRef(false);
+  // Message a notification click asked us to land on, applied once it has rendered.
+  const pendingJumpRef = useRef(null);
   useEffect(() => {
     if (consumedOpenRef.current) return;
     const params = new URLSearchParams(window.location.search);
     const open = params.get('open');
     if (!open) return;
-    const [kind, id] = open.split(':');
+    // `open` is kind:id[:msg_id] — the optional third part is the message a
+    // notification click wants us to land on.
+    const [kind, id, targetMsgId] = open.split(':');
+    const wantThread = params.get('thread') === '1';
     let done = false;
     if (kind === 'channel') {
       const ch = channels.find(c => c.channel_id === id);
@@ -295,7 +300,13 @@ export default function Messages({ fullscreen = false }) {
     }
     if (done) {
       consumedOpenRef.current = true;
+      // Messages load right after the channel/DM is selected, so defer the jump
+      // until the target row actually exists in the DOM.
+      if (targetMsgId && kind === 'channel') {
+        pendingJumpRef.current = { msgId: targetMsgId, thread: wantThread, tries: 0 };
+      }
       params.delete('open');
+      params.delete('thread');
       const qs = params.toString();
       window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
     }
@@ -550,6 +561,27 @@ export default function Messages({ fullscreen = false }) {
     }, 60);
     setTimeout(() => setHighlightMsgId(cur => (cur === msgId ? null : cur)), 2400);
   };
+
+  // Land on the message a notification click targeted. The channel's messages arrive
+  // asynchronously, so retry briefly until the row exists rather than firing blindly.
+  useEffect(() => {
+    const jump = pendingJumpRef.current;
+    if (!jump || !channelMessages.length) return;
+    const target = channelMessages.find(m => m.msg_id === jump.msgId);
+    if (!target) {
+      // Not in the loaded window (older message) — give up quietly after a few tries.
+      jump.tries += 1;
+      if (jump.tries > 5) pendingJumpRef.current = null;
+      return;
+    }
+    pendingJumpRef.current = null;
+    scrollToChannelMessage(jump.msgId);
+    if (jump.thread && selectedChannel) {
+      setThreadMsg(target);
+      fetchThreadReplies(selectedChannel.channel_id, jump.msgId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channelMessages, selectedChannel]);
 
   // Process a withdrawal request from its #withdraw_only card (captcha-gated, really processes it)
   const handleTxProcess = async (msg) => {
@@ -1385,7 +1417,7 @@ export default function Messages({ fullscreen = false }) {
                                   </Avatar>
                                 ) : (
                                   <span title={formatISTFull(msg.created_at)}
-                                    className="text-[9px] text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity block text-right leading-tight pt-2 whitespace-nowrap -ml-3">
+                                    className="text-[9px] text-muted-foreground block text-right leading-tight pt-2 whitespace-nowrap -ml-3">
                                     {formatShortDate(msg.created_at)}<br />{formatFullTime(msg.created_at)}
                                   </span>
                                 )}
