@@ -281,7 +281,9 @@ export default function Exchangers() {
   // Quick date presets for the reconciliation summary range.
   const setReconPeriod = (preset) => {
     const now = new Date();
-    const fmt = (d) => d.toISOString().split('T')[0];
+    // Format from LOCAL components — toISOString() would shift the boundary a day back
+    // in positive-UTC-offset timezones (IST/GST), misattributing a day's transactions.
+    const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     if (preset === 'all') { setReconSumFrom(''); setReconSumTo(''); }
     else if (preset === 'this_month') { setReconSumFrom(fmt(new Date(now.getFullYear(), now.getMonth(), 1))); setReconSumTo(fmt(new Date(now.getFullYear(), now.getMonth() + 1, 0))); }
     else if (preset === 'last_month') { setReconSumFrom(fmt(new Date(now.getFullYear(), now.getMonth() - 1, 1))); setReconSumTo(fmt(new Date(now.getFullYear(), now.getMonth(), 0))); }

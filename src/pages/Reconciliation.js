@@ -845,7 +845,9 @@ export default function Reconciliation() {
   const selectedAccount = allAccounts.find(a => a.id === selectedAccountId);
 
   // Exchanger opening/closing tiles — same authoritative endpoint the Vendors detail uses,
-  // driven by the panel's date filter so it agrees with the transaction list below it.
+  // driven by the panel's date filter. The tiles bucket by transaction (value) date via the
+  // settlement pipeline while the list below filters client-side by created_at, so the two can
+  // differ for back-dated/imported rows; the tiles are the authoritative settlement view.
   useEffect(() => {
     if (selectedAccountType !== 'exchanger' || !selectedAccountId) { setExchReconSummary([]); return; }
     const p = new URLSearchParams();
@@ -1341,10 +1343,10 @@ export default function Reconciliation() {
                         {exchReconSummary.map(s => (
                           <div key={s.currency} className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
                             <span className="font-semibold text-slate-500 w-9 shrink-0">{s.currency}</span>
-                            <span className="text-slate-500">Opening <span className="font-mono font-semibold text-slate-700">{formatAmount(s.opening_balance, s.currency)}</span></span>
+                            <span className="text-slate-500">Opening <span className="font-mono font-semibold text-slate-700">{s.opening_balance < 0 ? '-' : ''}{formatAmount(s.opening_balance, s.currency)}</span></span>
                             <span className="text-green-600">Credits <span className="font-mono font-semibold">+{formatAmount(s.total_credits, s.currency)}</span></span>
                             <span className="text-red-600">Debits <span className="font-mono font-semibold">-{formatAmount(s.total_debits, s.currency)}</span></span>
-                            <span className="text-blue-700 ml-auto">Closing <span className="font-mono font-bold">{formatAmount(s.closing_balance, s.currency)}</span></span>
+                            <span className="text-blue-700 ml-auto">Closing <span className="font-mono font-bold">{s.closing_balance < 0 ? '-' : ''}{formatAmount(s.closing_balance, s.currency)}</span></span>
                           </div>
                         ))}
                       </div>
