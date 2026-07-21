@@ -483,6 +483,26 @@ export default function Reconciliation() {
 
         // Newest-first, then paginate client-side.
         merged.sort((a, b) => (b.created_at || b.date || '').localeCompare(a.created_at || a.date || ''));
+
+        // Running settlement balance, per payment currency, walked oldest→newest so the
+        // NEWEST row equals the Net Settlement total in the header. Same credit/debit rule
+        // the row rendering uses. Computed over the WHOLE list before the page-slice, so it
+        // stays correct across pages.
+        const isCreditRow = (t) => {
+          const ty = t.type || t.transaction_type || 'transfer';
+          return !['withdrawal', 'transfer_out', 'debt_payment', 'expense', 'loan_disbursement', 'balance_adjustment_debit'].includes(ty)
+            && !/withdraw|debit|out/i.test(ty);
+        };
+        const runByCur = {};
+        for (let i = merged.length - 1; i >= 0; i--) {
+          const t = merged[i];
+          const cur = t.base_currency || t.currency || 'USD';
+          const amt = Math.abs(Number(t.base_amount ?? t.amount) || 0);
+          runByCur[cur] = Math.round(((runByCur[cur] || 0) + (isCreditRow(t) ? amt : -amt)) * 100) / 100;
+          t.exch_running_balance = runByCur[cur];
+          t.exch_running_currency = cur;
+        }
+
         const PAGE = 20;
         totalCount = merged.length;
         totalPagesCount = Math.max(1, Math.ceil(merged.length / PAGE));
@@ -1474,6 +1494,13 @@ export default function Reconciliation() {
                                       {!isTreasury && payCur && payCur !== 'USD' && tx.amount != null && (
                                         <span className="text-[10px] text-muted-foreground font-mono mt-0.5">
                                           ≈ USD {Math.abs(Number(tx.amount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </span>
+                                      )}
+
+                                      {/* Exchanger: running settlement balance (per currency; newest row = Net Settlement) */}
+                                      {selectedAccount?.type === 'exchanger' && tx.exch_running_balance != null && (
+                                        <span className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                                          Running balance: {formatAmount(tx.exch_running_balance, tx.exch_running_currency || payCur)}
                                         </span>
                                       )}
                                     </div>
