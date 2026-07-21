@@ -567,6 +567,28 @@ export default function Messages({ fullscreen = false }) {
     setTimeout(() => setHighlightMsgId(cur => (cur === msgId ? null : cur)), 2400);
   };
 
+  // Open a channel message from elsewhere (e.g. clicking a reply-DM bubble): switch to
+  // the channel, scroll to the message and open its thread. Reuses pendingJumpRef so the
+  // jump waits for the channel's messages to load.
+  const jumpToChannelMessage = (channelId, msgId, thread) => {
+    const ch = channels.find(c => c.channel_id === channelId);
+    if (!ch) { toast.error('Channel not found'); return; }
+    setActiveSection('channels');
+    setSelectedConversation(null);
+    setThreadMsg(null);
+    if (selectedChannel?.channel_id === channelId) {
+      // Already on this channel — messages are loaded, so jump straight away.
+      scrollToChannelMessage(msgId);
+      if (thread) {
+        const target = channelMessages.find(m => m.msg_id === msgId);
+        if (target) { setThreadMsg(target); fetchThreadReplies(channelId, msgId); }
+      }
+    } else {
+      setSelectedChannel(ch);
+      pendingJumpRef.current = { msgId, thread: !!thread, tries: 0 };
+    }
+  };
+
   // Land on the message a notification click targeted. The channel's messages arrive
   // asynchronously, so retry briefly until the row exists rather than firing blindly.
   useEffect(() => {
@@ -1664,7 +1686,14 @@ export default function Messages({ fullscreen = false }) {
                                   <button title="Delete" onClick={() => deleteDM(msg.message_id)} className="p-1 text-muted-foreground hover:text-red-500"><Trash2 className="w-3 h-3" /></button>
                                 </div>
                               )}
-                              {msg.content && <p className="text-sm leading-relaxed">{msg.content}</p>}
+                              {msg.content && (msg.link_channel_id ? (
+                                <p onClick={() => jumpToChannelMessage(msg.link_channel_id, msg.link_msg_id, msg.link_thread)}
+                                  title="Open the thread" className="text-sm leading-relaxed cursor-pointer hover:underline underline-offset-2">
+                                  {msg.content} <span className="opacity-70">↗</span>
+                                </p>
+                              ) : (
+                                <p className="text-sm leading-relaxed">{msg.content}</p>
+                              ))}
                               {msg.attachment && (
                                 isImage(msg.attachment.filename, msg.attachment.content_type) ? (
                                   <div className="mt-1 cursor-pointer rounded-lg overflow-hidden" onClick={async () => {
