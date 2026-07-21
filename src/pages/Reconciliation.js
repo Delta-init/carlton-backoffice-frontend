@@ -304,6 +304,7 @@ export default function Reconciliation() {
   const [txFilterStatus, setTxFilterStatus] = useState('all');
   const [txFilterDateFrom, setTxFilterDateFrom] = useState('');
   const [txFilterDateTo, setTxFilterDateTo] = useState('');
+  const [exchReconSummary, setExchReconSummary] = useState([]); // exchanger opening/closing tiles
   const [txFilterAmountMin, setTxFilterAmountMin] = useState('');
   const [txFilterAmountMax, setTxFilterAmountMax] = useState('');
   const [txFilterTags, setTxFilterTags] = useState([]); // selected tag IDs
@@ -843,6 +844,20 @@ export default function Reconciliation() {
 
   const selectedAccount = allAccounts.find(a => a.id === selectedAccountId);
 
+  // Exchanger opening/closing tiles — same authoritative endpoint the Vendors detail uses,
+  // driven by the panel's date filter so it agrees with the transaction list below it.
+  useEffect(() => {
+    if (selectedAccountType !== 'exchanger' || !selectedAccountId) { setExchReconSummary([]); return; }
+    const p = new URLSearchParams();
+    if (txFilterDateFrom) p.set('date_from', txFilterDateFrom);
+    if (txFilterDateTo) p.set('date_to', txFilterDateTo);
+    const qs = p.toString();
+    fetch(`${API_URL}/api/vendors/${selectedAccountId}/reconciliation-summary${qs ? `?${qs}` : ''}`, { headers: getAuthHeaders() })
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => setExchReconSummary(d?.summary || []))
+      .catch(() => setExchReconSummary([]));
+  }, [selectedAccountType, selectedAccountId, txFilterDateFrom, txFilterDateTo, getAuthHeaders]);
+
   // Sort all transactions newest-first for pagination
   const sortedAllTxs = [...transactions].sort((a, b) => {
     const da = a.created_at || a.date || '';
@@ -1319,6 +1334,21 @@ export default function Reconciliation() {
                         </div>
                       );
                     })()}
+
+                    {/* Exchanger: Opening / Credits / Debits / Closing over the filtered range */}
+                    {selectedAccount?.type === 'exchanger' && exchInnerTab === 'transactions' && exchReconSummary.length > 0 && (
+                      <div className="px-4 py-2 bg-slate-50 border-b border-slate-100 space-y-1.5">
+                        {exchReconSummary.map(s => (
+                          <div key={s.currency} className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                            <span className="font-semibold text-slate-500 w-9 shrink-0">{s.currency}</span>
+                            <span className="text-slate-500">Opening <span className="font-mono font-semibold text-slate-700">{formatAmount(s.opening_balance, s.currency)}</span></span>
+                            <span className="text-green-600">Credits <span className="font-mono font-semibold">+{formatAmount(s.total_credits, s.currency)}</span></span>
+                            <span className="text-red-600">Debits <span className="font-mono font-semibold">-{formatAmount(s.total_debits, s.currency)}</span></span>
+                            <span className="text-blue-700 ml-auto">Closing <span className="font-mono font-bold">{formatAmount(s.closing_balance, s.currency)}</span></span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
                     {/* Exchanger: Settlement History tab */}
                     {selectedAccount?.type === 'exchanger' && exchInnerTab === 'settlements' && (
