@@ -499,7 +499,8 @@ export default function Reconciliation() {
           const t = merged[i];
           const cur = t.base_currency || t.currency || 'USD';
           const amt = Math.abs(Number(t.base_amount ?? t.amount) || 0);
-          runByCur[cur] = Math.round(((runByCur[cur] || 0) + (isCreditRow(t) ? amt : -amt)) * 100) / 100;
+          const fee = Number(t.vendor_commission_base_amount) || 0;   // withdrawal fee, netted out like the sheet
+          runByCur[cur] = Math.round(((runByCur[cur] || 0) + (isCreditRow(t) ? amt : -amt) - fee) * 100) / 100;
           t.exch_running_balance = runByCur[cur];
           t.exch_running_currency = cur;
         }
@@ -890,7 +891,10 @@ export default function Reconciliation() {
       const cur  = tx.base_currency || tx.currency || selectedAccount?.currency || '';
       const type = tx.transaction_type || tx.type || '';
       const sign = /withdrawal|withdraw|debit|out/i.test(type) ? -1 : 1;
-      netMap[cur] = (netMap[cur] || 0) + sign * Math.abs(Number(amt));
+      // Deduct the withdrawal fee (stored as vendor commission) so the daily Net matches
+      // the reconciliation sheet, which nets fees out. Non-exchanger rows have no commission.
+      const fee = Number(tx.vendor_commission_base_amount) || 0;
+      netMap[cur] = (netMap[cur] || 0) + sign * Math.abs(Number(amt)) - fee;
     });
     return Object.entries(netMap); // [[currency, net], ...]
   };
