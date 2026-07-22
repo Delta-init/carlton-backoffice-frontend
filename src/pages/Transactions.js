@@ -1206,7 +1206,9 @@ export default function Transactions() {
       if (formData.reference) {
         formDataToSend.append("reference", formData.reference);
       }
-      if (formData.transaction_date) {
+      // Withdrawals are stamped with the creation date by the backend — omit the field
+      // so it can't diverge; only deposits may carry a chosen value date.
+      if (formData.transaction_type === "deposit" && formData.transaction_date) {
         formDataToSend.append("transaction_date", formData.transaction_date);
       }
       if (formData.crm_reference) {
@@ -3051,18 +3053,33 @@ export default function Transactions() {
                   <Label className="text-muted-foreground text-xs uppercase tracking-wider">
                     Transaction Date
                   </Label>
-                  <Input
-                    type="date"
-                    value={formData.transaction_date}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        transaction_date: e.target.value,
-                      })
-                    }
-                    className="bg-muted/50 border-border text-foreground focus:border-[#66FCF1]"
-                    data-testid="tx-transaction-date"
-                  />
+                  {formData.transaction_type === "withdrawal" ? (
+                    <>
+                      <Input
+                        type="date"
+                        value={formData.transaction_date}
+                        readOnly
+                        disabled
+                        title="Auto-set to the creation date for withdrawals"
+                        className="bg-muted border-border text-muted-foreground cursor-not-allowed"
+                        data-testid="tx-transaction-date"
+                      />
+                      <p className="text-[10px] text-muted-foreground">Auto-set to the creation date for withdrawals.</p>
+                    </>
+                  ) : (
+                    <Input
+                      type="date"
+                      value={formData.transaction_date}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          transaction_date: e.target.value,
+                        })
+                      }
+                      className="bg-muted/50 border-border text-foreground focus:border-[#66FCF1]"
+                      data-testid="tx-transaction-date"
+                    />
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -4445,6 +4462,7 @@ export default function Transactions() {
               </div>
               {fieldEditTx?.status === "pending" ? (
               <>
+              {fieldEditTx?.transaction_type === "deposit" && (
               <div>
                 <Label className="text-xs text-muted-foreground uppercase">
                   Transaction Date
@@ -4462,6 +4480,7 @@ export default function Transactions() {
                   data-testid="field-edit-date"
                 />
               </div>
+              )}
 
               {/* Payment Currency Section */}
               <div className="p-3 bg-primary/5 rounded border border-blue-200 space-y-3">
