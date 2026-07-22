@@ -254,6 +254,7 @@ export default function Reconciliation() {
   const [txPage, setTxPage] = useState(0);
   const [txTotalPages, setTxTotalPages] = useState(1);
   const [txTotalFromApi, setTxTotalFromApi] = useState(null);
+  const [pspClosingByDate, setPspClosingByDate] = useState({});  // PSP daily closing balance {date: {cur: bal}}
   const TX_PAGE_SIZE = 20; // individual transactions per page
 
   // Vendor data map: vendor_id → full vendor object (for correct settlement figures)
@@ -408,18 +409,39 @@ export default function Reconciliation() {
           totalCount = data.total ?? null;
         }
       } else if (accountType === 'psp') {
-        const qs = buildParams({ transaction_type: txType, status: txStatus, exclude_rejected: 'true' });
+        // PSP is otherwise server-paginated 20/page; fetch the FULL set so the running
+        // balance stays cumulative across pages, then paginate client-side (like exchanger).
+        const qs = buildParams({ transaction_type: txType, status: txStatus, exclude_rejected: 'true', page: 1, page_size: 100000 });
         const res = await fetch(`${API_URL}/api/psp/${accountId}/all-transactions?${qs}`, { headers: getAuthHeaders() });
         if (res.ok) {
           const data = await res.json();
-          list = (data.items || []).map(t => ({
+          const merged = (data.items || []).map(t => ({
             ...t,
             amount: t.base_amount ?? t.amount,
             currency: t.base_currency || t.currency || 'USD',
             status: t.settled ? 'settled' : (t.status || ''),
           }));
-          totalPagesCount = data.total_pages || 1;
-          totalCount = data.total ?? null;
+          // Newest-first, then a gross running balance (deposits +, withdrawals −) per
+          // currency over the WHOLE list, plus each date's closing balance.
+          merged.sort((a, b) => (b.created_at || b.date || '').localeCompare(a.created_at || a.date || ''));
+          const isWd = (t) => /withdraw|debit|out/i.test(t.transaction_type || t.type || '');
+          const runByCur = {};
+          const closingByDate = {};
+          for (let i = merged.length - 1; i >= 0; i--) {
+            const t = merged[i];
+            const cur = t.base_currency || t.currency || 'USD';
+            const amt = Math.abs(Number(t.base_amount ?? t.amount) || 0);
+            runByCur[cur] = Math.round(((runByCur[cur] || 0) + (isWd(t) ? -amt : amt)) * 100) / 100;
+            t.psp_running_balance = runByCur[cur];
+            t.psp_running_currency = cur;
+            const dt = (t.created_at || t.date || '').split('T')[0];
+            (closingByDate[dt] = closingByDate[dt] || {})[cur] = runByCur[cur];
+          }
+          setPspClosingByDate(closingByDate);
+          const PAGE = 20;
+          totalCount = merged.length;
+          totalPagesCount = Math.max(1, Math.ceil(merged.length / PAGE));
+          list = merged.slice(page * PAGE, page * PAGE + PAGE);
         }
       } else if (accountType === 'exchanger') {
         // An exchanger's reconciliation must reflect everything that feeds the Net
@@ -1470,6 +1492,12 @@ export default function Reconciliation() {
                                         Net: {net >= 0 ? '+' : ''}{formatAmount(net, cur)}
                                       </span>
                                     ))}
+                                    {/* PSP: daily closing balance (per currency) */}
+                                    {selectedAccount?.type === 'psp' && Object.entries(pspClosingByDate[date] || {}).map(([cur, bal]) => (
+                                      <span key={`cl-${cur}`} className="text-[10px] text-muted-foreground font-mono">
+                                        Closing: {formatAmount(bal, cur)}
+                                      </span>
+                                    ))}
                                   </div>
                                 )}
                               </div>
@@ -1537,6 +1565,13 @@ export default function Reconciliation() {
                                       {selectedAccount?.type === 'exchanger' && tx.exch_running_balance != null && (
                                         <span className="text-[10px] text-muted-foreground font-mono mt-0.5">
                                           Running balance: {formatAmount(tx.exch_running_balance, tx.exch_running_currency || payCur)}
+                                        </span>
+                                      )}
+
+                                      {/* PSP: gross running balance (per currency) */}
+                                      {selectedAccount?.type === 'psp' && tx.psp_running_balance != null && (
+                                        <span className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                                          Running balance: {formatAmount(tx.psp_running_balance, tx.psp_running_currency || payCur)}
                                         </span>
                                       )}
                                     </div>
