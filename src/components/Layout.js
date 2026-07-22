@@ -317,7 +317,7 @@ export default function Layout() {
       </aside>
 
       {/* ── Main content ────────────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex-1 flex flex-col min-h-screen min-w-0">
 
         {/* Impersonation Banner */}
         {impersonating && (
@@ -419,7 +419,7 @@ export default function Layout() {
           </div>
         </header>
 
-        <main className={`flex-1 p-4 md:p-6 lg:p-8 ${s.mainBg}`}>
+        <main className={`flex-1 min-w-0 overflow-x-hidden p-4 md:p-6 lg:p-8 ${s.mainBg}`}>
           <Outlet />
         </main>
       </div>

@@ -34,6 +34,7 @@ import Layout from "./components/Layout";
 import TransactionRequests from "./pages/TransactionRequests";
 import Profile from "./pages/Profile";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
 import { usePermissions } from "./context/usePermissions";
 import { ChatNotificationProvider } from "./context/ChatNotificationContext";
@@ -244,14 +245,16 @@ function ThemedToaster() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <ThemeProvider>
-        <AuthProvider>
-          <AppRouter />
-          <ThemedToaster />
-        </AuthProvider>
-      </ThemeProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <ThemeProvider>
+          <AuthProvider>
+            <AppRouter />
+            <ThemedToaster />
+          </AuthProvider>
+        </ThemeProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 

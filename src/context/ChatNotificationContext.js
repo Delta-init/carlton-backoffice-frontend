@@ -362,7 +362,9 @@ export function ChatNotificationProvider({ children }) {
     const token = localStorage.getItem('auth_token');
     if (!token) return;
 
-    if (Notification.permission === 'default') {
+    // Guard the global: iOS Safari tabs don't define Notification, so an unguarded
+    // read here throws and (absent an error boundary) blanks the whole app on mobile.
+    if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission().catch(() => {});
     }
 

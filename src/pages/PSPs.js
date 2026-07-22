@@ -2024,6 +2024,7 @@ export default function PSPs() {
                                     {expandedTxs.length === 0 ? (
                                       <p className="text-xs text-muted-foreground">Loading...</p>
                                     ) : (
+                                      <div className="overflow-x-auto">
                                       <table className="w-full text-xs">
                                         <thead>
                                           <tr className="text-muted-foreground border-b border">
@@ -2078,6 +2079,7 @@ export default function PSPs() {
                                           })}
                                         </tbody>
                                       </table>
+                                      </div>
                                     )}
                                   </div>
                                 </TableCell>
