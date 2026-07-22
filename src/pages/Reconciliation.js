@@ -25,7 +25,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   Upload, CheckCircle2, Clock, History, Loader2, FileText, Download, Eye,
   X, FileSpreadsheet, Building2, CreditCard, Store, Trash2, Pencil,
-  Search, SlidersHorizontal, Tag,
+  Search, SlidersHorizontal, Tag, RotateCcw,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -1762,7 +1762,7 @@ export default function Reconciliation() {
                 <div className="grid grid-cols-3 gap-3">
                   {['treasury', 'psp', 'exchanger'].map(type => {
                     const { label, Icon, color, border, bg } = TYPE_CONFIG[type];
-                    const s = historySummary[type] || { done: 0, pending: 0 };
+                    const s = historySummary[type] || { done: 0, pending: 0, re_reconcile: 0 };
                     return (
                       <div key={type} className={`rounded-lg border p-3 ${bg} ${border}`}>
                         <div className="flex items-center gap-2 mb-2">
@@ -1778,6 +1778,12 @@ export default function Reconciliation() {
                             <p className="text-xs text-yellow-600">Pending</p>
                             <p className="text-xl font-bold text-yellow-700">{s.pending}</p>
                           </div>
+                          {(s.re_reconcile || 0) > 0 && (
+                            <div>
+                              <p className="text-xs text-amber-600">Re-reconcile</p>
+                              <p className="text-xl font-bold text-amber-700">{s.re_reconcile}</p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -1804,7 +1810,7 @@ export default function Reconciliation() {
                   </div>
                   {/* Status filter */}
                   <div className="flex gap-1.5">
-                    {[['all','All'],['done','✅ Done'],['pending','⏳ Pending']].map(([v, lbl]) => (
+                    {[['all','All'],['done','✅ Done'],['pending','⏳ Pending'],['re_reconcile','🔄 Re-reconcile']].map(([v, lbl]) => (
                       <button
                         key={v}
                         onClick={() => setHistoryStatusFilter(v)}
@@ -1812,6 +1818,7 @@ export default function Reconciliation() {
                           historyStatusFilter === v
                             ? v === 'done' ? 'bg-green-600 text-white'
                               : v === 'pending' ? 'bg-yellow-500 text-white'
+                              : v === 're_reconcile' ? 'bg-amber-500 text-white'
                               : 'bg-slate-800 text-white'
                             : 'bg-card border border text-muted-foreground hover:border-slate-400'
                         }`}
@@ -1857,7 +1864,8 @@ export default function Reconciliation() {
                     {pagedHistoryDates.map(date => {
                       const dateRows = byDate[date];
                       const doneCount = dateRows.filter(r => r.status === 'done').length;
-                      const pendingCount = dateRows.length - doneCount;
+                      const reReconcileCount = dateRows.filter(r => r.status === 're_reconcile').length;
+                      const pendingCount = dateRows.length - doneCount - reReconcileCount;
                       return (
                         <div key={date}>
                           {/* Date group header */}
@@ -1874,6 +1882,11 @@ export default function Reconciliation() {
                             {pendingCount > 0 && (
                               <span className="text-xs font-medium text-yellow-600 bg-yellow-50 border border-yellow-100 rounded px-2 py-0.5">
                                 {pendingCount} pending
+                              </span>
+                            )}
+                            {reReconcileCount > 0 && (
+                              <span className="text-xs font-medium text-amber-600 bg-amber-50 border border-amber-100 rounded px-2 py-0.5">
+                                {reReconcileCount} re-reconcile
                               </span>
                             )}
                           </div>
@@ -1898,7 +1911,7 @@ export default function Reconciliation() {
                                   return (
                                     <TableRow
                                       key={row.key}
-                                      className={`text-xs ${row.status === 'done' ? 'bg-green-50/30' : 'bg-yellow-50/20'}`}
+                                      className={`text-xs ${row.status === 'done' ? 'bg-green-50/30' : row.status === 're_reconcile' ? 'bg-amber-50/40' : 'bg-yellow-50/20'}`}
                                     >
                                       <TableCell className="font-medium text-foreground py-2.5">
                                         {getAccountName(row.account_id) || row.account_name}
@@ -1992,6 +2005,10 @@ export default function Reconciliation() {
                                         {row.status === 'done' ? (
                                           <Badge className="bg-green-100 text-green-700 text-xs py-0 px-2 gap-1">
                                             <CheckCircle2 className="w-3 h-3" /> Done
+                                          </Badge>
+                                        ) : row.status === 're_reconcile' ? (
+                                          <Badge className="bg-amber-100 text-amber-700 text-xs py-0 px-2 gap-1">
+                                            <RotateCcw className="w-3 h-3" /> Re-reconcile
                                           </Badge>
                                         ) : (
                                           <Badge className="bg-yellow-100 text-yellow-700 text-xs py-0 px-2 gap-1">
