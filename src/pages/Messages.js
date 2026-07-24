@@ -21,7 +21,7 @@ import {
   MessageSquare, Send, Users, User, Search, Plus, Check, CheckCheck,
   Loader2, Paperclip, X, FileText, Image as ImageIcon, FileSpreadsheet, File,
   Hash, MessageCircle, ChevronRight, Video, ZoomIn, PanelRightOpen, Settings, Trash2,
-  Bell, BellOff, BellRing, Maximize2, Pencil, Search as SearchIcon, PhoneCall,
+  Bell, BellOff, BellRing, Maximize2, Pencil, Search as SearchIcon, PhoneCall, Activity,
 } from 'lucide-react';
 import { useChatNotification } from '../context/ChatNotificationContext';
 import { usePermissions } from '../context/usePermissions';
@@ -218,6 +218,13 @@ export default function Messages({ fullscreen = false }) {
   const [selectedAllConversation, setSelectedAllConversation] = useState(null);
   const [allMessages, setAllMessages] = useState([]);
   const [loadingAll, setLoadingAll] = useState(false);
+  // Activity feed (unified view of every channel)
+  const [activityItems, setActivityItems] = useState([]);
+  const [activityChannels, setActivityChannels] = useState([]);
+  const [activityFilter, setActivityFilter] = useState('');   // channel_id; '' = all channels
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activityPage, setActivityPage] = useState(1);
+  const [activityHasMore, setActivityHasMore] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   // Channel state
@@ -881,6 +888,22 @@ export default function Messages({ fullscreen = false }) {
     try { const r = await fetch(`${API_URL}/api/messages/admin/conversation/${u1}/${u2}`, { headers: getAuthHeaders() }); if (r.ok) setAllMessages(await r.json()); } catch { /* */ }
   }, [getAuthHeaders, isAdmin]);
 
+  const fetchActivity = useCallback(async (page = 1, channelId = '') => {
+    setActivityLoading(true);
+    try {
+      const qs = new URLSearchParams({ page: String(page), page_size: '40' });
+      if (channelId) qs.set('channel_id', channelId);
+      const r = await fetch(`${API_URL}/api/channels/activity?${qs.toString()}`, { headers: getAuthHeaders() });
+      if (r.ok) {
+        const d = await r.json();
+        setActivityItems(prev => (page > 1 ? [...prev, ...(d.items || [])] : (d.items || [])));
+        setActivityChannels(d.channels || []);
+        setActivityHasMore((d.page || 1) < (d.total_pages || 1));
+        setActivityPage(d.page || 1);
+      }
+    } catch { /* */ } finally { setActivityLoading(false); }
+  }, [getAuthHeaders]);
+
   const markAsRead = useCallback(async (recipientId) => {
     try { await fetch(`${API_URL}/api/messages/mark-read/${recipientId}`, { method: 'PUT', headers: getAuthHeaders() }); } catch { /* */ }
   }, [getAuthHeaders]);
@@ -1085,6 +1108,7 @@ export default function Messages({ fullscreen = false }) {
   }, [fetchUsers, fetchConversations, fetchChannels]);
 
   useEffect(() => { if (viewMode === 'all' && isAdmin) fetchAllConversations(); }, [viewMode, isAdmin, fetchAllConversations]);
+  useEffect(() => { if (viewMode === 'activity') fetchActivity(1, activityFilter); }, [viewMode, activityFilter, fetchActivity]);
   useEffect(() => { if (selectedAllConversation && isAdmin) fetchConversationMessages(selectedAllConversation.user1_id, selectedAllConversation.user2_id); }, [selectedAllConversation, isAdmin, fetchConversationMessages]);
 
   useEffect(() => {
@@ -1199,16 +1223,19 @@ export default function Messages({ fullscreen = false }) {
           >
             {soundEnabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
           </button>
-        {isAdmin && (
-          <div className="flex items-center bg-muted rounded-lg p-1">
-            <Button variant={viewMode === 'my' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('my')} className="rounded-md">
-              <User className="w-4 h-4 mr-1" /> My Messages
-            </Button>
+        <div className="flex items-center bg-muted rounded-lg p-1">
+          <Button variant={viewMode === 'my' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('my')} className="rounded-md">
+            <User className="w-4 h-4 mr-1" /> My Messages
+          </Button>
+          <Button variant={viewMode === 'activity' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('activity')} className="rounded-md">
+            <Activity className="w-4 h-4 mr-1" /> Activity
+          </Button>
+          {isAdmin && (
             <Button variant={viewMode === 'all' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('all')} className="rounded-md">
               <Users className="w-4 h-4 mr-1" /> All Communications
             </Button>
-          </div>
-        )}
+          )}
+        </div>
         </div>
       </div>
 
@@ -1312,6 +1339,72 @@ export default function Messages({ fullscreen = false }) {
             </CardContent>
           </Card>
         </div>
+      ) : viewMode === 'activity' ? (
+
+        /* ── Activity: unified feed of every channel ─────────────────────────── */
+        <Card className="flex-1 flex flex-col min-h-0">
+          <CardHeader className="border-b py-3">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <CardTitle className="text-base flex items-center gap-2"><Activity className="w-4 h-4" /> Activity <span className="text-xs font-normal text-muted-foreground/60">· all channels, newest first</span></CardTitle>
+              <Button variant="ghost" size="sm" onClick={() => fetchActivity(1, activityFilter)} className="text-muted-foreground">
+                <Loader2 className={`w-4 h-4 mr-1 ${activityLoading ? 'animate-spin' : ''}`} /> Refresh
+              </Button>
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap mt-2">
+              <button onClick={() => setActivityFilter('')} className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${!activityFilter ? 'bg-primary text-white border-primary' : 'text-muted-foreground border-border hover:bg-muted'}`}>All</button>
+              {activityChannels.map(c => (
+                <button key={c.channel_id} onClick={() => setActivityFilter(c.channel_id)}
+                  className={`inline-flex items-center gap-0.5 text-xs px-2 py-0.5 rounded-full border transition-colors ${activityFilter === c.channel_id ? 'bg-primary text-white border-primary' : 'text-muted-foreground border-border hover:bg-muted'}`}>
+                  <Hash className="w-2.5 h-2.5" />{c.name}
+                </button>
+              ))}
+            </div>
+          </CardHeader>
+          <CardContent className="flex-1 p-0 overflow-hidden">
+            <ScrollArea className="h-full">
+              {activityLoading && activityItems.length === 0 ? (
+                <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+              ) : activityItems.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground"><Activity className="w-12 h-12 mx-auto mb-2 opacity-40" /><p>No activity yet</p></div>
+              ) : (
+                <div className="divide-y">
+                  {activityItems.map(msg => (
+                    <div key={msg.msg_id} onClick={() => { setViewMode('my'); jumpToChannelMessage(msg.channel_id, msg.msg_id, false); }}
+                      className="flex gap-3 px-4 py-2.5 hover:bg-muted cursor-pointer transition-colors">
+                      <Avatar className="w-8 h-8 shrink-0">
+                        <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white text-xs">{getInitials(msg.sender_name)}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-primary bg-primary/10 rounded px-1.5 py-0.5"><Hash className="w-2.5 h-2.5" />{msg.channel_name}</span>
+                          <span className="text-sm font-bold text-foreground">{msg.sender_name}</span>
+                          <span className="text-xs text-muted-foreground/60" title={formatISTFull(msg.created_at)}>{formatDate(msg.created_at)}</span>
+                        </div>
+                        {msg.content && <p className="text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed mt-0.5 line-clamp-4">{msg.content}</p>}
+                        {msg.attachments?.length > 0 && <div onClick={e => e.stopPropagation()}>{renderAttachments(msg.attachments, false)}</div>}
+                        {msg.tags && Object.keys(msg.tags).length > 0 && (
+                          <div className="flex items-center gap-1 mt-1 flex-wrap">
+                            {TAG_META.filter(t => msg.tags[t.key]).map(t => (
+                              <span key={t.key} className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${t.cls}`}>{t.icon} {t.key}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {activityHasMore && (
+                    <div className="p-3 text-center">
+                      <Button variant="outline" size="sm" disabled={activityLoading} onClick={() => fetchActivity(activityPage + 1, activityFilter)}>
+                        {activityLoading ? 'Loading…' : 'Load more'}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </ScrollArea>
+          </CardContent>
+        </Card>
+
       ) : (
 
         /* ── My Messages / Channels ─────────────────────────────────────────── */
