@@ -1272,7 +1272,32 @@ export default function Messages({ fullscreen = false }) {
                       <div key={idx} className={`flex ${msg.sender_id === selectedAllConversation.user1_id ? 'justify-start' : 'justify-end'}`}>
                         <div className={`max-w-[70%] rounded-2xl px-4 py-2 ${msg.sender_id === selectedAllConversation.user1_id ? 'bg-muted' : 'bg-purple-100'}`}>
                           <p className="text-xs font-medium text-muted-foreground mb-0.5">{msg.sender_name}</p>
-                          <p className="text-sm text-foreground">{msg.content}</p>
+                          {msg.content && <p className="text-sm text-foreground whitespace-pre-wrap">{msg.content}</p>}
+                          {msg.attachment && (
+                            isImage(msg.attachment.filename, msg.attachment.content_type) ? (
+                              <div className="relative group mt-1 inline-block cursor-pointer rounded-lg overflow-hidden" onClick={() => setLightboxUrl(msg.attachment.url || `${API_URL}/api/messages/attachment/${msg.message_id}`)}>
+                                <img src={msg.attachment.url || `${API_URL}/api/messages/attachment/${msg.message_id}`}
+                                  alt={msg.attachment.filename} className="rounded-lg max-h-48 object-cover" style={{ maxWidth: 240 }} />
+                                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                  <ZoomIn className="w-6 h-6 text-white drop-shadow" />
+                                </div>
+                              </div>
+                            ) : (
+                              <a href="#" onClick={async e => {
+                                e.preventDefault();
+                                const token = localStorage.getItem('auth_token');
+                                const r = await fetch(`${API_URL}/api/messages/attachment/${msg.message_id}`, { headers: { Authorization: `Bearer ${token}` } });
+                                const blob = await r.blob(); const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a'); a.href = url; a.download = msg.attachment.filename; a.click(); URL.revokeObjectURL(url);
+                              }} className="flex items-center gap-2 mt-1 p-2 rounded-lg cursor-pointer bg-background/60 hover:bg-background">
+                                {getFileIcon(msg.attachment.filename, msg.attachment.content_type)}
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-medium truncate">{msg.attachment.filename}</p>
+                                  {msg.attachment.size && <p className="text-xs text-muted-foreground/60">{formatFileSize(msg.attachment.size)}</p>}
+                                </div>
+                              </a>
+                            )
+                          )}
                           <span className="text-xs text-muted-foreground/60">{formatDate(msg.created_at)}</span>
                         </div>
                       </div>
@@ -1714,13 +1739,12 @@ export default function Messages({ fullscreen = false }) {
                               ))}
                               {msg.attachment && (
                                 isImage(msg.attachment.filename, msg.attachment.content_type) ? (
-                                  <div className="mt-1 cursor-pointer rounded-lg overflow-hidden" onClick={async () => {
-                                    const token = localStorage.getItem('auth_token');
-                                    const r = await fetch(`${API_URL}/api/messages/attachment/${msg.message_id}`, { headers: { Authorization: `Bearer ${token}` } });
-                                    const b = await r.blob(); setLightboxUrl(URL.createObjectURL(b));
-                                  }}>
+                                  <div className="relative group mt-1 inline-block cursor-pointer rounded-lg overflow-hidden" onClick={() => setLightboxUrl(msg.attachment.url || `${API_URL}/api/messages/attachment/${msg.message_id}`)}>
                                     <img src={msg.attachment.url || `${API_URL}/api/messages/attachment/${msg.message_id}`}
                                       alt={msg.attachment.filename} className="rounded-lg max-h-48 object-cover" style={{ maxWidth: 240 }} />
+                                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                      <ZoomIn className="w-6 h-6 text-white drop-shadow" />
+                                    </div>
                                   </div>
                                 ) : (
                                   <a href="#" onClick={async e => {
