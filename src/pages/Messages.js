@@ -97,14 +97,26 @@ const TAG_META = [
   { key: 'Query',     icon: '❓', cls: 'bg-purple-100 text-purple-700' },
 ];
 
-// Active tag pills — shown ABOVE the message (styled like the status badge). Click to remove.
-function TagChips({ tags, onTag }) {
+// Active tag pills — shown ABOVE the message (styled like the status badge). Only the
+// user who ADDED a tag can remove it; for everyone else the pill is read-only (locked).
+function TagChips({ tags, onTag, currentUserId }) {
   const active = TAG_META.filter(t => tags && tags[t.key]);
   if (!active.length) return null;
   return (
     <div className="flex items-center gap-1 mb-1 flex-wrap">
       {active.map(t => {
-        const by = tags[t.key]?.by;
+        const meta = tags[t.key] || {};
+        const by = meta.by;
+        const mine = !meta.by_id || meta.by_id === currentUserId; // legacy tags stay editable
+        if (!mine) {
+          return (
+            <span key={t.key}
+              title={`${t.key}${by ? ' — by ' + by : ''} · only ${by || 'the tagger'} can change this`}
+              className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-full ${t.cls} opacity-90 cursor-default inline-flex items-center gap-0.5`}>
+              {t.icon} {t.key} <span className="text-[9px] opacity-70">🔒</span>
+            </span>
+          );
+        }
         return (
           <button key={t.key} type="button" onClick={() => onTag(t.key)}
             title={`${t.key}${by ? ' — by ' + by : ''} · click to remove`}
@@ -117,8 +129,9 @@ function TagChips({ tags, onTag }) {
   );
 }
 
-// "Tag" button — shown BELOW the message; opens a menu of all status tags (multi-select toggle).
-function TagBar({ tags, onTag }) {
+// "Tag" button — shown BELOW the message; opens a menu of all status tags (multi-select
+// toggle). A tag set by someone else is locked (can't be toggled off by others).
+function TagBar({ tags, onTag, currentUserId }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="relative mt-0.5 inline-block clear-both align-top">
@@ -131,12 +144,16 @@ function TagBar({ tags, onTag }) {
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div className="absolute bottom-8 left-0 z-50 bg-card border border-border rounded-lg shadow-lg p-1.5 flex flex-col gap-1 w-40">
             {TAG_META.map(t => {
-              const on = !!(tags && tags[t.key]);
+              const meta = (tags && tags[t.key]) || null;
+              const on = !!meta;
+              const lockedByOther = on && meta.by_id && meta.by_id !== currentUserId;
               return (
-                <button key={t.key} type="button" onClick={() => onTag(t.key)}
-                  className={`flex items-center justify-between text-[12px] font-semibold px-2 py-1 rounded-md transition-colors ${on ? t.cls : 'text-muted-foreground hover:bg-muted'}`}>
+                <button key={t.key} type="button" disabled={lockedByOther}
+                  onClick={() => { if (!lockedByOther) onTag(t.key); }}
+                  title={lockedByOther ? `Set by ${meta.by || 'someone else'} — only they can change it` : undefined}
+                  className={`flex items-center justify-between text-[12px] font-semibold px-2 py-1 rounded-md transition-colors ${on ? t.cls : 'text-muted-foreground hover:bg-muted'} ${lockedByOther ? 'opacity-50 cursor-not-allowed' : ''}`}>
                   <span>{t.icon} {t.key}</span>
-                  {on && <span className="text-[11px] leading-none">✓</span>}
+                  {on && <span className="text-[11px] leading-none">{lockedByOther ? '🔒' : '✓'}</span>}
                 </button>
               );
             })}
@@ -1285,9 +1302,42 @@ export default function Messages({ fullscreen = false }) {
               </div>
             </div>
 
-            {/* DM list */}
+            {/* Sidebar: Channels first, Direct Messages below */}
             <div className="overflow-y-auto flex-1">
+              {/* Channels list */}
               <div className="p-2">
+                <div className="flex items-center justify-between px-2 py-1.5">
+                  <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">Channels</span>
+                  <button onClick={() => setNewChannelDialog(true)} className="flex items-center gap-0.5 text-xs text-primary hover:text-primary/80 font-semibold">
+                    <Plus className="w-3 h-3" /> New
+                  </button>
+                </div>
+                {filteredChannels.length === 0 && (
+                  <button onClick={() => setNewChannelDialog(true)} className="w-full text-left px-2 py-2 text-xs text-primary hover:bg-primary/5 rounded-md transition-colors">
+                    + Create a channel
+                  </button>
+                )}
+                {filteredChannels.map(ch => {
+                  const active = activeSection === 'channels' && selectedChannel?.channel_id === ch.channel_id;
+                  return (
+                    <div key={ch.channel_id}
+                      onClick={() => { setSelectedChannel(ch); setActiveSection('channels'); setSelectedConversation(null); }}
+                      className={`flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-colors mb-0.5 ${active ? 'bg-primary text-white' : 'text-foreground/80 hover:bg-muted'}`}>
+                      <Hash className={`w-4 h-4 shrink-0 ${active ? 'text-blue-200' : 'text-muted-foreground/60'}`} />
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm truncate leading-tight ${ch.unread_count > 0 ? 'font-bold' : 'font-medium'}`}>{ch.name}</p>
+                        {ch.last_message && <p className={`text-xs truncate leading-tight ${active ? 'text-blue-200' : 'text-muted-foreground/60'}`}>{ch.last_message}</p>}
+                      </div>
+                      {ch.unread_count > 0 && (
+                        <Badge className={`text-xs h-4 px-1.5 shrink-0 ${active ? 'bg-white text-primary' : 'bg-primary text-white'}`}>{ch.unread_count}</Badge>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* DM list */}
+              <div className="p-2 border-t">
                 <div className="flex items-center justify-between px-2 py-1.5">
                   <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">Direct Messages</span>
                   <button onClick={() => setNewChatDialog(true)} className="flex items-center gap-0.5 text-xs text-primary hover:text-primary/80 font-semibold">
@@ -1316,38 +1366,6 @@ export default function Messages({ fullscreen = false }) {
                       </div>
                       {conv.unread_count > 0 && (
                         <Badge className={`text-xs h-4 px-1.5 shrink-0 ${active ? 'bg-white text-primary' : 'bg-primary text-white'}`}>{conv.unread_count}</Badge>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Channels list */}
-              <div className="p-2 border-t">
-                <div className="flex items-center justify-between px-2 py-1.5">
-                  <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">Channels</span>
-                  <button onClick={() => setNewChannelDialog(true)} className="flex items-center gap-0.5 text-xs text-primary hover:text-primary/80 font-semibold">
-                    <Plus className="w-3 h-3" /> New
-                  </button>
-                </div>
-                {filteredChannels.length === 0 && (
-                  <button onClick={() => setNewChannelDialog(true)} className="w-full text-left px-2 py-2 text-xs text-primary hover:bg-primary/5 rounded-md transition-colors">
-                    + Create a channel
-                  </button>
-                )}
-                {filteredChannels.map(ch => {
-                  const active = activeSection === 'channels' && selectedChannel?.channel_id === ch.channel_id;
-                  return (
-                    <div key={ch.channel_id}
-                      onClick={() => { setSelectedChannel(ch); setActiveSection('channels'); setSelectedConversation(null); }}
-                      className={`flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-colors mb-0.5 ${active ? 'bg-primary text-white' : 'text-foreground/80 hover:bg-muted'}`}>
-                      <Hash className={`w-4 h-4 shrink-0 ${active ? 'text-blue-200' : 'text-muted-foreground/60'}`} />
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm truncate leading-tight ${ch.unread_count > 0 ? 'font-bold' : 'font-medium'}`}>{ch.name}</p>
-                        {ch.last_message && <p className={`text-xs truncate leading-tight ${active ? 'text-blue-200' : 'text-muted-foreground/60'}`}>{ch.last_message}</p>}
-                      </div>
-                      {ch.unread_count > 0 && (
-                        <Badge className={`text-xs h-4 px-1.5 shrink-0 ${active ? 'bg-white text-primary' : 'bg-primary text-white'}`}>{ch.unread_count}</Badge>
                       )}
                     </div>
                   );
@@ -1473,7 +1491,7 @@ export default function Messages({ fullscreen = false }) {
                                     onReact={(emoji) => handleReact(msg, emoji, 'channel')} />
                                 )}
                                 {!msg.deleted && TAG_CHANNELS.includes(selectedChannel?.name) && (
-                                  <TagChips tags={msg.tags} onTag={(tag) => handleTag(msg, tag)} />
+                                  <TagChips tags={msg.tags} onTag={(tag) => handleTag(msg, tag)} currentUserId={user?.user_id} />
                                 )}
                                 {/* Bubble (text + attachments together) */}
                                 {msg.deleted ? (
@@ -1537,7 +1555,7 @@ export default function Messages({ fullscreen = false }) {
                                   <div className="flex items-center gap-1.5 clear-both">
                                     <ReactionAdder onReact={(emoji) => handleReact(msg, emoji, 'channel')} />
                                     {TAG_CHANNELS.includes(selectedChannel?.name) && (
-                                      <TagBar tags={msg.tags} onTag={(tag) => handleTag(msg, tag)} />
+                                      <TagBar tags={msg.tags} onTag={(tag) => handleTag(msg, tag)} currentUserId={user?.user_id} />
                                     )}
                                   </div>
                                 )}
@@ -1842,7 +1860,7 @@ export default function Messages({ fullscreen = false }) {
                           <span className="text-xs text-muted-foreground/60 whitespace-nowrap" title={formatISTFull(threadMsg.created_at)}>{formatDate(threadMsg.created_at)}</span>
                         </div>
                         {TAG_CHANNELS.includes(selectedChannel?.name) && (
-                          <TagChips tags={threadMsg.tags} onTag={(tag) => handleTag(threadMsg, tag)} />
+                          <TagChips tags={threadMsg.tags} onTag={(tag) => handleTag(threadMsg, tag)} currentUserId={user?.user_id} />
                         )}
                         {threadMsg.content && (
                           <p title="Jump to this message in the channel" onClick={() => scrollToChannelMessage(threadMsg.msg_id)}
@@ -1852,7 +1870,7 @@ export default function Messages({ fullscreen = false }) {
                         )}
                         {renderAttachments(threadMsg.attachments, threadMsg.sender_id === user?.user_id)}
                         {TAG_CHANNELS.includes(selectedChannel?.name) && (
-                          <TagBar tags={threadMsg.tags} onTag={(tag) => handleTag(threadMsg, tag)} />
+                          <TagBar tags={threadMsg.tags} onTag={(tag) => handleTag(threadMsg, tag)} currentUserId={user?.user_id} />
                         )}
                       </div>
                     </div>
@@ -1886,7 +1904,7 @@ export default function Messages({ fullscreen = false }) {
                             onReact={(emoji) => handleReact(r, emoji, 'channel')} />
                         )}
                         {!r.deleted && TAG_CHANNELS.includes(selectedChannel?.name) && (
-                          <TagChips tags={r.tags} onTag={(tag) => handleTag(r, tag)} />
+                          <TagChips tags={r.tags} onTag={(tag) => handleTag(r, tag)} currentUserId={user?.user_id} />
                         )}
                         {r.deleted ? (
                           <p className="text-sm text-muted-foreground italic mt-0.5">🚫 This message was deleted</p>
@@ -1909,7 +1927,7 @@ export default function Messages({ fullscreen = false }) {
                           <div className="flex items-center gap-1.5 clear-both">
                             <ReactionAdder onReact={(emoji) => handleReact(r, emoji, 'channel')} />
                             {TAG_CHANNELS.includes(selectedChannel?.name) && (
-                              <TagBar tags={r.tags} onTag={(tag) => handleTag(r, tag)} />
+                              <TagBar tags={r.tags} onTag={(tag) => handleTag(r, tag)} currentUserId={user?.user_id} />
                             )}
                           </div>
                         )}
