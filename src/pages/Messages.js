@@ -22,6 +22,7 @@ import {
   Loader2, Paperclip, X, FileText, Image as ImageIcon, FileSpreadsheet, File,
   Hash, MessageCircle, ChevronRight, Video, ZoomIn, PanelRightOpen, Settings, Trash2,
   Bell, BellOff, BellRing, Maximize2, Pencil, Search as SearchIcon, PhoneCall, Activity,
+  CornerUpLeft,
 } from 'lucide-react';
 import { useChatNotification } from '../context/ChatNotificationContext';
 import { usePermissions } from '../context/usePermissions';
@@ -225,6 +226,10 @@ export default function Messages({ fullscreen = false }) {
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityPage, setActivityPage] = useState(1);
   const [activityHasMore, setActivityHasMore] = useState(false);
+  const [activityReplyId, setActivityReplyId] = useState(null);   // msg_id whose inline reply box is open
+  const [activityReplyText, setActivityReplyText] = useState('');
+  const [activityReplySending, setActivityReplySending] = useState(false);
+  const seenActivityReplyRef = useRef(new Set());                 // reply msg_ids already counted (dedup optimistic vs WS)
   const [searchTerm, setSearchTerm] = useState('');
 
   // Channel state
@@ -793,6 +798,13 @@ export default function Messages({ fullscreen = false }) {
             ? { ...m, reply_count: (m.reply_count || 0) + (prev.some(x => x.msg_id === reply.msg_id) ? 0 : 1) }
             : m));
         }
+        // Keep the Activity feed's reply_count live (dedup against the optimistic bump)
+        if (!seenActivityReplyRef.current.has(reply.msg_id)) {
+          seenActivityReplyRef.current.add(reply.msg_id);
+          setActivityItems(prev => prev.some(m => m.msg_id === reply.thread_root_id)
+            ? prev.map(m => m.msg_id === reply.thread_root_id ? { ...m, reply_count: (m.reply_count || 0) + 1 } : m)
+            : prev);
+        }
         // In-page toast if user is author or participated in this thread but not currently viewing it
         if (reply.sender_id !== user?.user_id) {
           const isParent = data.parent_sender_id === user?.user_id;
@@ -995,6 +1007,29 @@ export default function Messages({ fullscreen = false }) {
         trackThreadParticipation(selectedChannel.channel_id, threadMsg.msg_id);
       } else toast.error(await getApiError(r));
     } catch (e) { toast.error(e?.message || 'Something went wrong'); } finally { setSendingThread(false); }
+  };
+
+  // Inline reply from the Activity feed — posts to the message's thread without
+  // leaving the tab. Optimistically bumps reply_count and marks the reply id as
+  // seen so the echoed WS thread_reply event doesn't double-count it.
+  const handleActivityReply = async (msg) => {
+    const text = activityReplyText.trim();
+    if (!text || activityReplySending) return;
+    setActivityReplySending(true);
+    try {
+      const fd = new FormData();
+      fd.append('content', text);
+      const headers = { ...getAuthHeaders() }; delete headers['Content-Type'];
+      const r = await fetch(`${API_URL}/api/channels/${msg.channel_id}/messages/${msg.msg_id}/replies`, { method: 'POST', headers, body: fd });
+      if (r.ok) {
+        const reply = await r.json();
+        if (reply?.msg_id) seenActivityReplyRef.current.add(reply.msg_id);
+        setActivityItems(prev => prev.map(m => m.msg_id === msg.msg_id ? { ...m, reply_count: (m.reply_count || 0) + 1 } : m));
+        trackThreadParticipation(msg.channel_id, msg.msg_id);
+        setActivityReplyText(''); setActivityReplyId(null);
+        toast.success('Reply sent');
+      } else toast.error(await getApiError(r));
+    } catch (e) { toast.error(e?.message || 'Something went wrong'); } finally { setActivityReplySending(false); }
   };
 
   const handleCreateChannel = async () => {
@@ -1387,6 +1422,38 @@ export default function Messages({ fullscreen = false }) {
                             {TAG_META.filter(t => msg.tags[t.key]).map(t => (
                               <span key={t.key} className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${t.cls}`}>{t.icon} {t.key}</span>
                             ))}
+                          </div>
+                        )}
+                        {/* Inline reply (Activity feed) */}
+                        <div className="flex items-center gap-3 mt-1.5" onClick={e => e.stopPropagation()}>
+                          {msg.reply_count > 0 && (
+                            <span className="inline-flex items-center gap-1 text-xs text-slate-500">
+                              <MessageSquare className="w-3 h-3" />{msg.reply_count}
+                            </span>
+                          )}
+                          <button
+                            onClick={() => { setActivityReplyId(activityReplyId === msg.msg_id ? null : msg.msg_id); setActivityReplyText(''); }}
+                            className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-blue-600 transition-colors">
+                            <CornerUpLeft className="w-3 h-3" /> Reply
+                          </button>
+                        </div>
+                        {activityReplyId === msg.msg_id && (
+                          <div className="mt-2 flex items-end gap-2" onClick={e => e.stopPropagation()}>
+                            <textarea
+                              value={activityReplyText}
+                              onChange={e => setActivityReplyText(e.target.value)}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleActivityReply(msg); }
+                                else if (e.key === 'Escape') { setActivityReplyId(null); }
+                              }}
+                              placeholder="Type a reply…"
+                              rows={1}
+                              autoFocus
+                              className="flex-1 resize-none rounded-md border border-slate-200 px-3 py-1.5 text-sm leading-relaxed focus:outline-none focus:ring-1 focus:ring-blue-500 max-h-32"
+                            />
+                            <Button size="sm" className="h-8 px-3 shrink-0" disabled={activityReplySending || !activityReplyText.trim()} onClick={() => handleActivityReply(msg)}>
+                              {activityReplySending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                            </Button>
                           </div>
                         )}
                       </div>
