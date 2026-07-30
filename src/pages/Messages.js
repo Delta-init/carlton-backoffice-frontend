@@ -236,6 +236,11 @@ export default function Messages({ fullscreen = false }) {
   const [channels, setChannels] = useState([]);
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [channelMessages, setChannelMessages] = useState([]);
+  // Channel message pagination (scroll-to-top loads older pages; server-side date filtering)
+  const [channelPage, setChannelPage] = useState(1);
+  const [channelHasMore, setChannelHasMore] = useState(false);
+  const [channelLoadingMore, setChannelLoadingMore] = useState(false);
+  const channelLoadingMoreRef = useRef(false);  // synchronous re-entrancy guard for rapid scroll events
   // Message edit / in-chat search + filter
   const [editingId, setEditingId] = useState(null);   // message_id (DM) or msg_id (channel)
   const [editText, setEditText] = useState('');
@@ -707,6 +712,13 @@ export default function Messages({ fullscreen = false }) {
     const el = channelScrollRef.current;
     if (!el) return;
     atChannelBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    if (el.scrollTop < 120 && selectedChannel && channelHasMore && !channelLoadingMoreRef.current) {
+      channelLoadingMoreRef.current = true;
+      setChannelLoadingMore(true);
+      fetchChannelMessages(selectedChannel.channel_id, {
+        page: channelPage + 1, dateFrom: msgDateFrom, dateTo: msgDateTo, append: true,
+      });
+    }
   };
 
   // ── Register WS handler with global context (reassigned each render for fresh closure) ──
@@ -924,12 +936,43 @@ export default function Messages({ fullscreen = false }) {
     try { const r = await fetch(`${API_URL}/api/channels`, { headers: getAuthHeaders() }); if (r.ok) setChannels(await r.json()); } catch { /* */ }
   }, [getAuthHeaders]);
 
-  const fetchChannelMessages = useCallback(async (channelId) => {
+  // Fetches one page of channel messages (server-side paginated, newest-first window
+  // reversed to ascending). Pass { page, dateFrom, dateTo } to page back / filter by IST
+  // calendar day, and { append: true } to prepend an older page onto the currently
+  // loaded messages (used by scroll-to-top infinite loading) while preserving scroll
+  // position, instead of replacing the whole list.
+  const fetchChannelMessages = useCallback(async (channelId, opts = {}) => {
     if (!channelId) return;
+    const { page = 1, dateFrom = '', dateTo = '', append = false } = opts;
     try {
-      const r = await fetch(`${API_URL}/api/channels/${channelId}/messages`, { headers: getAuthHeaders() });
-      if (r.ok) { setChannelMessages(await r.json()); atChannelBottomRef.current = true; setTimeout(() => scrollToBottom(channelScrollRef), 60); }
-    } catch { /* */ }
+      const qs = new URLSearchParams({ page: String(page), page_size: '200' });
+      if (dateFrom) qs.set('date_from', dateFrom);
+      if (dateTo) qs.set('date_to', dateTo);
+      const r = await fetch(`${API_URL}/api/channels/${channelId}/messages?${qs.toString()}`, { headers: getAuthHeaders() });
+      if (r.ok) {
+        const d = await r.json();
+        const items = d.items || [];
+        setChannelHasMore(!!d.has_more);
+        setChannelPage(d.page || page);
+        if (append) {
+          const el = channelScrollRef.current;
+          const prevHeight = el ? el.scrollHeight : 0;
+          const prevScrollTop = el ? el.scrollTop : 0;
+          setChannelMessages(prev => [...items, ...prev]);
+          if (el) {
+            requestAnimationFrame(() => {
+              el.scrollTop = prevScrollTop + (el.scrollHeight - prevHeight);
+            });
+          }
+        } else {
+          setChannelMessages(items);
+          atChannelBottomRef.current = true;
+          setTimeout(() => scrollToBottom(channelScrollRef), 60);
+        }
+      }
+    } catch { /* */ } finally {
+      if (append) { channelLoadingMoreRef.current = false; setChannelLoadingMore(false); }
+    }
   }, [getAuthHeaders]);
 
   const fetchThreadReplies = useCallback(async (channelId, msgId) => {
@@ -1158,10 +1201,23 @@ export default function Messages({ fullscreen = false }) {
   useEffect(() => {
     setThreadMsg(null); setThreadReplies([]);
     if (selectedChannel) {
-      fetchChannelMessages(selectedChannel.channel_id);
+      setChannelPage(1); setChannelHasMore(false);
+      fetchChannelMessages(selectedChannel.channel_id, { page: 1, dateFrom: msgDateFrom, dateTo: msgDateTo });
       markChannelRead(selectedChannel.channel_id);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChannel, fetchChannelMessages, markChannelRead]);
+
+  // Re-fetch (server-side) when the date filter changes while a channel is open — kept
+  // separate from the channel-switch effect above so it doesn't reset the open thread or
+  // re-mark the channel read on every filter tweak.
+  useEffect(() => {
+    if (selectedChannel) {
+      setChannelPage(1); setChannelHasMore(false);
+      fetchChannelMessages(selectedChannel.channel_id, { page: 1, dateFrom: msgDateFrom, dateTo: msgDateTo });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [msgDateFrom, msgDateTo]);
 
   useEffect(() => {
     if (threadMsg && selectedChannel) fetchThreadReplies(selectedChannel.channel_id, threadMsg.msg_id);
@@ -1619,11 +1675,25 @@ export default function Messages({ fullscreen = false }) {
 
                   {/* Channel messages */}
                   <div ref={channelScrollRef} onScroll={handleChannelScroll} className="flex-1 overflow-y-auto py-2">
+                    {channelLoadingMore && (
+                      <div className="flex items-center justify-center py-2 text-muted-foreground/60">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      </div>
+                    )}
                     {channelMessages.length === 0 ? (
                       <div className="flex flex-col items-center justify-center h-full text-muted-foreground/60">
                         <Hash className="w-12 h-12 mb-3 opacity-20" />
-                        <p className="font-medium text-muted-foreground">No messages yet</p>
-                        <p className="text-sm mt-1">Be the first to say something in #{selectedChannel.name}</p>
+                        {(msgDateFrom || msgDateTo) ? (
+                          <>
+                            <p className="font-medium text-muted-foreground">No messages in this range</p>
+                            <p className="text-sm mt-1">Try a different date range</p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="font-medium text-muted-foreground">No messages yet</p>
+                            <p className="text-sm mt-1">Be the first to say something in #{selectedChannel.name}</p>
+                          </>
+                        )}
                       </div>
                     ) : (
                       groupedChannelMessages.filter(msgMatches).map(msg => {
