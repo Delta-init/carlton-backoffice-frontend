@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -97,6 +97,401 @@ const TAG_META = [
   { key: 'Pending',   icon: '⏳', cls: 'bg-slate-100 text-slate-600' },
   { key: 'Query',     icon: '❓', cls: 'bg-purple-100 text-purple-700' },
 ];
+
+// ── Pure formatting/render helpers, hoisted to module scope ────────────────────
+// These previously lived inside the main component and were recreated on every
+// render; since none of them depend on component state, defining them once here
+// makes their identity stable for free and lets a memoized row component call
+// them directly without needing them threaded through as props.
+const IST = 'Asia/Kolkata';  // All chat times are shown in IST (Asia/Kolkata)
+
+const formatTime = (d) => {
+  if (!d) return '';
+  const dt = new Date(d);
+  const now = new Date();
+  const diff = Math.floor((now - dt) / 86400000);
+  if (diff === 0) return dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: IST });
+  if (diff === 1) return 'Yesterday';
+  if (diff < 7) return dt.toLocaleDateString('en-US', { weekday: 'short', timeZone: IST });
+  return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: IST });
+};
+
+const formatFullTime = (d) => {
+  if (!d) return '';
+  return new Date(d).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: IST });
+};
+
+const formatDate = (d) => {
+  if (!d) return '';
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: IST });
+};
+
+// Compact IST date for the narrow grouped-message gutter: "17 Jul"
+const formatShortDate = (d) => {
+  if (!d) return '';
+  return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', timeZone: IST });
+};
+
+// Full IST date + time (for tooltips): "11 Jul 2026, 08:46 PM IST"
+const formatISTFull = (d) => {
+  if (!d) return '';
+  return new Date(d).toLocaleString('en-GB', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: true, timeZone: IST,
+  }) + ' IST';
+};
+
+const getDateLabel = (d) => {
+  const dt = new Date(d);
+  const today = new Date();
+  const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+  if (dt.toDateString() === today.toDateString()) return 'Today';
+  if (dt.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  return dt.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+};
+
+const getInitials = (n) => !n ? '?' : n.split(' ').map(s => s[0]).join('').toUpperCase().slice(0, 2);
+
+const formatFileSize = (b) => {
+  if (!b) return '';
+  if (b < 1024) return `${b} B`;
+  if (b < 1048576) return `${(b / 1024).toFixed(1)} KB`;
+  return `${(b / 1048576).toFixed(1)} MB`;
+};
+
+const isImage = (fn, ct) => {
+  const ext = (fn || '').split('.').pop().toLowerCase();
+  return (ct || '').startsWith('image/') || ['jpg','jpeg','png','gif','webp'].includes(ext);
+};
+const isVideo = (fn, ct) => {
+  const ext = (fn || '').split('.').pop().toLowerCase();
+  return (ct || '').startsWith('video/') || ['mp4','mov','webm','avi'].includes(ext);
+};
+const getFileIcon = (fn, ct) => {
+  const ext = (fn || '').split('.').pop().toLowerCase();
+  if (isImage(fn, ct)) return <ImageIcon className="w-4 h-4 text-green-500" />;
+  if (isVideo(fn, ct)) return <Video className="w-4 h-4 text-purple-500" />;
+  if (ext === 'pdf' || ct === 'application/pdf') return <FileText className="w-4 h-4 text-red-400" />;
+  if (['xlsx','xls','csv'].includes(ext)) return <FileSpreadsheet className="w-4 h-4 text-emerald-400" />;
+  return <File className="w-4 h-4 text-muted-foreground/60" />;
+};
+
+// Renders image/video/other attachments for a message bubble. onImageClick opens
+// the lightbox — passed explicitly since this now lives outside the component and
+// can't close over its setLightboxUrl state setter.
+const renderAttachmentsBase = (attachments, isSelf, onImageClick) => {
+  if (!attachments?.length) return null;
+  const imgs = attachments.filter(a => isImage(a.filename, a.content_type));
+  const vids = attachments.filter(a => !isImage(a.filename, a.content_type) && isVideo(a.filename, a.content_type));
+  const others = attachments.filter(a => !isImage(a.filename, a.content_type) && !isVideo(a.filename, a.content_type));
+  return (
+    <div className="mt-1.5 space-y-1.5">
+      {imgs.length > 0 && (
+        <div className={`grid gap-1 ${imgs.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`} style={{ maxWidth: 280 }}>
+          {imgs.map((img, i) => (
+            <div key={i} className="relative group cursor-pointer rounded-lg overflow-hidden" onClick={() => onImageClick(img.url)}>
+              <img src={img.url} alt={img.filename} loading="lazy" className="w-full object-cover" style={{ maxHeight: 180 }} />
+              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                <ZoomIn className="w-6 h-6 text-white drop-shadow" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {vids.map((v, i) => (
+        <video key={i} src={v.url} controls preload="none" className="rounded-lg w-full" style={{ maxWidth: 280, maxHeight: 180 }} />
+      ))}
+      {others.map((f, i) => (
+        <a key={i} href={f.url} target="_blank" rel="noopener noreferrer"
+          className={`flex items-center gap-2 p-2 rounded-lg ${isSelf ? 'bg-primary/20 hover:bg-primary/30' : 'bg-muted hover:bg-muted/80'}`}>
+          {getFileIcon(f.filename, f.content_type)}
+          <div className="min-w-0">
+            <p className="text-xs font-medium truncate">{f.filename}</p>
+            <p className={`text-xs ${isSelf ? 'text-primary/60' : 'text-muted-foreground/60'}`}>{formatFileSize(f.size)}</p>
+          </div>
+        </a>
+      ))}
+    </div>
+  );
+};
+
+// Pending-attachment thumbnail strip shown above the composer while drafting a
+// message. Hoisted to module scope (it used to be redefined inside the main
+// component's render body — a fresh component identity every render, which made
+// React remount this subtree, including re-decoding images, on every keystroke).
+// Creates one object URL per file and revokes it on cleanup/file-list change
+// instead of leaking a fresh, never-revoked blob URL on every render.
+function FilePreviewStrip({ files, onRemove }) {
+  const [urls, setUrls] = useState([]);
+  useEffect(() => {
+    const next = files.map(f => (isImage(f.name, f.type) ? URL.createObjectURL(f) : null));
+    setUrls(next);
+    return () => { next.forEach(u => u && URL.revokeObjectURL(u)); };
+  }, [files]);
+
+  if (!files.length) return null;
+  return (
+    <div className="flex flex-wrap gap-2 mb-2 p-2 bg-muted/50 rounded-lg border">
+      {files.map((f, i) => (
+        <div key={i} className="relative group">
+          {isImage(f.name, f.type) ? (
+            <div className="w-12 h-12 rounded overflow-hidden border">
+              {urls[i] && <img src={urls[i]} alt={f.name} className="w-full h-full object-cover" />}
+            </div>
+          ) : isVideo(f.name, f.type) ? (
+            <div className="w-12 h-12 rounded bg-purple-50 border border-purple-200 flex items-center justify-center">
+              <Video className="w-5 h-5 text-purple-500" />
+            </div>
+          ) : (
+            <div className="flex items-center gap-1 px-2 py-1.5 bg-card border rounded-lg max-w-[100px]">
+              {getFileIcon(f.name, f.type)}
+              <p className="text-xs truncate">{f.name}</p>
+            </div>
+          )}
+          <button onClick={() => onRemove(i)}
+            className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <X className="w-2.5 h-2.5" />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const DateDivider = ({ date }) => (
+  <div className="flex items-center gap-3 my-4 px-4">
+    <div className="flex-1 h-px bg-border" />
+    <span className="text-xs text-muted-foreground/60 font-medium whitespace-nowrap">{getDateLabel(date)}</span>
+    <div className="flex-1 h-px bg-border" />
+  </div>
+);
+
+// A single channel message row. Wrapped in React.memo so that a parent re-render
+// (typing in the composer, opening a thread, a WS tick for an unrelated message,
+// hovering) only re-renders the ONE row that actually changed instead of every
+// loaded message — this was the dominant cost behind the measured per-keystroke
+// and per-click main-thread freezes (each ~1-2s with 200 rows mounted). All
+// callback props are stable (useCallback in the parent, taking msg as a call-time
+// argument rather than a closure) so the default shallow-prop comparison works.
+const ChannelMessageRow = memo(function ChannelMessageRow({
+  msg, currentUserId, isAdmin, isEditing, editText, onEditTextChange, highlighted,
+  tagChannelActive, canProcessTx, onOpenThread, onReact, onTag, onStartEdit,
+  onSaveEdit, onCancelEdit, onDelete, onTxProcess, onTxComplete, onNavigateToTx, onImageClick,
+}) {
+  const isSelf = msg.sender_id === currentUserId;
+  return (
+    <div id={`chmsg-${msg.msg_id}`} className="scroll-mt-4">
+      {msg.showDateDivider && <DateDivider date={msg.created_at} />}
+      <div className={`group flex gap-3 px-4 py-0.5 transition-colors duration-700 ${highlighted ? 'bg-primary/10' : 'hover:bg-muted/60'}`}>
+        {/* Avatar or grouped spacer */}
+        <div className="w-9 shrink-0 mt-1">
+          {!msg.isGrouped ? (
+            <Avatar className="w-9 h-9">
+              <AvatarFallback className={`text-xs font-medium text-white ${isSelf ? 'bg-gradient-to-br from-blue-500 to-blue-700' : 'bg-gradient-to-br from-indigo-500 to-purple-600'}`}>
+                {getInitials(msg.sender_name)}
+              </AvatarFallback>
+            </Avatar>
+          ) : (
+            <span title={formatISTFull(msg.created_at)}
+              className="text-[9px] text-muted-foreground/60 block text-right leading-tight pt-2 whitespace-nowrap -ml-3">
+              {formatShortDate(msg.created_at)}<br />{formatFullTime(msg.created_at)}
+            </span>
+          )}
+        </div>
+        <div className="flex-1 min-w-0 pb-1">
+          {/* Name + time header (first in group only) */}
+          {!msg.isGrouped && (
+            <div className="flex items-baseline gap-2 mb-1">
+              <span className="text-sm font-bold text-foreground">{isSelf ? 'You' : msg.sender_name}</span>
+              <span className="text-xs text-muted-foreground/60 whitespace-nowrap" title={formatISTFull(msg.created_at)}>{formatDate(msg.created_at)}</span>
+              <button onClick={() => onOpenThread(msg)}
+                className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-primary bg-card hover:bg-primary/10 rounded px-2 py-0.5 border border-border hover:border-primary/40 shadow-sm">
+                <MessageCircle className="w-3 h-3" /> Reply
+              </button>
+            </div>
+          )}
+          {/* Grouped reply button on hover */}
+          {msg.isGrouped && (
+            <button onClick={() => onOpenThread(msg)}
+              className="opacity-0 group-hover:opacity-100 transition-opacity float-right flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-primary bg-card hover:bg-primary/10 rounded px-2 py-0.5 border border-border hover:border-primary/40 shadow-sm">
+              <MessageCircle className="w-3 h-3" /> Reply
+            </button>
+          )}
+          {!msg.deleted && (
+            <ReactionChips reactions={msg.reactions} currentUserId={currentUserId}
+              onReact={(emoji) => onReact(msg, emoji, 'channel')} />
+          )}
+          {!msg.deleted && tagChannelActive && (
+            <TagChips tags={msg.tags} onTag={(tag) => onTag(msg, tag)} currentUserId={currentUserId} />
+          )}
+          {/* Bubble (text + attachments together) */}
+          {msg.deleted ? (
+            <div className="inline-block rounded-2xl px-4 py-2 max-w-lg bg-muted text-muted-foreground/60 italic text-sm">🚫 This message was deleted</div>
+          ) : isEditing ? (
+            <div className="flex flex-col gap-1 max-w-lg">
+              <textarea value={editText} onChange={e => onEditTextChange(e.target.value)} rows={2}
+                className="w-full text-sm rounded-lg border border-primary/40 px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary/60" autoFocus />
+              <div className="flex gap-2">
+                <button onClick={() => onSaveEdit(msg.msg_id)} className="text-xs bg-primary text-white rounded px-2 py-0.5 hover:bg-primary/90">Save</button>
+                <button onClick={onCancelEdit} className="text-xs text-muted-foreground hover:text-foreground/80">Cancel</button>
+              </div>
+            </div>
+          ) : (msg.content || msg.attachments?.length > 0) && (
+            <div className={`relative group/msg inline-block rounded-2xl px-4 py-2.5 max-w-lg ${
+              isSelf
+                ? 'bg-primary text-white rounded-tl-sm'
+                : 'bg-muted text-foreground rounded-tl-sm'
+            }`}>
+              {(isSelf || isAdmin) && (
+                <div className="absolute -top-2 -right-2 opacity-0 group-hover/msg:opacity-100 transition-opacity flex gap-0.5 bg-card border border-border rounded-full shadow-sm px-1 z-10">
+                  {isSelf && <button title="Edit" onClick={() => onStartEdit(msg.msg_id, msg.content)} className="p-1 text-muted-foreground hover:text-primary"><Pencil className="w-3 h-3" /></button>}
+                  <button title="Delete" onClick={() => onDelete(msg.msg_id)} className="p-1 text-muted-foreground hover:text-red-600"><Trash2 className="w-3 h-3" /></button>
+                </div>
+              )}
+              {msg.content && (
+                <p className={`text-sm whitespace-pre-wrap leading-relaxed ${isSelf ? 'text-white' : 'text-foreground'}`}>
+                  {msg.content}
+                </p>
+              )}
+              {msg.attachments?.length > 0 && renderAttachmentsBase(msg.attachments, isSelf, onImageClick)}
+              {msg.is_tx_bot && (
+                <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+                  <TxBadge msg={msg} />
+                  {msg.tx_reference && (
+                    <button type="button" onClick={() => onNavigateToTx(msg.tx_reference)}
+                      className={`text-[11px] underline ${isSelf ? 'text-blue-100' : 'text-primary'} hover:opacity-80`}>
+                      View transaction →
+                    </button>
+                  )}
+                  {msg.tx_type === 'withdrawal' && !msg.tx_processed_by && !msg.tx_direct && canProcessTx && (
+                    <button type="button" onClick={() => onTxProcess(msg)}
+                      className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-600 text-white hover:bg-amber-700">Process</button>
+                  )}
+                  {msg.tx_processed_by && (
+                    <span className="text-[11px] text-emerald-600 font-medium">🟢 Processed{msg.tx_processed_by_name ? ` by ${msg.tx_processed_by_name}` : ''}</span>
+                  )}
+                  {msg.tx_owner_id === currentUserId && !msg.tx_completed_by && (
+                    <button type="button" onClick={() => onTxComplete(msg)}
+                      className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-primary text-white hover:bg-primary/90">Complete</button>
+                  )}
+                  {msg.tx_completed_by && (
+                    <span className="text-[11px] text-green-600 font-medium">✅ Completed{msg.tx_completed_by_name ? ` by ${msg.tx_completed_by_name}` : ''}</span>
+                  )}
+                </div>
+              )}
+              {msg.edited && <span className={`text-[10px] ml-1 ${isSelf ? 'text-blue-200' : 'text-muted-foreground/60'}`}>(edited)</span>}
+            </div>
+          )}
+          {!msg.deleted && (
+            <div className="flex items-center gap-1.5 clear-both">
+              <ReactionAdder onReact={(emoji) => onReact(msg, emoji, 'channel')} />
+              {tagChannelActive && (
+                <TagBar tags={msg.tags} onTag={(tag) => onTag(msg, tag)} currentUserId={currentUserId} />
+              )}
+            </div>
+          )}
+          {/* Thread reply count */}
+          {msg.reply_count > 0 && (
+            <button onClick={() => onOpenThread(msg)}
+              className="flex items-center gap-1.5 mt-1.5 text-xs text-primary hover:underline font-medium clear-both">
+              <MessageCircle className="w-3.5 h-3.5" />
+              {msg.reply_count} {msg.reply_count === 1 ? 'reply' : 'replies'}
+              <ChevronRight className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+});
+
+const validateChannelFile = (f) => {
+  const max = f.type?.startsWith('video/') ? 104857600 : 20971520;
+  if (f.size > max) { toast.error(`${f.name} exceeds ${f.type?.startsWith('video/') ? '100MB' : '20MB'} limit`); return false; }
+  return true;
+};
+
+// Channel message composer, isolated with its own local state (msg/files/sending).
+// Previously this state lived in the main Messages component, so every keystroke
+// re-rendered the entire (up to hundreds of rows) message list along with it — this
+// was the other half of the measured typing lag (the other half being the unmemoized
+// row rendering fixed by ChannelMessageRow above). Now a keystroke here only
+// re-renders this small composer subtree; onSent notifies the parent once, on send.
+function ChannelComposer({ channelId, channelName, onSent, getAuthHeaders }) {
+  const [msg, setMsg] = useState('');
+  const [files, setFiles] = useState([]);
+  const [sending, setSending] = useState(false);
+  const fileInputRef = useRef(null);
+  const textareaRef = useRef(null);
+
+  // Reset the draft when switching channels.
+  useEffect(() => {
+    setMsg(''); setFiles([]);
+    if (textareaRef.current) textareaRef.current.style.height = 'auto';
+  }, [channelId]);
+
+  const handleFileSelect = (e) => {
+    const picked = Array.from(e.target.files || []).filter(validateChannelFile);
+    setFiles(prev => [...prev, ...picked]); e.target.value = '';
+  };
+  const handlePaste = (e) => {
+    const items = e.clipboardData?.items || []; const pasted = [];
+    for (const item of items) { if (item.kind === 'file') { const f = item.getAsFile(); if (f && validateChannelFile(f)) pasted.push(f); } }
+    if (pasted.length) setFiles(prev => [...prev, ...pasted]);
+  };
+  const handleSend = async () => {
+    if ((!msg.trim() && !files.length) || sending) return;
+    setSending(true);
+    try {
+      const fd = new FormData();
+      fd.append('content', msg);
+      files.forEach(f => fd.append('files', f));
+      const headers = { ...getAuthHeaders() }; delete headers['Content-Type'];
+      const r = await fetch(`${API_URL}/api/channels/${channelId}/messages`, { method: 'POST', headers, body: fd });
+      if (r.ok) {
+        const sentMsg = await r.json();
+        setMsg(''); setFiles([]);
+        if (textareaRef.current) textareaRef.current.style.height = 'auto';
+        onSent(sentMsg);
+      } else toast.error(await getApiError(r));
+    } catch (e) { toast.error(e?.message || 'Something went wrong'); } finally { setSending(false); }
+  };
+
+  return (
+    <div className="px-4 py-3 border-t shrink-0">
+      <FilePreviewStrip files={files} onRemove={i => setFiles(prev => prev.filter((_, idx) => idx !== i))} />
+      <div className="flex items-end gap-2 bg-muted/70 rounded-xl px-3 py-2 focus-within:bg-card focus-within:ring-2 focus-within:ring-primary/40 transition-all border border-transparent focus-within:border-primary/40">
+        <input ref={fileInputRef} type="file" className="hidden" multiple accept="image/*,video/*,.pdf,.xlsx,.xls,.csv,.doc,.docx" onChange={handleFileSelect} />
+        <button className="text-muted-foreground/60 hover:text-primary transition-colors shrink-0" onClick={() => fileInputRef.current?.click()} title="Attach files">
+          <Paperclip className="w-5 h-5" />
+        </button>
+        <Textarea
+          ref={textareaRef}
+          value={msg}
+          onChange={e => {
+            setMsg(e.target.value);
+            e.target.style.height = 'auto';
+            e.target.style.height = Math.min(e.target.scrollHeight, 128) + 'px';
+          }}
+          onPaste={handlePaste}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+          placeholder={`Message #${channelName}`}
+          className="flex-1 resize-none text-sm border-0 p-0 focus-visible:ring-0 shadow-none bg-transparent overflow-y-hidden"
+          rows={1}
+          style={{ minHeight: 22, maxHeight: 128 }}
+        />
+        <button
+          onClick={handleSend}
+          disabled={(!msg.trim() && !files.length) || sending}
+          className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-primary hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors"
+        >
+          {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+        </button>
+      </div>
+      <p className="text-xs text-muted-foreground/60 mt-1 ml-1">Enter to send · Shift+Enter for new line · Paste images</p>
+    </div>
+  );
+}
 
 // Active tag pills — shown ABOVE the message (styled like the status badge). Only the
 // user who ADDED a tag can remove it; for everyone else the pill is read-only (locked).
@@ -249,11 +644,6 @@ export default function Messages({ fullscreen = false }) {
   const [msgDateFrom, setMsgDateFrom] = useState('');  // YYYY-MM-DD (IST)
   const [msgDateTo, setMsgDateTo] = useState('');
   const [activeSection, setActiveSection] = useState('dm');
-  const [channelMsg, setChannelMsg] = useState('');
-  const [channelFiles, setChannelFiles] = useState([]);
-  const [sendingChannel, setSendingChannel] = useState(false);
-  const channelFileInputRef = useRef(null);
-  const channelTextareaRef = useRef(null);
 
   // Thread state
   const [threadMsg, setThreadMsg] = useState(null);
@@ -360,57 +750,15 @@ export default function Messages({ fullscreen = false }) {
   const { canApprove } = usePermissions();
   const navigate = useNavigate();
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
-  // All chat times are shown in IST (Asia/Kolkata)
-  const IST = 'Asia/Kolkata';
-  const formatTime = (d) => {
-    if (!d) return '';
-    const dt = new Date(d);
-    const now = new Date();
-    const diff = Math.floor((now - dt) / 86400000);
-    if (diff === 0) return dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: IST });
-    if (diff === 1) return 'Yesterday';
-    if (diff < 7) return dt.toLocaleDateString('en-US', { weekday: 'short', timeZone: IST });
-    return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: IST });
-  };
-
-  const formatFullTime = (d) => {
-    if (!d) return '';
-    return new Date(d).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: IST });
-  };
-
-  const formatDate = (d) => {
-    if (!d) return '';
-    return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: IST });
-  };
-
-  // Compact IST date for the narrow grouped-message gutter: "17 Jul"
-  const formatShortDate = (d) => {
-    if (!d) return '';
-    return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', timeZone: IST });
-  };
-
-  // Full IST date + time (for tooltips): "11 Jul 2026, 08:46 PM IST"
-  const formatISTFull = (d) => {
-    if (!d) return '';
-    return new Date(d).toLocaleString('en-GB', {
-      day: '2-digit', month: 'short', year: 'numeric',
-      hour: '2-digit', minute: '2-digit', hour12: true, timeZone: IST,
-    }) + ' IST';
-  };
-
-  const getDateLabel = (d) => {
-    const dt = new Date(d);
-    const today = new Date();
-    const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
-    if (dt.toDateString() === today.toDateString()) return 'Today';
-    if (dt.toDateString() === yesterday.toDateString()) return 'Yesterday';
-    return dt.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-  };
-
   // ── Edit / delete message handlers ─────────────────────────────────────────
-  const startEdit = (id, content) => { setEditingId(id); setEditText(content || ''); };
-  const cancelEdit = () => { setEditingId(null); setEditText(''); };
+  // editTextRef mirrors editText so stable (useCallback) handlers below can read the
+  // latest value without needing editText in their dependency array — that would
+  // otherwise force a new callback identity (and re-render of memoized rows) on
+  // every keystroke while editing.
+  const editTextRef = useRef('');
+  const startEdit = useCallback((id, content) => { setEditingId(id); setEditText(content || ''); editTextRef.current = content || ''; }, []);
+  const cancelEdit = useCallback(() => { setEditingId(null); setEditText(''); }, []);
+  const onEditTextChange = useCallback((val) => { setEditText(val); editTextRef.current = val; }, []);
 
   const saveEditDM = async (message_id) => {
     const content = editText.trim();
@@ -440,8 +788,11 @@ export default function Messages({ fullscreen = false }) {
     } catch { toast.error('Delete failed'); }
   };
 
-  const saveEditChannel = async (msg_id) => {
-    const content = editText.trim();
+  // Reads editTextRef (not the editText state) so this callback's identity stays stable
+  // while the user is typing in the edit box — only depends on selectedChannel, which
+  // changes rarely (channel switch), unlike editText which changes every keystroke.
+  const saveEditChannel = useCallback(async (msg_id) => {
+    const content = editTextRef.current.trim();
     if (!selectedChannel) return;
     try {
       const r = await fetch(`${API_URL}/api/channels/${selectedChannel.channel_id}/messages/${msg_id}`, {
@@ -456,9 +807,9 @@ export default function Messages({ fullscreen = false }) {
         cancelEdit();
       } else { toast.error((await r.json().catch(() => ({})))?.detail || 'Edit failed'); }
     } catch { toast.error('Edit failed'); }
-  };
+  }, [selectedChannel, getAuthHeaders, cancelEdit]);
 
-  const deleteChannelMsg = async (msg_id) => {
+  const deleteChannelMsg = useCallback(async (msg_id) => {
     if (!selectedChannel || !window.confirm('Delete this message?')) return;
     try {
       const r = await fetch(`${API_URL}/api/channels/${selectedChannel.channel_id}/messages/${msg_id}`, {
@@ -467,7 +818,7 @@ export default function Messages({ fullscreen = false }) {
       if (r.ok) setChannelMessages(prev => prev.map(m => m.msg_id === msg_id ? { ...m, deleted: true, content: '', attachments: [] } : m));
       else toast.error('Delete failed');
     } catch { toast.error('Delete failed'); }
-  };
+  }, [selectedChannel, getAuthHeaders]);
 
   const saveEditReply = async (msg_id) => {
     const content = editText.trim();
@@ -512,34 +863,8 @@ export default function Messages({ fullscreen = false }) {
     return true;
   };
 
-  const getInitials = (n) => !n ? '?' : n.split(' ').map(s => s[0]).join('').toUpperCase().slice(0, 2);
-
-  const formatFileSize = (b) => {
-    if (!b) return '';
-    if (b < 1024) return `${b} B`;
-    if (b < 1048576) return `${(b / 1024).toFixed(1)} KB`;
-    return `${(b / 1048576).toFixed(1)} MB`;
-  };
-
-  const isImage = (fn, ct) => {
-    const ext = (fn || '').split('.').pop().toLowerCase();
-    return (ct || '').startsWith('image/') || ['jpg','jpeg','png','gif','webp'].includes(ext);
-  };
-  const isVideo = (fn, ct) => {
-    const ext = (fn || '').split('.').pop().toLowerCase();
-    return (ct || '').startsWith('video/') || ['mp4','mov','webm','avi'].includes(ext);
-  };
-  const getFileIcon = (fn, ct) => {
-    const ext = (fn || '').split('.').pop().toLowerCase();
-    if (isImage(fn, ct)) return <ImageIcon className="w-4 h-4 text-green-500" />;
-    if (isVideo(fn, ct)) return <Video className="w-4 h-4 text-purple-500" />;
-    if (ext === 'pdf' || ct === 'application/pdf') return <FileText className="w-4 h-4 text-red-400" />;
-    if (['xlsx','xls','csv'].includes(ext)) return <FileSpreadsheet className="w-4 h-4 text-emerald-400" />;
-    return <File className="w-4 h-4 text-muted-foreground/60" />;
-  };
-
   // Approve / reject a pending transaction straight from its #deposite_only/#withdraw_only card
-  const handleTxComplete = async (msg) => {
+  const handleTxComplete = useCallback(async (msg) => {
     const note = window.prompt('Add a completion note (optional):');
     if (note === null) return;
     try {
@@ -551,10 +876,10 @@ export default function Messages({ fullscreen = false }) {
       if (r.ok) toast.success('✅ Marked complete');
       else toast.error((await r.json().catch(() => ({})))?.detail || 'Could not complete');
     } catch { toast.error('Could not complete'); }
-  };
+  }, [getAuthHeaders]);
 
   // Toggle an emoji reaction on a message (channel or DM); the server bumps it to the latest.
-  const handleReact = async (msg, emoji, scope) => {
+  const handleReact = useCallback(async (msg, emoji, scope) => {
     try {
       const url = scope === 'channel'
         ? `${API_URL}/api/channels/${selectedChannel?.channel_id}/messages/${msg.msg_id}/react`
@@ -575,10 +900,10 @@ export default function Messages({ fullscreen = false }) {
           m.message_id === msg.message_id ? { ...m, reactions: data.reactions } : m));
       }
     } catch { /* */ }
-  };
+  }, [selectedChannel, getAuthHeaders]);
 
   // Toggle a status tag on a channel message (scalping-check workflow); syncs live to all viewers.
-  const handleTag = async (msg, tag) => {
+  const handleTag = useCallback(async (msg, tag) => {
     try {
       const r = await fetch(`${API_URL}/api/channels/${selectedChannel?.channel_id}/messages/${msg.msg_id}/tag`, {
         method: 'POST', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
@@ -590,16 +915,16 @@ export default function Messages({ fullscreen = false }) {
       setThreadReplies(prev => prev.map(m => m.msg_id === msg.msg_id ? { ...m, tags: data.tags } : m));
       setThreadMsg(prev => (prev && prev.msg_id === msg.msg_id) ? { ...prev, tags: data.tags } : prev);
     } catch { /* */ }
-  };
+  }, [selectedChannel, getAuthHeaders]);
 
   // Scroll the main channel list to a message and briefly flash it (used when opening its thread).
-  const scrollToChannelMessage = (msgId) => {
+  const scrollToChannelMessage = useCallback((msgId) => {
     setHighlightMsgId(msgId);
     setTimeout(() => {
       document.getElementById(`chmsg-${msgId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 60);
     setTimeout(() => setHighlightMsgId(cur => (cur === msgId ? null : cur)), 2400);
-  };
+  }, []);
 
   // Open a channel message from elsewhere (e.g. clicking a reply-DM bubble): switch to
   // the channel, scroll to the message and open its thread. Reuses pendingJumpRef so the
@@ -645,7 +970,7 @@ export default function Messages({ fullscreen = false }) {
   }, [channelMessages, selectedChannel]);
 
   // Process a withdrawal request from its #withdraw_only card (captcha-gated, really processes it)
-  const handleTxProcess = async (msg) => {
+  const handleTxProcess = useCallback(async (msg) => {
     const a = Math.floor(Math.random() * 8) + 2, b = Math.floor(Math.random() * 8) + 2;
     const ans = window.prompt(`Confirm processing — what is ${a} + ${b}?`);
     if (ans === null) return;
@@ -658,43 +983,14 @@ export default function Messages({ fullscreen = false }) {
       if (r.ok) toast.success('🟢 Request processed');
       else toast.error((await r.json().catch(() => ({})))?.detail || 'Could not process');
     } catch { toast.error('Could not process'); }
-  };
+  }, [getAuthHeaders]);
 
-  const renderAttachments = (attachments, isSelf) => {
-    if (!attachments?.length) return null;
-    const imgs = attachments.filter(a => isImage(a.filename, a.content_type));
-    const vids = attachments.filter(a => !isImage(a.filename, a.content_type) && isVideo(a.filename, a.content_type));
-    const others = attachments.filter(a => !isImage(a.filename, a.content_type) && !isVideo(a.filename, a.content_type));
-    return (
-      <div className="mt-1.5 space-y-1.5">
-        {imgs.length > 0 && (
-          <div className={`grid gap-1 ${imgs.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`} style={{ maxWidth: 280 }}>
-            {imgs.map((img, i) => (
-              <div key={i} className="relative group cursor-pointer rounded-lg overflow-hidden" onClick={() => setLightboxUrl(img.url)}>
-                <img src={img.url} alt={img.filename} className="w-full object-cover" style={{ maxHeight: 180 }} />
-                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                  <ZoomIn className="w-6 h-6 text-white drop-shadow" />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-        {vids.map((v, i) => (
-          <video key={i} src={v.url} controls className="rounded-lg w-full" style={{ maxWidth: 280, maxHeight: 180 }} />
-        ))}
-        {others.map((f, i) => (
-          <a key={i} href={f.url} target="_blank" rel="noopener noreferrer"
-            className={`flex items-center gap-2 p-2 rounded-lg ${isSelf ? 'bg-primary/20 hover:bg-primary/30' : 'bg-muted hover:bg-muted/80'}`}>
-            {getFileIcon(f.filename, f.content_type)}
-            <div className="min-w-0">
-              <p className="text-xs font-medium truncate">{f.filename}</p>
-              <p className={`text-xs ${isSelf ? 'text-primary/60' : 'text-muted-foreground/60'}`}>{formatFileSize(f.size)}</p>
-            </div>
-          </a>
-        ))}
-      </div>
-    );
-  };
+  const navigateToTx = useCallback((txReference) => {
+    navigate(`/transactions?search=${encodeURIComponent(txReference)}`);
+  }, [navigate]);
+
+  // Thin wrapper binding the module-level renderer to this component's lightbox state.
+  const renderAttachments = (attachments, isSelf) => renderAttachmentsBase(attachments, isSelf, setLightboxUrl);
 
   // Scroll helpers
   const scrollToBottom = (ref, instant = false) => {
@@ -983,6 +1279,15 @@ export default function Messages({ fullscreen = false }) {
     } catch { /* */ }
   }, [getAuthHeaders]);
 
+  // Stable per-message "open thread" handler for the memoized channel row list — takes
+  // msg as a call-time argument (from the row's own props) rather than closing over it,
+  // so this single function reference works for every row without ever going stale.
+  const openThreadForMsg = useCallback((msg) => {
+    setThreadMsg(msg);
+    if (selectedChannel) fetchThreadReplies(selectedChannel.channel_id, msg.msg_id);
+    scrollToChannelMessage(msg.msg_id);
+  }, [selectedChannel, fetchThreadReplies, scrollToChannelMessage]);
+
   const markChannelRead = useCallback(async (channelId) => {
     try {
       await fetch(`${API_URL}/api/channels/${channelId}/mark-read`, { method: 'PUT', headers: getAuthHeaders() });
@@ -1011,25 +1316,13 @@ export default function Messages({ fullscreen = false }) {
     } catch (e) { toast.error(e?.message || 'Something went wrong'); } finally { setSending(false); }
   };
 
-  const handleSendChannelMessage = async () => {
-    if ((!channelMsg.trim() && !channelFiles.length) || !selectedChannel) return;
-    setSendingChannel(true);
-    try {
-      const fd = new FormData();
-      fd.append('content', channelMsg);
-      channelFiles.forEach(f => fd.append('files', f));
-      const headers = { ...getAuthHeaders() }; delete headers['Content-Type'];
-      const r = await fetch(`${API_URL}/api/channels/${selectedChannel.channel_id}/messages`, { method: 'POST', headers, body: fd });
-      if (r.ok) {
-        const msg = await r.json();
-        setChannelMsg(''); setChannelFiles([]);
-        if (channelTextareaRef.current) channelTextareaRef.current.style.height = 'auto';
-        setChannelMessages(prev => prev.some(m => m.msg_id === msg.msg_id) ? prev : [...prev, msg]);
-        setChannels(prev => prev.map(ch => ch.channel_id === selectedChannel.channel_id
-          ? { ...ch, last_message: msg.content || '📎 Media', last_message_at: msg.created_at } : ch));
-      } else toast.error(await getApiError(r));
-    } catch (e) { toast.error(e?.message || 'Something went wrong'); } finally { setSendingChannel(false); }
-  };
+  // Called by ChannelComposer once a message has actually been sent (the composer
+  // does the fetch itself, keeping its own draft state fully isolated).
+  const handleChannelMessageSent = useCallback((msg) => {
+    setChannelMessages(prev => prev.some(m => m.msg_id === msg.msg_id) ? prev : [...prev, msg]);
+    setChannels(prev => prev.map(ch => ch.channel_id === msg.channel_id
+      ? { ...ch, last_message: msg.content || '📎 Media', last_message_at: msg.created_at } : ch));
+  }, []);
 
   const handleSendThreadReply = async () => {
     if ((!threadText.trim() && !threadFiles.length) || !threadMsg) return;
@@ -1139,25 +1432,10 @@ export default function Messages({ fullscreen = false }) {
     if (f.size > 10485760) { toast.error('File size exceeds 10MB limit'); return; }
     setAttachment(f); e.target.value = '';
   };
-  const validateChannelFile = (f) => {
-    const max = f.type?.startsWith('video/') ? 104857600 : 20971520;
-    if (f.size > max) { toast.error(`${f.name} exceeds ${f.type?.startsWith('video/') ? '100MB' : '20MB'} limit`); return false; }
-    return true;
-  };
-  const handleChannelFileSelect = (e) => {
-    const files = Array.from(e.target.files || []).filter(validateChannelFile);
-    setChannelFiles(prev => [...prev, ...files]); e.target.value = '';
-  };
   const handleThreadFileSelect = (e) => {
     const files = Array.from(e.target.files || []).filter(validateChannelFile);
     setThreadFiles(prev => [...prev, ...files]); e.target.value = '';
   };
-  const handleChannelPaste = useCallback((e) => {
-    const items = e.clipboardData?.items || []; const pasted = [];
-    for (const item of items) { if (item.kind === 'file') { const f = item.getAsFile(); if (f && validateChannelFile(f)) pasted.push(f); } }
-    if (pasted.length) setChannelFiles(prev => [...prev, ...pasted]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
   const handleThreadPaste = useCallback((e) => {
     const items = e.clipboardData?.items || []; const pasted = [];
     for (const item of items) { if (item.kind === 'file') { const f = item.getAsFile(); if (f && validateChannelFile(f)) pasted.push(f); } }
@@ -1230,13 +1508,23 @@ export default function Messages({ fullscreen = false }) {
     c.user1_name?.toLowerCase().includes(searchTerm.toLowerCase()) || c.user2_name?.toLowerCase().includes(searchTerm.toLowerCase()));
   const filteredChannels = channels.filter(c => c.name?.toLowerCase().includes(searchTerm.toLowerCase()));
 
-  const groupedChannelMessages = channelMessages.map((msg, i) => {
-    const prev = channelMessages[i - 1];
-    const sameDay = prev && new Date(msg.created_at).toDateString() === new Date(prev.created_at).toDateString();
-    const grouped = prev && prev.sender_id === msg.sender_id && sameDay
-      && new Date(msg.created_at) - new Date(prev.created_at) < 300000;
-    return { ...msg, isGrouped: !!grouped, showDateDivider: !sameDay };
-  });
+  const canProcessTx = canApprove('transaction_requests');
+
+  // Memoized: previously recomputed (map + filter over every loaded message) on EVERY
+  // render, including every keystroke anywhere else in this component — with hundreds
+  // of messages loaded that was the dominant cost behind the typing/click lag. Now only
+  // recomputes when the messages or the active filters actually change.
+  const groupedChannelMessages = useMemo(() => {
+    const grouped = channelMessages.map((msg, i) => {
+      const prev = channelMessages[i - 1];
+      const sameDay = prev && new Date(msg.created_at).toDateString() === new Date(prev.created_at).toDateString();
+      const isGrouped = prev && prev.sender_id === msg.sender_id && sameDay
+        && new Date(msg.created_at) - new Date(prev.created_at) < 300000;
+      return { ...msg, isGrouped: !!isGrouped, showDateDivider: !sameDay };
+    });
+    return grouped.filter(msgMatches);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channelMessages, msgFilter, msgSearch, msgDateFrom, msgDateTo]);
 
   if (loading) {
     return <div className="flex items-center justify-center h-96"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
@@ -1696,174 +1984,41 @@ export default function Messages({ fullscreen = false }) {
                         )}
                       </div>
                     ) : (
-                      groupedChannelMessages.filter(msgMatches).map(msg => {
-                        const isSelf = msg.sender_id === user?.user_id;
-                        const openThread = () => {
-                          setThreadMsg(msg);
-                          if (selectedChannel) fetchThreadReplies(selectedChannel.channel_id, msg.msg_id);
-                          scrollToChannelMessage(msg.msg_id);
-                        };
-                        return (
-                          <div key={msg.msg_id} id={`chmsg-${msg.msg_id}`} className="scroll-mt-4">
-                            {msg.showDateDivider && <DateDivider date={msg.created_at} />}
-                            <div className={`group flex gap-3 px-4 py-0.5 transition-colors duration-700 ${highlightMsgId === msg.msg_id ? 'bg-primary/15' : 'hover:bg-muted/50/60'}`}>
-                              {/* Avatar or grouped spacer */}
-                              <div className="w-9 shrink-0 mt-1">
-                                {!msg.isGrouped ? (
-                                  <Avatar className="w-9 h-9">
-                                    <AvatarFallback className={`text-xs font-medium text-white ${isSelf ? 'bg-gradient-to-br from-blue-500 to-blue-700' : 'bg-gradient-to-br from-indigo-500 to-purple-600'}`}>
-                                      {getInitials(msg.sender_name)}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                ) : (
-                                  <span title={formatISTFull(msg.created_at)}
-                                    className="text-[9px] text-muted-foreground block text-right leading-tight pt-2 whitespace-nowrap -ml-3">
-                                    {formatShortDate(msg.created_at)}<br />{formatFullTime(msg.created_at)}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0 pb-1">
-                                {/* Name + time header (first in group only) */}
-                                {!msg.isGrouped && (
-                                  <div className="flex items-baseline gap-2 mb-1">
-                                    <span className="text-sm font-bold text-foreground">{isSelf ? 'You' : msg.sender_name}</span>
-                                    <span className="text-xs text-muted-foreground/60 whitespace-nowrap" title={formatISTFull(msg.created_at)}>{formatDate(msg.created_at)}</span>
-                                    <button onClick={openThread}
-                                      className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-primary bg-white hover:bg-primary/5 rounded px-2 py-0.5 border border-border hover:border-primary/40 shadow-sm">
-                                      <MessageCircle className="w-3 h-3" /> Reply
-                                    </button>
-                                  </div>
-                                )}
-                                {/* Grouped reply button on hover */}
-                                {msg.isGrouped && (
-                                  <button onClick={openThread}
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity float-right flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-primary bg-white hover:bg-primary/5 rounded px-2 py-0.5 border border-border hover:border-primary/40 shadow-sm">
-                                    <MessageCircle className="w-3 h-3" /> Reply
-                                  </button>
-                                )}
-                                {!msg.deleted && (
-                                  <ReactionChips reactions={msg.reactions} currentUserId={user?.user_id}
-                                    onReact={(emoji) => handleReact(msg, emoji, 'channel')} />
-                                )}
-                                {!msg.deleted && TAG_CHANNELS.includes(selectedChannel?.name) && (
-                                  <TagChips tags={msg.tags} onTag={(tag) => handleTag(msg, tag)} currentUserId={user?.user_id} />
-                                )}
-                                {/* Bubble (text + attachments together) */}
-                                {msg.deleted ? (
-                                  <div className="inline-block rounded-2xl px-4 py-2 max-w-lg bg-muted text-muted-foreground italic text-sm">🚫 This message was deleted</div>
-                                ) : editingId === msg.msg_id ? (
-                                  <div className="flex flex-col gap-1 max-w-lg">
-                                    <textarea value={editText} onChange={e => setEditText(e.target.value)} rows={2}
-                                      className="w-full text-sm rounded-lg border border-primary/40 bg-card px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary" autoFocus />
-                                    <div className="flex gap-2">
-                                      <button onClick={() => saveEditChannel(msg.msg_id)} className="text-xs bg-primary text-white rounded px-2 py-0.5 hover:opacity-90">Save</button>
-                                      <button onClick={cancelEdit} className="text-xs text-muted-foreground hover:text-foreground">Cancel</button>
-                                    </div>
-                                  </div>
-                                ) : (msg.content || msg.attachments?.length > 0) && (
-                                  <div className={`relative group/msg inline-block rounded-2xl px-4 py-2.5 max-w-lg ${
-                                    isSelf
-                                      ? 'bg-primary text-white rounded-tl-sm'
-                                      : 'bg-muted text-foreground rounded-tl-sm'
-                                  }`}>
-                                    {(isSelf || isAdmin) && (
-                                      <div className="absolute -top-2 -right-2 opacity-0 group-hover/msg:opacity-100 transition-opacity flex gap-0.5 bg-card border rounded-full shadow-sm px-1 z-10">
-                                        {isSelf && <button title="Edit" onClick={() => startEdit(msg.msg_id, msg.content)} className="p-1 text-muted-foreground hover:text-primary"><Pencil className="w-3 h-3" /></button>}
-                                        <button title="Delete" onClick={() => deleteChannelMsg(msg.msg_id)} className="p-1 text-muted-foreground hover:text-red-500"><Trash2 className="w-3 h-3" /></button>
-                                      </div>
-                                    )}
-                                    {msg.content && (
-                                      <p className={`text-sm whitespace-pre-wrap leading-relaxed ${isSelf ? 'text-white' : 'text-foreground'}`}>
-                                        {msg.content}
-                                      </p>
-                                    )}
-                                    {msg.attachments?.length > 0 && renderAttachments(msg.attachments, isSelf)}
-                                    {msg.is_tx_bot && (
-                                      <div className="mt-1.5 flex items-center gap-2 flex-wrap">
-                                        <TxBadge msg={msg} />
-                                        {msg.tx_reference && (
-                                          <button type="button" onClick={() => navigate(`/transactions?search=${encodeURIComponent(msg.tx_reference)}`)}
-                                            className={`text-[11px] underline ${isSelf ? 'text-white/90' : 'text-primary'} hover:opacity-80`}>
-                                            View transaction →
-                                          </button>
-                                        )}
-                                        {msg.tx_type === 'withdrawal' && !msg.tx_processed_by && !msg.tx_direct && canApprove('transaction_requests') && (
-                                          <button type="button" onClick={() => handleTxProcess(msg)}
-                                            className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-600 text-white hover:bg-amber-700">Process</button>
-                                        )}
-                                        {msg.tx_processed_by && (
-                                          <span className="text-[11px] text-emerald-600 font-medium">🟢 Processed{msg.tx_processed_by_name ? ` by ${msg.tx_processed_by_name}` : ''}</span>
-                                        )}
-                                        {msg.tx_owner_id === user?.user_id && !msg.tx_completed_by && (
-                                          <button type="button" onClick={() => handleTxComplete(msg)}
-                                            className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-600 text-white hover:bg-blue-700">Complete</button>
-                                        )}
-                                        {msg.tx_completed_by && (
-                                          <span className="text-[11px] text-green-600 font-medium">✅ Completed{msg.tx_completed_by_name ? ` by ${msg.tx_completed_by_name}` : ''}</span>
-                                        )}
-                                      </div>
-                                    )}
-                                    {msg.edited && <span className={`text-[10px] ml-1 ${isSelf ? 'text-white/70' : 'text-muted-foreground'}`}>(edited)</span>}
-                                  </div>
-                                )}
-                                {!msg.deleted && (
-                                  <div className="flex items-center gap-1.5 clear-both">
-                                    <ReactionAdder onReact={(emoji) => handleReact(msg, emoji, 'channel')} />
-                                    {TAG_CHANNELS.includes(selectedChannel?.name) && (
-                                      <TagBar tags={msg.tags} onTag={(tag) => handleTag(msg, tag)} currentUserId={user?.user_id} />
-                                    )}
-                                  </div>
-                                )}
-                                {/* Thread reply count */}
-                                {msg.reply_count > 0 && (
-                                  <button onClick={openThread}
-                                    className="flex items-center gap-1.5 mt-1.5 text-xs text-primary hover:underline font-medium clear-both">
-                                    <MessageCircle className="w-3.5 h-3.5" />
-                                    {msg.reply_count} {msg.reply_count === 1 ? 'reply' : 'replies'}
-                                    <ChevronRight className="w-3 h-3" />
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })
+                      groupedChannelMessages.map(msg => (
+                        <ChannelMessageRow
+                          key={msg.msg_id}
+                          msg={msg}
+                          currentUserId={user?.user_id}
+                          isAdmin={isAdmin}
+                          isEditing={editingId === msg.msg_id}
+                          editText={editingId === msg.msg_id ? editText : ''}
+                          onEditTextChange={onEditTextChange}
+                          highlighted={highlightMsgId === msg.msg_id}
+                          tagChannelActive={TAG_CHANNELS.includes(selectedChannel?.name)}
+                          canProcessTx={canProcessTx}
+                          onOpenThread={openThreadForMsg}
+                          onReact={handleReact}
+                          onTag={handleTag}
+                          onStartEdit={startEdit}
+                          onSaveEdit={saveEditChannel}
+                          onCancelEdit={cancelEdit}
+                          onDelete={deleteChannelMsg}
+                          onTxProcess={handleTxProcess}
+                          onTxComplete={handleTxComplete}
+                          onNavigateToTx={navigateToTx}
+                          onImageClick={setLightboxUrl}
+                        />
+                      ))
                     )}
                   </div>
 
                   {/* Channel compose */}
-                  <div className="px-4 py-3 border-t shrink-0">
-                    <FilePreviewStrip files={channelFiles} onRemove={i => setChannelFiles(prev => prev.filter((_, idx) => idx !== i))} />
-                    <div className="flex items-end gap-2 bg-muted/70 rounded-xl px-3 py-2 focus-within:bg-white focus-within:ring-2 focus-within:ring-primary/40 transition-all border border-transparent focus-within:border-primary/40">
-                      <input ref={channelFileInputRef} type="file" className="hidden" multiple accept="image/*,video/*,.pdf,.xlsx,.xls,.csv,.doc,.docx" onChange={handleChannelFileSelect} />
-                      <button className="text-muted-foreground/60 hover:text-primary transition-colors shrink-0" onClick={() => channelFileInputRef.current?.click()} title="Attach files">
-                        <Paperclip className="w-5 h-5" />
-                      </button>
-                      <Textarea
-                        ref={channelTextareaRef}
-                        value={channelMsg}
-                        onChange={e => {
-                          setChannelMsg(e.target.value);
-                          e.target.style.height = 'auto';
-                          e.target.style.height = Math.min(e.target.scrollHeight, 128) + 'px';
-                        }}
-                        onPaste={handleChannelPaste}
-                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendChannelMessage(); } }}
-                        placeholder={`Message #${selectedChannel.name}`}
-                        className="flex-1 resize-none text-sm border-0 p-0 focus-visible:ring-0 shadow-none bg-transparent overflow-y-hidden"
-                        rows={1}
-                        style={{ minHeight: 22, maxHeight: 128 }}
-                      />
-                      <button
-                        onClick={handleSendChannelMessage}
-                        disabled={(!channelMsg.trim() && !channelFiles.length) || sendingChannel}
-                        className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-primary hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors"
-                      >
-                        {sendingChannel ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                      </button>
-                    </div>
-                    <p className="text-xs text-muted-foreground/60 mt-1 ml-1">Enter to send · Shift+Enter for new line · Paste images</p>
-                  </div>
+                  <ChannelComposer
+                    channelId={selectedChannel.channel_id}
+                    channelName={selectedChannel.name}
+                    onSent={handleChannelMessageSent}
+                    getAuthHeaders={getAuthHeaders}
+                  />
                 </>
 
               ) : activeSection === 'dm' && selectedConversation ? (
