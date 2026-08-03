@@ -350,7 +350,7 @@ const ChannelMessageRow = memo(function ChannelMessageRow({
               )}
               {msg.content && (
                 <p className={`text-sm whitespace-pre-wrap leading-relaxed ${isSelf ? 'text-white' : 'text-foreground'}`}>
-                  {msg.content}
+                  {renderMentionedContent(msg.content, msg.mentions)}
                 </p>
               )}
               {msg.attachments?.length > 0 && renderAttachmentsBase(msg.attachments, isSelf, onImageClick)}
@@ -417,17 +417,20 @@ const validateChannelFile = (f) => {
 // was the other half of the measured typing lag (the other half being the unmemoized
 // row rendering fixed by ChannelMessageRow above). Now a keystroke here only
 // re-renders this small composer subtree; onSent notifies the parent once, on send.
-function ChannelComposer({ channelId, channelName, onSent, getAuthHeaders }) {
+function ChannelComposer({ channelId, channelName, members, onSent, getAuthHeaders }) {
   const [msg, setMsg] = useState('');
   const [files, setFiles] = useState([]);
   const [sending, setSending] = useState(false);
   const fileInputRef = useRef(null);
   const textareaRef = useRef(null);
+  const mention = useMentionOverlay(query => filterMentionCandidates(members, query));
 
   // Reset the draft when switching channels.
   useEffect(() => {
     setMsg(''); setFiles([]);
+    mention.resetMentions();
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelId]);
 
   const handleFileSelect = (e) => {
@@ -445,12 +448,14 @@ function ChannelComposer({ channelId, channelName, onSent, getAuthHeaders }) {
     try {
       const fd = new FormData();
       fd.append('content', msg);
+      fd.append('mentions', JSON.stringify(mention.getMentionsForSend()));
       files.forEach(f => fd.append('files', f));
       const headers = { ...getAuthHeaders() }; delete headers['Content-Type'];
       const r = await fetch(`${API_URL}/api/channels/${channelId}/messages`, { method: 'POST', headers, body: fd });
       if (r.ok) {
         const sentMsg = await r.json();
         setMsg(''); setFiles([]);
+        mention.resetMentions();
         if (textareaRef.current) textareaRef.current.style.height = 'auto';
         onSent(sentMsg);
       } else toast.error(await getApiError(r));
@@ -460,7 +465,17 @@ function ChannelComposer({ channelId, channelName, onSent, getAuthHeaders }) {
   return (
     <div className="px-4 py-3 border-t shrink-0">
       <FilePreviewStrip files={files} onRemove={i => setFiles(prev => prev.filter((_, idx) => idx !== i))} />
-      <div className="flex items-end gap-2 bg-muted/70 rounded-xl px-3 py-2 focus-within:bg-card focus-within:ring-2 focus-within:ring-primary/40 transition-all border border-transparent focus-within:border-primary/40">
+      <div className="relative flex items-end gap-2 bg-muted/70 rounded-xl px-3 py-2 focus-within:bg-card focus-within:ring-2 focus-within:ring-primary/40 transition-all border border-transparent focus-within:border-primary/40">
+        {mention.trigger && (
+          <MentionDropdown candidates={mention.candidates} activeIndex={mention.activeIndex}
+            onSelect={u => {
+              const result = mention.applyMention(u, msg);
+              if (result) {
+                setMsg(result.text);
+                requestAnimationFrame(() => { textareaRef.current?.focus(); textareaRef.current?.setSelectionRange(result.caret, result.caret); });
+              }
+            }} />
+        )}
         <input ref={fileInputRef} type="file" className="hidden" multiple accept="image/*,video/*,.pdf,.xlsx,.xls,.csv,.doc,.docx" onChange={handleFileSelect} />
         <button className="text-muted-foreground/60 hover:text-primary transition-colors shrink-0" onClick={() => fileInputRef.current?.click()} title="Attach files">
           <Paperclip className="w-5 h-5" />
@@ -470,11 +485,15 @@ function ChannelComposer({ channelId, channelName, onSent, getAuthHeaders }) {
           value={msg}
           onChange={e => {
             setMsg(e.target.value);
+            mention.handleChange(e.target.value, e.target.selectionStart);
             e.target.style.height = 'auto';
             e.target.style.height = Math.min(e.target.scrollHeight, 128) + 'px';
           }}
           onPaste={handlePaste}
-          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+          onKeyDown={e => {
+            if (mention.handleKeyDown(e, msg, setMsg, textareaRef.current)) return;
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
+          }}
           placeholder={`Message #${channelName}`}
           className="flex-1 resize-none text-sm border-0 p-0 focus-visible:ring-0 shadow-none bg-transparent overflow-y-hidden"
           rows={1}
@@ -488,9 +507,135 @@ function ChannelComposer({ channelId, channelName, onSent, getAuthHeaders }) {
           {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
         </button>
       </div>
-      <p className="text-xs text-muted-foreground/60 mt-1 ml-1">Enter to send · Shift+Enter for new line · Paste images</p>
+      <p className="text-xs text-muted-foreground/60 mt-1 ml-1">Enter to send · Shift+Enter for new line · Paste images · @ to mention</p>
     </div>
   );
+}
+
+// ── @mention support ────────────────────────────────────────────────────────────
+// Mentions are tracked as {user_id, name} pairs captured at send time (from whoever
+// was actually picked in the autocomplete), not re-parsed from the raw text on
+// display — that keeps rendering and "was I mentioned" notifications correct even if
+// the mentioned person's name later changes or they leave the channel.
+
+// Detects an in-progress "@word" trigger immediately before the caret, so a caller
+// can show an autocomplete dropdown. Returns null once a space closes the token, or
+// the "@" isn't preceded by start-of-text/whitespace (avoids matching an email
+// address or similar mid-word "@").
+function detectMentionTrigger(text, caret) {
+  const uptoCaret = text.slice(0, caret);
+  const at = uptoCaret.lastIndexOf('@');
+  if (at === -1) return null;
+  const between = uptoCaret.slice(at + 1);
+  if (/[\s\n]/.test(between)) return null;
+  if (at > 0 && !/\s/.test(uptoCaret[at - 1])) return null;
+  return { start: at, query: between };
+}
+
+// Inserts "@Name " at the trigger position, replacing the partial "@query" typed so far.
+function insertMention(text, trigger, name) {
+  const before = text.slice(0, trigger.start);
+  const after = text.slice(trigger.start + 1 + trigger.query.length);
+  const inserted = `@${name} `;
+  return { text: `${before}${inserted}${after}`, caret: (before + inserted).length };
+}
+
+// Renders message content with @Name mentions highlighted, using the exact names
+// captured in `mentions` ([{user_id, name}]) rather than re-detecting them from text.
+function renderMentionedContent(content, mentions) {
+  if (!content || !mentions?.length) return content;
+  const names = [...new Set(mentions.map(m => m.name).filter(Boolean))].sort((a, b) => b.length - a.length);
+  if (!names.length) return content;
+  const pattern = new RegExp(`@(${names.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'g');
+  return content.split(pattern).map((part, i) => (
+    i % 2 === 1
+      ? <span key={i} className="font-semibold text-primary bg-primary/10 rounded px-1">@{part}</span>
+      : part
+  ));
+}
+
+// Filters a {user_id, name} candidate list by the in-progress "@query" (case-
+// insensitive prefix match on name, falling back to substring match), capped to a
+// manageable dropdown size. Empty query -> first N candidates, so "@" alone shows
+// something useful rather than an empty dropdown.
+function filterMentionCandidates(candidates, query) {
+  if (!candidates?.length) return [];
+  const q = (query || '').toLowerCase();
+  if (!q) return candidates.slice(0, 6);
+  const starts = candidates.filter(u => u.name?.toLowerCase().startsWith(q));
+  const contains = candidates.filter(u => !u.name?.toLowerCase().startsWith(q) && u.name?.toLowerCase().includes(q));
+  return [...starts, ...contains].slice(0, 6);
+}
+
+// Autocomplete dropdown shown above a composer while a mention is in progress.
+function MentionDropdown({ candidates, activeIndex, onSelect }) {
+  if (!candidates.length) return null;
+  return (
+    <div className="absolute bottom-full left-0 mb-1 w-64 max-h-48 overflow-y-auto bg-card border border-border rounded-lg shadow-lg z-50 py-1">
+      {candidates.map((u, i) => (
+        <button key={u.user_id} type="button"
+          onMouseDown={e => { e.preventDefault(); onSelect(u); }}
+          className={`w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 ${i === activeIndex ? 'bg-primary/10 text-primary' : 'hover:bg-muted'}`}>
+          <span className="w-5 h-5 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white text-[10px] flex items-center justify-center shrink-0 font-medium">
+            {getInitials(u.name)}
+          </span>
+          <span className="truncate">{u.name}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// Encapsulates the @mention autocomplete overlay for a single plain-textarea composer.
+// Deliberately does NOT own the draft text itself (each composer already has its own
+// text state from before this feature existed) — it's a thin layer on top: callers
+// feed it the current text + caret on change, and call its handlers from their own
+// onChange/onKeyDown. `getCandidates(query)` returns the filtered {user_id, name} list
+// to show for the in-progress query (empty query -> a sensible default list).
+function useMentionOverlay(getCandidates) {
+  const [trigger, setTrigger] = useState(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const mentionedRef = useRef(new Map()); // user_id -> name, for the current draft
+
+  const candidates = trigger ? getCandidates(trigger.query) : [];
+
+  const handleChange = (text, caret) => {
+    setTrigger(detectMentionTrigger(text, caret));
+    setActiveIndex(0);
+  };
+
+  const applyMention = (user, text) => {
+    if (!trigger) return null;
+    const result = insertMention(text, trigger, user.name);
+    mentionedRef.current.set(user.user_id, user.name);
+    setTrigger(null);
+    return result;
+  };
+
+  // Returns true if the key was consumed by the dropdown (caller should return early
+  // and skip its own Enter-to-send / newline handling for this keystroke).
+  const handleKeyDown = (e, text, setText, textareaEl) => {
+    if (!trigger || !candidates.length) return false;
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIndex(i => (i + 1) % candidates.length); return true; }
+    if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIndex(i => (i - 1 + candidates.length) % candidates.length); return true; }
+    if (e.key === 'Escape') { e.preventDefault(); setTrigger(null); return true; }
+    if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab') {
+      e.preventDefault();
+      const picked = candidates[activeIndex] || candidates[0];
+      const result = applyMention(picked, text);
+      if (result) {
+        setText(result.text);
+        requestAnimationFrame(() => { textareaEl?.focus(); textareaEl?.setSelectionRange(result.caret, result.caret); });
+      }
+      return true;
+    }
+    return false;
+  };
+
+  const getMentionsForSend = () => Array.from(mentionedRef.current, ([user_id, name]) => ({ user_id, name }));
+  const resetMentions = () => { mentionedRef.current = new Map(); };
+
+  return { trigger, candidates, activeIndex, handleChange, applyMention, handleKeyDown, getMentionsForSend, resetMentions };
 }
 
 // Active tag pills — shown ABOVE the message (styled like the status badge). Only the
@@ -605,6 +750,10 @@ export default function Messages({ fullscreen = false }) {
   const [sending, setSending] = useState(false);
   const [attachment, setAttachment] = useState(null);
   const fileInputRef = useRef(null);
+  const dmTextareaRef = useRef(null);
+  // DM mentions can reference anyone (not just the other party in the conversation) -
+  // e.g. "ask @manager about this" - so the candidate source is the full users list.
+  const dmMention = useMentionOverlay(query => filterMentionCandidates(users, query));
   const [newChatDialog, setNewChatDialog] = useState(false);
   const [selectedRecipient, setSelectedRecipient] = useState('');
 
@@ -636,6 +785,16 @@ export default function Messages({ fullscreen = false }) {
   // Channel state
   const [channels, setChannels] = useState([]);
   const [selectedChannel, setSelectedChannel] = useState(null);
+  // @mention candidates for the currently-open channel: the channel's own member list
+  // (user_ids only) resolved against `users` (which has names) for the autocomplete.
+  // Declared early (before any useMentionOverlay(...) calls below) since those hooks
+  // synchronously read this on every render once a mention is in progress - defining
+  // it later in the component would be a TDZ violation the moment a user types "@".
+  const channelMentionCandidates = useMemo(() => {
+    if (!selectedChannel?.members?.length || !users.length) return [];
+    const memberIds = new Set(selectedChannel.members);
+    return users.filter(u => memberIds.has(u.user_id));
+  }, [selectedChannel, users]);
   const [channelMessages, setChannelMessages] = useState([]);
   // Channel message pagination (scroll-to-top loads older pages; server-side date filtering)
   const [channelPage, setChannelPage] = useState(1);
@@ -659,6 +818,7 @@ export default function Messages({ fullscreen = false }) {
   const [sendingThread, setSendingThread] = useState(false);
   const threadFileInputRef = useRef(null);
   const threadTextareaRef = useRef(null);
+  const threadMention = useMentionOverlay(query => filterMentionCandidates(channelMentionCandidates, query));
 
   // Channel dialog
   const [newChannelDialog, setNewChannelDialog] = useState(false);
@@ -1032,10 +1192,13 @@ export default function Messages({ fullscreen = false }) {
         if (selectedConvRef.current?.user_id === otherId) {
           setMessages(prev => prev.some(m => m.message_id === msg.message_id) ? prev : [...prev, msg]);
         } else if (msg.sender_id !== user?.user_id) {
-          // In-page toast when on Messages page but viewing a different conversation
+          // In-page toast when on Messages page but viewing a different conversation.
+          // A mention gets a distinct, longer-lived notification so it cuts through.
           const preview = msg.content || (msg.attachments?.length ? '📎 Attachment' : '');
-          toast(`💬 ${msg.sender_name}`, {
+          const isMentioned = msg.mentions?.some(m => m.user_id === user?.user_id);
+          toast(isMentioned ? `🔔 ${msg.sender_name} mentioned you` : `💬 ${msg.sender_name}`, {
             description: preview,
+            duration: isMentioned ? 10000 : 6000,
             action: {
               label: 'View',
               onClick: () => {
@@ -1047,7 +1210,6 @@ export default function Messages({ fullscreen = false }) {
                 setThreadMsg(null);
               },
             },
-            duration: 6000,
           });
         }
         setConversations(prev => {
@@ -1079,10 +1241,13 @@ export default function Messages({ fullscreen = false }) {
         if (selectedChannelRef.current?.channel_id === msg.channel_id) {
           setChannelMessages(prev => prev.some(m => m.msg_id === msg.msg_id) ? prev : [...prev, msg]);
         } else if (msg.sender_id !== user?.user_id) {
-          // In-page toast for a different channel
+          // In-page toast for a different channel. A mention gets a distinct,
+          // longer-lived notification so it cuts through.
           const chName = data.channel_name || channels.find(c => c.channel_id === msg.channel_id)?.name || 'Channel';
-          toast(`# ${chName}`, {
+          const isMentioned = msg.mentions?.some(m => m.user_id === user?.user_id);
+          toast(isMentioned ? `🔔 ${msg.sender_name} mentioned you in #${chName}` : `# ${chName}`, {
             description: `${msg.sender_name}: ${msg.content || '📎'}`,
+            duration: isMentioned ? 10000 : 6000,
             action: {
               label: 'View',
               onClick: () => {
@@ -1090,7 +1255,6 @@ export default function Messages({ fullscreen = false }) {
                 if (ch) { setSelectedChannel(ch); setActiveSection('channels'); setSelectedConversation(null); setThreadMsg(null); }
               },
             },
-            duration: 6000,
           });
         }
         setChannels(prev => prev.map(ch => ch.channel_id === msg.channel_id ? {
@@ -1124,15 +1288,18 @@ export default function Messages({ fullscreen = false }) {
             ? prev.map(m => m.msg_id === reply.thread_root_id ? { ...m, reply_count: (m.reply_count || 0) + 1 } : m)
             : prev);
         }
-        // In-page toast if user is author or participated in this thread but not currently viewing it
+        // In-page toast if user is author, participated, or was mentioned in this
+        // thread but isn't currently viewing it. A mention surfaces even if you
+        // weren't otherwise part of the thread, with a distinct, longer-lived toast.
         if (reply.sender_id !== user?.user_id) {
           const isParent = data.parent_sender_id === user?.user_id;
           const participated = hasParticipated(reply.channel_id, reply.thread_root_id);
+          const isMentioned = reply.mentions?.some(m => m.user_id === user?.user_id);
           const threadOpen = threadMsgRef.current?.msg_id === reply.thread_root_id;
-          if ((isParent || participated) && !threadOpen) {
-            toast(`↩ ${reply.sender_name} replied in thread`, {
+          if ((isParent || participated || isMentioned) && !threadOpen) {
+            toast(isMentioned ? `🔔 ${reply.sender_name} mentioned you in a thread` : `↩ ${reply.sender_name} replied in thread`, {
               description: reply.content || '📎',
-              duration: 6000,
+              duration: isMentioned ? 10000 : 6000,
             });
           }
         }
@@ -1314,12 +1481,14 @@ export default function Messages({ fullscreen = false }) {
       const fd = new FormData();
       fd.append('recipient_id', selectedConversation.user_id);
       fd.append('content', newMessage);
+      fd.append('mentions', JSON.stringify(dmMention.getMentionsForSend()));
       if (attachment) fd.append('attachment', attachment);
       const headers = { ...getAuthHeaders() }; delete headers['Content-Type'];
       const r = await fetch(`${API_URL}/api/messages/send`, { method: 'POST', headers, body: fd });
       if (r.ok) {
         const msg = await r.json();
         setNewMessage(''); setAttachment(null);
+        dmMention.resetMentions();
         setMessages(prev => prev.some(m => m.message_id === msg.message_id) ? prev : [...prev, msg]);
         setConversations(prev => prev.map(c => c.user_id === selectedConversation.user_id
           ? { ...c, last_message: msg.content || '📎 Attachment' } : c));
@@ -1341,12 +1510,14 @@ export default function Messages({ fullscreen = false }) {
     try {
       const fd = new FormData();
       fd.append('content', threadText);
+      fd.append('mentions', JSON.stringify(threadMention.getMentionsForSend()));
       threadFiles.forEach(f => fd.append('files', f));
       const headers = { ...getAuthHeaders() }; delete headers['Content-Type'];
       const r = await fetch(`${API_URL}/api/channels/${selectedChannel.channel_id}/messages/${threadMsg.msg_id}/replies`, { method: 'POST', headers, body: fd });
       if (r.ok) {
         const reply = await r.json();
         setThreadText(''); setThreadFiles([]);
+        threadMention.resetMentions();
         if (threadTextareaRef.current) threadTextareaRef.current.style.height = 'auto';
         setThreadReplies(prev => prev.some(m => m.msg_id === reply.msg_id) ? prev : [...prev, reply]);
         // Mark seen BEFORE the WS echo of this same reply arrives, so the thread_reply
@@ -1692,7 +1863,7 @@ export default function Messages({ fullscreen = false }) {
                       <div key={idx} className={`flex ${msg.sender_id === selectedAllConversation.user1_id ? 'justify-start' : 'justify-end'}`}>
                         <div className={`max-w-[70%] rounded-2xl px-4 py-2 ${msg.sender_id === selectedAllConversation.user1_id ? 'bg-muted' : 'bg-purple-100'}`}>
                           <p className="text-xs font-medium text-muted-foreground mb-0.5">{msg.sender_name}</p>
-                          {msg.content && <p className="text-sm text-foreground whitespace-pre-wrap">{msg.content}</p>}
+                          {msg.content && <p className="text-sm text-foreground whitespace-pre-wrap">{renderMentionedContent(msg.content, msg.mentions)}</p>}
                           {msg.attachment && (
                             isImage(msg.attachment.filename, msg.attachment.content_type) ? (
                               <div className="relative group mt-1 inline-block cursor-pointer rounded-lg overflow-hidden" onClick={() => setLightboxUrl(msg.attachment.url || `${API_URL}/api/messages/attachment/${msg.message_id}`)}>
@@ -1773,7 +1944,7 @@ export default function Messages({ fullscreen = false }) {
                           <span className="text-sm font-bold text-foreground">{msg.sender_name}</span>
                           <span className="text-xs text-muted-foreground/60" title={formatISTFull(msg.created_at)}>{formatDate(msg.created_at)}</span>
                         </div>
-                        {msg.content && <p className="text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed mt-0.5 line-clamp-4">{msg.content}</p>}
+                        {msg.content && <p className="text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed mt-0.5 line-clamp-4">{renderMentionedContent(msg.content, msg.mentions)}</p>}
                         {msg.attachments?.length > 0 && <div onClick={e => e.stopPropagation()}>{renderAttachments(msg.attachments, false)}</div>}
                         {msg.tags && Object.keys(msg.tags).length > 0 && (
                           <div className="flex items-center gap-1 mt-1 flex-wrap">
@@ -2030,6 +2201,7 @@ export default function Messages({ fullscreen = false }) {
                   <ChannelComposer
                     channelId={selectedChannel.channel_id}
                     channelName={selectedChannel.name}
+                    members={channelMentionCandidates}
                     onSent={handleChannelMessageSent}
                     getAuthHeaders={getAuthHeaders}
                   />
@@ -2131,10 +2303,10 @@ export default function Messages({ fullscreen = false }) {
                               {msg.content && (msg.link_channel_id ? (
                                 <p onClick={() => jumpToChannelMessage(msg.link_channel_id, msg.link_msg_id, msg.link_thread)}
                                   title="Open the thread" className="text-sm leading-relaxed cursor-pointer hover:underline underline-offset-2">
-                                  {msg.content} <span className="opacity-70">↗</span>
+                                  {renderMentionedContent(msg.content, msg.mentions)} <span className="opacity-70">↗</span>
                                 </p>
                               ) : (
-                                <p className="text-sm leading-relaxed">{msg.content}</p>
+                                <p className="text-sm leading-relaxed">{renderMentionedContent(msg.content, msg.mentions)}</p>
                               ))}
                               {msg.attachment && (
                                 isImage(msg.attachment.filename, msg.attachment.content_type) ? (
@@ -2217,7 +2389,17 @@ export default function Messages({ fullscreen = false }) {
                         </button>
                       </div>
                     )}
-                    <div className="flex items-end gap-2 bg-muted/70 rounded-xl px-3 py-2 focus-within:bg-white focus-within:ring-2 focus-within:ring-primary/40 transition-all border border-transparent focus-within:border-primary/40">
+                    <div className="relative flex items-end gap-2 bg-muted/70 rounded-xl px-3 py-2 focus-within:bg-white focus-within:ring-2 focus-within:ring-primary/40 transition-all border border-transparent focus-within:border-primary/40">
+                      {dmMention.trigger && (
+                        <MentionDropdown candidates={dmMention.candidates} activeIndex={dmMention.activeIndex}
+                          onSelect={u => {
+                            const result = dmMention.applyMention(u, newMessage);
+                            if (result) {
+                              setNewMessage(result.text);
+                              requestAnimationFrame(() => { dmTextareaRef.current?.focus(); dmTextareaRef.current?.setSelectionRange(result.caret, result.caret); });
+                            }
+                          }} />
+                      )}
                       <input ref={fileInputRef} type="file" className="hidden"
                         accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.xlsx,.xls,.csv,.doc,.docx"
                         onChange={handleDmFileSelect} />
@@ -2225,10 +2407,17 @@ export default function Messages({ fullscreen = false }) {
                         <Paperclip className="w-5 h-5" />
                       </button>
                       <Input
+                        ref={dmTextareaRef}
                         value={newMessage}
-                        onChange={e => setNewMessage(e.target.value)}
-                        placeholder={`Message ${selectedConversation.name}`}
-                        onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+                        onChange={e => {
+                          setNewMessage(e.target.value);
+                          dmMention.handleChange(e.target.value, e.target.selectionStart);
+                        }}
+                        placeholder={`Message ${selectedConversation.name} (@ to mention)`}
+                        onKeyDown={e => {
+                          if (dmMention.handleKeyDown(e, newMessage, setNewMessage, dmTextareaRef.current)) return;
+                          if (e.key === 'Enter' && !e.shiftKey) handleSendMessage();
+                        }}
                         className="flex-1 border-0 p-0 focus-visible:ring-0 shadow-none text-sm bg-transparent"
                       />
                       <button
@@ -2288,7 +2477,7 @@ export default function Messages({ fullscreen = false }) {
                         {threadMsg.content && (
                           <p title="Jump to this message in the channel" onClick={() => scrollToChannelMessage(threadMsg.msg_id)}
                             className="text-sm text-foreground mt-0.5 whitespace-pre-wrap leading-relaxed cursor-pointer rounded hover:bg-muted transition-colors">
-                            {threadMsg.content}
+                            {renderMentionedContent(threadMsg.content, threadMsg.mentions)}
                           </p>
                         )}
                         {renderAttachments(threadMsg.attachments, threadMsg.sender_id === user?.user_id)}
@@ -2342,7 +2531,7 @@ export default function Messages({ fullscreen = false }) {
                           </div>
                         ) : (
                           <>
-                            {r.content && <p className="text-sm text-foreground mt-0.5 whitespace-pre-wrap leading-relaxed">{r.content}</p>}
+                            {r.content && <p className="text-sm text-foreground mt-0.5 whitespace-pre-wrap leading-relaxed">{renderMentionedContent(r.content, r.mentions)}</p>}
                             {renderAttachments(r.attachments, r.sender_id === user?.user_id)}
                           </>
                         )}
@@ -2362,7 +2551,17 @@ export default function Messages({ fullscreen = false }) {
                 {/* Thread compose */}
                 <div className="px-3 py-3 border-t shrink-0">
                   <FilePreviewStrip files={threadFiles} onRemove={i => setThreadFiles(prev => prev.filter((_, idx) => idx !== i))} />
-                  <div className="flex items-end gap-2 bg-muted/70 rounded-xl px-2.5 py-1.5 focus-within:bg-white focus-within:ring-2 focus-within:ring-primary/40 transition-all border border-transparent focus-within:border-primary/40">
+                  <div className="relative flex items-end gap-2 bg-muted/70 rounded-xl px-2.5 py-1.5 focus-within:bg-white focus-within:ring-2 focus-within:ring-primary/40 transition-all border border-transparent focus-within:border-primary/40">
+                    {threadMention.trigger && (
+                      <MentionDropdown candidates={threadMention.candidates} activeIndex={threadMention.activeIndex}
+                        onSelect={u => {
+                          const result = threadMention.applyMention(u, threadText);
+                          if (result) {
+                            setThreadText(result.text);
+                            requestAnimationFrame(() => { threadTextareaRef.current?.focus(); threadTextareaRef.current?.setSelectionRange(result.caret, result.caret); });
+                          }
+                        }} />
+                    )}
                     <input ref={threadFileInputRef} type="file" className="hidden" multiple accept="image/*,video/*,.pdf,.xlsx,.xls,.csv,.doc,.docx" onChange={handleThreadFileSelect} />
                     <button className="text-muted-foreground/60 hover:text-primary shrink-0" onClick={() => threadFileInputRef.current?.click()}>
                       <Paperclip className="w-4 h-4" />
@@ -2372,12 +2571,16 @@ export default function Messages({ fullscreen = false }) {
                       value={threadText}
                       onChange={e => {
                         setThreadText(e.target.value);
+                        threadMention.handleChange(e.target.value, e.target.selectionStart);
                         e.target.style.height = 'auto';
                         e.target.style.height = Math.min(e.target.scrollHeight, 96) + 'px';
                       }}
                       onPaste={handleThreadPaste}
-                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendThreadReply(); } }}
-                      placeholder="Reply in thread…"
+                      onKeyDown={e => {
+                        if (threadMention.handleKeyDown(e, threadText, setThreadText, threadTextareaRef.current)) return;
+                        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendThreadReply(); }
+                      }}
+                      placeholder="Reply in thread… (@ to mention)"
                       className="flex-1 resize-none text-sm border-0 p-0 focus-visible:ring-0 shadow-none bg-transparent overflow-y-hidden"
                       rows={1}
                       style={{ minHeight: 20, maxHeight: 96 }}
