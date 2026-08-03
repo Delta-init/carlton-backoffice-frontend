@@ -625,6 +625,12 @@ export default function Messages({ fullscreen = false }) {
   const [activityReplyText, setActivityReplyText] = useState('');
   const [activityReplySending, setActivityReplySending] = useState(false);
   const seenActivityReplyRef = useRef(new Set());                 // reply msg_ids already counted (dedup optimistic vs WS)
+  // Separate from seenActivityReplyRef: dedupes the CHANNEL row's reply_count bump
+  // specifically (Thread-panel sends vs. the WS echo of your own reply). Must be its
+  // own ref — reusing seenActivityReplyRef here would make the WS handler skip the
+  // Activity feed's own count whenever a reply was sent via the Thread panel instead
+  // of Activity's inline box, under-counting it there.
+  const seenChannelReplyRef = useRef(new Set());
   const [searchTerm, setSearchTerm] = useState('');
 
   // Channel state
@@ -1101,9 +1107,14 @@ export default function Messages({ fullscreen = false }) {
         if (threadMsgRef.current?.msg_id === reply.thread_root_id) {
           setThreadReplies(prev => prev.some(m => m.msg_id === reply.msg_id) ? prev : [...prev, reply]);
         }
-        if (selectedChannelRef.current?.channel_id === reply.channel_id) {
+        // Dedup against seenChannelReplyRef (not a channelMessages lookup — replies never
+        // appear in that top-level list, so that check could never match and silently
+        // double-counted every reply you sent yourself: once optimistically in
+        // handleSendThreadReply, and again here when the WS echoed your own broadcast back).
+        if (selectedChannelRef.current?.channel_id === reply.channel_id && !seenChannelReplyRef.current.has(reply.msg_id)) {
+          seenChannelReplyRef.current.add(reply.msg_id);
           setChannelMessages(prev => prev.map(m => m.msg_id === reply.thread_root_id
-            ? { ...m, reply_count: (m.reply_count || 0) + (prev.some(x => x.msg_id === reply.msg_id) ? 0 : 1) }
+            ? { ...m, reply_count: (m.reply_count || 0) + 1 }
             : m));
         }
         // Keep the Activity feed's reply_count live (dedup against the optimistic bump)
@@ -1338,6 +1349,9 @@ export default function Messages({ fullscreen = false }) {
         setThreadText(''); setThreadFiles([]);
         if (threadTextareaRef.current) threadTextareaRef.current.style.height = 'auto';
         setThreadReplies(prev => prev.some(m => m.msg_id === reply.msg_id) ? prev : [...prev, reply]);
+        // Mark seen BEFORE the WS echo of this same reply arrives, so the thread_reply
+        // handler's channelMessages bump (above) skips it instead of double-counting.
+        if (reply?.msg_id) seenChannelReplyRef.current.add(reply.msg_id);
         setChannelMessages(prev => prev.map(m => m.msg_id === threadMsg.msg_id
           ? { ...m, reply_count: (m.reply_count || 0) + 1 } : m));
         trackThreadParticipation(selectedChannel.channel_id, threadMsg.msg_id);
