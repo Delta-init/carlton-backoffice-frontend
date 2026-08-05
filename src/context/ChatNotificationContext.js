@@ -260,11 +260,19 @@ export function ChatNotificationProvider({ children }) {
         if (reply.sender_id === me?.user_id) break;
         const isParent = data.parent_sender_id === me?.user_id;
         const participated = threadParticipationsRef.current.has(`${reply.channel_id}:${reply.thread_root_id}`);
-        if (!isParent && !participated) break;
+        const isMentioned = reply.mentions?.some(m => m.user_id === me?.user_id);
+        // A mention must notify even if you're neither the thread's author nor a
+        // prior participant - otherwise someone pulled into a thread purely via @mention
+        // gets no app-wide notification at all (only Messages.js's in-page toast, which
+        // only fires while that page happens to be open).
+        if (!isParent && !participated && !isMentioned) break;
+        if (isMentioned) setTotalUnread(n => n + 1);
         // The author also gets a real DM (sent from the replier); dedupe so they don't
         // get both that and this for the same reply.
         notifyOnce(`reply:${reply.msg_id}`, () =>
-          fireNotification(`↩ ${reply.sender_name} replied`, reply.content || '📎 Attachment',
+          fireNotification(
+            isMentioned ? `🔔 ${reply.sender_name} mentioned you in a thread` : `↩ ${reply.sender_name} replied`,
+            reply.content || '📎 Attachment',
             () => goToMessage({ channel_id: reply.channel_id, msg_id: reply.thread_root_id, thread: true })));
         break;
       }
