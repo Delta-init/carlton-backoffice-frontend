@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
 import {
   Card,
@@ -95,6 +96,12 @@ import {
   Tag,
   Trash2,
   Copy,
+  X,
+  ZoomIn,
+  ZoomOut,
+  ChevronLeft,
+  ChevronRight,
+  RotateCcw,
 } from "lucide-react";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -269,6 +276,71 @@ const TX_SUMMARY_COLUMNS = [
   { id: "actions",          label: "Actions",             defaultVisible: true, alwaysVisible: true, headClass: "text-muted-foreground font-bold uppercase tracking-wider text-xs text-right" },
 ];
 
+// Merges the legacy singular proof field with the plural array field the
+// multi-upload endpoint writes, so old and new transactions render the same way.
+function buildProofImageList(singular, plural) {
+  if (plural?.length) return plural;
+  if (singular) return [singular];
+  return [];
+}
+
+const resolveProofSrc = (url) =>
+  url?.startsWith("http") ? url : `data:image/png;base64,${url}`;
+const isPdfProof = (url) => url?.toLowerCase().includes(".pdf");
+
+function ProofImageGrid({ label, icon, labelClass, borderClass, images, onZoom, testIdPrefix }) {
+  if (!images.length) return null;
+  const resolved = images.map(resolveProofSrc);
+  const imageOnly = resolved.filter((s) => !isPdfProof(s));
+  return (
+    <div className="pt-4 border-t border-border">
+      <p className={`text-xs ${labelClass} uppercase tracking-wider mb-2 flex items-center gap-2`}>
+        {icon}
+        {label}
+        {resolved.length > 1 ? ` (${resolved.length})` : ""}
+      </p>
+      <div className={resolved.length > 1 ? "grid grid-cols-2 gap-2" : ""}>
+        {resolved.map((src, i) =>
+          isPdfProof(src) ? (
+            <a
+              key={i}
+              href={src}
+              target="_blank"
+              rel="noreferrer"
+              className="flex flex-col items-center justify-center p-4 rounded border border-red-200 bg-red-50 hover:bg-red-100 cursor-pointer"
+            >
+              <FileText className="w-8 h-8 text-red-500 mb-1" />
+              <span className="text-xs text-red-600">
+                View PDF{resolved.length > 1 ? ` ${i + 1}` : ""}
+              </span>
+            </a>
+          ) : (
+            <div key={i} className="relative group">
+              <img
+                src={src}
+                alt={`${label} ${i + 1}`}
+                className={`w-full ${resolved.length > 1 ? "" : "max-h-48"} object-contain rounded border ${borderClass} bg-muted/50 cursor-zoom-in hover:opacity-90`}
+                onClick={() =>
+                  onZoom(
+                    imageOnly,
+                    resolved.slice(0, i).filter((s) => !isPdfProof(s)).length,
+                  )
+                }
+                data-testid={`${testIdPrefix}-thumbnail-${i}`}
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded pointer-events-none">
+                <span className="text-white text-xs flex items-center gap-1">
+                  <ZoomIn className="w-3.5 h-3.5" /> Click to zoom
+                </span>
+              </div>
+            </div>
+          ),
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Transactions() {
   const [transactions, setTransactions] = useState([]);
   const [clients, setClients] = useState([]);
@@ -297,6 +369,66 @@ export default function Transactions() {
   const [txDateType, setTxDateType] = useState("transaction");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [viewTransaction, setViewTransaction] = useState(null);
+  // Receipt zoom viewer (Client / Accountant / Exchanger proof images)
+  const [zoomViewer, setZoomViewer] = useState(null); // { images: string[], index: number }
+  const [zoomScale, setZoomScale] = useState(1);
+  const [zoomOffset, setZoomOffset] = useState({ x: 0, y: 0 });
+  const zoomDragRef = useRef(null);
+
+  const openZoomViewer = useCallback((images, index = 0) => {
+    setZoomViewer({ images, index });
+    setZoomScale(1);
+    setZoomOffset({ x: 0, y: 0 });
+  }, []);
+
+  const closeZoomViewer = useCallback(() => {
+    setZoomViewer(null);
+    setZoomScale(1);
+    setZoomOffset({ x: 0, y: 0 });
+  }, []);
+
+  const zoomNav = useCallback((delta) => {
+    setZoomViewer((prev) => {
+      if (!prev || prev.images.length < 2) return prev;
+      const next = (prev.index + delta + prev.images.length) % prev.images.length;
+      return { ...prev, index: next };
+    });
+    setZoomScale(1);
+    setZoomOffset({ x: 0, y: 0 });
+  }, []);
+
+  useEffect(() => {
+    if (!zoomViewer) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") closeZoomViewer();
+      else if (e.key === "ArrowRight") zoomNav(1);
+      else if (e.key === "ArrowLeft") zoomNav(-1);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [zoomViewer, closeZoomViewer, zoomNav]);
+
+  const handleZoomWheel = useCallback((e) => {
+    e.preventDefault();
+    setZoomScale((s) => Math.min(5, Math.max(1, +(s + (e.deltaY < 0 ? 0.25 : -0.25)).toFixed(2))));
+  }, []);
+
+  const handleZoomMouseDown = useCallback(
+    (e) => {
+      if (zoomScale <= 1) return;
+      zoomDragRef.current = { startX: e.clientX, startY: e.clientY, origin: zoomOffset };
+    },
+    [zoomScale, zoomOffset],
+  );
+  const handleZoomMouseMove = useCallback((e) => {
+    if (!zoomDragRef.current) return;
+    const dx = e.clientX - zoomDragRef.current.startX;
+    const dy = e.clientY - zoomDragRef.current.startY;
+    setZoomOffset({ x: zoomDragRef.current.origin.x + dx, y: zoomDragRef.current.origin.y + dy });
+  }, []);
+  const handleZoomMouseUp = useCallback(() => {
+    zoomDragRef.current = null;
+  }, []);
   const [destEditTx, setDestEditTx] = useState(null);
   const [destForm, setDestForm] = useState({
     destination_type: "",
@@ -3772,7 +3904,14 @@ export default function Transactions() {
         open={!!viewTransaction}
         onOpenChange={() => setViewTransaction(null)}
       >
-        <DialogContent className="bg-white border-border text-foreground max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent
+          className="bg-white border-border text-foreground max-w-lg max-h-[90vh] overflow-y-auto"
+          onPointerDownOutside={(e) => {
+            // The receipt zoom viewer is portaled to document.body, so clicks inside it
+            // register as "outside" this dialog to Radix's dismissable layer - ignore those.
+            if (e.target.closest('[data-testid="zoom-viewer-backdrop"]')) e.preventDefault();
+          }}
+        >
           <DialogHeader>
             <DialogTitle
               className="text-lg font-bold text-foreground"
@@ -4014,140 +4153,71 @@ export default function Transactions() {
                   </p>
                 </div>
               )}
+              <ProofImageGrid
+                label="Client Proof of Payment"
+                icon={<ImageIcon className="w-4 h-4" />}
+                labelClass="text-muted-foreground"
+                borderClass="border-border"
+                images={buildProofImageList(
+                  viewTransaction.proof_image,
+                  viewTransaction.proof_images,
+                )}
+                onZoom={openZoomViewer}
+                testIdPrefix="client-proof"
+              />
               {(() => {
-                const imgs = viewTransaction.proof_images?.length
-                  ? viewTransaction.proof_images
-                  : viewTransaction.proof_image
-                    ? [viewTransaction.proof_image]
-                    : [];
-                if (!imgs.length) return null;
+                const images = buildProofImageList(
+                  viewTransaction.accountant_proof_image,
+                  viewTransaction.accountant_proof_images,
+                );
+                if (!images.length) return null;
                 return (
-                  <div className="pt-4 border-t border-border">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
-                      Client Proof of Payment ({imgs.length})
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {imgs.map((url, i) => {
-                        const src = url?.startsWith("http")
-                          ? url
-                          : `data:image/png;base64,${url}`;
-                        if (url?.toLowerCase().includes('.pdf')) {
-                          return (
-                            <a key={i} href={src} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center p-4 rounded border border-red-200 bg-red-50 hover:bg-red-100 cursor-pointer">
-                              <FileText className="w-8 h-8 text-red-500 mb-1" />
-                              <span className="text-xs text-red-600">PDF {i + 1}</span>
-                            </a>
-                          );
-                        }
-                        return (
-                          <img
-                            key={i}
-                            src={src}
-                            alt={`Proof ${i + 1}`}
-                            className="w-full rounded border border-border cursor-pointer hover:opacity-80"
-                            onClick={() => window.open(src, "_blank")}
-                          />
-                        );
-                      })}
-                    </div>
-                  </div>
+                  <>
+                    <ProofImageGrid
+                      label="Accountant Approval Proof"
+                      icon={<ImageIcon className="w-4 h-4" />}
+                      labelClass="text-primary"
+                      borderClass="border-[#66FCF1]/30"
+                      images={images}
+                      onZoom={openZoomViewer}
+                      testIdPrefix="accountant-proof"
+                    />
+                    {viewTransaction.proof_uploaded_at && (
+                      <p className="text-xs text-muted-foreground -mt-3 pl-0.5">
+                        Uploaded: {formatDate(viewTransaction.proof_uploaded_at)}{" "}
+                        by {viewTransaction.proof_uploaded_by_name}
+                      </p>
+                    )}
+                  </>
                 );
               })()}
-              {/* Accountant Approval Proof - Thumbnail Preview */}
-              {viewTransaction.accountant_proof_image && (
-                <div className="pt-4 border-t border-border">
-                  <p className="text-xs text-primary uppercase tracking-wider mb-2 flex items-center gap-2">
-                    <ImageIcon className="w-4 h-4" />
-                    Accountant Approval Proof
-                  </p>
-                  {viewTransaction.accountant_proof_image?.toLowerCase().includes('.pdf') ? (
-                    <a href={viewTransaction.accountant_proof_image} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center p-6 rounded border border-red-200 bg-red-50 hover:bg-red-100 cursor-pointer">
-                      <FileText className="w-10 h-10 text-red-500 mb-2" />
-                      <span className="text-sm text-red-600">View PDF</span>
-                    </a>
-                  ) : (
-                  <div className="relative group">
-                    <img
-                      src={
-                        viewTransaction.accountant_proof_image?.startsWith(
-                          "http",
-                        )
-                          ? viewTransaction.accountant_proof_image
-                          : `data:image/png;base64,${viewTransaction.accountant_proof_image}`
-                      }
-                      alt="Accountant approval proof"
-                      className="w-full max-h-48 object-contain rounded border border-[#66FCF1]/30 bg-muted/50 cursor-pointer hover:border-[#66FCF1]"
-                       onClick={() =>
-                        window.open(
-                          viewTransaction.accountant_proof_image?.startsWith(
-                            "http",
-                          )
-                            ? viewTransaction.accountant_proof_image
-                            : `data:image/png;base64,${viewTransaction.accountant_proof_image}`,
-                          "_blank",
-                        )
-                      }
-                      data-testid="accountant-proof-thumbnail"
+              {(() => {
+                const images = buildProofImageList(
+                  viewTransaction.vendor_proof_image,
+                  viewTransaction.vendor_proof_images,
+                );
+                if (!images.length) return null;
+                return (
+                  <>
+                    <ProofImageGrid
+                      label="Exchanger Payment Proof"
+                      icon={<ImageIcon className="w-4 h-4" />}
+                      labelClass="text-orange-400"
+                      borderClass="border-orange-400/30"
+                      images={images}
+                      onZoom={openZoomViewer}
+                      testIdPrefix="vendor-proof"
                     />
-                    
-                  </div>
-                  )}
-                  {viewTransaction.proof_uploaded_at && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Uploaded: {formatDate(viewTransaction.proof_uploaded_at)}{" "}
-                      by {viewTransaction.proof_uploaded_by_name}
-                    </p>
-                  )}
-                </div>
-              )}
-              {/* Exchanger Proof - For Withdrawals */}
-              {viewTransaction.vendor_proof_image && (
-                <div className="pt-4 border-t border-border">
-                  <p className="text-xs text-orange-400 uppercase tracking-wider mb-2 flex items-center gap-2">
-                    <ImageIcon className="w-4 h-4" />
-                    Exchanger Payment Proof
-                  </p>
-                  {viewTransaction.vendor_proof_image?.toLowerCase().includes('.pdf') ? (
-                    <a href={viewTransaction.vendor_proof_image} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center p-6 rounded border border-red-200 bg-red-50 hover:bg-red-100 cursor-pointer">
-                      <FileText className="w-10 h-10 text-red-500 mb-2" />
-                      <span className="text-sm text-red-600">View PDF</span>
-                    </a>
-                  ) : (
-                  <div className="relative group">
-                    <img
-                      src={
-                        viewTransaction.vendor_proof_image?.startsWith("http")
-                          ? viewTransaction.vendor_proof_image
-                          : `data:image/png;base64,${viewTransaction.vendor_proof_image}`
-                      }
-                      alt="Exchanger payment proof"
-                      className="w-full max-h-48 object-contain rounded border border-orange-400/30 bg-muted/50 cursor-pointer hover:border-orange-400"
-                      onClick={() =>
-                        window.open(
-                          viewTransaction.vendor_proof_image?.startsWith("http")
-                            ? viewTransaction.vendor_proof_image
-                            : `data:image/png;base64,${viewTransaction.vendor_proof_image}`,
-                          "_blank",
-                        )
-                      }
-                      data-testid="vendor-proof-thumbnail"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded">
-                      <span className="text-foreground text-sm">
-                        Click to view full size
-                      </span>
-                    </div>
-                  </div>
-                  )}
-                  {viewTransaction.vendor_proof_uploaded_at && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Uploaded:{" "}
-                      {formatDate(viewTransaction.vendor_proof_uploaded_at)} by{" "}
-                      {viewTransaction.vendor_proof_uploaded_by_name}
-                    </p>
-                  )}
-                </div>
-              )}
+                    {viewTransaction.vendor_proof_uploaded_at && (
+                      <p className="text-xs text-muted-foreground -mt-3 pl-0.5">
+                        Uploaded:{" "}
+                        {formatDate(viewTransaction.vendor_proof_uploaded_at)} by{" "}
+                        {viewTransaction.vendor_proof_uploaded_by_name}
+                      </p>
+                    )}
+                  </>
+                );
+              })()}
               {viewTransaction.rejection_reason && (
                 <div className="pt-4 border-t border-border">
                   <p className="text-xs text-red-400 uppercase tracking-wider mb-1">
@@ -5171,6 +5241,114 @@ export default function Transactions() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Receipt Zoom Viewer */}
+      {zoomViewer && createPortal(
+        <div
+          className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4"
+          onClick={closeZoomViewer}
+          data-testid="zoom-viewer-backdrop"
+        >
+          <button
+            className="absolute top-4 right-4 w-9 h-9 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center"
+            onClick={closeZoomViewer}
+            data-testid="zoom-viewer-close"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <div className="absolute top-4 left-4 flex items-center gap-2">
+            <button
+              className="w-9 h-9 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center"
+              onClick={(e) => {
+                e.stopPropagation();
+                setZoomScale((s) => Math.min(5, +(s + 0.5).toFixed(2)));
+              }}
+              data-testid="zoom-viewer-in"
+            >
+              <ZoomIn className="w-5 h-5" />
+            </button>
+            <button
+              className="w-9 h-9 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center"
+              onClick={(e) => {
+                e.stopPropagation();
+                setZoomScale((s) => Math.max(1, +(s - 0.5).toFixed(2)));
+              }}
+              data-testid="zoom-viewer-out"
+            >
+              <ZoomOut className="w-5 h-5" />
+            </button>
+            {zoomScale !== 1 && (
+              <button
+                className="w-9 h-9 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setZoomScale(1);
+                  setZoomOffset({ x: 0, y: 0 });
+                }}
+                data-testid="zoom-viewer-reset"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+            )}
+            {zoomViewer.images.length > 1 && (
+              <span className="text-white/80 text-sm ml-2">
+                {zoomViewer.index + 1} / {zoomViewer.images.length}
+              </span>
+            )}
+          </div>
+          {zoomViewer.images.length > 1 && (
+            <>
+              <button
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  zoomNav(-1);
+                }}
+                data-testid="zoom-viewer-prev"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+              <button
+                className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  zoomNav(1);
+                }}
+                data-testid="zoom-viewer-next"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            </>
+          )}
+          <img
+            src={zoomViewer.images[zoomViewer.index]}
+            alt="Receipt full view"
+            className="max-w-full max-h-full object-contain select-none"
+            style={{
+              transform: `translate(${zoomOffset.x}px, ${zoomOffset.y}px) scale(${zoomScale})`,
+              cursor: zoomScale > 1 ? "grab" : "zoom-in",
+              transition: zoomDragRef.current ? "none" : "transform 0.15s ease-out",
+            }}
+            draggable={false}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (zoomScale === 1) setZoomScale(2);
+            }}
+            onWheel={handleZoomWheel}
+            onMouseDown={handleZoomMouseDown}
+            onMouseMove={handleZoomMouseMove}
+            onMouseUp={handleZoomMouseUp}
+            onMouseLeave={handleZoomMouseUp}
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              setZoomScale(1);
+              setZoomOffset({ x: 0, y: 0 });
+            }}
+            data-testid="zoom-viewer-image"
+          />
+        </div>,
+        document.body,
+      )}
     </div>
   );
 }
