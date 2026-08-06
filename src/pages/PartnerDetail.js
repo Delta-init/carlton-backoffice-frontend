@@ -2,15 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
 import { Badge } from '../components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '../components/ui/dialog';
 import {
   Select,
   SelectContent,
@@ -34,26 +26,22 @@ import {
 } from '../components/ui/tabs';
 import PaginationControls from '../components/PaginationControls';
 import { toast } from 'sonner';
-import { getApiError } from '../lib/utils';
 import { usePermissions } from '../context/usePermissions';
 import {
   ArrowLeft,
   Loader2,
-  Plus,
-  Edit,
-  Trash2,
   Landmark,
   Wallet,
+  Building2,
+  CreditCard,
+  Repeat,
+  Coins,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
-const CURRENCIES = ['USD', 'EUR', 'GBP', 'AED', 'SAR', 'INR', 'JPY', 'USDT'];
 
 const fmtUsd = (n) =>
   `$${(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-const fmtAmount = (n, currency) =>
-  `${(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency || ''}`.trim();
 
 const formatDate = (s) =>
   s
@@ -62,12 +50,18 @@ const formatDate = (s) =>
       })
     : '-';
 
-const emptyForm = { account_name: '', bank_name: '', account_number: '', currency: 'USD', balance: '0', description: '' };
+const DEST_ICONS = {
+  treasury: Landmark,
+  vendor: Repeat,
+  psp: CreditCard,
+  bank: Building2,
+  usdt: Coins,
+};
 
 export default function PartnerDetail() {
   const { tagId } = useParams();
   const navigate = useNavigate();
-  const { canView, canCreate, canEdit, canDelete } = usePermissions();
+  const { canView } = usePermissions();
   const canManageTreasury = canView('partner_treasury');
 
   const [loading, setLoading] = useState(true);
@@ -82,14 +76,10 @@ export default function PartnerDetail() {
   const [txType, setTxType] = useState('all');
   const [txLoading, setTxLoading] = useState(false);
 
-  // Treasury tab
-  const [treasuryAccounts, setTreasuryAccounts] = useState([]);
+  // Treasury tab (computed from real transactions, read-only)
+  const [treasuryGroups, setTreasuryGroups] = useState([]);
   const [treasuryTotal, setTreasuryTotal] = useState(0);
   const [treasuryLoading, setTreasuryLoading] = useState(false);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingAccount, setEditingAccount] = useState(null);
-  const [formData, setFormData] = useState(emptyForm);
-  const [submitting, setSubmitting] = useState(false);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth_token');
@@ -163,8 +153,8 @@ export default function PartnerDetail() {
       });
       if (r.ok) {
         const d = await r.json();
-        setTreasuryAccounts(d.items || []);
-        setTreasuryTotal(d.total_balance || 0);
+        setTreasuryGroups(d.groups || []);
+        setTreasuryTotal(d.grand_total_net_usd || 0);
       } else {
         toast.error('Failed to load partner treasury');
       }
