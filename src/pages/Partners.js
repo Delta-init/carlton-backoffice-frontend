@@ -1,28 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '../components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../components/ui/table';
-import PaginationControls from '../components/PaginationControls';
 import { toast } from 'sonner';
 import {
   Handshake,
@@ -37,13 +16,6 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const fmtUsd = (n) =>
   `$${(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-const formatDate = (s) =>
-  s
-    ? new Date(s).toLocaleDateString('en-US', {
-        month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit',
-      })
-    : '-';
 
 const StatCard = ({ title, value, icon: Icon, color = 'blue' }) => (
   <Card className="bg-card border shadow-sm">
@@ -62,17 +34,10 @@ const StatCard = ({ title, value, icon: Icon, color = 'blue' }) => (
 );
 
 export default function Partners() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [partners, setPartners] = useState([]);
   const [summary, setSummary] = useState(null);
-
-  const [viewPartner, setViewPartner] = useState(null);
-  const [txItems, setTxItems] = useState([]);
-  const [txTotal, setTxTotal] = useState(0);
-  const [txPage, setTxPage] = useState(1);
-  const [txPageSize, setTxPageSize] = useState(20);
-  const [txType, setTxType] = useState('all');
-  const [txLoading, setTxLoading] = useState(false);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth_token');
@@ -103,46 +68,6 @@ export default function Partners() {
   }, []);
 
   useEffect(() => { fetchSummary(); }, [fetchSummary]);
-
-  const fetchPartnerTransactions = useCallback(async (tagName, page, pageSize, type) => {
-    setTxLoading(true);
-    try {
-      const qs = new URLSearchParams({
-        client_tag: tagName, page: String(page), page_size: String(pageSize),
-      });
-      if (type && type !== 'all') qs.set('transaction_type', type);
-      const r = await fetch(`${API_URL}/api/transactions?${qs.toString()}`, {
-        headers: getAuthHeaders(), credentials: 'include',
-      });
-      if (r.ok) {
-        const d = await r.json();
-        setTxItems(d.items || []);
-        setTxTotal(d.total || 0);
-      } else {
-        toast.error('Failed to load transactions');
-      }
-    } catch {
-      toast.error('Failed to load transactions');
-    } finally {
-      setTxLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (viewPartner) fetchPartnerTransactions(viewPartner.name, txPage, txPageSize, txType);
-  }, [viewPartner, txPage, txPageSize, txType, fetchPartnerTransactions]);
-
-  const openPartner = (p) => {
-    setViewPartner(p);
-    setTxPage(1);
-    setTxType('all');
-  };
-
-  const closePartner = () => {
-    setViewPartner(null);
-    setTxItems([]);
-    setTxTotal(0);
-  };
 
   if (loading) {
     return (
@@ -182,7 +107,7 @@ export default function Partners() {
             <Card
               key={p.tag_id}
               className="bg-card border shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => openPartner(p)}
+              onClick={() => navigate(`/partners/${p.tag_id}`)}
               data-testid={`partner-card-${p.tag_id}`}
             >
               <CardContent className="p-4">
@@ -214,106 +139,6 @@ export default function Partners() {
           ))}
         </div>
       )}
-
-      {/* Partner drill-down */}
-      <Dialog open={!!viewPartner} onOpenChange={(open) => { if (!open) closePartner(); }}>
-        <DialogContent className="bg-white border-border text-foreground max-w-4xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-lg font-bold text-foreground">
-              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: viewPartner?.color || '#94a3b8' }} />
-              {viewPartner?.name}
-            </DialogTitle>
-          </DialogHeader>
-
-          {viewPartner && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-3">
-                <div className="bg-muted/50 rounded-lg p-3">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Deposits</p>
-                  <p className="text-base font-mono font-semibold text-green-600">{fmtUsd(viewPartner.total_deposits_usd)}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{viewPartner.deposit_count} txns</p>
-                </div>
-                <div className="bg-muted/50 rounded-lg p-3">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Withdrawals</p>
-                  <p className="text-base font-mono font-semibold text-red-600">{fmtUsd(viewPartner.total_withdrawals_usd)}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{viewPartner.withdrawal_count} txns</p>
-                </div>
-                <div className="bg-muted/50 rounded-lg p-3">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Net</p>
-                  <p className={`text-base font-mono font-semibold ${viewPartner.net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {fmtUsd(viewPartner.net)}
-                  </p>
-                </div>
-              </div>
-
-              <Select value={txType} onValueChange={(v) => { setTxType(v); setTxPage(1); }}>
-                <SelectTrigger className="w-40 h-8 text-xs bg-white border-border">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="deposit">Deposits</SelectItem>
-                  <SelectItem value="withdrawal">Withdrawals</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <div className="border border-border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Reference</TableHead>
-                      <TableHead>Client</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead className="text-right">Amount (USD)</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Date</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {txLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                          <Loader2 className="w-4 h-4 animate-spin mx-auto" />
-                        </TableCell>
-                      </TableRow>
-                    ) : txItems.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No transactions</TableCell>
-                      </TableRow>
-                    ) : (
-                      txItems.map((tx) => (
-                        <TableRow key={tx.transaction_id}>
-                          <TableCell className="font-mono text-xs">{tx.reference || tx.transaction_id}</TableCell>
-                          <TableCell className="text-sm">{tx.client_name || tx.client_email || '-'}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={tx.transaction_type === 'deposit' ? 'text-green-600 border-green-200' : 'text-red-600 border-red-200'}>
-                              {tx.transaction_type}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className={`text-right font-mono text-sm ${tx.transaction_type === 'deposit' ? 'text-green-600' : 'text-red-600'}`}>
-                            {tx.transaction_type === 'deposit' ? '+' : '-'}{fmtUsd(tx.amount)}
-                          </TableCell>
-                          <TableCell><Badge variant="outline" className="text-xs capitalize">{tx.status}</Badge></TableCell>
-                          <TableCell className="text-xs text-muted-foreground">{formatDate(tx.created_at)}</TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-
-              <PaginationControls
-                currentPage={txPage}
-                totalPages={Math.max(1, Math.ceil(txTotal / txPageSize))}
-                totalItems={txTotal}
-                pageSize={txPageSize}
-                onPageChange={setTxPage}
-                onPageSizeChange={(s) => { setTxPageSize(s); setTxPage(1); }}
-              />
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
