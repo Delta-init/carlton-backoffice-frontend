@@ -1178,7 +1178,7 @@ export default function Messages({ fullscreen = false }) {
       channelLoadingMoreRef.current = true;
       setChannelLoadingMore(true);
       fetchChannelMessages(selectedChannel.channel_id, {
-        page: channelPage + 1, dateFrom: msgDateFrom, dateTo: msgDateTo, append: true,
+        page: channelPage + 1, dateFrom: msgDateFrom, dateTo: msgDateTo, search: msgSearch, append: true,
       });
     }
   };
@@ -1417,11 +1417,12 @@ export default function Messages({ fullscreen = false }) {
   // position, instead of replacing the whole list.
   const fetchChannelMessages = useCallback(async (channelId, opts = {}) => {
     if (!channelId) return;
-    const { page = 1, dateFrom = '', dateTo = '', append = false } = opts;
+    const { page = 1, dateFrom = '', dateTo = '', search = '', append = false } = opts;
     try {
       const qs = new URLSearchParams({ page: String(page), page_size: '200' });
       if (dateFrom) qs.set('date_from', dateFrom);
       if (dateTo) qs.set('date_to', dateTo);
+      if (search) qs.set('search', search);
       const r = await fetch(`${API_URL}/api/channels/${channelId}/messages?${qs.toString()}`, { headers: getAuthHeaders() });
       if (r.ok) {
         const d = await r.json();
@@ -1665,22 +1666,26 @@ export default function Messages({ fullscreen = false }) {
     setThreadMsg(null); setThreadReplies([]);
     if (selectedChannel) {
       setChannelPage(1); setChannelHasMore(false);
-      fetchChannelMessages(selectedChannel.channel_id, { page: 1, dateFrom: msgDateFrom, dateTo: msgDateTo });
+      fetchChannelMessages(selectedChannel.channel_id, { page: 1, dateFrom: msgDateFrom, dateTo: msgDateTo, search: msgSearch });
       markChannelRead(selectedChannel.channel_id);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChannel, fetchChannelMessages, markChannelRead]);
 
-  // Re-fetch (server-side) when the date filter changes while a channel is open — kept
-  // separate from the channel-switch effect above so it doesn't reset the open thread or
-  // re-mark the channel read on every filter tweak.
+  // Re-fetch (server-side) when the date filter or search term changes while a channel is
+  // open — kept separate from the channel-switch effect above so it doesn't reset the open
+  // thread or re-mark the channel read on every filter tweak. Debounced so search doesn't
+  // fire a request on every keystroke; the date inputs only ever change a few times a
+  // session, so the same short debounce on them is unnoticeable.
   useEffect(() => {
-    if (selectedChannel) {
+    if (!selectedChannel) return;
+    const handle = setTimeout(() => {
       setChannelPage(1); setChannelHasMore(false);
-      fetchChannelMessages(selectedChannel.channel_id, { page: 1, dateFrom: msgDateFrom, dateTo: msgDateTo });
-    }
+      fetchChannelMessages(selectedChannel.channel_id, { page: 1, dateFrom: msgDateFrom, dateTo: msgDateTo, search: msgSearch });
+    }, 350);
+    return () => clearTimeout(handle);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [msgDateFrom, msgDateTo]);
+  }, [msgDateFrom, msgDateTo, msgSearch]);
 
   useEffect(() => {
     if (threadMsg && selectedChannel) fetchThreadReplies(selectedChannel.channel_id, threadMsg.msg_id);
@@ -2156,7 +2161,12 @@ export default function Messages({ fullscreen = false }) {
                     {channelMessages.length === 0 ? (
                       <div className="flex flex-col items-center justify-center h-full text-muted-foreground/60">
                         <Hash className="w-12 h-12 mb-3 opacity-20" />
-                        {(msgDateFrom || msgDateTo) ? (
+                        {msgSearch ? (
+                          <>
+                            <p className="font-medium text-muted-foreground">No messages match "{msgSearch}"</p>
+                            <p className="text-sm mt-1">Searches the whole channel, not just what's loaded</p>
+                          </>
+                        ) : (msgDateFrom || msgDateTo) ? (
                           <>
                             <p className="font-medium text-muted-foreground">No messages in this range</p>
                             <p className="text-sm mt-1">Try a different date range</p>
