@@ -51,6 +51,7 @@ import {
   Edit,
   Trash2,
   Eye,
+  EyeOff,
   Building2,
   DollarSign,
   History,
@@ -89,6 +90,9 @@ export default function Treasury() {
   const { canCreate } = usePermissions();
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
+  // Hidden accounts stay blurred until clicked - a per-session "peek", not a
+  // persisted preference, so it resets on reload.
+  const [revealedAccounts, setRevealedAccounts] = useState(() => new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [totalPages, setTotalPages] = useState(1);
@@ -532,6 +536,26 @@ export default function Treasury() {
     }
   };
 
+  const handleToggleHidden = async (account) => {
+    const nextHidden = !account.is_hidden;
+    try {
+      const response = await fetch(`${API_URL}/api/treasury/${account.account_id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({ is_hidden: nextHidden }),
+      });
+      if (response.ok) {
+        toast.success(nextHidden ? 'Account hidden' : 'Account unhidden');
+        fetchAccounts();
+      } else {
+        toast.error(await getApiError(response));
+      }
+    } catch (error) {
+      toast.error(error?.message || 'Something went wrong. Please try again.');
+    }
+  };
+
 
   const handleEdit = (account) => {
     setSelectedAccount(account);
@@ -605,11 +629,14 @@ export default function Treasury() {
     });
   };
 
-  const totalBalanceUSD = accounts.reduce((sum, acc) => sum + (acc.balance_usd || 0), 0);
-  const activeAccounts = accounts.filter(a => a.status === 'active').length;
+  // Hidden accounts are excluded from every total on this page - they still
+  // render as blurred cards below, just not counted here.
+  const visibleAccounts = accounts.filter(a => !a.is_hidden);
+  const totalBalanceUSD = visibleAccounts.reduce((sum, acc) => sum + (acc.balance_usd || 0), 0);
+  const activeAccounts = visibleAccounts.filter(a => a.status === 'active').length;
 
   // Group balances by currency
-  const balanceByCurrency = accounts.reduce((acc, a) => {
+  const balanceByCurrency = visibleAccounts.reduce((acc, a) => {
     const cur = a.currency || 'USD';
     if (!acc[cur]) acc[cur] = { balance: 0, count: 0 };
     acc[cur].balance += (a.balance || 0);
@@ -905,7 +932,7 @@ export default function Treasury() {
             </div>
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Accounts</p>
-              <p className="text-xl font-bold font-mono text-foreground" data-testid="active-accounts">{activeAccounts}<span className="text-sm text-muted-foreground font-normal">/{accounts.length}</span></p>
+              <p className="text-xl font-bold font-mono text-foreground" data-testid="active-accounts">{activeAccounts}<span className="text-sm text-muted-foreground font-normal">/{visibleAccounts.length}</span></p>
             </div>
           </CardContent>
         </Card>
@@ -935,8 +962,22 @@ export default function Treasury() {
             {isAccountantOrAdmin && <p className="text-sm text-muted-foreground/60 mt-2">Click "Add Account" to create one</p>}
           </div>
         ) : (
-          accounts.map((account) => (
-            <Card key={account.account_id} className="bg-card border card-hover">
+          accounts.map((account) => {
+            const isBlurred = account.is_hidden && !revealedAccounts.has(account.account_id);
+            return (
+            <Card key={account.account_id} className="bg-card border card-hover relative overflow-hidden">
+              {isBlurred && (
+                <button
+                  type="button"
+                  onClick={() => setRevealedAccounts(prev => new Set(prev).add(account.account_id))}
+                  className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-1.5 bg-card/40 backdrop-blur-[1px] cursor-pointer"
+                  data-testid={`treasury-reveal-${account.account_id}`}
+                >
+                  <EyeOff className="w-5 h-5 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground font-medium">Hidden - click to reveal</span>
+                </button>
+              )}
+              <div className={isBlurred ? 'blur-sm opacity-60 pointer-events-none select-none' : ''}>
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
@@ -964,6 +1005,10 @@ export default function Treasury() {
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleEdit(account)} className="text-foreground hover:bg-muted cursor-pointer">
                           <Edit className="w-4 h-4 mr-2" /> Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleToggleHidden(account)} className="text-foreground hover:bg-muted cursor-pointer" data-testid={`treasury-toggle-hidden-${account.account_id}`}>
+                          {account.is_hidden ? <Eye className="w-4 h-4 mr-2" /> : <EyeOff className="w-4 h-4 mr-2" />}
+                          {account.is_hidden ? 'Unhide account' : 'Hide account'}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleDelete(account.account_id)} className="text-red-600 hover:bg-red-50 cursor-pointer">
                           <Trash2 className="w-4 h-4 mr-2" /> Delete
@@ -1014,8 +1059,10 @@ export default function Treasury() {
                   </Button>
                 </div>
               </CardContent>
+              </div>
             </Card>
-          ))
+            );
+          })
         )}
       </div>
 

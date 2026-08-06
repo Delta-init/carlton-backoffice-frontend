@@ -339,9 +339,13 @@ export default function Reconciliation() {
       const vendors  = eRes.ok ? (await eRes.json()) : {};
 
       const combined = [
-        ...(treasury.items || (Array.isArray(treasury) ? treasury : [])).map(a => ({
-          id: a.account_id, name: a.account_name, type: 'treasury', currency: a.currency,
-        })),
+        // Hidden treasury accounts don't show up here at all - not just blurred like on
+        // the Treasury page, since there's no "click to reveal" affordance in this picker.
+        ...(treasury.items || (Array.isArray(treasury) ? treasury : []))
+          .filter(a => !a.is_hidden)
+          .map(a => ({
+            id: a.account_id, name: a.account_name, type: 'treasury', currency: a.currency,
+          })),
         ...(Array.isArray(psps) ? psps : []).map(p => ({
           id: p.psp_id, name: p.psp_name, type: 'psp', currency: p.currency || 'USD',
         })),
