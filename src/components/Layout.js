@@ -44,6 +44,7 @@ import {
   Sun,
   Moon,
   UserCircle,
+  Handshake,
 } from 'lucide-react';
 
 // ── Theme styles ─────────────────────────────────────────────────────────────
@@ -197,6 +198,7 @@ export default function Layout() {
     { to: '/debts', icon: Receipt, label: 'O/S Accounts', module: 'debts' },
     { to: '/psp', icon: CreditCard, label: 'PSP', module: 'psp' },
     { to: '/vendors', icon: Store, label: 'Exchangers', module: 'exchangers' },
+    { to: '/partners', icon: Handshake, label: 'Partners', module: 'partners' },
     { to: '/reconciliation', icon: ArrowUpDown, label: 'Reconciliation', module: 'reconciliation' },
     { to: '/messages', icon: MessageSquare, label: 'Messages', module: 'messages' },
     { to: '/audit', icon: ShieldCheck, label: 'Audit', module: 'audit' },
