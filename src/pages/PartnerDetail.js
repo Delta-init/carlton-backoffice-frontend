@@ -40,8 +40,10 @@ import {
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
-const fmtUsd = (n) =>
-  `$${(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const fmtUsd = (n) => {
+  const v = n || 0;
+  return `${v < 0 ? '-' : ''}$${Math.abs(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
 
 const formatDate = (s) =>
   s
