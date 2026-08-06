@@ -49,6 +49,17 @@ export default function Login() {
   const { login, verifyOtp, mfaSetup, mfaConfirm } = useAuth();
   const navigate                  = useNavigate();
 
+  // Shown once, right after landing here from a forced logout (session expiry or
+  // cross-tab sign-out) - AuthContext stashes the reason since it can't show its
+  // own toast across the full-page navigation to this route.
+  useEffect(() => {
+    const reason = sessionStorage.getItem('auth_logout_reason');
+    if (reason) {
+      sessionStorage.removeItem('auth_logout_reason');
+      toast.error(reason);
+    }
+  }, []);
+
   const [forgotStep, setForgotStep]           = useState('');
   const [resetEmail, setResetEmail]           = useState('');
   const [resetCode, setResetCode]             = useState('');

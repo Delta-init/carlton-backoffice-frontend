@@ -208,27 +208,80 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
-  // Auto-logout: check JWT expiry every minute
+  // Auto-logout on token expiry. Scheduled precisely for the token's exact expiry
+  // moment (via decoded exp) rather than polling on a fixed interval, so it fires
+  // the instant the token goes stale instead of up to a minute late. Re-checks on
+  // tab focus too, since setTimeout can run late while a tab is backgrounded or the
+  // machine is asleep - visibilitychange catches that the moment the tab is back.
+  // A 60s interval remains as a pure safety net for anything those two miss.
+  // Re-runs whenever `user` changes (login, logout, impersonation swap) so a fresh
+  // token is always what gets scheduled, not a stale one from before the swap.
   useEffect(() => {
-    const checkTokenExpiry = () => {
+    let expiryTimer = null;
+
+    const getExpiryMs = () => {
       const token = localStorage.getItem("auth_token");
-      if (!token) return;
+      if (!token) return null;
       try {
         const payload = JSON.parse(atob(token.split(".")[1]));
-        const expiresAt = payload.exp * 1000;
-        const now = Date.now();
-        if (now >= expiresAt) {
-          localStorage.removeItem("auth_token");
-          setUser(null);
-          window.location.href = "/login";
-        }
-      } catch (e) {
-        /* invalid token */
+        return payload.exp ? payload.exp * 1000 : null;
+      } catch {
+        return null;
       }
     };
-    const interval = setInterval(checkTokenExpiry, 60000);
-    return () => clearInterval(interval);
-  }, []);
+
+    const forceLogout = () => {
+      if (!localStorage.getItem("auth_token")) return; // already logged out
+      // window.location.href below is a full page reload, which tears down this
+      // toast before it can ever render - stash the message for the login page
+      // to show instead, once it's actually mounted.
+      sessionStorage.setItem("auth_logout_reason", "Your session has expired. Please sign in again.");
+      logout();
+      window.location.href = "/login";
+    };
+
+    const scheduleCheck = () => {
+      if (expiryTimer) { clearTimeout(expiryTimer); expiryTimer = null; }
+      const expiresAt = getExpiryMs();
+      if (!expiresAt) return;
+      const msRemaining = expiresAt - Date.now();
+      if (msRemaining <= 0) { forceLogout(); return; }
+      // setTimeout's delay is a 32-bit int internally - anything past ~24 days
+      // overflows and fires almost immediately, so cap it; the safety-net interval
+      // below re-schedules well before a capped timer would under-fire.
+      expiryTimer = setTimeout(forceLogout, Math.min(msRemaining, 2147000000));
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") scheduleCheck();
+    };
+
+    // Cross-tab: if the token is cleared elsewhere (expiry there, or a manual
+    // logout), mirror that here immediately instead of waiting for this tab's
+    // own timer.
+    const onStorage = (e) => {
+      if (e.key === "auth_token" && !e.newValue) {
+        setUser(null);
+        if (window.location.pathname !== "/login") {
+          sessionStorage.setItem("auth_logout_reason", "You were signed out in another tab.");
+          window.location.href = "/login";
+        }
+      }
+    };
+
+    scheduleCheck();
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("storage", onStorage);
+    const safetyInterval = setInterval(scheduleCheck, 60000);
+
+    return () => {
+      if (expiryTimer) clearTimeout(expiryTimer);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("storage", onStorage);
+      clearInterval(safetyInterval);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const startImpersonation = useCallback(
     async (targetUserId) => {
