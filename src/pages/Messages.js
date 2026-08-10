@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { useChatNotification } from '../context/ChatNotificationContext';
 import { usePermissions } from '../context/usePermissions';
+import { useDraft, useDraftKeys, readDraft } from '../hooks/useDraft';
 import EmojiPicker from 'emoji-picker-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -418,20 +419,29 @@ const validateChannelFile = (f) => {
 // row rendering fixed by ChannelMessageRow above). Now a keystroke here only
 // re-renders this small composer subtree; onSent notifies the parent once, on send.
 function ChannelComposer({ channelId, channelName, members, onSent, getAuthHeaders }) {
-  const [msg, setMsg] = useState('');
+  const { text: msg, setText: setMsg, clearDraft, setMentions, getMentions } = useDraft(channelId ? `channel:${channelId}` : null);
   const [files, setFiles] = useState([]);
   const [sending, setSending] = useState(false);
   const fileInputRef = useRef(null);
   const textareaRef = useRef(null);
   const mention = useMentionOverlay(query => filterMentionCandidates(members, query));
 
-  // Reset the draft when switching channels.
+  // Switching channels keeps the draft (useDraft swaps it in); only the attachments,
+  // which cannot be persisted, are dropped.
   useEffect(() => {
-    setMsg(''); setFiles([]);
-    mention.resetMentions();
+    setFiles([]);
+    mention.loadMentions(getMentions());
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelId]);
+
+  // Every text change re-captures the mention set, so the debounced draft write
+  // always stores text and mentions as a matched pair. applyMention has already run
+  // by the time this fires on both the click and the Enter/Tab path.
+  const updateMsg = (next) => {
+    setMentions(mention.getMentionsForSend());
+    setMsg(next);
+  };
 
   const handleFileSelect = (e) => {
     const picked = Array.from(e.target.files || []).filter(validateChannelFile);
@@ -454,7 +464,7 @@ function ChannelComposer({ channelId, channelName, members, onSent, getAuthHeade
       const r = await fetch(`${API_URL}/api/channels/${channelId}/messages`, { method: 'POST', headers, body: fd });
       if (r.ok) {
         const sentMsg = await r.json();
-        setMsg(''); setFiles([]);
+        clearDraft(); setFiles([]);
         mention.resetMentions();
         if (textareaRef.current) textareaRef.current.style.height = 'auto';
         onSent(sentMsg);
@@ -471,7 +481,7 @@ function ChannelComposer({ channelId, channelName, members, onSent, getAuthHeade
             onSelect={u => {
               const result = mention.applyMention(u, msg);
               if (result) {
-                setMsg(result.text);
+                updateMsg(result.text);
                 requestAnimationFrame(() => { textareaRef.current?.focus(); textareaRef.current?.setSelectionRange(result.caret, result.caret); });
               }
             }} />
@@ -484,14 +494,14 @@ function ChannelComposer({ channelId, channelName, members, onSent, getAuthHeade
           ref={textareaRef}
           value={msg}
           onChange={e => {
-            setMsg(e.target.value);
+            updateMsg(e.target.value);
             mention.handleChange(e.target.value, e.target.selectionStart);
             e.target.style.height = 'auto';
             e.target.style.height = Math.min(e.target.scrollHeight, 128) + 'px';
           }}
           onPaste={handlePaste}
           onKeyDown={e => {
-            if (mention.handleKeyDown(e, msg, setMsg, textareaRef.current)) return;
+            if (mention.handleKeyDown(e, msg, updateMsg, textareaRef.current)) return;
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
           }}
           placeholder={`Message #${channelName}`}
@@ -634,8 +644,13 @@ function useMentionOverlay(getCandidates) {
 
   const getMentionsForSend = () => Array.from(mentionedRef.current, ([user_id, name]) => ({ user_id, name }));
   const resetMentions = () => { mentionedRef.current = new Map(); };
+  // Rehydrate from a restored draft, so an "@Sara" that came back from storage still
+  // sends as a real mention instead of decaying into plain text.
+  const loadMentions = (list) => {
+    mentionedRef.current = new Map((list || []).map(m => [m.user_id, m.name]));
+  };
 
-  return { trigger, candidates, activeIndex, handleChange, applyMention, handleKeyDown, getMentionsForSend, resetMentions };
+  return { trigger, candidates, activeIndex, handleChange, applyMention, handleKeyDown, getMentionsForSend, resetMentions, loadMentions };
 }
 
 // Active tag pills — shown ABOVE the message (styled like the status badge). Only the
@@ -746,7 +761,15 @@ export default function Messages({ fullscreen = false }) {
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState('');
+  const selectedConversationKey = selectedConversation ? `dm:${selectedConversation.user_id}` : null;
+  // Conversation keys that currently hold a draft, for the sidebar indicator.
+  const draftKeys = useDraftKeys();
+  // Draft-backed per recipient. Previously this was plain state that nothing reset
+  // on conversation switch, so text typed to one person stayed in the box when you
+  // clicked another - one Enter away from sending it to the wrong person.
+  const { text: newMessage, setText: setNewMessage, clearDraft: clearDmDraft,
+          setMentions: setDmDraftMentions, getMentions: getDmDraftMentions } =
+    useDraft(selectedConversationKey);
   const [sending, setSending] = useState(false);
   const [attachment, setAttachment] = useState(null);
   const fileInputRef = useRef(null);
@@ -821,7 +844,9 @@ export default function Messages({ fullscreen = false }) {
   // Thread state
   const [threadMsg, setThreadMsg] = useState(null);
   const [threadReplies, setThreadReplies] = useState([]);
-  const [threadText, setThreadText] = useState('');
+  const { text: threadText, setText: setThreadText, clearDraft: clearThreadDraft,
+          setMentions: setThreadDraftMentions, getMentions: getThreadDraftMentions } =
+    useDraft(threadMsg ? `thread:${threadMsg.msg_id}` : null);
   const [threadFiles, setThreadFiles] = useState([]);
   const [sendingThread, setSendingThread] = useState(false);
   const threadFileInputRef = useRef(null);
@@ -861,6 +886,14 @@ export default function Messages({ fullscreen = false }) {
   useEffect(() => { selectedConvRef.current = selectedConversation; }, [selectedConversation]);
   useEffect(() => { selectedChannelRef.current = selectedChannel; }, [selectedChannel]);
   useEffect(() => { threadMsgRef.current = threadMsg; }, [threadMsg]);
+  // A restored draft brings its mentions back with it, so an "@Sara" typed before
+  // switching away still sends as a real mention rather than plain text.
+  useEffect(() => { dmMention.loadMentions(getDmDraftMentions());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedConversationKey]);
+  useEffect(() => { threadMention.loadMentions(getThreadDraftMentions());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [threadMsg?.msg_id]);
 
   // Send a buzz ("missed-call" ring) to a channel's members or a DM peer
   const sendBuzz = async (scope, id, label) => {
@@ -1506,6 +1539,12 @@ export default function Messages({ fullscreen = false }) {
   }, [getAuthHeaders]);
 
   // ── Send handlers ──────────────────────────────────────────────────────────
+  // Keeps the DM draft's text and mentions in sync - see updateMsg in ChannelComposer.
+  const updateNewMessage = (next) => {
+    setDmDraftMentions(dmMention.getMentionsForSend());
+    setNewMessage(next);
+  };
+
   const handleSendMessage = async () => {
     if ((!newMessage.trim() && !attachment) || !selectedConversation) return;
     setSending(true);
@@ -1519,7 +1558,7 @@ export default function Messages({ fullscreen = false }) {
       const r = await fetch(`${API_URL}/api/messages/send`, { method: 'POST', headers, body: fd });
       if (r.ok) {
         const msg = await r.json();
-        setNewMessage(''); setAttachment(null);
+        clearDmDraft(); setAttachment(null);
         dmMention.resetMentions();
         setMessages(prev => prev.some(m => m.message_id === msg.message_id) ? prev : [...prev, msg]);
         setConversations(prev => prev.map(c => c.user_id === selectedConversation.user_id
@@ -1536,6 +1575,12 @@ export default function Messages({ fullscreen = false }) {
       ? { ...ch, last_message: msg.content || '📎 Media', last_message_at: msg.created_at } : ch));
   }, []);
 
+  // Keeps the thread draft's text and mentions in sync - see updateMsg in ChannelComposer.
+  const updateThreadText = (next) => {
+    setThreadDraftMentions(threadMention.getMentionsForSend());
+    setThreadText(next);
+  };
+
   const handleSendThreadReply = async () => {
     if ((!threadText.trim() && !threadFiles.length) || !threadMsg) return;
     setSendingThread(true);
@@ -1548,7 +1593,7 @@ export default function Messages({ fullscreen = false }) {
       const r = await fetch(`${API_URL}/api/channels/${selectedChannel.channel_id}/messages/${threadMsg.msg_id}/replies`, { method: 'POST', headers, body: fd });
       if (r.ok) {
         const reply = await r.json();
-        setThreadText(''); setThreadFiles([]);
+        clearThreadDraft(); setThreadFiles([]);
         threadMention.resetMentions();
         if (threadTextareaRef.current) threadTextareaRef.current.style.height = 'auto';
         setThreadReplies(prev => prev.some(m => m.msg_id === reply.msg_id) ? prev : [...prev, reply]);
@@ -2093,7 +2138,11 @@ export default function Messages({ fullscreen = false }) {
                       <Hash className={`w-4 h-4 shrink-0 ${active ? 'text-blue-200' : 'text-muted-foreground/60'}`} />
                       <div className="flex-1 min-w-0">
                         <p className={`text-sm truncate leading-tight ${ch.unread_count > 0 ? 'font-bold' : 'font-medium'}`}>{ch.name}</p>
-                        {ch.last_message && <p className={`text-xs truncate leading-tight ${active ? 'text-blue-200' : 'text-muted-foreground/60'}`}>{ch.last_message}</p>}
+                        {draftKeys.has(`channel:${ch.channel_id}`) ? (
+                          <p className={`text-xs truncate leading-tight ${active ? 'text-blue-100' : 'text-emerald-600'}`}>
+                            <span className="font-semibold">Draft: </span>{readDraft(`channel:${ch.channel_id}`).text}
+                          </p>
+                        ) : ch.last_message && <p className={`text-xs truncate leading-tight ${active ? 'text-blue-200' : 'text-muted-foreground/60'}`}>{ch.last_message}</p>}
                       </div>
                       {ch.unread_count > 0 && (
                         <Badge className={`text-xs h-4 px-1.5 shrink-0 ${active ? 'bg-white text-primary' : 'bg-primary text-white'}`}>{ch.unread_count}</Badge>
@@ -2129,7 +2178,11 @@ export default function Messages({ fullscreen = false }) {
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <p className={`text-sm truncate leading-tight ${conv.unread_count > 0 ? 'font-bold' : 'font-medium'}`}>{conv.name}</p>
-                        {conv.last_message && <p className={`text-xs truncate leading-tight ${active ? 'text-blue-200' : 'text-muted-foreground/60'}`}>{conv.last_message}</p>}
+                        {draftKeys.has(`dm:${conv.user_id}`) ? (
+                          <p className={`text-xs truncate leading-tight ${active ? 'text-blue-100' : 'text-emerald-600'}`}>
+                            <span className="font-semibold">Draft: </span>{readDraft(`dm:${conv.user_id}`).text}
+                          </p>
+                        ) : conv.last_message && <p className={`text-xs truncate leading-tight ${active ? 'text-blue-200' : 'text-muted-foreground/60'}`}>{conv.last_message}</p>}
                       </div>
                       {conv.unread_count > 0 && (
                         <Badge className={`text-xs h-4 px-1.5 shrink-0 ${active ? 'bg-white text-primary' : 'bg-primary text-white'}`}>{conv.unread_count}</Badge>
@@ -2453,7 +2506,7 @@ export default function Messages({ fullscreen = false }) {
                           onSelect={u => {
                             const result = dmMention.applyMention(u, newMessage);
                             if (result) {
-                              setNewMessage(result.text);
+                              updateNewMessage(result.text);
                               requestAnimationFrame(() => { dmTextareaRef.current?.focus(); dmTextareaRef.current?.setSelectionRange(result.caret, result.caret); });
                             }
                           }} />
@@ -2468,12 +2521,12 @@ export default function Messages({ fullscreen = false }) {
                         ref={dmTextareaRef}
                         value={newMessage}
                         onChange={e => {
-                          setNewMessage(e.target.value);
+                          updateNewMessage(e.target.value);
                           dmMention.handleChange(e.target.value, e.target.selectionStart);
                         }}
                         placeholder={`Message ${selectedConversation.name} (@ to mention)`}
                         onKeyDown={e => {
-                          if (dmMention.handleKeyDown(e, newMessage, setNewMessage, dmTextareaRef.current)) return;
+                          if (dmMention.handleKeyDown(e, newMessage, updateNewMessage, dmTextareaRef.current)) return;
                           if (e.key === 'Enter' && !e.shiftKey) handleSendMessage();
                         }}
                         className="flex-1 border-0 p-0 focus-visible:ring-0 shadow-none text-sm bg-transparent"
@@ -2615,7 +2668,7 @@ export default function Messages({ fullscreen = false }) {
                         onSelect={u => {
                           const result = threadMention.applyMention(u, threadText);
                           if (result) {
-                            setThreadText(result.text);
+                            updateThreadText(result.text);
                             requestAnimationFrame(() => { threadTextareaRef.current?.focus(); threadTextareaRef.current?.setSelectionRange(result.caret, result.caret); });
                           }
                         }} />
@@ -2628,14 +2681,14 @@ export default function Messages({ fullscreen = false }) {
                       ref={threadTextareaRef}
                       value={threadText}
                       onChange={e => {
-                        setThreadText(e.target.value);
+                        updateThreadText(e.target.value);
                         threadMention.handleChange(e.target.value, e.target.selectionStart);
                         e.target.style.height = 'auto';
                         e.target.style.height = Math.min(e.target.scrollHeight, 96) + 'px';
                       }}
                       onPaste={handleThreadPaste}
                       onKeyDown={e => {
-                        if (threadMention.handleKeyDown(e, threadText, setThreadText, threadTextareaRef.current)) return;
+                        if (threadMention.handleKeyDown(e, threadText, updateThreadText, threadTextareaRef.current)) return;
                         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendThreadReply(); }
                       }}
                       placeholder="Reply in thread… (@ to mention)"
