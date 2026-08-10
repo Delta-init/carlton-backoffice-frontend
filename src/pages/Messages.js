@@ -780,6 +780,14 @@ export default function Messages({ fullscreen = false }) {
   // Activity feed's own count whenever a reply was sent via the Thread panel instead
   // of Activity's inline box, under-counting it there.
   const seenChannelReplyRef = useRef(new Set());
+  // Dedupes INSERTING a reply as its own Activity entry. Distinct from
+  // seenActivityReplyRef, which the optimistic inline send already consumes for the
+  // count bump - sharing it would silently swallow the entry itself.
+  const seenActivityItemRef = useRef(new Set());
+  // The WS handler closes over stale state, so the active channel filter is mirrored
+  // into a ref to decide whether an incoming reply belongs in the current view.
+  const activityFilterRef = useRef('');
+  useEffect(() => { activityFilterRef.current = activityFilter; }, [activityFilter]);
   const [searchTerm, setSearchTerm] = useState('');
 
   // Channel state
@@ -1288,6 +1296,29 @@ export default function Messages({ fullscreen = false }) {
             ? prev.map(m => m.msg_id === reply.thread_root_id ? { ...m, reply_count: (m.reply_count || 0) + 1 } : m)
             : prev);
         }
+        // The reply itself also lands in Activity as its own entry, carrying the
+        // message it answers. Guarded separately from the count bump above: that one
+        // is consumed by the optimistic send, so reusing its ref would drop the entry
+        // for replies sent from this tab's own inline box.
+        if (!seenActivityItemRef.current.has(reply.msg_id)) {
+          seenActivityItemRef.current.add(reply.msg_id);
+          setActivityItems(prev => {
+            if (prev.some(m => m.msg_id === reply.msg_id)) return prev;
+            // Only channels already represented in the feed are in view; a reply from
+            // a channel the current filter excludes must not jump in.
+            const parent = prev.find(m => m.msg_id === reply.thread_root_id);
+            if (activityFilterRef.current && activityFilterRef.current !== reply.channel_id) return prev;
+            return [{
+              ...reply,
+              is_reply: true,
+              channel_name: parent?.channel_name
+                || activityChannels.find(c => c.channel_id === reply.channel_id)?.name
+                || '',
+              parent_sender_name: data.parent_sender_name || parent?.sender_name,
+              parent_content: data.parent_content ?? parent?.content ?? '',
+            }, ...prev];
+          });
+        }
         // In-page toast if user is author, participated, or was mentioned in this
         // thread but isn't currently viewing it. A mention surfaces even if you
         // weren't otherwise part of the thread, with a distinct, longer-lived toast.
@@ -1537,17 +1568,20 @@ export default function Messages({ fullscreen = false }) {
   const handleActivityReply = async (msg) => {
     const text = activityReplyText.trim();
     if (!text || activityReplySending) return;
+    // Replying to a reply continues the same thread rather than starting a nested
+    // one - threads are one level deep, so the root is always the target.
+    const rootId = msg.thread_root_id || msg.msg_id;
     setActivityReplySending(true);
     try {
       const fd = new FormData();
       fd.append('content', text);
       const headers = { ...getAuthHeaders() }; delete headers['Content-Type'];
-      const r = await fetch(`${API_URL}/api/channels/${msg.channel_id}/messages/${msg.msg_id}/replies`, { method: 'POST', headers, body: fd });
+      const r = await fetch(`${API_URL}/api/channels/${msg.channel_id}/messages/${rootId}/replies`, { method: 'POST', headers, body: fd });
       if (r.ok) {
         const reply = await r.json();
         if (reply?.msg_id) seenActivityReplyRef.current.add(reply.msg_id);
-        setActivityItems(prev => prev.map(m => m.msg_id === msg.msg_id ? { ...m, reply_count: (m.reply_count || 0) + 1 } : m));
-        trackThreadParticipation(msg.channel_id, msg.msg_id);
+        setActivityItems(prev => prev.map(m => m.msg_id === rootId ? { ...m, reply_count: (m.reply_count || 0) + 1 } : m));
+        trackThreadParticipation(msg.channel_id, rootId);
         setActivityReplyText(''); setActivityReplyId(null);
         toast.success('Reply sent');
       } else toast.error(await getApiError(r));
@@ -1938,7 +1972,7 @@ export default function Messages({ fullscreen = false }) {
               ) : (
                 <div className="divide-y">
                   {activityItems.map(msg => (
-                    <div key={msg.msg_id} onClick={() => { setViewMode('my'); jumpToChannelMessage(msg.channel_id, msg.msg_id, false); }}
+                    <div key={msg.msg_id} onClick={() => { setViewMode('my'); jumpToChannelMessage(msg.channel_id, msg.is_reply ? msg.thread_root_id : msg.msg_id, false); }}
                       className="flex gap-3 px-4 py-2.5 hover:bg-muted cursor-pointer transition-colors">
                       <Avatar className="w-8 h-8 shrink-0">
                         <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white text-xs">{getInitials(msg.sender_name)}</AvatarFallback>
@@ -1947,8 +1981,22 @@ export default function Messages({ fullscreen = false }) {
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-primary bg-primary/10 rounded px-1.5 py-0.5"><Hash className="w-2.5 h-2.5" />{msg.channel_name}</span>
                           <span className="text-sm font-bold text-foreground">{msg.sender_name}</span>
+                          {msg.is_reply && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-violet-700 bg-violet-50 rounded px-1.5 py-0.5">
+                              <CornerUpLeft className="w-2.5 h-2.5" />
+                              replied{msg.parent_sender_name ? ` to ${msg.parent_sender_name}` : ''}
+                            </span>
+                          )}
                           <span className="text-xs text-muted-foreground/60" title={formatISTFull(msg.created_at)}>{formatDate(msg.created_at)}</span>
                         </div>
+                        {/* The message this reply answers, so the feed shows the relation */}
+                        {msg.is_reply && (
+                          <div className="mt-1 mb-0.5 border-l-2 border-violet-200 pl-2">
+                            <p className="text-xs text-muted-foreground line-clamp-2">
+                              {msg.parent_content || <span className="italic text-muted-foreground/60">original message unavailable</span>}
+                            </p>
+                          </div>
+                        )}
                         {msg.content && <p className="text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed mt-0.5 line-clamp-4">{renderMentionedContent(msg.content, msg.mentions)}</p>}
                         {msg.attachments?.length > 0 && <div onClick={e => e.stopPropagation()}>{renderAttachments(msg.attachments, false)}</div>}
                         {msg.tags && Object.keys(msg.tags).length > 0 && (
