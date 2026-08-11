@@ -1144,10 +1144,31 @@ export default function Loans() {
     });
   };
 
+  // The exports mirror whatever the Loans tab is filtered to - the same params the
+  // list sends, minus page/page_size, since an export is the whole filtered set.
+  const loanFilterParams = () => {
+    const q = new URLSearchParams();
+    // Status lives on activeTab (the status Select is bound to it), not statusFilter.
+    if (activeTab && activeTab !== "all") q.set("status", activeTab);
+    if (borrowerFilter) q.set("borrower", borrowerFilter);
+    if (loanSearch) q.set("search", loanSearch);
+    if (currencyFilter) q.set("currency", currencyFilter);
+    if (loanDateFrom) q.set("date_from", loanDateFrom);
+    if (loanDateTo) q.set("date_to", loanDateTo);
+    if (loanTagFilter) q.set("transaction_tag", loanTagFilter);
+    // Principal maps to the loan's `amount` server-side.
+    if (principalMinFilter) q.set("amount_min", principalMinFilter);
+    if (principalMaxFilter) q.set("amount_max", principalMaxFilter);
+    if (outstandingMinFilter) q.set("outstanding_min", outstandingMinFilter);
+    if (outstandingMaxFilter) q.set("outstanding_max", outstandingMaxFilter);
+    const s = q.toString();
+    return s ? `?${s}` : "";
+  };
+
   const handleExportExcel = async () => {
     try {
       const token = localStorage.getItem("auth_token");
-      const response = await fetch(`${API_URL}/api/loans/export/excel`, {
+      const response = await fetch(`${API_URL}/api/loans/export/excel${loanFilterParams()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
@@ -1258,7 +1279,7 @@ export default function Loans() {
   const handleExportPDF = async () => {
     try {
       const token = localStorage.getItem("auth_token");
-      const response = await fetch(`${API_URL}/api/loans/export/pdf`, {
+      const response = await fetch(`${API_URL}/api/loans/export/pdf${loanFilterParams()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
