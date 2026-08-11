@@ -103,6 +103,88 @@ const installmentFrequencies = [
   { value: "quarterly", label: "Quarterly" },
 ];
 
+// Coloured tag pills with an optional remove affordance. Mirrors how Transactions
+// Summary renders transaction tags so the two pages read the same.
+function TagPills({ tags, colorOf, onRemove }) {
+  if (!tags || tags.length === 0) return <span className="text-muted-foreground/60 text-xs">—</span>;
+  return (
+    <div className="flex flex-wrap gap-1">
+      {tags.map((name) => (
+        <span
+          key={name}
+          className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full text-white"
+          style={{ backgroundColor: colorOf(name) }}
+        >
+          {name}
+          {onRemove && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onRemove(name); }}
+              className="hover:opacity-70 leading-none"
+              title={`Remove ${name}`}
+            >
+              ×
+            </button>
+          )}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// Appears only once something is selected. Applying MERGES the picked tags into
+// every selected row - it never clears tags those rows already carry.
+function BulkTagBar({ count, tags, pendingTags, onToggleTag, onApply, onClear, onClearSelection, applying, testId }) {
+  if (count === 0) return null;
+  return (
+    <div
+      className="flex items-center gap-3 flex-wrap mb-3 p-2.5 rounded-lg border border-primary/20 bg-primary/5"
+      data-testid={testId}
+    >
+      <span className="text-sm font-semibold text-primary shrink-0">
+        {count} selected
+      </span>
+      <div className="flex flex-wrap gap-1 flex-1 min-w-[200px]">
+        {tags.length === 0 ? (
+          <span className="text-xs text-muted-foreground">
+            No tags defined — create them in Transactions Summary → Manage Txn Tags
+          </span>
+        ) : tags.map((t) => {
+          const on = pendingTags.includes(t.name);
+          return (
+            <button
+              key={t.tag_id}
+              type="button"
+              onClick={() => onToggleTag(t.name)}
+              className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border transition-all ${on ? "text-white border-transparent" : "text-muted-foreground border bg-white hover:bg-muted/50"}`}
+              style={on ? { backgroundColor: t.color } : undefined}
+            >
+              {t.name}
+            </button>
+          );
+        })}
+      </div>
+      <Button
+        size="sm"
+        onClick={onApply}
+        disabled={applying || pendingTags.length === 0}
+        className="h-8 bg-primary hover:bg-primary/90 text-white shrink-0"
+        data-testid={`${testId}-apply`}
+      >
+        {applying ? "Applying…" : "Apply tags"}
+      </Button>
+      <Button
+        size="sm"
+        variant="ghost"
+        onClick={() => { onClear(); onClearSelection(); }}
+        className="h-8 text-muted-foreground shrink-0"
+      >
+        Clear
+      </Button>
+    </div>
+  );
+}
+
 export default function Loans() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -112,6 +194,18 @@ export default function Loans() {
   const [vendors, setExchangers] = useState([]);
   const [dashboard, setDashboard] = useState(null);
   const [loanTransactions, setLoanTransactions] = useState([]);
+
+  // ── Tagging (loans + loan transactions) ──────────────────────────────────
+  // Loans share the transaction_tags vocabulary with regular transactions, so a
+  // tag means the same thing everywhere. Bulk apply MERGES: a selection usually
+  // spans rows with different tags, and replacing would discard them with no undo.
+  const [txnTags, setTxnTags] = useState([]);
+  const [selectedLoanIds, setSelectedLoanIds] = useState([]);
+  const [selectedLoanTxIds, setSelectedLoanTxIds] = useState([]);
+  const [pendingTags, setPendingTags] = useState([]);      // tags chosen in the bulk bar
+  const [applyingTags, setApplyingTags] = useState(false);
+  const [loanTagFilter, setLoanTagFilter] = useState("");  // "" = all
+  const [txTagFilter, setTxTagFilter] = useState("");
   const [loanTxPage, setLoanTxPage] = useState(1);
   const [loanTxPageSize, setLoanTxPageSize] = useState(20);
   const [loanTxTotalPages, setLoanTxTotalPages] = useState(1);
@@ -236,6 +330,7 @@ export default function Loans() {
       if (currencyFilter) url += `&currency=${encodeURIComponent(currencyFilter)}`;
       if (loanDateFrom) url += `&date_from=${loanDateFrom}`;
       if (loanDateTo) url += `&date_to=${loanDateTo}`;
+      if (loanTagFilter) url += `&transaction_tag=${encodeURIComponent(loanTagFilter)}`;
 
       const response = await fetch(url, {
         headers: getAuthHeaders(),
@@ -253,7 +348,7 @@ export default function Loans() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, borrowerFilter, loanSearch, currencyFilter, loanDateFrom, loanDateTo, currentPage, pageSize]);
+  }, [statusFilter, borrowerFilter, loanSearch, currencyFilter, loanDateFrom, loanDateTo, loanTagFilter, currentPage, pageSize]);
 
   const fetchTreasuryAccounts = async () => {
     try {
@@ -321,6 +416,7 @@ export default function Loans() {
       if (txCurrency) url += `&currency=${encodeURIComponent(txCurrency)}`;
       if (txDateFrom) url += `&date_from=${txDateFrom}`;
       if (txDateTo) url += `&date_to=${txDateTo}`;
+      if (txTagFilter) url += `&transaction_tag=${encodeURIComponent(txTagFilter)}`;
       const response = await fetch(url, {
         headers: getAuthHeaders(),
         credentials: "include",
@@ -334,6 +430,95 @@ export default function Loans() {
     } catch (error) {
       console.error("Error fetching transactions:", error);
     }
+  };
+
+  // Shared tag vocabulary - same collection Transactions Summary manages, so tags
+  // are created there and simply consumed here.
+  const fetchTxnTags = async () => {
+    try {
+      const r = await fetch(`${API_URL}/api/transaction-tags`, {
+        headers: getAuthHeaders(), credentials: "include",
+      });
+      if (r.ok) {
+        const d = await r.json();
+        setTxnTags(Array.isArray(d) ? d : d.items || []);
+      }
+    } catch { /* dropdown just stays empty */ }
+  };
+
+  const tagColor = (name) => txnTags.find((t) => t.name === name)?.color || "#64748b";
+
+  const toggleId = (setter) => (id) =>
+    setter((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const toggleLoanId = toggleId(setSelectedLoanIds);
+  const toggleLoanTxId = toggleId(setSelectedLoanTxIds);
+
+  const toggleAllLoans = () => {
+    setSelectedLoanIds((prev) =>
+      prev.length === filteredLoans.length ? [] : filteredLoans.map((l) => l.loan_id));
+  };
+  const toggleAllLoanTx = () => {
+    setSelectedLoanTxIds((prev) =>
+      prev.length === loanTransactions.length ? [] : loanTransactions.map((t) => t.transaction_id));
+  };
+
+  const togglePendingTag = (name) =>
+    setPendingTags((prev) => (prev.includes(name) ? prev.filter((t) => t !== name) : [...prev, name]));
+
+  const clearTagSelection = () => { setPendingTags([]); };
+
+  // kind: "loans" | "transactions"
+  const applyBulkTags = async (kind) => {
+    const ids = kind === "loans" ? selectedLoanIds : selectedLoanTxIds;
+    if (!ids.length) { toast.error("Select at least one row"); return; }
+    if (!pendingTags.length) { toast.error("Pick at least one tag"); return; }
+    setApplyingTags(true);
+    try {
+      const url = kind === "loans"
+        ? `${API_URL}/api/loans/bulk-tags`
+        : `${API_URL}/api/loans/transactions/bulk-tags`;
+      const body = kind === "loans"
+        ? { loan_ids: ids, transaction_tags: pendingTags }
+        : { transaction_ids: ids, transaction_tags: pendingTags };
+      const r = await fetch(url, {
+        method: "PATCH",
+        headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(body),
+      });
+      if (r.ok) {
+        const d = await r.json();
+        toast.success(`Tagged ${d.modified} of ${d.matched} row(s)`);
+        setPendingTags([]);
+        if (kind === "loans") { setSelectedLoanIds([]); fetchLoans(); }
+        else { setSelectedLoanTxIds([]); fetchLoanTransactions(loanTxPage); }
+      } else {
+        toast.error(await getApiError(r));
+      }
+    } catch (e) {
+      toast.error(e?.message || "Something went wrong");
+    } finally {
+      setApplyingTags(false);
+    }
+  };
+
+  // Removing a tag sets the exact remaining list - bulk apply only ever adds.
+  const removeTagFrom = async (kind, id, current, name) => {
+    const next = (current || []).filter((t) => t !== name);
+    const url = kind === "loans"
+      ? `${API_URL}/api/loans/${id}/tags`
+      : `${API_URL}/api/loans/transactions/${id}/tags`;
+    try {
+      const r = await fetch(url, {
+        method: "PATCH",
+        headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ transaction_tags: next }),
+      });
+      if (r.ok) {
+        if (kind === "loans") fetchLoans(); else fetchLoanTransactions(loanTxPage);
+      } else toast.error(await getApiError(r));
+    } catch (e) { toast.error(e?.message || "Something went wrong"); }
   };
 
   const fetchLoanDetail = async (loanId) => {
@@ -363,6 +548,7 @@ export default function Loans() {
     fetchSummary();
     fetchDashboard();
     fetchExchangers();
+    fetchTxnTags();
   }, []);
 
   useEffect(() => {
@@ -1840,6 +2026,23 @@ export default function Loans() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  <div>
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">
+                      Tag
+                    </Label>
+                    <select
+                      value={loanTagFilter}
+                      onChange={(e) => setLoanTagFilter(e.target.value)}
+                      className="h-9 w-full border rounded-md text-sm px-2 bg-card text-foreground"
+                      data-testid="loan-tag-filter"
+                    >
+                      <option value="">All Tags</option>
+                      {txnTags.map((t) => (
+                        <option key={t.tag_id} value={t.name}>{t.name}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 {hasActiveFilters && (
@@ -1877,10 +2080,32 @@ export default function Loans() {
               ) : (
                 <Card className="bg-card border">
                   <CardContent className="p-0">
+                    <div className="px-4 pt-4">
+                      <BulkTagBar
+                        count={selectedLoanIds.length}
+                        tags={txnTags}
+                        pendingTags={pendingTags}
+                        onToggleTag={togglePendingTag}
+                        onApply={() => applyBulkTags("loans")}
+                        onClear={clearTagSelection}
+                        onClearSelection={() => setSelectedLoanIds([])}
+                        applying={applyingTags}
+                        testId="loans-bulk-tag-bar"
+                      />
+                    </div>
                     <ScrollArea className="h-[500px]">
                       <Table>
                         <TableHeader>
                           <TableRow className="border hover:bg-transparent">
+                            <TableHead className="w-10">
+                              <input
+                                type="checkbox"
+                                checked={selectedLoanIds.length === filteredLoans.length && filteredLoans.length > 0}
+                                onChange={toggleAllLoans}
+                                className="rounded border accent-[#66FCF1]"
+                                data-testid="select-all-loans"
+                              />
+                            </TableHead>
                             <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                               Borrower
                             </TableHead>
@@ -1896,6 +2121,9 @@ export default function Loans() {
                             <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
                               Status
                             </TableHead>
+                            <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs">
+                              Tags
+                            </TableHead>
                             <TableHead className="text-muted-foreground font-bold uppercase tracking-wider text-xs text-right">
                               Actions
                             </TableHead>
@@ -1905,8 +2133,17 @@ export default function Loans() {
                           {filteredLoans.map((loan) => (
                             <TableRow
                               key={loan.loan_id}
-                              className="border hover:bg-muted"
+                              className={`border hover:bg-muted ${selectedLoanIds.includes(loan.loan_id) ? "bg-primary/5" : ""}`}
                             >
+                              <TableCell className="w-10">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedLoanIds.includes(loan.loan_id)}
+                                  onChange={() => toggleLoanId(loan.loan_id)}
+                                  className="rounded border accent-[#66FCF1]"
+                                  data-testid={`select-loan-${loan.loan_id}`}
+                                />
+                              </TableCell>
                               <TableCell>
                                 <div className="text-foreground font-medium">
                                   {loan.borrower_name}
@@ -1942,6 +2179,13 @@ export default function Loans() {
                                 {formatDate(loan.due_date)}
                               </TableCell>
                               <TableCell>{getStatusBadge(loan)}</TableCell>
+                              <TableCell className="max-w-[180px]">
+                                <TagPills
+                                  tags={loan.transaction_tags}
+                                  colorOf={tagColor}
+                                  onRemove={(name) => removeTagFrom("loans", loan.loan_id, loan.transaction_tags, name)}
+                                />
+                              </TableCell>
                               <TableCell>
                                 <div className="flex gap-0.5 justify-end">
                                   <Button
@@ -2083,6 +2327,17 @@ export default function Loans() {
                   <option value="write_off">Write-off</option>
                 </select>
                 <select
+                  value={txTagFilter}
+                  onChange={(e) => setTxTagFilter(e.target.value)}
+                  className="h-9 border rounded-md text-sm px-2 bg-card text-foreground"
+                  data-testid="tx-tag-filter"
+                >
+                  <option value="">All Tags</option>
+                  {txnTags.map((t) => (
+                    <option key={t.tag_id} value={t.name}>{t.name}</option>
+                  ))}
+                </select>
+                <select
                   value={txCurrency}
                   onChange={(e) => setTxCurrency(e.target.value)}
                   className="h-9 border rounded-md text-sm px-2 bg-card text-foreground"
@@ -2109,9 +2364,29 @@ export default function Loans() {
                 />
               </div>
               <ScrollArea className="h-[500px]">
-                <Table>
+                <BulkTagBar
+                count={selectedLoanTxIds.length}
+                tags={txnTags}
+                pendingTags={pendingTags}
+                onToggleTag={togglePendingTag}
+                onApply={() => applyBulkTags("transactions")}
+                onClear={clearTagSelection}
+                onClearSelection={() => setSelectedLoanTxIds([])}
+                applying={applyingTags}
+                testId="loan-tx-bulk-tag-bar"
+              />
+              <Table>
                   <TableHeader>
                     <TableRow className="border hover:bg-transparent">
+                      <TableHead className="w-10">
+                        <input
+                          type="checkbox"
+                          checked={selectedLoanTxIds.length === loanTransactions.length && loanTransactions.length > 0}
+                          onChange={toggleAllLoanTx}
+                          className="rounded border accent-[#66FCF1]"
+                          data-testid="select-all-loan-tx"
+                        />
+                      </TableHead>
                       <TableHead className="text-muted-foreground text-xs">
                         Date
                       </TableHead>
@@ -2134,6 +2409,9 @@ export default function Loans() {
                         Status
                       </TableHead>
                       <TableHead className="text-muted-foreground text-xs">
+                        Tags
+                      </TableHead>
+                      <TableHead className="text-muted-foreground text-xs">
                         Attachments
                       </TableHead>
                       <TableHead className="text-muted-foreground text-xs">
@@ -2145,8 +2423,17 @@ export default function Loans() {
                     {loanTransactions.map((tx) => (
                       <TableRow
                         key={tx.transaction_id}
-                        className="border hover:bg-muted"
+                        className={`border hover:bg-muted ${selectedLoanTxIds.includes(tx.transaction_id) ? "bg-primary/5" : ""}`}
                       >
+                        <TableCell className="w-10">
+                          <input
+                            type="checkbox"
+                            checked={selectedLoanTxIds.includes(tx.transaction_id)}
+                            onChange={() => toggleLoanTxId(tx.transaction_id)}
+                            className="rounded border accent-[#66FCF1]"
+                            data-testid={`select-loan-tx-${tx.transaction_id}`}
+                          />
+                        </TableCell>
                         <TableCell className="text-foreground text-sm">
                           {formatDate(tx.created_at)}
                         </TableCell>
@@ -2230,6 +2517,13 @@ export default function Loans() {
                           >
                             {tx.status || "Completed"}
                           </Badge>
+                        </TableCell>
+                        <TableCell className="max-w-[180px]">
+                          <TagPills
+                            tags={tx.transaction_tags}
+                            colorOf={tagColor}
+                            onRemove={(name) => removeTagFrom("transactions", tx.transaction_id, tx.transaction_tags, name)}
+                          />
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
                           {tx.attachments && tx.attachments.length > 0 ? (
