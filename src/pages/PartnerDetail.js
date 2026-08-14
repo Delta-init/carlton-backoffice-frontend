@@ -27,7 +27,15 @@ import {
 } from '../components/ui/tabs';
 import PaginationControls from '../components/PaginationControls';
 import { toast } from 'sonner';
+import { getApiError } from '../lib/utils';
+import * as XLSX from 'xlsx';
 import { usePermissions } from '../context/usePermissions';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '../components/ui/dialog';
 import {
   ArrowLeft,
   Loader2,
@@ -40,6 +48,10 @@ import {
   Search,
   Filter,
   Eye,
+  Percent,
+  X,
+  Download,
+  FileText,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -86,8 +98,9 @@ const DEST_ICONS = {
 export default function PartnerDetail() {
   const { tagId } = useParams();
   const navigate = useNavigate();
-  const { canView } = usePermissions();
+  const { canView, canEdit } = usePermissions();
   const canManageTreasury = canView('partner_treasury');
+  const canEditCharges = canEdit('partner_treasury');
 
   const [loading, setLoading] = useState(true);
   const [partner, setPartner] = useState(null);
@@ -129,6 +142,21 @@ export default function PartnerDetail() {
   const [treasuryGroups, setTreasuryGroups] = useState([]);
   const [treasuryTotal, setTreasuryTotal] = useState(0);
   const [treasuryLoading, setTreasuryLoading] = useState(false);
+  const [treasuryCharges, setTreasuryCharges] = useState(0);
+  const [treasuryNetAfter, setTreasuryNetAfter] = useState(0);
+
+  // Drill-down: the transactions behind one treasury card
+  const [drill, setDrill] = useState(null);          // { group, entry }
+  const [drillRows, setDrillRows] = useState([]);
+  const [drillTotal, setDrillTotal] = useState(0);
+  const [drillPage, setDrillPage] = useState(1);
+  const [drillLoading, setDrillLoading] = useState(false);
+
+  // Charge editor
+  const [chargeEdit, setChargeEdit] = useState(null); // { group, entry }
+  const [chargeIn, setChargeIn] = useState('0');
+  const [chargeOut, setChargeOut] = useState('0');
+  const [chargeSaving, setChargeSaving] = useState(false);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth_token');
@@ -317,6 +345,8 @@ export default function PartnerDetail() {
         const d = await r.json();
         setTreasuryGroups(d.groups || []);
         setTreasuryTotal(d.grand_total_net_usd || 0);
+        setTreasuryCharges(d.grand_total_charges_usd || 0);
+        setTreasuryNetAfter(d.grand_total_net_after_charges_usd || 0);
       } else {
         toast.error('Failed to load partner treasury');
       }
@@ -330,6 +360,221 @@ export default function PartnerDetail() {
   useEffect(() => {
     if (activeTab === 'treasury') fetchTreasury();
   }, [activeTab, fetchTreasury]);
+
+  // ── Drill-down ────────────────────────────────────────────────────────────
+  // The card counts approved+completed only, so the list asks for exactly that
+  // set - otherwise the rows would not add up to the figure they came from.
+  const drillParams = (group, entry, page) => {
+    const qs = new URLSearchParams({
+      client_tag: partner.name,
+      status: 'approved,completed',
+      page: String(page),
+      page_size: '20',
+    });
+    qs.set('destination_type', group.destination_type);
+    if (group.destination_type === 'vendor') qs.set('vendor_id', entry.key);
+    else if (group.destination_type === 'psp') qs.set('psp_id', entry.key);
+    else if (group.destination_type === 'treasury' || group.destination_type === 'usdt') {
+      qs.set('destination_account_id', entry.key);
+    }
+    return qs;
+  };
+
+  const loadDrill = useCallback(async (group, entry, page) => {
+    setDrillLoading(true);
+    try {
+      const r = await fetch(`${API_URL}/api/transactions?${drillParams(group, entry, page).toString()}`, {
+        headers: getAuthHeaders(), credentials: 'include',
+      });
+      if (r.ok) {
+        const d = await r.json();
+        setDrillRows(d.items || []);
+        setDrillTotal(d.total || 0);
+      } else toast.error('Failed to load transactions');
+    } catch {
+      toast.error('Failed to load transactions');
+    } finally {
+      setDrillLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [partner]);
+
+  const openDrill = (group, entry) => {
+    setDrill({ group, entry });
+    setDrillPage(1);
+    loadDrill(group, entry, 1);
+  };
+
+  useEffect(() => {
+    if (drill) loadDrill(drill.group, drill.entry, drillPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drillPage]);
+
+  // ── Charges (display-only overlay) ────────────────────────────────────────
+  const openChargeEditor = (group, entry) => {
+    setChargeEdit({ group, entry });
+    setChargeIn(String(entry.in_rate ?? 0));
+    setChargeOut(String(entry.out_rate ?? 0));
+  };
+
+  const saveCharges = async () => {
+    const inR = parseFloat(chargeIn) || 0;
+    const outR = parseFloat(chargeOut) || 0;
+    if (inR < 0 || inR > 100 || outR < 0 || outR > 100) {
+      toast.error('Charges must be between 0 and 100 percent');
+      return;
+    }
+    setChargeSaving(true);
+    try {
+      const r = await fetch(`${API_URL}/api/partner-treasury/charges`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({
+          tag_id: tagId,
+          destination_type: chargeEdit.group.destination_type,
+          entity_key: chargeEdit.entry.key,
+          in_rate: inR,
+          out_rate: outR,
+        }),
+      });
+      if (r.ok) {
+        toast.success('Charges updated');
+        setChargeEdit(null);
+        fetchTreasury();
+      } else toast.error(await getApiError(r));
+    } catch (e) {
+      toast.error(e?.message || 'Something went wrong');
+    } finally {
+      setChargeSaving(false);
+    }
+  };
+
+  // Same filters the Transactions tab list uses, without page/page_size - an
+  // export covers the whole filtered set, not the page on screen.
+  const txExportParams = () => {
+    const qs = new URLSearchParams({ client_tag: partner.name });
+    if (txType !== 'all') qs.set('transaction_type', txType);
+    if (statusFilter !== 'all') qs.set('status', statusFilter);
+    if (baseCurrencyFilter !== 'all') qs.set('base_currency', baseCurrencyFilter);
+    if (destinationFilter !== 'all') qs.set('destination_type', destinationFilter);
+    if (destinationIdFilter !== 'all') {
+      if (destinationFilter === 'vendor') qs.set('vendor_id', destinationIdFilter);
+      else if (destinationFilter === 'psp') qs.set('psp_id', destinationIdFilter);
+      else if (destinationFilter === 'treasury' || destinationFilter === 'usdt') qs.set('destination_account_id', destinationIdFilter);
+    }
+    if (search) qs.set('search', search);
+    if (emailFilter) qs.set('client_email', emailFilter);
+    if (dateFrom) qs.set(txDateType === 'approved' ? 'approved_date_from' : txDateType === 'bank_receipt' ? 'bank_receipt_date_from' : txDateType === 'request_processed' ? 'request_processed_date_from' : 'date_from', dateFrom);
+    if (dateTo) qs.set(txDateType === 'approved' ? 'approved_date_to' : txDateType === 'bank_receipt' ? 'bank_receipt_date_to' : txDateType === 'request_processed' ? 'request_processed_date_to' : 'date_to', dateTo);
+    if (txnTagFilter !== 'all') qs.set('transaction_tag', txnTagFilter);
+    return qs;
+  };
+
+  // The drill-down export must carry the same status set the card counted.
+  const drillExportParams = () => {
+    const qs = drillParams(drill.group, drill.entry, 1);
+    qs.delete('page'); qs.delete('page_size');
+    return qs;
+  };
+
+  // ── Export ────────────────────────────────────────────────────────────────
+  // Both transaction areas export through the same path: /transactions/export
+  // returns every row matching the filters (no page cap), then the file is built
+  // client-side - the same approach the Transactions Summary page uses.
+  const destinationLabel = (tx) => {
+    if (tx.destination_type === 'treasury' || tx.destination_type === 'usdt')
+      return tx.destination_account_name || (tx.destination_type || '').toUpperCase();
+    if (tx.destination_type === 'psp') return tx.psp_name || 'PSP';
+    if (tx.destination_type === 'vendor') return tx.vendor_name || 'Exchanger';
+    if (tx.destination_type === 'bank') return tx.client_bank_name || 'Bank Transfer';
+    return tx.destination_type || '-';
+  };
+
+  const EXPORT_HEADERS = [
+    'Date', 'Reference', 'CRM Reference', 'Client', 'Email', 'Type',
+    'Payment Currency', 'Amount', 'USD Amount', 'Status', 'Destination',
+    'Client Tags', 'Transaction Tags',
+  ];
+  const exportRow = (tx) => [
+    formatDate(tx.transaction_date || tx.created_at),
+    tx.reference || '',
+    tx.crm_reference || '',
+    tx.client_name || '',
+    tx.client_email || '',
+    tx.transaction_type,
+    tx.base_currency || tx.currency || 'USD',
+    tx.base_amount ?? tx.amount,
+    tx.amount,
+    tx.status,
+    destinationLabel(tx),
+    (tx.client_tags || []).join('; '),
+    (tx.transaction_tags || []).join('; '),
+  ];
+
+  const fetchAllForExport = async (params) => {
+    const r = await fetch(`${API_URL}/api/transactions/export?${params.toString()}`, {
+      headers: getAuthHeaders(), credentials: 'include',
+    });
+    if (!r.ok) throw new Error('Export failed');
+    const d = await r.json();
+    return d.items || [];
+  };
+
+  const exportExcel = async (params, title) => {
+    const id = toast.loading('Preparing export…');
+    try {
+      const rows = await fetchAllForExport(params);
+      if (!rows.length) { toast.error('Nothing to export', { id }); return; }
+      const ws = XLSX.utils.aoa_to_sheet([EXPORT_HEADERS, ...rows.map(exportRow)]);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Transactions');
+      XLSX.writeFile(wb, `${title}_${new Date().toISOString().split('T')[0]}.xlsx`);
+      toast.success(`Exported ${rows.length} row(s)`, { id });
+    } catch (e) {
+      toast.error(e?.message || 'Export failed', { id });
+    }
+  };
+
+  const exportPDF = async (params, title) => {
+    const id = toast.loading('Preparing export…');
+    try {
+      const rows = await fetchAllForExport(params);
+      if (!rows.length) { toast.error('Nothing to export', { id }); return; }
+      const dep = rows.filter(t => t.transaction_type === 'deposit').reduce((a, t) => a + (t.amount || 0), 0);
+      const wd = rows.filter(t => t.transaction_type === 'withdrawal').reduce((a, t) => a + (t.amount || 0), 0);
+      const esc = (v) => String(v ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+      const w = window.open('', '_blank');
+      if (!w) { toast.error('Pop-up blocked - allow pop-ups to export PDF', { id }); return; }
+      w.document.write(`
+        <html><head><title>${esc(title)}</title><style>
+          body{font-family:Arial,sans-serif;padding:20px}
+          h1{color:#1F2833;border-bottom:2px solid #66FCF1;padding-bottom:10px}
+          .summary{display:flex;gap:30px;margin:20px 0;padding:15px;background:#f8f9fa;border-radius:8px}
+          .summary-item label{font-size:12px;color:#666;display:block}
+          .summary-item span{font-size:18px;font-weight:bold}
+          .dep{color:#22c55e}.wd{color:#ef4444}
+          table{width:100%;border-collapse:collapse;margin-top:20px}
+          th{background:#1F2833;color:#fff;padding:8px;text-align:left;font-size:10px}
+          td{padding:6px 8px;border-bottom:1px solid #eee;font-size:10px}
+        </style></head><body>
+          <h1>${esc(title)}</h1>
+          <p>Generated: ${new Date().toLocaleString()} | Total Records: ${rows.length}</p>
+          <div class="summary">
+            <div class="summary-item"><label>Total Deposits (USD)</label><span class="dep">${fmtUsd(dep)}</span></div>
+            <div class="summary-item"><label>Total Withdrawals (USD)</label><span class="wd">${fmtUsd(wd)}</span></div>
+            <div class="summary-item"><label>Net (USD)</label><span>${fmtUsd(dep - wd)}</span></div>
+          </div>
+          <table><thead><tr>${EXPORT_HEADERS.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead>
+          <tbody>${rows.map(t => `<tr>${exportRow(t).map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>
+        </body></html>`);
+      w.document.close();
+      setTimeout(() => w.print(), 400);
+      toast.success(`Exported ${rows.length} row(s)`, { id });
+    } catch (e) {
+      toast.error(e?.message || 'Export failed', { id });
+    }
+  };
 
   if (loading) {
     return (
@@ -392,6 +637,16 @@ export default function PartnerDetail() {
         </TabsList>
 
         <TabsContent value="transactions" className="mt-4 space-y-4">
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => exportExcel(txExportParams(), `${partner.name}_transactions`)}
+              className="border-green-200 text-green-600 hover:bg-green-50 h-8 px-3" data-testid="pd-export-excel">
+              <Download className="w-3.5 h-3.5 mr-1" /> Excel
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => exportPDF(txExportParams(), `${partner.name} Transactions`)}
+              className="border-red-200 text-red-600 hover:bg-red-50 h-8 px-3" data-testid="pd-export-pdf">
+              <FileText className="w-3.5 h-3.5 mr-1" /> PDF
+            </Button>
+          </div>
           {/* Filters - mirrors the Transactions Summary page (client tag is implicit here) */}
           <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
             <div className="relative flex-1 min-w-[200px]">
@@ -711,6 +966,15 @@ export default function PartnerDetail() {
                 <p className={`text-xl font-mono font-bold ${treasuryTotal >= 0 ? 'text-green-600' : 'text-red-600'}`} data-testid="ptreasury-grand-total">
                   {fmtUsd(treasuryTotal)}
                 </p>
+                {treasuryCharges > 0 && (
+                  <>
+                    <p className="text-xs text-amber-600 font-mono mt-0.5">&minus;{fmtUsd(treasuryCharges)} charges</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mt-1">Net after charges</p>
+                    <p className={`text-lg font-mono font-bold ${treasuryNetAfter >= 0 ? 'text-green-600' : 'text-red-600'}`} data-testid="ptreasury-net-after-charges">
+                      {fmtUsd(treasuryNetAfter)}
+                    </p>
+                  </>
+                )}
               </div>
             </div>
 
@@ -744,19 +1008,55 @@ export default function PartnerDetail() {
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                         {group.entries.map((entry) => (
-                          <Card key={entry.key} className="bg-card border">
+                          <Card
+                            key={entry.key}
+                            className="bg-card border hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer"
+                            onClick={() => openDrill(group, entry)}
+                            title="Click to see the transactions behind this figure"
+                            data-testid={`ptreasury-card-${group.destination_type}-${entry.key}`}
+                          >
                             <CardContent className="p-4">
-                              <p className="font-semibold text-foreground truncate" title={entry.name}>{entry.name}</p>
+                              <div className="flex items-start justify-between gap-2">
+                                <p className="font-semibold text-foreground truncate" title={entry.name}>{entry.name}</p>
+                                {canEditCharges && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); openChargeEditor(group, entry); }}
+                                    className="shrink-0 text-muted-foreground/60 hover:text-primary"
+                                    title="Set in/out charges"
+                                    data-testid={`ptreasury-edit-charge-${entry.key}`}
+                                  >
+                                    <Percent className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
                               <div className="flex items-baseline justify-between mt-2">
                                 <span className="text-muted-foreground text-sm">Net</span>
                                 <span className={`text-lg font-mono font-bold ${entry.net_usd >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                   {fmtUsd(entry.net_usd)}
                                 </span>
                               </div>
-                              <div className="flex justify-between text-xs mt-2 pt-2 border-t">
-                                <span className="text-green-600">+{fmtUsd(entry.deposits_usd)} <span className="text-muted-foreground">({entry.deposit_count})</span></span>
-                                <span className="text-red-600">&minus;{fmtUsd(entry.withdrawals_usd)} <span className="text-muted-foreground">({entry.withdrawal_count})</span></span>
+                              <div className="flex justify-between text-xs mt-2 pt-2 border-t border">
+                                <span className="text-green-600">+{fmtUsd(entry.deposits_usd)} <span className="text-muted-foreground/60">({entry.deposit_count})</span></span>
+                                <span className="text-red-600">&minus;{fmtUsd(entry.withdrawals_usd)} <span className="text-muted-foreground/60">({entry.withdrawal_count})</span></span>
                               </div>
+                              {/* Charges are a reporting overlay - they never touch the ledger */}
+                              {entry.charges_usd > 0 && (
+                                <div className="mt-2 pt-2 border-t border space-y-1">
+                                  <div className="flex justify-between text-xs">
+                                    <span className="text-muted-foreground">
+                                      Charges <span className="text-muted-foreground/60">({entry.in_rate}% in / {entry.out_rate}% out)</span>
+                                    </span>
+                                    <span className="font-mono text-amber-600">&minus;{fmtUsd(entry.charges_usd)}</span>
+                                  </div>
+                                  <div className="flex items-baseline justify-between">
+                                    <span className="text-muted-foreground text-xs font-medium">Net after charges</span>
+                                    <span className={`font-mono text-sm font-bold ${entry.net_after_charges_usd >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                      {fmtUsd(entry.net_after_charges_usd)}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
                             </CardContent>
                           </Card>
                         ))}
@@ -768,6 +1068,136 @@ export default function PartnerDetail() {
           </TabsContent>
         )}
       </Tabs>
+
+      {/* Transactions behind one treasury card */}
+      <Dialog open={!!drill} onOpenChange={(o) => { if (!o) setDrill(null); }}>
+        <DialogContent className="bg-card border max-w-4xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-foreground">
+              {drill?.entry?.name}
+              <span className="ml-2 text-xs font-normal text-muted-foreground">{drill?.group?.label}</span>
+            </DialogTitle>
+          </DialogHeader>
+          {drill && (
+            <>
+              <div className="flex flex-wrap gap-4 text-sm pb-2 border-b border">
+                <span className="text-green-600">In +{fmtUsd(drill.entry.deposits_usd)} <span className="text-muted-foreground/60">({drill.entry.deposit_count})</span></span>
+                <span className="text-red-600">Out &minus;{fmtUsd(drill.entry.withdrawals_usd)} <span className="text-muted-foreground/60">({drill.entry.withdrawal_count})</span></span>
+                <span className="text-foreground font-semibold">Net {fmtUsd(drill.entry.net_usd)}</span>
+                {drill.entry.charges_usd > 0 && (
+                  <>
+                    <span className="text-amber-600">Charges &minus;{fmtUsd(drill.entry.charges_usd)}</span>
+                    <span className="text-foreground font-bold">After charges {fmtUsd(drill.entry.net_after_charges_usd)}</span>
+                  </>
+                )}
+                <span className="ml-auto flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => exportExcel(drillExportParams(), `${partner.name}_${drill.entry.name}`)}
+                    className="border-green-200 text-green-600 hover:bg-green-50 h-7 px-2 text-xs" data-testid="drill-export-excel">
+                    <Download className="w-3 h-3 mr-1" /> Excel
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => exportPDF(drillExportParams(), `${partner.name} — ${drill.entry.name}`)}
+                    className="border-red-200 text-red-600 hover:bg-red-50 h-7 px-2 text-xs" data-testid="drill-export-pdf">
+                    <FileText className="w-3 h-3 mr-1" /> PDF
+                  </Button>
+                </span>
+              </div>
+              <div className="border border rounded-lg overflow-hidden max-h-[45vh] overflow-y-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Reference</TableHead>
+                      <TableHead>Client</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead className="text-right">Amount (USD)</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead className="w-10" />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {drillLoading ? (
+                      <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground/60"><Loader2 className="w-4 h-4 animate-spin mx-auto" /></TableCell></TableRow>
+                    ) : drillRows.length === 0 ? (
+                      <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground/60">No transactions</TableCell></TableRow>
+                    ) : drillRows.map((tx) => (
+                      <TableRow key={tx.transaction_id}>
+                        <TableCell className="font-mono text-xs">{tx.reference || tx.transaction_id}</TableCell>
+                        <TableCell className="text-sm">{tx.client_name || tx.client_email || '-'}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={tx.transaction_type === 'deposit' ? 'text-green-600 border-green-200' : 'text-red-600 border-red-200'}>
+                            {tx.transaction_type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className={`text-right font-mono text-sm ${tx.transaction_type === 'deposit' ? 'text-green-600' : 'text-red-600'}`}>
+                          {tx.transaction_type === 'deposit' ? '+' : '-'}{fmtUsd(tx.amount)}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{formatDate(tx.created_at)}</TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="sm" onClick={() => viewFullDetails(tx)}
+                            title="Open in Transactions Summary"
+                            className="text-muted-foreground hover:text-foreground hover:bg-muted h-7 w-7 p-0">
+                            <Eye className="w-3.5 h-3.5" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <PaginationControls
+                currentPage={drillPage}
+                totalPages={Math.max(1, Math.ceil(drillTotal / 20))}
+                totalItems={drillTotal}
+                pageSize={20}
+                onPageChange={setDrillPage}
+                onPageSizeChange={() => {}}
+              />
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* In/out charge percentages for one destination */}
+      <Dialog open={!!chargeEdit} onOpenChange={(o) => { if (!o) setChargeEdit(null); }}>
+        <DialogContent className="bg-card border max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-foreground">Charges &mdash; {chargeEdit?.entry?.name}</DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground">
+            Applied to this partner only, for reporting. Nothing in the ledger changes,
+            and this is separate from any exchanger/PSP commission on the transactions themselves.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground uppercase tracking-wider">In charge %</label>
+              <Input type="number" step="0.01" min="0" max="100" value={chargeIn}
+                onChange={(e) => setChargeIn(e.target.value)}
+                className="bg-muted/50 border" data-testid="charge-in-rate" />
+              <p className="text-[10px] text-muted-foreground/60">on {fmtUsd(chargeEdit?.entry?.deposits_usd || 0)} in</p>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground uppercase tracking-wider">Out charge %</label>
+              <Input type="number" step="0.01" min="0" max="100" value={chargeOut}
+                onChange={(e) => setChargeOut(e.target.value)}
+                className="bg-muted/50 border" data-testid="charge-out-rate" />
+              <p className="text-[10px] text-muted-foreground/60">on {fmtUsd(chargeEdit?.entry?.withdrawals_usd || 0)} out</p>
+            </div>
+          </div>
+          <div className="text-xs text-muted-foreground bg-muted/50 rounded p-2">
+            Estimated charge:{' '}
+            <span className="font-mono font-semibold text-amber-600">
+              {fmtUsd(((chargeEdit?.entry?.deposits_usd || 0) * (parseFloat(chargeIn) || 0) / 100)
+                + ((chargeEdit?.entry?.withdrawals_usd || 0) * (parseFloat(chargeOut) || 0) / 100))}
+            </span>
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="outline" onClick={() => setChargeEdit(null)} className="border text-muted-foreground">Cancel</Button>
+            <Button onClick={saveCharges} disabled={chargeSaving}
+              className="bg-primary hover:bg-primary/90 text-white" data-testid="save-charges">
+              {chargeSaving ? 'Saving…' : 'Save'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
