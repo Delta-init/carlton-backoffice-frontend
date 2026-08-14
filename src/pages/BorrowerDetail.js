@@ -208,24 +208,34 @@ export default function BorrowerDetail() {
           extras.forEach(d => { if (d) allLoans = allLoans.concat(Array.isArray(d) ? d : d.items || []); });
         }
 
-        // Only active/partially_paid loans for financial stats
-        const activeLoans = allLoans.filter(l => l.status === "active" || l.status === "partially_paid");
+        // Which loans count towards which figure - same rule the borrowers listing
+        // applies server-side, so the two views agree. Rejected and not-yet-approved
+        // loans were never paid out, so they belong to neither: counting them left
+        // money that does not exist showing as still owed.
+        const ACTIVE = ["active", "partially_paid"];              // still owed
+        const DISBURSED = ["active", "partially_paid", "fully_paid"]; // actually paid out
+        const disbursedLoans = allLoans.filter(l => DISBURSED.includes(l.status));
+        const activeLoans = allLoans.filter(l => ACTIVE.includes(l.status));
 
-        // Build per-currency breakdown (active/partially_paid only)
+        // Per-currency: disbursed/repaid over everything paid out, outstanding over
+        // what is still owed (a fully-paid loan contributes 0 to outstanding).
         const byCurrency = {};
+        const bucket = (cur) => (byCurrency[cur] = byCurrency[cur] || { disbursed: 0, outstanding: 0, repaid: 0 });
+        disbursedLoans.forEach(l => {
+          const b = bucket(l.currency || "USD");
+          b.disbursed += l.amount || 0;
+          b.repaid += l.total_repaid || 0;
+        });
         activeLoans.forEach(l => {
-          const cur = l.currency || "USD";
-          if (!byCurrency[cur]) byCurrency[cur] = { disbursed: 0, outstanding: 0, repaid: 0 };
-          byCurrency[cur].disbursed += l.amount || 0;
-          byCurrency[cur].outstanding += Math.max(0, (l.amount || 0) + (l.total_interest || 0) - (l.total_repaid || 0));
-          byCurrency[cur].repaid += l.total_repaid || 0;
+          bucket(l.currency || "USD").outstanding +=
+            Math.max(0, (l.amount || 0) + (l.total_interest || 0) - (l.total_repaid || 0));
         });
 
         setSummaryStats({
           total: totalCount,
-          totalDisbursed: activeLoans.reduce((s, l) => s + (l.amount_usd || l.amount || 0), 0),
+          totalDisbursed: disbursedLoans.reduce((s, l) => s + (l.amount_usd || l.amount || 0), 0),
           outstanding: activeLoans.reduce((s, l) => s + (l.outstanding_balance_usd || l.outstanding_balance || 0), 0),
-          totalRepaid: activeLoans.reduce((s, l) => s + (l.total_repaid_usd || l.total_repaid || 0), 0),
+          totalRepaid: disbursedLoans.reduce((s, l) => s + (l.total_repaid_usd || l.total_repaid || 0), 0),
           byCurrency,
           active: allLoans.filter((l) => l.status === "active").length,
           overdue: allLoans.filter((l) => l.is_overdue || (l.status === "active" && l.due_date && new Date(l.due_date) < new Date())).length,
