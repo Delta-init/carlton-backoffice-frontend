@@ -82,6 +82,30 @@ const fmtCur = (n, cur) =>
   `${(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${cur || ''}`.trim();
 
 // One line per currency, e.g. "3,240,236.00 AED · 61,300.00 INR"
+const CurrencyBreakdown = ({ byCurrency, className = '' }) => {
+  const entries = Object.entries(byCurrency || {});
+  if (!entries.length) return null;
+  return (
+    <div className={`text-[10px] font-mono leading-tight ${className}`}>
+      <div className="grid grid-cols-4 gap-1 text-muted-foreground/60 uppercase tracking-wider mb-0.5">
+        <span>Cur</span>
+        <span className="text-right">In</span>
+        <span className="text-right">Out</span>
+        <span className="text-right">Net</span>
+      </div>
+      {entries.map(([cur, v]) => (
+        <div key={cur} className="grid grid-cols-4 gap-1">
+          <span className="text-muted-foreground font-semibold">{cur}</span>
+          <span className="text-right text-green-600">{v.deposits ? fmtNum(v.deposits) : '-'}</span>
+          <span className="text-right text-red-600">{v.withdrawals ? fmtNum(v.withdrawals) : '-'}</span>
+          <span className={`text-right font-semibold ${v.net >= 0 ? 'text-slate-700' : 'text-red-600'}`}>{fmtNum(v.net)}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// One line per currency, e.g. "3,240,236.00 AED · 61,300.00 INR"
 const CurrencyLines = ({ byCurrency, field = 'net', className = '' }) => {
   const entries = Object.entries(byCurrency || {});
   if (!entries.length) return null;
@@ -669,6 +693,13 @@ export default function PartnerDetail() {
               {(partner.client_count ?? 0).toLocaleString()}
             </p>
             <p className="text-xs text-muted-foreground/60 mt-0.5">tagged {partner.name}</p>
+            {/* Carrying the tag and having activity are different numbers - showing
+                only the first makes "189 clients / 12 transactions" look broken. */}
+            <p className="text-[11px] text-muted-foreground mt-1" data-testid="partner-active-client-count">
+              <span className="font-mono font-semibold text-green-600">
+                {(partner.active_client_count ?? 0).toLocaleString()}
+              </span>{' '}transacted
+            </p>
           </CardContent>
         </Card>
         <Card className="bg-card border">
@@ -1197,7 +1228,7 @@ export default function PartnerDetail() {
                                 <span className="text-green-600">+{fmtUsd(entry.deposits_usd)} <span className="text-muted-foreground/60">({entry.deposit_count})</span></span>
                                 <span className="text-red-600">&minus;{fmtUsd(entry.withdrawals_usd)} <span className="text-muted-foreground/60">({entry.withdrawal_count})</span></span>
                               </div>
-                              <CurrencyLines byCurrency={entry.by_currency} field="net" className="mt-1.5 pt-1.5 border-t border" />
+                              <CurrencyBreakdown byCurrency={entry.by_currency} className="mt-2 pt-2 border-t border" />
                               {/* Charges are a reporting overlay - they never touch the ledger */}
                               {entry.charges_usd > 0 && (
                                 <div className="mt-2 pt-2 border-t border space-y-1">
@@ -1242,7 +1273,7 @@ export default function PartnerDetail() {
                 <span className="text-green-600">In +{fmtUsd(drill.entry.deposits_usd)} <span className="text-muted-foreground/60">({drill.entry.deposit_count})</span></span>
                 <span className="text-red-600">Out &minus;{fmtUsd(drill.entry.withdrawals_usd)} <span className="text-muted-foreground/60">({drill.entry.withdrawal_count})</span></span>
                 <span className="text-foreground font-semibold">Net {fmtUsd(drill.entry.net_usd)}</span>
-                <CurrencyLines byCurrency={drill.entry.by_currency} field="net" />
+                <CurrencyBreakdown byCurrency={drill.entry.by_currency} className="pb-2 border-b border" />
                 {drill.entry.charges_usd > 0 && (
                   <>
                     <span className="text-amber-600">Charges &minus;{fmtUsd(drill.entry.charges_usd)}</span>
