@@ -52,6 +52,7 @@ import {
   X,
   Download,
   FileText,
+  Users,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -74,6 +75,24 @@ const statusOptions = [
 ];
 
 const currencies = ['USD', 'EUR', 'GBP', 'AED', 'SAR', 'INR', 'JPY', 'USDT'];
+
+// Amounts in the transaction's own payment currency. USD figures stay the common
+// base for totals; this shows what actually moved.
+const fmtCur = (n, cur) =>
+  `${(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${cur || ''}`.trim();
+
+// One line per currency, e.g. "3,240,236.00 AED · 61,300.00 INR"
+const CurrencyLines = ({ byCurrency, field = 'net', className = '' }) => {
+  const entries = Object.entries(byCurrency || {});
+  if (!entries.length) return null;
+  return (
+    <div className={`text-[10px] text-muted-foreground font-mono leading-tight ${className}`}>
+      {entries.map(([cur, v]) => (
+        <div key={cur}>{fmtCur(v[field], cur)}</div>
+      ))}
+    </div>
+  );
+};
 
 const fmtUsd = (n) => {
   const v = n || 0;
@@ -144,6 +163,15 @@ export default function PartnerDetail() {
   const [treasuryLoading, setTreasuryLoading] = useState(false);
   const [treasuryCharges, setTreasuryCharges] = useState(0);
   const [treasuryNetAfter, setTreasuryNetAfter] = useState(0);
+
+  // Clients tab - clients carrying this partner's tag
+  const [clientRows, setClientRows] = useState([]);
+  const [clientTotal, setClientTotal] = useState(0);
+  const [clientPage, setClientPage] = useState(1);
+  const [clientPageSize, setClientPageSize] = useState(20);
+  const [clientSearchInput, setClientSearchInput] = useState('');
+  const [clientSearch, setClientSearch] = useState('');
+  const [clientsLoading, setClientsLoading] = useState(false);
 
   // Drill-down: the transactions behind one treasury card
   const [drill, setDrill] = useState(null);          // { group, entry }
@@ -333,6 +361,40 @@ export default function PartnerDetail() {
     const ref = tx.reference || tx.transaction_id;
     navigate(`/transactions?search=${encodeURIComponent(ref)}`);
   };
+
+  useEffect(() => {
+    const t = setTimeout(() => setClientSearch(clientSearchInput.trim()), 400);
+    return () => clearTimeout(t);
+  }, [clientSearchInput]);
+
+  // Clients store tag IDs, so this filters by tagId (not the tag name that
+  // transactions carry).
+  const fetchClients = useCallback(async () => {
+    setClientsLoading(true);
+    try {
+      const qs = new URLSearchParams({
+        tags: tagId, page: String(clientPage), page_size: String(clientPageSize),
+      });
+      if (clientSearch) qs.set('search', clientSearch);
+      const r = await fetch(`${API_URL}/api/clients?${qs.toString()}`, {
+        headers: getAuthHeaders(), credentials: 'include',
+      });
+      if (r.ok) {
+        const d = await r.json();
+        setClientRows(d.items || []);
+        setClientTotal(d.total || 0);
+      } else toast.error('Failed to load clients');
+    } catch {
+      toast.error('Failed to load clients');
+    } finally {
+      setClientsLoading(false);
+    }
+  }, [tagId, clientPage, clientPageSize, clientSearch]);
+
+  useEffect(() => { setClientPage(1); }, [clientSearch, clientPageSize]);
+  useEffect(() => {
+    if (activeTab === 'clients') fetchClients();
+  }, [activeTab, fetchClients]);
 
   const fetchTreasury = useCallback(async () => {
     if (!canManageTreasury) return;
@@ -599,12 +661,22 @@ export default function PartnerDetail() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 max-w-2xl">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-4xl">
         <Card className="bg-card border">
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">Deposits</p>
+            <p className="text-xs text-muted-foreground/60 uppercase tracking-wider">Clients</p>
+            <p className="text-lg font-mono font-semibold text-foreground" data-testid="partner-client-count">
+              {(partner.client_count ?? 0).toLocaleString()}
+            </p>
+            <p className="text-xs text-muted-foreground/60 mt-0.5">tagged {partner.name}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card border">
+          <CardContent className="p-4">
+<p className="text-xs text-muted-foreground uppercase tracking-wider">Deposits</p>
             <p className="text-lg font-mono font-semibold text-green-600">{fmtUsd(partner.total_deposits_usd)}</p>
             <p className="text-xs text-muted-foreground mt-0.5">{partner.deposit_count} txns</p>
+            <CurrencyLines byCurrency={partner.by_currency} field="deposits" className="mt-1" />
           </CardContent>
         </Card>
         <Card className="bg-card border">
@@ -612,6 +684,7 @@ export default function PartnerDetail() {
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Withdrawals</p>
             <p className="text-lg font-mono font-semibold text-red-600">{fmtUsd(partner.total_withdrawals_usd)}</p>
             <p className="text-xs text-muted-foreground mt-0.5">{partner.withdrawal_count} txns</p>
+            <CurrencyLines byCurrency={partner.by_currency} field="withdrawals" className="mt-1" />
           </CardContent>
         </Card>
         <Card className="bg-card border">
@@ -628,6 +701,9 @@ export default function PartnerDetail() {
         <TabsList className="bg-muted/50 border border">
           <TabsTrigger value="transactions" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]">
             <Wallet className="w-3.5 h-3.5 mr-1.5" /> Transactions
+          </TabsTrigger>
+          <TabsTrigger value="clients" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]" data-testid="partner-clients-tab">
+            <Users className="w-3.5 h-3.5 mr-1.5" /> Clients
           </TabsTrigger>
           {canManageTreasury && (
             <TabsTrigger value="treasury" className="data-[state=active]:bg-[#66FCF1] data-[state=active]:text-[#0B0C10]" data-testid="partner-treasury-tab">
@@ -852,6 +928,7 @@ export default function PartnerDetail() {
                   <TableHead>Client</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead className="text-right">Amount (USD)</TableHead>
+                  <TableHead>Payment Currency</TableHead>
                   <TableHead>Destination</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Date</TableHead>
@@ -881,6 +958,14 @@ export default function PartnerDetail() {
                       </TableCell>
                       <TableCell className={`text-right font-mono text-sm ${tx.transaction_type === 'deposit' ? 'text-green-600' : 'text-red-600'}`}>
                         {tx.transaction_type === 'deposit' ? '+' : '-'}{fmtUsd(tx.amount)}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground font-mono whitespace-nowrap">
+                        {tx.base_currency && tx.base_currency !== 'USD' && tx.base_amount != null ? (
+                          <>
+                            {fmtCur(tx.base_amount, tx.base_currency)}
+                            {tx.exchange_rate ? <div className="text-muted-foreground/60">@ {tx.exchange_rate}</div> : null}
+                          </>
+                        ) : <span className="text-muted-foreground/60">USD</span>}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-xs">
                         {tx.destination_type === 'vendor' && tx.vendor_name ? (
@@ -949,6 +1034,78 @@ export default function PartnerDetail() {
             pageSize={txPageSize}
             onPageChange={setTxPage}
             onPageSizeChange={(s) => { setTxPageSize(s); setTxPage(1); }}
+          />
+        </TabsContent>
+
+        <TabsContent value="clients" className="mt-4 space-y-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="relative flex-1 min-w-[220px] max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search name, email or phone..."
+                value={clientSearchInput}
+                onChange={(e) => setClientSearchInput(e.target.value)}
+                className="pl-10 bg-card border text-foreground"
+                data-testid="pd-client-search"
+              />
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {clientTotal.toLocaleString()} client{clientTotal === 1 ? '' : 's'} tagged {partner.name}
+            </span>
+          </div>
+
+          <div className="border border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Client</TableHead>
+                  <TableHead>Contact</TableHead>
+                  <TableHead>KYC</TableHead>
+                  <TableHead className="text-right">Deposits</TableHead>
+                  <TableHead className="text-right">Withdrawals</TableHead>
+                  <TableHead className="text-right">Net</TableHead>
+                  <TableHead className="text-right">Txns</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {clientsLoading ? (
+                  <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground/60"><Loader2 className="w-4 h-4 animate-spin mx-auto" /></TableCell></TableRow>
+                ) : clientRows.length === 0 ? (
+                  <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground/60">No clients</TableCell></TableRow>
+                ) : clientRows.map((c) => (
+                  <TableRow key={c.client_id}>
+                    <TableCell>
+                      <div className="text-foreground font-medium">{`${c.first_name || ''} ${c.last_name || ''}`.trim() || '-'}</div>
+                      {c.mt5_number && <div className="text-[10px] text-muted-foreground/60">MT5 {c.mt5_number}</div>}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      <div>{c.email || '-'}</div>
+                      {c.phone && <div className="text-muted-foreground/60">{c.phone}</div>}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={`text-xs capitalize ${c.kyc_status === 'approved' ? 'text-green-600 border-green-200' : 'text-muted-foreground'}`}>
+                        {c.kyc_status || 'pending'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-sm text-green-600">{fmtUsd(c.total_deposits)}</TableCell>
+                    <TableCell className="text-right font-mono text-sm text-red-600">{fmtUsd(c.total_withdrawals)}</TableCell>
+                    <TableCell className={`text-right font-mono text-sm font-semibold ${(c.net_balance || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {fmtUsd(c.net_balance)}
+                    </TableCell>
+                    <TableCell className="text-right text-xs text-muted-foreground">{c.transaction_count ?? 0}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          <PaginationControls
+            currentPage={clientPage}
+            totalPages={Math.max(1, Math.ceil(clientTotal / clientPageSize))}
+            totalItems={clientTotal}
+            pageSize={clientPageSize}
+            onPageChange={setClientPage}
+            onPageSizeChange={(n) => { setClientPageSize(n); setClientPage(1); }}
           />
         </TabsContent>
 
@@ -1040,6 +1197,7 @@ export default function PartnerDetail() {
                                 <span className="text-green-600">+{fmtUsd(entry.deposits_usd)} <span className="text-muted-foreground/60">({entry.deposit_count})</span></span>
                                 <span className="text-red-600">&minus;{fmtUsd(entry.withdrawals_usd)} <span className="text-muted-foreground/60">({entry.withdrawal_count})</span></span>
                               </div>
+                              <CurrencyLines byCurrency={entry.by_currency} field="net" className="mt-1.5 pt-1.5 border-t border" />
                               {/* Charges are a reporting overlay - they never touch the ledger */}
                               {entry.charges_usd > 0 && (
                                 <div className="mt-2 pt-2 border-t border space-y-1">
@@ -1084,6 +1242,7 @@ export default function PartnerDetail() {
                 <span className="text-green-600">In +{fmtUsd(drill.entry.deposits_usd)} <span className="text-muted-foreground/60">({drill.entry.deposit_count})</span></span>
                 <span className="text-red-600">Out &minus;{fmtUsd(drill.entry.withdrawals_usd)} <span className="text-muted-foreground/60">({drill.entry.withdrawal_count})</span></span>
                 <span className="text-foreground font-semibold">Net {fmtUsd(drill.entry.net_usd)}</span>
+                <CurrencyLines byCurrency={drill.entry.by_currency} field="net" />
                 {drill.entry.charges_usd > 0 && (
                   <>
                     <span className="text-amber-600">Charges &minus;{fmtUsd(drill.entry.charges_usd)}</span>
@@ -1109,15 +1268,16 @@ export default function PartnerDetail() {
                       <TableHead>Client</TableHead>
                       <TableHead>Type</TableHead>
                       <TableHead className="text-right">Amount (USD)</TableHead>
+                      <TableHead>Payment Currency</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead className="w-10" />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {drillLoading ? (
-                      <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground/60"><Loader2 className="w-4 h-4 animate-spin mx-auto" /></TableCell></TableRow>
+                      <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground/60"><Loader2 className="w-4 h-4 animate-spin mx-auto" /></TableCell></TableRow>
                     ) : drillRows.length === 0 ? (
-                      <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground/60">No transactions</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground/60">No transactions</TableCell></TableRow>
                     ) : drillRows.map((tx) => (
                       <TableRow key={tx.transaction_id}>
                         <TableCell className="font-mono text-xs">{tx.reference || tx.transaction_id}</TableCell>
@@ -1129,6 +1289,14 @@ export default function PartnerDetail() {
                         </TableCell>
                         <TableCell className={`text-right font-mono text-sm ${tx.transaction_type === 'deposit' ? 'text-green-600' : 'text-red-600'}`}>
                           {tx.transaction_type === 'deposit' ? '+' : '-'}{fmtUsd(tx.amount)}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground font-mono whitespace-nowrap">
+                          {tx.base_currency && tx.base_currency !== 'USD' && tx.base_amount != null ? (
+                            <>
+                              {fmtCur(tx.base_amount, tx.base_currency)}
+                              {tx.exchange_rate ? <div className="text-muted-foreground/60">@ {tx.exchange_rate}</div> : null}
+                            </>
+                          ) : <span className="text-muted-foreground/60">USD</span>}
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">{formatDate(tx.created_at)}</TableCell>
                         <TableCell>
