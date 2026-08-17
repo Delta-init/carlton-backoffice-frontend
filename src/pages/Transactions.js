@@ -4228,17 +4228,32 @@ export default function Transactions() {
                   </p>
                 </div>
               )}
-              {viewTransaction.processed_at && (
+              {(viewTransaction.processed_at || viewTransaction.approval_comment) && (
                 <div className="pt-4 border-t border-border">
                   <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Processed
                   </p>
-                  <p className="text-foreground text-sm">
-                    {formatDate(viewTransaction.processed_at)} by{" "}
-                    {viewTransaction.processed_by_name}
-                  </p>
+                  {viewTransaction.processed_at && (
+                    <p className="text-foreground text-sm">
+                      {formatDate(viewTransaction.processed_at)} by{" "}
+                      {viewTransaction.processed_by_name}
+                    </p>
+                  )}
+                  {/* Comment left at approval time. whitespace-pre-wrap because these
+                      are routinely multi-line (payer / amount / destination). */}
+                  {viewTransaction.approval_comment && (
+                    <div className="mt-2">
+                      <p className="text-xs text-green-600 uppercase tracking-wider mb-1">
+                        Approval Comment
+                      </p>
+                      <p className="text-foreground text-sm whitespace-pre-wrap" data-testid="approval-comment">
+                        {viewTransaction.approval_comment}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
+
             </div>
           )}
         </DialogContent>
