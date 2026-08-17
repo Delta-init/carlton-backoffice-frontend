@@ -53,6 +53,8 @@ import {
   Download,
   FileText,
   Users,
+  HandCoins,
+  Trash2,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -78,6 +80,9 @@ const currencies = ['USD', 'EUR', 'GBP', 'AED', 'SAR', 'INR', 'JPY', 'USDT'];
 
 // Amounts in the transaction's own payment currency. USD figures stay the common
 // base for totals; this shows what actually moved.
+const fmtNum = (n) =>
+  (n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 const fmtCur = (n, cur) =>
   `${(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${cur || ''}`.trim();
 
@@ -98,7 +103,7 @@ const CurrencyBreakdown = ({ byCurrency, className = '' }) => {
           <span className="text-muted-foreground font-semibold">{cur}</span>
           <span className="text-right text-green-600">{v.deposits ? fmtNum(v.deposits) : '-'}</span>
           <span className="text-right text-red-600">{v.withdrawals ? fmtNum(v.withdrawals) : '-'}</span>
-          <span className={`text-right font-semibold ${v.net >= 0 ? 'text-slate-700' : 'text-red-600'}`}>{fmtNum(v.net)}</span>
+          <span className={`text-right font-semibold ${v.net >= 0 ? 'text-foreground' : 'text-red-600'}`}>{fmtNum(v.net)}</span>
         </div>
       ))}
     </div>
@@ -117,19 +122,6 @@ const CurrencyLines = ({ byCurrency, field = 'net', className = '' }) => {
     </div>
   );
 };
-
-// Settled comes straight off the transaction's own flag. Only the PSP settlement
-// flow stamps it, so exchanger rows read "Unsettled" even where a vendor settlement
-// exists - the badge reflects the flag, not a judgement about the counterparty.
-const SettlementBadge = ({ tx }) => (
-  <Badge
-    variant="outline"
-    className={`text-[10px] ${tx.settled ? 'text-green-600 border-green-200' : 'text-muted-foreground border'}`}
-    title={tx.settled && tx.settlement_id ? `Settlement ${tx.settlement_id}` : undefined}
-  >
-    {tx.settled ? 'Settled' : 'Unsettled'}
-  </Badge>
-);
 
 const fmtUsd = (n) => {
   const v = n || 0;
@@ -154,9 +146,10 @@ const DEST_ICONS = {
 export default function PartnerDetail() {
   const { tagId } = useParams();
   const navigate = useNavigate();
-  const { canView, canEdit } = usePermissions();
+  const { canView, canEdit, canDelete } = usePermissions();
   const canManageTreasury = canView('partner_treasury');
   const canEditCharges = canEdit('partner_treasury');
+  const canDeleteSettlement = canDelete('partner_treasury');
 
   const [loading, setLoading] = useState(true);
   const [partner, setPartner] = useState(null);
@@ -179,7 +172,6 @@ export default function PartnerDetail() {
   const [destinationFilter, setDestinationFilter] = useState('all');
   const [destinationIdFilter, setDestinationIdFilter] = useState('all');
   const [txnTagFilter, setTxnTagFilter] = useState('all');
-  const [settledFilter, setSettledFilter] = useState('all');   // all | yes | no
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [txDateType, setTxDateType] = useState('transaction');
@@ -210,6 +202,18 @@ export default function PartnerDetail() {
   const [clientSearchInput, setClientSearchInput] = useState('');
   const [clientSearch, setClientSearch] = useState('');
   const [clientsLoading, setClientsLoading] = useState(false);
+
+  // Partner settlement - this partner's own settlements, deliberately unrelated to
+  // the exchanger/PSP settlement flow (which stamps `settled` on the transaction).
+  const [psFilter, setPsFilter] = useState('all');        // all | yes | no
+  const [settleFor, setSettleFor] = useState(null);       // { group, entry }
+  const [settleRows, setSettleRows] = useState([]);
+  const [settlePicked, setSettlePicked] = useState([]);
+  const [settleAmount, setSettleAmount] = useState('');
+  const [settleNotes, setSettleNotes] = useState('');
+  const [settleLoading, setSettleLoading] = useState(false);
+  const [settleSaving, setSettleSaving] = useState(false);
+  const [psHistory, setPsHistory] = useState([]);
 
   // Drill-down: the transactions behind one treasury card
   const [drill, setDrill] = useState(null);          // { group, entry }
@@ -335,7 +339,7 @@ export default function PartnerDetail() {
         );
       }
       if (txnTagFilter !== 'all') qs.set('transaction_tag', txnTagFilter);
-      if (settledFilter !== 'all') qs.set('settled', settledFilter);
+      if (psFilter !== 'all') { qs.set('partner_settled', psFilter); qs.set('partner_tag_id', tagId); }
 
       const r = await fetch(`${API_URL}/api/transactions?${qs.toString()}`, {
         headers: getAuthHeaders(), credentials: 'include',
@@ -355,7 +359,7 @@ export default function PartnerDetail() {
   }, [
     txPageSize, txType, statusFilter, baseCurrencyFilter, completedFilter, hasCrmFilter,
     destinationFilter, destinationIdFilter, search, emailFilter, dateFrom, dateTo,
-    txDateType, txnTagFilter, settledFilter,
+    txDateType, txnTagFilter, psFilter, tagId,
   ]);
 
   // Any filter change sends us back to page 1 - staying on page 7 of a result set
@@ -365,7 +369,7 @@ export default function PartnerDetail() {
   }, [
     txType, statusFilter, baseCurrencyFilter, completedFilter, hasCrmFilter,
     destinationFilter, destinationIdFilter, search, emailFilter, dateFrom, dateTo,
-    txDateType, txnTagFilter, settledFilter, txPageSize,
+    txDateType, txnTagFilter, psFilter, txPageSize,
   ]);
 
   useEffect(() => {
@@ -374,7 +378,7 @@ export default function PartnerDetail() {
 
   const filtersActive = txType !== 'all' || statusFilter !== 'all' || baseCurrencyFilter !== 'all'
     || completedFilter !== 'all' || hasCrmFilter !== 'all' || destinationFilter !== 'all'
-    || destinationIdFilter !== 'all' || txnTagFilter !== 'all' || settledFilter !== 'all' || dateFrom || dateTo
+    || destinationIdFilter !== 'all' || txnTagFilter !== 'all' || psFilter !== 'all' || dateFrom || dateTo
     || searchInput || emailInput;
 
   const clearFilters = () => {
@@ -386,7 +390,7 @@ export default function PartnerDetail() {
     setDestinationFilter('all');
     setDestinationIdFilter('all');
     setTxnTagFilter('all');
-    setSettledFilter('all');
+    setPsFilter('all');
     setDateFrom('');
     setDateTo('');
     setTxDateType('transaction');
@@ -512,6 +516,96 @@ export default function PartnerDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [drillPage]);
 
+  // ── Partner settlement ────────────────────────────────────────────────────
+  // Records what this partner was actually paid across for a chosen set of its
+  // transactions. Deliberately parallel to the exchanger/PSP settlement flow:
+  // nothing is written onto the transaction, and neither side reads the other.
+  const openSettle = async (group, entry) => {
+    setSettleFor({ group, entry });
+    setSettlePicked([]);
+    setSettleAmount('');
+    setSettleNotes('');
+    setSettleRows([]);
+    setPsHistory([]);
+    setSettleLoading(true);
+    try {
+      // Same status set the card counted, minus anything already settled here.
+      const qs = drillParams(group, entry, 1);
+      qs.set('page_size', '200');
+      qs.set('partner_settled', 'no');
+      qs.set('partner_tag_id', tagId);
+      const hs = new URLSearchParams({
+        tag_id: tagId,
+        destination_type: group.destination_type,
+        entity_key: entry.key,
+      });
+      const [txRes, hRes] = await Promise.all([
+        fetch(`${API_URL}/api/transactions?${qs.toString()}`, { headers: getAuthHeaders(), credentials: 'include' }),
+        fetch(`${API_URL}/api/partner-settlements?${hs.toString()}`, { headers: getAuthHeaders(), credentials: 'include' }),
+      ]);
+      if (!txRes.ok) toast.error('Failed to load unsettled transactions');
+      setSettleRows(txRes.ok ? (await txRes.json()).items || [] : []);
+      setPsHistory(hRes.ok ? (await hRes.json()).items || [] : []);
+    } catch {
+      toast.error('Failed to load unsettled transactions');
+    } finally {
+      setSettleLoading(false);
+    }
+  };
+
+  const togglePicked = (id) =>
+    setSettlePicked((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const pickedGross = settleRows
+    .filter((t) => settlePicked.includes(t.transaction_id))
+    .reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
+
+  const saveSettlement = async () => {
+    if (settlePicked.length === 0) { toast.error('Select at least one transaction'); return; }
+    setSettleSaving(true);
+    try {
+      const r = await fetch(`${API_URL}/api/partner-settlements`, {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          tag_id: tagId,
+          destination_type: settleFor.group.destination_type,
+          entity_key: settleFor.entry.key,
+          transaction_ids: settlePicked,
+          // Left blank means "settled at face value".
+          settled_amount: settleAmount === '' ? pickedGross : Number(settleAmount),
+          currency: 'USD',
+          notes: settleNotes || null,
+        }),
+      });
+      if (!r.ok) { toast.error(await getApiError(r, 'Failed to save settlement')); return; }
+      toast.success(`Settled ${settlePicked.length} transaction(s)`);
+      setSettleFor(null);
+      fetchTreasury();
+      if (partner) fetchTransactions(partner.name, txPage);
+    } catch {
+      toast.error('Failed to save settlement');
+    } finally {
+      setSettleSaving(false);
+    }
+  };
+
+  const deleteSettlement = async (settlementId) => {
+    try {
+      const r = await fetch(`${API_URL}/api/partner-settlements/${settlementId}`, {
+        method: 'DELETE', headers: getAuthHeaders(), credentials: 'include',
+      });
+      if (!r.ok) { toast.error(await getApiError(r, 'Failed to remove settlement')); return; }
+      toast.success('Settlement removed');
+      setSettleFor(null);
+      fetchTreasury();
+      if (partner) fetchTransactions(partner.name, txPage);
+    } catch {
+      toast.error('Failed to remove settlement');
+    }
+  };
+
   // ── Charges (display-only overlay) ────────────────────────────────────────
   const openChargeEditor = (group, entry) => {
     setChargeEdit({ group, entry });
@@ -570,7 +664,7 @@ export default function PartnerDetail() {
     if (dateFrom) qs.set(txDateType === 'approved' ? 'approved_date_from' : txDateType === 'bank_receipt' ? 'bank_receipt_date_from' : txDateType === 'request_processed' ? 'request_processed_date_from' : 'date_from', dateFrom);
     if (dateTo) qs.set(txDateType === 'approved' ? 'approved_date_to' : txDateType === 'bank_receipt' ? 'bank_receipt_date_to' : txDateType === 'request_processed' ? 'request_processed_date_to' : 'date_to', dateTo);
     if (txnTagFilter !== 'all') qs.set('transaction_tag', txnTagFilter);
-    if (settledFilter !== 'all') qs.set('settled', settledFilter);
+    if (psFilter !== 'all') { qs.set('partner_settled', psFilter); qs.set('partner_tag_id', tagId); }
     return qs;
   };
 
@@ -928,16 +1022,18 @@ export default function PartnerDetail() {
               </SelectContent>
             </Select>
 
-            <Select value={settledFilter} onValueChange={setSettledFilter}>
-              <SelectTrigger className="w-full sm:w-44 bg-card border text-foreground" data-testid="pd-filter-settled">
-                <SelectValue placeholder="Settlement" />
-              </SelectTrigger>
-              <SelectContent className="bg-card border">
-                <SelectItem value="all" className="text-foreground hover:bg-muted">All (settlement)</SelectItem>
-                <SelectItem value="yes" className="text-foreground hover:bg-muted">Settled</SelectItem>
-                <SelectItem value="no" className="text-foreground hover:bg-muted">Unsettled</SelectItem>
-              </SelectContent>
-            </Select>
+            {canManageTreasury && (
+              <Select value={psFilter} onValueChange={setPsFilter}>
+                <SelectTrigger className="w-[170px] bg-card border text-foreground" data-testid="pd-filter-partner-settled">
+                  <SelectValue placeholder="Partner Settlement" />
+                </SelectTrigger>
+                <SelectContent className="bg-card border">
+                  <SelectItem value="all" className="text-foreground hover:bg-muted">All Settlements</SelectItem>
+                  <SelectItem value="yes" className="text-foreground hover:bg-muted">Partner Settled</SelectItem>
+                  <SelectItem value="no" className="text-foreground hover:bg-muted">Not Settled</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
 
             <div className="flex items-center gap-2">
               <select
@@ -990,7 +1086,6 @@ export default function PartnerDetail() {
                   <TableHead>Payment Currency</TableHead>
                   <TableHead>Destination</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Settlement</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead className="w-10" />
                 </TableRow>
@@ -1067,7 +1162,6 @@ export default function PartnerDetail() {
                         )}
                       </TableCell>
                       <TableCell><Badge variant="outline" className="text-xs capitalize">{tx.status}</Badge></TableCell>
-                      <TableCell><SettlementBadge tx={tx} /></TableCell>
                       <TableCell className="text-xs text-muted-foreground">{formatDate(tx.created_at)}</TableCell>
                       <TableCell>
                         <Button
@@ -1130,9 +1224,9 @@ export default function PartnerDetail() {
               </TableHeader>
               <TableBody>
                 {clientsLoading ? (
-                  <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground/60"><Loader2 className="w-4 h-4 animate-spin mx-auto" /></TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground/60"><Loader2 className="w-4 h-4 animate-spin mx-auto" /></TableCell></TableRow>
                 ) : clientRows.length === 0 ? (
-                  <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground/60">No clients</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground/60">No clients</TableCell></TableRow>
                 ) : clientRows.map((c) => (
                   <TableRow key={c.client_id}>
                     <TableCell>
@@ -1236,17 +1330,30 @@ export default function PartnerDetail() {
                             <CardContent className="p-4">
                               <div className="flex items-start justify-between gap-2">
                                 <p className="font-semibold text-foreground truncate" title={entry.name}>{entry.name}</p>
-                                {canEditCharges && (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => { e.stopPropagation(); openChargeEditor(group, entry); }}
-                                    className="shrink-0 text-muted-foreground/60 hover:text-primary"
-                                    title="Set in/out charges"
-                                    data-testid={`ptreasury-edit-charge-${entry.key}`}
-                                  >
-                                    <Percent className="w-3.5 h-3.5" />
-                                  </button>
-                                )}
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  {canEditCharges && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); openSettle(group, entry); }}
+                                      className="text-muted-foreground/60 hover:text-emerald-600"
+                                      title="Settle transactions with this partner"
+                                      data-testid={`ptreasury-settle-${entry.key}`}
+                                    >
+                                      <HandCoins className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                  {canEditCharges && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); openChargeEditor(group, entry); }}
+                                      className="text-muted-foreground/60 hover:text-primary"
+                                      title="Set in/out charges"
+                                      data-testid={`ptreasury-edit-charge-${entry.key}`}
+                                    >
+                                      <Percent className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                </div>
                               </div>
                               <div className="flex items-baseline justify-between mt-2">
                                 <span className="text-muted-foreground text-sm">Net</span>
@@ -1259,16 +1366,6 @@ export default function PartnerDetail() {
                                 <span className="text-red-600">&minus;{fmtUsd(entry.withdrawals_usd)} <span className="text-muted-foreground/60">({entry.withdrawal_count})</span></span>
                               </div>
                               <CurrencyBreakdown byCurrency={entry.by_currency} className="mt-2 pt-2 border-t border" />
-                              {(entry.settled_count > 0 || entry.unsettled_count > 0) && (
-                                <div className="flex justify-between text-[10px] mt-2 pt-2 border-t border font-mono">
-                                  <span className="text-green-600">
-                                    Settled {fmtUsd(entry.settled_usd)} <span className="text-muted-foreground/60">({entry.settled_count})</span>
-                                  </span>
-                                  <span className="text-muted-foreground">
-                                    Unsettled {fmtUsd(entry.unsettled_usd)} <span className="text-muted-foreground/60">({entry.unsettled_count})</span>
-                                  </span>
-                                </div>
-                              )}
                               {/* Charges are a reporting overlay - they never touch the ledger */}
                               {entry.charges_usd > 0 && (
                                 <div className="mt-2 pt-2 border-t border space-y-1">
@@ -1286,6 +1383,24 @@ export default function PartnerDetail() {
                                   </div>
                                 </div>
                               )}
+                              {/* This partner's own settlement position - unrelated to
+                                  the exchanger/PSP settled flag on the transaction. */}
+                              {(entry.partner_settled_count > 0 || entry.partner_unsettled_count > 0) && (
+                                <div className="mt-2 pt-2 border-t space-y-1">
+                                  <div className="flex justify-between text-xs">
+                                    <span className="text-muted-foreground">Settled with partner</span>
+                                    <span className="font-mono text-emerald-600">
+                                      {fmtUsd(entry.partner_settled_usd)} <span className="text-muted-foreground/60">({entry.partner_settled_count})</span>
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between text-xs">
+                                    <span className="text-muted-foreground">Outstanding</span>
+                                    <span className="font-mono text-amber-600">
+                                      {fmtUsd(entry.partner_unsettled_usd)} <span className="text-muted-foreground/60">({entry.partner_unsettled_count})</span>
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
                             </CardContent>
                           </Card>
                         ))}
@@ -1297,6 +1412,185 @@ export default function PartnerDetail() {
           </TabsContent>
         )}
       </Tabs>
+
+      {/* Settle transactions with this partner. Writes only to partner_settlements -
+          the exchanger/PSP settlement flow is untouched and unaware of it. */}
+      <Dialog open={!!settleFor} onOpenChange={(o) => { if (!o) setSettleFor(null); }}>
+        <DialogContent className="bg-card border max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-foreground">
+              Settle with {partner?.name}
+            </DialogTitle>
+            {settleFor && (
+              <p className="text-sm text-muted-foreground">
+                {settleFor.group.label} &middot; {settleFor.entry.name}
+              </p>
+            )}
+          </DialogHeader>
+
+          {settleLoading ? (
+            <div className="py-10 text-center text-muted-foreground/60">
+              <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                {/* /transactions caps a page at 100, so say so rather than let the
+                    list read as the full outstanding set. */}
+                <p className="text-sm text-muted-foreground" data-testid="ps-count">
+                  {settleFor && settleFor.entry.partner_unsettled_count > settleRows.length
+                    ? `Showing ${settleRows.length} of ${settleFor.entry.partner_unsettled_count} outstanding \u2014 settle these, then reopen for the rest`
+                    : `${settleRows.length} outstanding transaction${settleRows.length === 1 ? '' : 's'}`}
+                </p>
+                {settleRows.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-primary hover:text-primary/80"
+                    onClick={() =>
+                      setSettlePicked(
+                        settlePicked.length === settleRows.length ? [] : settleRows.map((t) => t.transaction_id)
+                      )
+                    }
+                    data-testid="ps-toggle-all"
+                  >
+                    {settlePicked.length === settleRows.length ? 'Clear all' : `Select all ${settleRows.length}`}
+                  </Button>
+                )}
+              </div>
+
+              <div className="border rounded-lg overflow-hidden max-h-[280px] overflow-y-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-10" />
+                      <TableHead>Reference</TableHead>
+                      <TableHead>Client</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead className="text-right">Amount (USD)</TableHead>
+                      <TableHead>Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {settleRows.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground/60">
+                          Nothing outstanding &mdash; everything here is already settled
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      settleRows.map((tx) => (
+                        <TableRow
+                          key={tx.transaction_id}
+                          className="cursor-pointer"
+                          onClick={() => togglePicked(tx.transaction_id)}
+                          data-testid={`ps-row-${tx.transaction_id}`}
+                        >
+                          <TableCell>
+                            <input
+                              type="checkbox"
+                              className="accent-primary"
+                              checked={settlePicked.includes(tx.transaction_id)}
+                              onChange={() => togglePicked(tx.transaction_id)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </TableCell>
+                          <TableCell className="font-mono text-xs text-foreground">{tx.reference || '-'}</TableCell>
+                          <TableCell className="text-foreground text-sm">{tx.client_name || '-'}</TableCell>
+                          <TableCell className="text-muted-foreground text-sm capitalize">{tx.transaction_type}</TableCell>
+                          <TableCell className="text-right font-mono text-sm text-foreground">
+                            {fmtUsd(Math.abs(tx.amount || 0))}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-xs">{formatDate(tx.transaction_date || tx.created_at)}</TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground block mb-1">Selected (gross)</label>
+                  <p className="font-mono font-bold text-foreground h-9 flex items-center" data-testid="ps-picked-gross">
+                    {fmtUsd(pickedGross)} <span className="text-muted-foreground/60 text-xs ml-1">({settlePicked.length})</span>
+                  </p>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground block mb-1">Amount paid (USD)</label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={settleAmount}
+                    onChange={(e) => setSettleAmount(e.target.value)}
+                    placeholder={pickedGross ? pickedGross.toFixed(2) : '0.00'}
+                    className="bg-muted/50 border"
+                    data-testid="ps-amount"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground block mb-1">Notes</label>
+                  <Input
+                    value={settleNotes}
+                    onChange={(e) => setSettleNotes(e.target.value)}
+                    placeholder="Optional"
+                    className="bg-muted/50 border"
+                    data-testid="ps-notes"
+                  />
+                </div>
+              </div>
+
+              {psHistory.length > 0 && (
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5">Past settlements</p>
+                  <div className="space-y-1 max-h-[140px] overflow-y-auto">
+                    {psHistory.map((h) => (
+                      <div
+                        key={h.settlement_id}
+                        className="flex items-center justify-between text-xs bg-muted/40 border rounded px-2.5 py-1.5"
+                        data-testid={`ps-history-${h.settlement_id}`}
+                      >
+                        <span className="text-muted-foreground">
+                          {h.settlement_date} &middot; {h.transaction_count} txn
+                          {h.notes ? <span className="text-muted-foreground/60"> &middot; {h.notes}</span> : null}
+                        </span>
+                        <span className="flex items-center gap-2">
+                          <span className="font-mono text-foreground">{fmtUsd(h.settled_amount)}</span>
+                          {canDeleteSettlement && (
+                            <button
+                              type="button"
+                              onClick={() => deleteSettlement(h.settlement_id)}
+                              className="text-muted-foreground/60 hover:text-red-500"
+                              title="Remove this settlement"
+                              data-testid={`ps-delete-${h.settlement_id}`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-1">
+                <Button variant="outline" onClick={() => setSettleFor(null)} className="border text-muted-foreground">
+                  Cancel
+                </Button>
+                <Button
+                  onClick={saveSettlement}
+                  disabled={settleSaving || settlePicked.length === 0}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                  data-testid="ps-save"
+                >
+                  {settleSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Record settlement'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Transactions behind one treasury card */}
       <Dialog open={!!drill} onOpenChange={(o) => { if (!o) setDrill(null); }}>
@@ -1340,16 +1634,15 @@ export default function PartnerDetail() {
                       <TableHead>Type</TableHead>
                       <TableHead className="text-right">Amount (USD)</TableHead>
                       <TableHead>Payment Currency</TableHead>
-                      <TableHead>Settlement</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead className="w-10" />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {drillLoading ? (
-                      <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground/60"><Loader2 className="w-4 h-4 animate-spin mx-auto" /></TableCell></TableRow>
+                      <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground/60"><Loader2 className="w-4 h-4 animate-spin mx-auto" /></TableCell></TableRow>
                     ) : drillRows.length === 0 ? (
-                      <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground/60">No transactions</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground/60">No transactions</TableCell></TableRow>
                     ) : drillRows.map((tx) => (
                       <TableRow key={tx.transaction_id}>
                         <TableCell className="font-mono text-xs">{tx.reference || tx.transaction_id}</TableCell>
@@ -1370,7 +1663,6 @@ export default function PartnerDetail() {
                             </>
                           ) : <span className="text-muted-foreground/60">USD</span>}
                         </TableCell>
-                        <TableCell><SettlementBadge tx={tx} /></TableCell>
                         <TableCell className="text-xs text-muted-foreground">{formatDate(tx.created_at)}</TableCell>
                         <TableCell>
                           <Button variant="ghost" size="sm" onClick={() => viewFullDetails(tx)}
