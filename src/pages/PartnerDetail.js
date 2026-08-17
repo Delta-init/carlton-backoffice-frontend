@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -208,7 +208,16 @@ export default function PartnerDetail() {
   const [psFilter, setPsFilter] = useState('all');        // all | yes | no
   const [settleFor, setSettleFor] = useState(null);       // { group, entry }
   const [settleRows, setSettleRows] = useState([]);
-  const [settlePicked, setSettlePicked] = useState([]);
+  // id -> gross USD. Carries the amount so the running total stays right for
+  // picks made on pages we have since navigated away from.
+  const [settlePicked, setSettlePicked] = useState({});
+  const [settlePage, setSettlePage] = useState(1);
+  const [settlePageSize, setSettlePageSize] = useState(20);
+  const [settleTotal, setSettleTotal] = useState(0);
+  const [settleAllLoading, setSettleAllLoading] = useState(false);
+  // Identifies one dialog session. Bumped on every open and close so async work
+  // started for one treasury card can never land on another.
+  const settleRunRef = useRef(0);
   const [settleAmount, setSettleAmount] = useState('');
   const [settleNotes, setSettleNotes] = useState('');
   const [settleLoading, setSettleLoading] = useState(false);
@@ -520,48 +529,150 @@ export default function PartnerDetail() {
   // Records what this partner was actually paid across for a chosen set of its
   // transactions. Deliberately parallel to the exchanger/PSP settlement flow:
   // nothing is written onto the transaction, and neither side reads the other.
-  const openSettle = async (group, entry) => {
-    setSettleFor({ group, entry });
-    setSettlePicked([]);
+  // Same status set the card counted, minus anything already settled here.
+  const settleParams = (group, entry, page, size) => {
+    const qs = drillParams(group, entry, page);
+    qs.set('page_size', String(size));
+    qs.set('partner_settled', 'no');
+    qs.set('partner_tag_id', tagId);
+    return qs;
+  };
+
+  const closeSettle = () => {
+    settleRunRef.current += 1;   // orphan anything still in flight
+    setSettleAllLoading(false);
+    setSettleFor(null);
+  };
+
+  const openSettle = (group, entry) => {
+    const run = ++settleRunRef.current;
+    setSettleAllLoading(false);
+    setSettlePicked({});
     setSettleAmount('');
     setSettleNotes('');
     setSettleRows([]);
     setPsHistory([]);
+    setSettleTotal(0);
+    setSettlePage(1);
+    setSettleFor({ group, entry });   // the effect below loads page 1
+    const hs = new URLSearchParams({
+      tag_id: tagId,
+      destination_type: group.destination_type,
+      entity_key: entry.key,
+    });
+    fetch(`${API_URL}/api/partner-settlements?${hs.toString()}`, {
+      headers: getAuthHeaders(), credentials: 'include',
+    })
+      .then((r) => (r.ok ? r.json() : { items: [] }))
+      .then((d) => { if (settleRunRef.current === run) setPsHistory(d.items || []); })
+      .catch(() => { if (settleRunRef.current === run) setPsHistory([]); });
+  };
+
+  // One loading path for the rows, so opening and paging cannot disagree.
+  useEffect(() => {
+    if (!settleFor) return;
+    let cancelled = false;
+    const { group, entry } = settleFor;
     setSettleLoading(true);
+    fetch(`${API_URL}/api/transactions?${settleParams(group, entry, settlePage, settlePageSize).toString()}`, {
+      headers: getAuthHeaders(), credentials: 'include',
+    })
+      .then(async (r) => {
+        if (!r.ok) throw new Error('load failed');
+        return r.json();
+      })
+      .then((d) => {
+        if (cancelled) return;
+        const total = d.total || 0;
+        setSettleTotal(total);
+        // Someone else may have settled rows out from under us, shrinking the set.
+        // Land on the real last page instead of an empty one; the effect refires.
+        const lastPage = Math.max(1, Math.ceil(total / settlePageSize));
+        if (settlePage > lastPage) { setSettlePage(lastPage); return; }
+        setSettleRows(d.items || []);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setSettleRows([]);
+        toast.error('Failed to load unsettled transactions');
+      })
+      .finally(() => { if (!cancelled) setSettleLoading(false); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settleFor, settlePage, settlePageSize]);
+
+  const grossOf = (tx) => Math.abs(tx.amount || 0);
+
+  const togglePicked = (tx) =>
+    setSettlePicked((prev) => {
+      const next = { ...prev };
+      if (tx.transaction_id in next) delete next[tx.transaction_id];
+      else next[tx.transaction_id] = grossOf(tx);
+      return next;
+    });
+
+  const pageAllPicked = settleRows.length > 0
+    && settleRows.every((t) => t.transaction_id in settlePicked);
+
+  const togglePage = () =>
+    setSettlePicked((prev) => {
+      // Decide from `prev`, not from the render-scope pageAllPicked, so this stays
+      // correct when it lands in the same batch as another selection change.
+      const allOnPage = settleRows.length > 0
+        && settleRows.every((t) => t.transaction_id in prev);
+      const next = { ...prev };
+      if (allOnPage) settleRows.forEach((t) => delete next[t.transaction_id]);
+      else settleRows.forEach((t) => { next[t.transaction_id] = grossOf(t); });
+      return next;
+    });
+
+  // Paging to select everything would mean walking every page by hand, so offer
+  // it directly. Walks the pages at the API's max size rather than pretending a
+  // single request could return them all.
+  const selectAllOutstanding = async () => {
+    if (!settleFor) return;
+    const { group, entry } = settleFor;
+    const run = settleRunRef.current;   // this walk belongs to the session open now
+    setSettleAllLoading(true);
     try {
-      // Same status set the card counted, minus anything already settled here.
-      const qs = drillParams(group, entry, 1);
-      qs.set('page_size', '200');
-      qs.set('partner_settled', 'no');
-      qs.set('partner_tag_id', tagId);
-      const hs = new URLSearchParams({
-        tag_id: tagId,
-        destination_type: group.destination_type,
-        entity_key: entry.key,
-      });
-      const [txRes, hRes] = await Promise.all([
-        fetch(`${API_URL}/api/transactions?${qs.toString()}`, { headers: getAuthHeaders(), credentials: 'include' }),
-        fetch(`${API_URL}/api/partner-settlements?${hs.toString()}`, { headers: getAuthHeaders(), credentials: 'include' }),
-      ]);
-      if (!txRes.ok) toast.error('Failed to load unsettled transactions');
-      setSettleRows(txRes.ok ? (await txRes.json()).items || [] : []);
-      setPsHistory(hRes.ok ? (await hRes.json()).items || [] : []);
+      const picked = {};
+      const SIZE = 100;              // the API caps a page here
+      const MAX_PAGES = 60;          // 6,000 transactions; refuse silently to spin past it
+      let page = 1;
+      let total = null;
+      while (page <= MAX_PAGES) {
+        const r = await fetch(`${API_URL}/api/transactions?${settleParams(group, entry, page, SIZE).toString()}`, {
+          headers: getAuthHeaders(), credentials: 'include',
+        });
+        if (settleRunRef.current !== run) return;   // dialog closed or moved on
+        if (!r.ok) { toast.error('Failed to select all outstanding'); return; }
+        const d = await r.json();
+        if (settleRunRef.current !== run) return;
+        total = d.total || 0;
+        (d.items || []).forEach((t) => { picked[t.transaction_id] = grossOf(t); });
+        if (!d.items || d.items.length < SIZE || Object.keys(picked).length >= total) break;
+        page += 1;
+      }
+      if (settleRunRef.current !== run) return;
+      // Merge, so a tick made while the walk was running is not silently undone.
+      setSettlePicked((prev) => ({ ...prev, ...picked }));
+      const n = Object.keys(picked).length;
+      if (total !== null && n < total) {
+        toast.warning(`Selected ${n} of ${total} \u2014 stopped at the ${MAX_PAGES}-page limit`);
+      }
     } catch {
-      toast.error('Failed to load unsettled transactions');
+      toast.error('Failed to select all outstanding');
     } finally {
-      setSettleLoading(false);
+      if (settleRunRef.current === run) setSettleAllLoading(false);
     }
   };
 
-  const togglePicked = (id) =>
-    setSettlePicked((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-
-  const pickedGross = settleRows
-    .filter((t) => settlePicked.includes(t.transaction_id))
-    .reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
+  const pickedIds = Object.keys(settlePicked);
+  const pickedCount = pickedIds.length;
+  const pickedGross = Object.values(settlePicked).reduce((sum, v) => sum + v, 0);
 
   const saveSettlement = async () => {
-    if (settlePicked.length === 0) { toast.error('Select at least one transaction'); return; }
+    if (pickedCount === 0) { toast.error('Select at least one transaction'); return; }
     setSettleSaving(true);
     try {
       const r = await fetch(`${API_URL}/api/partner-settlements`, {
@@ -572,7 +683,7 @@ export default function PartnerDetail() {
           tag_id: tagId,
           destination_type: settleFor.group.destination_type,
           entity_key: settleFor.entry.key,
-          transaction_ids: settlePicked,
+          transaction_ids: pickedIds,
           // Left blank means "settled at face value".
           settled_amount: settleAmount === '' ? pickedGross : Number(settleAmount),
           currency: 'USD',
@@ -580,8 +691,8 @@ export default function PartnerDetail() {
         }),
       });
       if (!r.ok) { toast.error(await getApiError(r, 'Failed to save settlement')); return; }
-      toast.success(`Settled ${settlePicked.length} transaction(s)`);
-      setSettleFor(null);
+      toast.success(`Settled ${pickedCount} transaction(s)`);
+      closeSettle();
       fetchTreasury();
       if (partner) fetchTransactions(partner.name, txPage);
     } catch {
@@ -598,7 +709,7 @@ export default function PartnerDetail() {
       });
       if (!r.ok) { toast.error(await getApiError(r, 'Failed to remove settlement')); return; }
       toast.success('Settlement removed');
-      setSettleFor(null);
+      closeSettle();
       fetchTreasury();
       if (partner) fetchTransactions(partner.name, txPage);
     } catch {
@@ -1415,8 +1526,8 @@ export default function PartnerDetail() {
 
       {/* Settle transactions with this partner. Writes only to partner_settlements -
           the exchanger/PSP settlement flow is untouched and unaware of it. */}
-      <Dialog open={!!settleFor} onOpenChange={(o) => { if (!o) setSettleFor(null); }}>
-        <DialogContent className="bg-card border max-w-3xl">
+      <Dialog open={!!settleFor} onOpenChange={(o) => { if (!o) closeSettle(); }}>
+        <DialogContent className="bg-card border max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-foreground">
               Settle with {partner?.name}
@@ -1434,32 +1545,56 @@ export default function PartnerDetail() {
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                {/* /transactions caps a page at 100, so say so rather than let the
-                    list read as the full outstanding set. */}
+              <div className="flex items-center justify-between gap-2 flex-wrap">
                 <p className="text-sm text-muted-foreground" data-testid="ps-count">
-                  {settleFor && settleFor.entry.partner_unsettled_count > settleRows.length
-                    ? `Showing ${settleRows.length} of ${settleFor.entry.partner_unsettled_count} outstanding \u2014 settle these, then reopen for the rest`
-                    : `${settleRows.length} outstanding transaction${settleRows.length === 1 ? '' : 's'}`}
+                  {settleTotal} outstanding transaction{settleTotal === 1 ? '' : 's'}
+                  {pickedCount > 0 && (
+                    <span className="text-muted-foreground/60"> &middot; {pickedCount} selected</span>
+                  )}
                 </p>
-                {settleRows.length > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-primary hover:text-primary/80"
-                    onClick={() =>
-                      setSettlePicked(
-                        settlePicked.length === settleRows.length ? [] : settleRows.map((t) => t.transaction_id)
-                      )
-                    }
-                    data-testid="ps-toggle-all"
-                  >
-                    {settlePicked.length === settleRows.length ? 'Clear all' : `Select all ${settleRows.length}`}
-                  </Button>
+                {settleTotal > 0 && (
+                  <div className="flex items-center gap-1">
+                    {/* Selections are kept by id across pages, so these compose. */}
+                    {settleRows.length > 0 && (
+                    <Button
+                      variant="ghost" size="sm"
+                      className="text-primary hover:text-primary/80"
+                      onClick={togglePage}
+                      data-testid="ps-toggle-page"
+                    >
+                      {pageAllPicked ? 'Clear page' : `Select page (${settleRows.length})`}
+                    </Button>
+                    )}
+                    {settleTotal > settleRows.length && (
+                      <Button
+                        variant="ghost" size="sm"
+                        className="text-primary hover:text-primary/80"
+                        onClick={selectAllOutstanding}
+                        disabled={settleAllLoading}
+                        data-testid="ps-select-all-outstanding"
+                      >
+                        {settleAllLoading
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : `Select all ${settleTotal}`}
+                      </Button>
+                    )}
+                    {pickedCount > 0 && (
+                      <Button
+                        variant="ghost" size="sm"
+                        className="text-muted-foreground hover:text-red-500"
+                        onClick={() => setSettlePicked({})}
+                        data-testid="ps-clear-picked"
+                      >
+                        Clear
+                      </Button>
+                    )}
+                  </div>
                 )}
               </div>
 
-              <div className="border rounded-lg overflow-hidden max-h-[280px] overflow-y-auto">
+              {/* Bounded so the amount fields and Save stay reachable at any page
+                  size - the page control below is the way through the rest. */}
+              <div className="border rounded-lg overflow-hidden max-h-[45vh] overflow-y-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1475,7 +1610,9 @@ export default function PartnerDetail() {
                     {settleRows.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center py-8 text-muted-foreground/60">
-                          Nothing outstanding &mdash; everything here is already settled
+                          {settleTotal === 0
+                            ? 'Nothing outstanding \u2014 everything here is already settled'
+                            : 'No transactions on this page'}
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -1483,15 +1620,15 @@ export default function PartnerDetail() {
                         <TableRow
                           key={tx.transaction_id}
                           className="cursor-pointer"
-                          onClick={() => togglePicked(tx.transaction_id)}
+                          onClick={() => togglePicked(tx)}
                           data-testid={`ps-row-${tx.transaction_id}`}
                         >
                           <TableCell>
                             <input
                               type="checkbox"
                               className="accent-primary"
-                              checked={settlePicked.includes(tx.transaction_id)}
-                              onChange={() => togglePicked(tx.transaction_id)}
+                              checked={tx.transaction_id in settlePicked}
+                              onChange={() => togglePicked(tx)}
                               onClick={(e) => e.stopPropagation()}
                             />
                           </TableCell>
@@ -1509,11 +1646,20 @@ export default function PartnerDetail() {
                 </Table>
               </div>
 
+              <PaginationControls
+                currentPage={settlePage}
+                totalPages={Math.max(1, Math.ceil(settleTotal / settlePageSize))}
+                totalItems={settleTotal}
+                pageSize={settlePageSize}
+                onPageChange={setSettlePage}
+                onPageSizeChange={(n) => { setSettlePageSize(n); setSettlePage(1); }}
+              />
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
                   <label className="text-xs text-muted-foreground block mb-1">Selected (gross)</label>
                   <p className="font-mono font-bold text-foreground h-9 flex items-center" data-testid="ps-picked-gross">
-                    {fmtUsd(pickedGross)} <span className="text-muted-foreground/60 text-xs ml-1">({settlePicked.length})</span>
+                    {fmtUsd(pickedGross)} <span className="text-muted-foreground/60 text-xs ml-1">({pickedCount})</span>
                   </p>
                 </div>
                 <div>
@@ -1575,12 +1721,12 @@ export default function PartnerDetail() {
               )}
 
               <div className="flex justify-end gap-2 pt-1">
-                <Button variant="outline" onClick={() => setSettleFor(null)} className="border text-muted-foreground">
+                <Button variant="outline" onClick={closeSettle} className="border text-muted-foreground">
                   Cancel
                 </Button>
                 <Button
                   onClick={saveSettlement}
-                  disabled={settleSaving || settlePicked.length === 0}
+                  disabled={settleSaving || pickedCount === 0}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white"
                   data-testid="ps-save"
                 >
