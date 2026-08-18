@@ -605,7 +605,21 @@ export default function AccountantDashboard() {
       });
 
       if (response.ok) {
-        toast.success("Transaction approved");
+        // Approval is never blocked on balance any more. If it took an account
+        // negative, say which one and by how much rather than letting it pass
+        // silently.
+        const approved = await response.json().catch(() => null);
+        const warnings = approved?.balance_warnings || [];
+        if (warnings.length) {
+          warnings.forEach((w) => {
+            toast.warning(
+              `Approved \u2014 ${w.account_name} is now ${w.resulting_balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${w.currency}`,
+              { duration: 8000 },
+            );
+          });
+        } else {
+          toast.success("Transaction approved");
+        }
         fetchPendingTransactions();
       } else {
         toast.error(await getApiError(response));
