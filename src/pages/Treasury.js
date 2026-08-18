@@ -54,6 +54,7 @@ import {
   EyeOff,
   Building2,
   DollarSign,
+  AlertTriangle,
   History,
   Download,
   Filter,
@@ -637,15 +638,21 @@ export default function Treasury() {
   // Hidden accounts are excluded from every total on this page - they still
   // render as blurred cards below, just not counted here.
   const visibleAccounts = accounts.filter(a => !a.is_hidden);
-  const totalBalanceUSD = visibleAccounts.reduce((sum, acc) => sum + (acc.balance_usd || 0), 0);
+  // Settle each balance before summing so float drift does not accumulate into
+  // the headline figures.
+  const totalBalanceUSD = visibleAccounts.reduce((sum, acc) => sum + settleBal(acc.balance_usd), 0);
   const activeAccounts = visibleAccounts.filter(a => a.status === 'active').length;
+  // Overdrawn accounts are now reachable (approvals no longer block on balance),
+  // so surface them here rather than making someone scan every card.
+  const negativeAccounts = visibleAccounts.filter(a => isNegative(a.balance));
 
   // Group balances by currency
   const balanceByCurrency = visibleAccounts.reduce((acc, a) => {
     const cur = a.currency || 'USD';
-    if (!acc[cur]) acc[cur] = { balance: 0, count: 0 };
-    acc[cur].balance += (a.balance || 0);
+    if (!acc[cur]) acc[cur] = { balance: 0, count: 0, negative: 0 };
+    acc[cur].balance += settleBal(a.balance);
     acc[cur].count += 1;
+    if (isNegative(a.balance)) acc[cur].negative += 1;
     return acc;
   }, {});
 
@@ -926,7 +933,12 @@ export default function Treasury() {
             </div>
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total (USD)</p>
-              <p className="text-xl font-bold font-mono text-foreground" data-testid="total-balance-usd">${totalBalanceUSD.toLocaleString()}</p>
+              <p
+                className={`text-xl font-bold font-mono ${isNegative(totalBalanceUSD) ? 'text-red-600' : 'text-foreground'}`}
+                data-testid="total-balance-usd"
+              >
+                ${settleBal(totalBalanceUSD).toLocaleString()}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -941,6 +953,24 @@ export default function Treasury() {
             </div>
           </CardContent>
         </Card>
+        {negativeAccounts.length > 0 && (
+          <Card className="bg-red-50 border-red-200 min-w-[150px]" data-testid="negative-accounts-card">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-2 bg-red-100 rounded-sm shrink-0">
+                <AlertTriangle className="w-4 h-4 text-red-600" />
+              </div>
+              <div>
+                <p className="text-[10px] text-red-500 uppercase tracking-wider">Negative</p>
+                <p className="text-xl font-bold font-mono text-red-600" data-testid="negative-accounts-count">
+                  {negativeAccounts.length}
+                  <span className="text-sm text-red-400 font-normal">
+                    {' '}account{negativeAccounts.length > 1 ? 's' : ''}
+                  </span>
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
         {Object.entries(balanceByCurrency).map(([cur, data]) => (
           <Card key={cur} className="bg-card border min-w-[130px]">
             <CardContent className="p-4">
@@ -948,7 +978,17 @@ export default function Treasury() {
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{cur}</p>
                 <span className="text-[10px] text-muted-foreground">{data.count} acct{data.count > 1 ? 's' : ''}</span>
               </div>
-              <p className="text-lg font-bold font-mono text-foreground" data-testid={`balance-${cur}`}>{data.balance.toLocaleString()}</p>
+              <p
+                className={`text-lg font-bold font-mono ${isNegative(data.balance) ? 'text-red-600' : 'text-foreground'}`}
+                data-testid={`balance-${cur}`}
+              >
+                {settleBal(data.balance).toLocaleString()}
+              </p>
+              {data.negative > 0 && (
+                <p className="text-[10px] text-red-500 mt-0.5" data-testid={`negative-${cur}`}>
+                  {data.negative} negative
+                </p>
+              )}
             </CardContent>
           </Card>
         ))}
