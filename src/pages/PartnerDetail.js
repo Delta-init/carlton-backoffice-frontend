@@ -48,6 +48,7 @@ import {
   Search,
   Filter,
   Eye,
+  EyeOff,
   Percent,
   X,
   Download,
@@ -191,6 +192,9 @@ export default function PartnerDetail() {
   const [treasuryGroups, setTreasuryGroups] = useState([]);
   const [treasuryTotal, setTreasuryTotal] = useState(0);
   const [treasuryLoading, setTreasuryLoading] = useState(false);
+  // Revealing is per session only, like the Treasury page - hiding stays put,
+  // a peek does not.
+  const [revealedEntries, setRevealedEntries] = useState(new Set());
   const [treasuryCharges, setTreasuryCharges] = useState(0);
   const [treasuryNetAfter, setTreasuryNetAfter] = useState(0);
 
@@ -714,6 +718,33 @@ export default function PartnerDetail() {
       if (partner) fetchTransactions(partner.name, txPage);
     } catch {
       toast.error('Failed to remove settlement');
+    }
+  };
+
+  const toggleEntryHidden = async (group, entry) => {
+    const next = !entry.is_hidden;
+    try {
+      const r = await fetch(`${API_URL}/api/partner-treasury/hidden`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({
+          tag_id: tagId,
+          destination_type: group.destination_type,
+          entity_key: entry.key,
+          is_hidden: next,
+        }),
+      });
+      if (!r.ok) { toast.error(await getApiError(r, 'Failed to update')); return; }
+      toast.success(next ? `${entry.name} hidden` : `${entry.name} unhidden`);
+      if (!next) {
+        setRevealedEntries((prev) => {
+          const s = new Set(prev); s.delete(entry.key); return s;
+        });
+      }
+      fetchTreasury();
+    } catch {
+      toast.error('Failed to update');
     }
   };
 
@@ -1455,15 +1486,44 @@ export default function PartnerDetail() {
                         {group.entries.map((entry) => (
                           <Card
                             key={entry.key}
-                            className="bg-card border hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer"
+                            className="bg-card border hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer relative overflow-hidden"
                             onClick={() => openDrill(group, entry)}
                             title="Click to see the transactions behind this figure"
                             data-testid={`ptreasury-card-${group.destination_type}-${entry.key}`}
                           >
+                            {/* Hidden entries still render, blurred behind a one-off reveal -
+                                same treatment the Treasury page gives a hidden account. */}
+                            {entry.is_hidden && !revealedEntries.has(entry.key) && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setRevealedEntries((prev) => new Set(prev).add(entry.key));
+                                }}
+                                className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-1.5 bg-card/50 backdrop-blur-[1px] cursor-pointer"
+                                data-testid={`ptreasury-reveal-${entry.key}`}
+                              >
+                                <EyeOff className="w-5 h-5 text-muted-foreground/60" />
+                                <span className="text-xs text-muted-foreground font-medium">Hidden &mdash; click to reveal</span>
+                              </button>
+                            )}
+                            <div className={entry.is_hidden && !revealedEntries.has(entry.key)
+                              ? 'blur-sm opacity-60 pointer-events-none select-none' : ''}>
                             <CardContent className="p-4">
                               <div className="flex items-start justify-between gap-2">
                                 <p className="font-semibold text-foreground truncate" title={entry.name}>{entry.name}</p>
                                 <div className="flex items-center gap-2 shrink-0">
+                                  {canEditCharges && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); toggleEntryHidden(group, entry); }}
+                                      className="h-9 w-9 rounded-lg border text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors"
+                                      title={entry.is_hidden ? 'Unhide from this partner\u2019s treasury' : 'Hide from this partner\u2019s treasury'}
+                                      data-testid={`ptreasury-toggle-hidden-${entry.key}`}
+                                    >
+                                      {entry.is_hidden ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
+                                    </button>
+                                  )}
                                   {canEditCharges && (
                                     <button
                                       type="button"
@@ -1535,6 +1595,7 @@ export default function PartnerDetail() {
                                 </div>
                               )}
                             </CardContent>
+                            </div>
                           </Card>
                         ))}
                       </div>
