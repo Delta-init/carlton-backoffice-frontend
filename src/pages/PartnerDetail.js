@@ -60,6 +60,16 @@ import {
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
+// TEMPORARY - testing only. This page reports on transactions from this date
+// forward and nothing earlier; the matching PARTNERS_DATE_FLOOR in the backend
+// covers the summary and treasury aggregations. Delete both to restore full
+// history. It lives here rather than in the /transactions endpoint because that
+// endpoint is shared with Transactions Summary, Reports and the vendor dashboard.
+const PARTNERS_DATE_FLOOR = '2026-08-15';
+
+// A user-picked "from" may narrow the window but never widen it past the floor.
+const flooredFrom = (d) => (d && d > PARTNERS_DATE_FLOOR ? d : PARTNERS_DATE_FLOOR);
+
 const transactionTypes = [
   { value: 'deposit', label: 'Deposit' },
   { value: 'withdrawal', label: 'Withdrawal' },
@@ -332,13 +342,15 @@ export default function PartnerDetail() {
       }
       if (search) qs.set('search', search);
       if (emailFilter) qs.set('client_email', emailFilter);
-      // Which date field the range applies to is chosen by txDateType
-      if (dateFrom) {
+      // The floor always rides on date_from (transaction_date). When the user is
+      // filtering on that same field their value is clamped to it; when they are
+      // filtering on another date field, both constraints simply apply.
+      qs.set('date_from', txDateType === 'transaction' ? flooredFrom(dateFrom) : PARTNERS_DATE_FLOOR);
+      if (dateFrom && txDateType !== 'transaction') {
         qs.set(
           txDateType === 'approved' ? 'approved_date_from'
             : txDateType === 'bank_receipt' ? 'bank_receipt_date_from'
-              : txDateType === 'request_processed' ? 'request_processed_date_from'
-                : 'date_from',
+              : 'request_processed_date_from',
           dateFrom,
         );
       }
@@ -489,6 +501,7 @@ export default function PartnerDetail() {
       status: 'approved,completed',
       page: String(page),
       page_size: '20',
+      date_from: PARTNERS_DATE_FLOOR,
     });
     qs.set('destination_type', group.destination_type);
     if (group.destination_type === 'vendor') qs.set('vendor_id', entry.key);
@@ -825,7 +838,8 @@ export default function PartnerDetail() {
     }
     if (search) qs.set('search', search);
     if (emailFilter) qs.set('client_email', emailFilter);
-    if (dateFrom) qs.set(txDateType === 'approved' ? 'approved_date_from' : txDateType === 'bank_receipt' ? 'bank_receipt_date_from' : txDateType === 'request_processed' ? 'request_processed_date_from' : 'date_from', dateFrom);
+    qs.set('date_from', txDateType === 'transaction' ? flooredFrom(dateFrom) : PARTNERS_DATE_FLOOR);
+    if (dateFrom && txDateType !== 'transaction') qs.set(txDateType === 'approved' ? 'approved_date_from' : txDateType === 'bank_receipt' ? 'bank_receipt_date_from' : 'request_processed_date_from', dateFrom);
     if (dateTo) qs.set(txDateType === 'approved' ? 'approved_date_to' : txDateType === 'bank_receipt' ? 'bank_receipt_date_to' : txDateType === 'request_processed' ? 'request_processed_date_to' : 'date_to', dateTo);
     if (txnTagFilter !== 'all') qs.set('transaction_tag', txnTagFilter);
     if (psFilter !== 'all') { qs.set('partner_settled', psFilter); qs.set('partner_tag_id', tagId); }
