@@ -273,6 +273,7 @@ const TX_SUMMARY_COLUMNS = [
   { id: "txn_tags",         label: "Txn Tags",            defaultVisible: true, headClass: "text-amber-500 font-bold uppercase tracking-wider text-xs" },
   { id: "status",           label: "Status",              defaultVisible: true },
   { id: "completed",        label: "Completed",           defaultVisible: true },
+  { id: "completed_date",   label: "Completed Date",      defaultVisible: true },
   { id: "actions",          label: "Actions",             defaultVisible: true, alwaysVisible: true, headClass: "text-muted-foreground font-bold uppercase tracking-wider text-xs text-right" },
 ];
 
@@ -564,6 +565,21 @@ export default function Transactions() {
         return (
           <TableCell key="crm_ref" className="font-mono text-xs text-primary">
             {tx.crm_reference || "-"}
+          </TableCell>
+        );
+      case "completed_date":
+        return (
+          <TableCell key="completed_date" className="text-xs whitespace-nowrap">
+            {tx.completed_at ? (
+              <span
+                className="text-foreground"
+                title={tx.completed_by_name ? `Completed by ${tx.completed_by_name}` : undefined}
+              >
+                {formatDate(tx.completed_at)}
+              </span>
+            ) : (
+              <span className="text-muted-foreground">-</span>
+            )}
           </TableCell>
         );
       case "completed":
@@ -867,8 +883,8 @@ export default function Transactions() {
       }
       if (searchTerm) params.append("search", searchTerm);
       if (emailFilter) params.append("client_email", emailFilter);
-      if (dateFrom) params.append(txDateType === "approved" ? "approved_date_from" : txDateType === "bank_receipt" ? "bank_receipt_date_from" : txDateType === "request_processed" ? "request_processed_date_from" : "date_from", dateFrom);
-      if (dateTo) params.append(txDateType === "approved" ? "approved_date_to" : txDateType === "bank_receipt" ? "bank_receipt_date_to" : txDateType === "request_processed" ? "request_processed_date_to" : "date_to", dateTo);
+      if (dateFrom) params.append(txDateType === "approved" ? "approved_date_from" : txDateType === "bank_receipt" ? "bank_receipt_date_from" : txDateType === "request_processed" ? "request_processed_date_from" : txDateType === "completed" ? "completed_date_from" : "date_from", dateFrom);
+      if (dateTo) params.append(txDateType === "approved" ? "approved_date_to" : txDateType === "bank_receipt" ? "bank_receipt_date_to" : txDateType === "request_processed" ? "request_processed_date_to" : txDateType === "completed" ? "completed_date_to" : "date_to", dateTo);
       if (tagFilter && tagFilter !== "all")
         params.append("client_tag", tagFilter);
       if (txnTagFilter && txnTagFilter !== "all")
@@ -1791,8 +1807,8 @@ export default function Transactions() {
     }
     if (searchTerm) params.append("search", searchTerm);
     if (emailFilter) params.append("client_email", emailFilter);
-    if (dateFrom) params.append(txDateType === "approved" ? "approved_date_from" : txDateType === "bank_receipt" ? "bank_receipt_date_from" : txDateType === "request_processed" ? "request_processed_date_from" : "date_from", dateFrom);
-    if (dateTo) params.append(txDateType === "approved" ? "approved_date_to" : txDateType === "bank_receipt" ? "bank_receipt_date_to" : txDateType === "request_processed" ? "request_processed_date_to" : "date_to", dateTo);
+    if (dateFrom) params.append(txDateType === "approved" ? "approved_date_from" : txDateType === "bank_receipt" ? "bank_receipt_date_from" : txDateType === "request_processed" ? "request_processed_date_from" : txDateType === "completed" ? "completed_date_from" : "date_from", dateFrom);
+    if (dateTo) params.append(txDateType === "approved" ? "approved_date_to" : txDateType === "bank_receipt" ? "bank_receipt_date_to" : txDateType === "request_processed" ? "request_processed_date_to" : txDateType === "completed" ? "completed_date_to" : "date_to", dateTo);
     if (tagFilter && tagFilter !== "all") params.append("client_tag", tagFilter);
     if (txnTagFilter && txnTagFilter !== "all") params.append("transaction_tag", txnTagFilter);
 
@@ -1813,7 +1829,7 @@ export default function Transactions() {
         "Date", "Client", "Email", "Type", "Payment Currency",
         "Amount", "Exchange Rate", "USD Amount",
         "Status", "Destination", "Reference", "CRM Reference", "Description",
-        "Client Tags", "Transaction Tags",
+        "Client Tags", "Transaction Tags", "Completed Date",
       ];
       const rows = allData.map((tx) => [
         formatDate(tx.transaction_date || tx.created_at, tx.created_at),
@@ -1831,6 +1847,7 @@ export default function Transactions() {
         tx.description || "",
         (tx.client_tags || []).join("; "),
         (tx.transaction_tags || []).join("; "),
+        tx.completed_at ? formatDate(tx.completed_at) : "",
       ]);
 
       const csvContent = [
@@ -1862,7 +1879,7 @@ export default function Transactions() {
         "Date", "Client", "Email", "Type", "Payment Currency",
         "Amount", "Exchange Rate", "USD Amount",
         "Status", "Destination", "Reference", "CRM Reference", "Description",
-        "Client Tags", "Transaction Tags",
+        "Client Tags", "Transaction Tags", "Completed Date",
       ];
       const rows = allData.map((tx) => ({
         "Date": formatDate(tx.transaction_date || tx.created_at, tx.created_at),
@@ -1880,6 +1897,7 @@ export default function Transactions() {
         "Description": tx.description || "",
         "Client Tags": (tx.client_tags || []).join("; "),
         "Transaction Tags": (tx.transaction_tags || []).join("; "),
+        "Completed Date": tx.completed_at ? formatDate(tx.completed_at) : "",
       }));
 
       const ws = XLSX.utils.json_to_sheet(rows, { header: headers });
@@ -1896,7 +1914,7 @@ export default function Transactions() {
         { wch: 14 }, { wch: 22 }, { wch: 26 }, { wch: 12 }, { wch: 16 },
         { wch: 12 }, { wch: 14 }, { wch: 12 },
         { wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 22 },
-        { wch: 22 }, { wch: 22 },
+        { wch: 22 }, { wch: 22 }, { wch: 20 },
       ];
 
       const wb = XLSX.utils.book_new();
@@ -1917,7 +1935,7 @@ export default function Transactions() {
       const headers = [
         "Date", "Client", "Email", "Type", "Payment Currency",
         "Amount", "USD Amount", "Status", "Destination",
-        "Client Tags", "Transaction Tags",
+        "Client Tags", "Transaction Tags", "Completed Date",
       ];
       const rows = allData.map((tx) => [
         formatDate(tx.transaction_date || tx.created_at, tx.created_at),
@@ -1931,6 +1949,7 @@ export default function Transactions() {
         getDestinationDisplay(tx),
         (tx.client_tags || []).join("; "),
         (tx.transaction_tags || []).join("; "),
+        tx.completed_at ? formatDate(tx.completed_at) : "",
       ]);
 
       const totalDeposits = allData
@@ -3790,6 +3809,7 @@ export default function Transactions() {
             <option value="approved">Processed Date</option>
             <option value="bank_receipt">Approved Date</option>
             <option value="request_processed">Req. Processed Date</option>
+            <option value="completed">Completed Date</option>
           </select>
           <div className="flex items-center gap-1">
             <span className="text-xs text-muted-foreground">From:</span>

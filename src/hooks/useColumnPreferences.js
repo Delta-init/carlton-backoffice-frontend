@@ -15,7 +15,23 @@ export function useColumnPreferences(columns, storageKey) {
     if (typeof window === "undefined") return defaultVisible;
     try {
       const saved = localStorage.getItem(`${storageKey}_columns`);
-      if (saved) return new Set(JSON.parse(saved));
+      if (saved) {
+        const savedVisible = new Set(JSON.parse(saved));
+        // A column added since the preference was saved should appear, but one the
+        // user deliberately hid must stay hidden - and the visible set alone cannot
+        // tell those apart. The order key lists every column known at save time, so
+        // anything missing from it is genuinely new.
+        let knownAtSave = null;
+        try {
+          const savedOrder = localStorage.getItem(`${storageKey}_order`);
+          if (savedOrder) knownAtSave = new Set(JSON.parse(savedOrder));
+        } catch (e) { /* ignore */ }
+        if (!knownAtSave) return savedVisible;
+        columns.forEach((c) => {
+          if (!knownAtSave.has(c.id) && c.defaultVisible !== false) savedVisible.add(c.id);
+        });
+        return savedVisible;
+      }
     } catch (e) { /* ignore */ }
     return defaultVisible;
   });
