@@ -146,6 +146,13 @@ const formatDate = (s) =>
       })
     : '-';
 
+// Completion is reported as a plain date here - the time of day is noise on this
+// page, and an edited completed_at carries a placeholder time anyway.
+const formatDateOnly = (s) =>
+  s
+    ? new Date(s).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : '-';
+
 const DEST_ICONS = {
   treasury: Landmark,
   vendor: Repeat,
@@ -353,7 +360,8 @@ export default function PartnerDetail() {
         qs.set(
           txDateType === 'approved' ? 'approved_date_from'
             : txDateType === 'bank_receipt' ? 'bank_receipt_date_from'
-              : 'request_processed_date_from',
+              : txDateType === 'completed' ? 'completed_date_from'
+                : 'request_processed_date_from',
           dateFrom,
         );
       }
@@ -362,7 +370,8 @@ export default function PartnerDetail() {
           txDateType === 'approved' ? 'approved_date_to'
             : txDateType === 'bank_receipt' ? 'bank_receipt_date_to'
               : txDateType === 'request_processed' ? 'request_processed_date_to'
-                : 'date_to',
+                : txDateType === 'completed' ? 'completed_date_to'
+                  : 'date_to',
           dateTo,
         );
       }
@@ -843,8 +852,8 @@ export default function PartnerDetail() {
     if (emailFilter) qs.set('client_email', emailFilter);
     qs.set('exclude_hidden_tag_id', tagId);
     qs.set('date_from', txDateType === 'transaction' ? flooredFrom(dateFrom) : PARTNERS_DATE_FLOOR);
-    if (dateFrom && txDateType !== 'transaction') qs.set(txDateType === 'approved' ? 'approved_date_from' : txDateType === 'bank_receipt' ? 'bank_receipt_date_from' : 'request_processed_date_from', dateFrom);
-    if (dateTo) qs.set(txDateType === 'approved' ? 'approved_date_to' : txDateType === 'bank_receipt' ? 'bank_receipt_date_to' : txDateType === 'request_processed' ? 'request_processed_date_to' : 'date_to', dateTo);
+    if (dateFrom && txDateType !== 'transaction') qs.set(txDateType === 'approved' ? 'approved_date_from' : txDateType === 'bank_receipt' ? 'bank_receipt_date_from' : txDateType === 'completed' ? 'completed_date_from' : 'request_processed_date_from', dateFrom);
+    if (dateTo) qs.set(txDateType === 'approved' ? 'approved_date_to' : txDateType === 'bank_receipt' ? 'bank_receipt_date_to' : txDateType === 'request_processed' ? 'request_processed_date_to' : txDateType === 'completed' ? 'completed_date_to' : 'date_to', dateTo);
     if (txnTagFilter !== 'all') qs.set('transaction_tag', txnTagFilter);
     if (psFilter !== 'all') { qs.set('partner_settled', psFilter); qs.set('partner_tag_id', tagId); }
     return qs;
@@ -1228,6 +1237,7 @@ export default function PartnerDetail() {
                 <option value="approved">Processed Date</option>
                 <option value="bank_receipt">Approved Date</option>
                 <option value="request_processed">Req. Processed Date</option>
+                <option value="completed">Completed Date</option>
               </select>
               <div className="flex items-center gap-1">
                 <span className="text-xs text-muted-foreground">From:</span>
@@ -1269,19 +1279,20 @@ export default function PartnerDetail() {
                   <TableHead>Destination</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Date</TableHead>
+                  <TableHead>Completed Date</TableHead>
                   <TableHead className="w-10" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {txLoading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                       <Loader2 className="w-4 h-4 animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
                 ) : txItems.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No transactions</TableCell>
+                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">No transactions</TableCell>
                   </TableRow>
                 ) : (
                   txItems.map((tx) => (
@@ -1345,6 +1356,11 @@ export default function PartnerDetail() {
                       </TableCell>
                       <TableCell><Badge variant="outline" className="text-xs capitalize">{tx.status}</Badge></TableCell>
                       <TableCell className="text-xs text-muted-foreground">{formatDate(tx.created_at)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground" data-testid={`pd-completed-date-${tx.transaction_id}`}>
+                        {tx.completed_at
+                          ? <span title={tx.completed_by_name ? `Completed by ${tx.completed_by_name}` : undefined}>{formatDateOnly(tx.completed_at)}</span>
+                          : <span className="text-muted-foreground/60">-</span>}
+                      </TableCell>
                       <TableCell>
                         <Button
                           variant="ghost"
