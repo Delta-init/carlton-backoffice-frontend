@@ -349,19 +349,19 @@ export default function PartnerDetail() {
       }
       if (search) qs.set('search', search);
       if (emailFilter) qs.set('client_email', emailFilter);
-      // The floor always rides on date_from (transaction_date). When the user is
-      // filtering on that same field their value is clamped to it; when they are
-      // filtering on another date field, both constraints simply apply.
+      // The floor rides on completed_date_from. When the user is filtering on that
+      // same field their value is clamped to it; when they are filtering on another
+      // date field, both constraints simply apply.
       // Hidden on this partner means hidden across the whole partner - list,
       // totals and exports - not just on the treasury tab.
       qs.set('exclude_hidden_tag_id', tagId);
-      qs.set('date_from', txDateType === 'transaction' ? flooredFrom(dateFrom) : PARTNERS_DATE_FLOOR);
-      if (dateFrom && txDateType !== 'transaction') {
+      qs.set('completed_date_from', txDateType === 'completed' ? flooredFrom(dateFrom) : PARTNERS_DATE_FLOOR);
+      if (dateFrom && txDateType !== 'completed') {
         qs.set(
           txDateType === 'approved' ? 'approved_date_from'
             : txDateType === 'bank_receipt' ? 'bank_receipt_date_from'
-              : txDateType === 'completed' ? 'completed_date_from'
-                : 'request_processed_date_from',
+              : txDateType === 'request_processed' ? 'request_processed_date_from'
+                : 'date_from',
           dateFrom,
         );
       }
@@ -513,7 +513,7 @@ export default function PartnerDetail() {
       status: 'approved,completed',
       page: String(page),
       page_size: '20',
-      date_from: PARTNERS_DATE_FLOOR,
+      completed_date_from: PARTNERS_DATE_FLOOR,
     });
     qs.set('destination_type', group.destination_type);
     if (group.destination_type === 'vendor') qs.set('vendor_id', entry.key);
@@ -851,8 +851,8 @@ export default function PartnerDetail() {
     if (search) qs.set('search', search);
     if (emailFilter) qs.set('client_email', emailFilter);
     qs.set('exclude_hidden_tag_id', tagId);
-    qs.set('date_from', txDateType === 'transaction' ? flooredFrom(dateFrom) : PARTNERS_DATE_FLOOR);
-    if (dateFrom && txDateType !== 'transaction') qs.set(txDateType === 'approved' ? 'approved_date_from' : txDateType === 'bank_receipt' ? 'bank_receipt_date_from' : txDateType === 'completed' ? 'completed_date_from' : 'request_processed_date_from', dateFrom);
+    qs.set('completed_date_from', txDateType === 'completed' ? flooredFrom(dateFrom) : PARTNERS_DATE_FLOOR);
+    if (dateFrom && txDateType !== 'completed') qs.set(txDateType === 'approved' ? 'approved_date_from' : txDateType === 'bank_receipt' ? 'bank_receipt_date_from' : txDateType === 'request_processed' ? 'request_processed_date_from' : 'date_from', dateFrom);
     if (dateTo) qs.set(txDateType === 'approved' ? 'approved_date_to' : txDateType === 'bank_receipt' ? 'bank_receipt_date_to' : txDateType === 'request_processed' ? 'request_processed_date_to' : txDateType === 'completed' ? 'completed_date_to' : 'date_to', dateTo);
     if (txnTagFilter !== 'all') qs.set('transaction_tag', txnTagFilter);
     if (psFilter !== 'all') { qs.set('partner_settled', psFilter); qs.set('partner_tag_id', tagId); }
