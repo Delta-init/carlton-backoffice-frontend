@@ -882,7 +882,7 @@ export default function PartnerDetail() {
   const EXPORT_HEADERS = [
     'Date', 'Reference', 'CRM Reference', 'Client', 'Email', 'Type',
     'Payment Currency', 'Amount', 'USD Amount', 'Status', 'Destination',
-    'Client Tags', 'Transaction Tags',
+    'Client Tags', 'Transaction Tags', 'Completed Date',
   ];
   const exportRow = (tx) => [
     formatDate(tx.transaction_date || tx.created_at),
@@ -898,6 +898,7 @@ export default function PartnerDetail() {
     destinationLabel(tx),
     (tx.client_tags || []).join('; '),
     (tx.transaction_tags || []).join('; '),
+    tx.completed_at ? formatDateOnly(tx.completed_at) : '',
   ];
 
   const fetchAllForExport = async (params) => {
