@@ -345,6 +345,9 @@ export default function PartnerDetail() {
       // The floor always rides on date_from (transaction_date). When the user is
       // filtering on that same field their value is clamped to it; when they are
       // filtering on another date field, both constraints simply apply.
+      // Hidden on this partner means hidden across the whole partner - list,
+      // totals and exports - not just on the treasury tab.
+      qs.set('exclude_hidden_tag_id', tagId);
       qs.set('date_from', txDateType === 'transaction' ? flooredFrom(dateFrom) : PARTNERS_DATE_FLOOR);
       if (dateFrom && txDateType !== 'transaction') {
         qs.set(
@@ -838,6 +841,7 @@ export default function PartnerDetail() {
     }
     if (search) qs.set('search', search);
     if (emailFilter) qs.set('client_email', emailFilter);
+    qs.set('exclude_hidden_tag_id', tagId);
     qs.set('date_from', txDateType === 'transaction' ? flooredFrom(dateFrom) : PARTNERS_DATE_FLOOR);
     if (dateFrom && txDateType !== 'transaction') qs.set(txDateType === 'approved' ? 'approved_date_from' : txDateType === 'bank_receipt' ? 'bank_receipt_date_from' : 'request_processed_date_from', dateFrom);
     if (dateTo) qs.set(txDateType === 'approved' ? 'approved_date_to' : txDateType === 'bank_receipt' ? 'bank_receipt_date_to' : txDateType === 'request_processed' ? 'request_processed_date_to' : 'date_to', dateTo);
