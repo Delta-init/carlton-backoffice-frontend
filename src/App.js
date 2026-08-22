@@ -27,6 +27,7 @@ import IncomeExpenses from "./pages/IncomeExpenses";
 import Loans from "./pages/Loans";
 import BorrowerDetail from "./pages/BorrowerDetail";
 import Debts from "./pages/Debts";
+import Billing from "./pages/Billing";
 import Reconciliation from "./pages/Reconciliation";
 import Messages from "./pages/Messages";
 import AuditCompliance from "./pages/AuditCompliance";
@@ -200,6 +201,14 @@ function AppRouter() {
           element={
             <ProtectedRoute requiredModule="loans">
               <BorrowerDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/billing"
+          element={
+            <ProtectedRoute requiredModule="billing">
+              <Billing />
             </ProtectedRoute>
           }
         />
