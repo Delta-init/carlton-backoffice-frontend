@@ -355,6 +355,7 @@ export default function PartnerDetail() {
       // Hidden on this partner means hidden across the whole partner - list,
       // totals and exports - not just on the treasury tab.
       qs.set('exclude_hidden_tag_id', tagId);
+      qs.set('exclude_business_tags', 'true');
       qs.set('completed_date_from', txDateType === 'completed' ? flooredFrom(dateFrom) : PARTNERS_DATE_FLOOR);
       if (dateFrom && txDateType !== 'completed') {
         qs.set(
@@ -514,6 +515,7 @@ export default function PartnerDetail() {
       page: String(page),
       page_size: '20',
       completed_date_from: PARTNERS_DATE_FLOOR,
+      exclude_business_tags: 'true',
     });
     qs.set('destination_type', group.destination_type);
     if (group.destination_type === 'vendor') qs.set('vendor_id', entry.key);
@@ -851,6 +853,7 @@ export default function PartnerDetail() {
     if (search) qs.set('search', search);
     if (emailFilter) qs.set('client_email', emailFilter);
     qs.set('exclude_hidden_tag_id', tagId);
+    qs.set('exclude_business_tags', 'true');
     qs.set('completed_date_from', txDateType === 'completed' ? flooredFrom(dateFrom) : PARTNERS_DATE_FLOOR);
     if (dateFrom && txDateType !== 'completed') qs.set(txDateType === 'approved' ? 'approved_date_from' : txDateType === 'bank_receipt' ? 'bank_receipt_date_from' : txDateType === 'request_processed' ? 'request_processed_date_from' : 'date_from', dateFrom);
     if (dateTo) qs.set(txDateType === 'approved' ? 'approved_date_to' : txDateType === 'bank_receipt' ? 'bank_receipt_date_to' : txDateType === 'request_processed' ? 'request_processed_date_to' : txDateType === 'completed' ? 'completed_date_to' : 'date_to', dateTo);
