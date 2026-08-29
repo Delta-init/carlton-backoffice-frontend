@@ -65,7 +65,7 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 // covers the summary and treasury aggregations. Delete both to restore full
 // history. It lives here rather than in the /transactions endpoint because that
 // endpoint is shared with Transactions Summary, Reports and the vendor dashboard.
-const PARTNERS_DATE_FLOOR = '2026-08-15';
+const PARTNERS_DATE_FLOOR = '2026-08-01';
 
 // A user-picked "from" may narrow the window but never widen it past the floor.
 const flooredFrom = (d) => (d && d > PARTNERS_DATE_FLOOR ? d : PARTNERS_DATE_FLOOR);
