@@ -1538,13 +1538,37 @@ export default function Messages({ fullscreen = false }) {
         setChannelPage(d.page || page);
         if (append) {
           const el = channelScrollRef.current;
-          const prevHeight = el ? el.scrollHeight : 0;
-          const prevScrollTop = el ? el.scrollTop : 0;
+          // Keep the reader where they were by pinning a real message element rather
+          // than doing pixel arithmetic on scrollHeight. These cards carry receipt
+          // images that finish loading AFTER the first frame, so a one-shot
+          // "scrollTop += heightDelta" is measured before the content above has
+          // settled and leaves the view drifted by a screenful or more.
+          //
+          // The anchor is the topmost rendered message; we record how far below the
+          // container's top edge it sits, then restore exactly that offset - once on
+          // the next frame, and again as the prepended content changes size.
+          const anchorEl = el ? el.querySelector('[id^="chmsg-"]') : null;
+          const anchorId = anchorEl ? anchorEl.id : null;
+          const offsetWas = anchorEl && el
+            ? anchorEl.getBoundingClientRect().top - el.getBoundingClientRect().top
+            : 0;
           setChannelMessages(prev => [...items, ...prev]);
-          if (el) {
-            requestAnimationFrame(() => {
-              el.scrollTop = prevScrollTop + (el.scrollHeight - prevHeight);
-            });
+          if (el && anchorId) {
+            const repin = () => {
+              const now = document.getElementById(anchorId);
+              if (!now) return;
+              const delta =
+                (now.getBoundingClientRect().top - el.getBoundingClientRect().top) - offsetWas;
+              if (Math.abs(delta) > 1) el.scrollTop += delta;
+            };
+            requestAnimationFrame(repin);
+            // Images above resolve over the next moment; re-pin while that happens,
+            // then stop. ResizeObserver catches the growth without polling.
+            if (typeof ResizeObserver !== 'undefined') {
+              const ro = new ResizeObserver(repin);
+              Array.from(el.children).forEach(c => ro.observe(c));
+              setTimeout(() => ro.disconnect(), 3000);
+            }
           }
         } else {
           setChannelMessages(items);
