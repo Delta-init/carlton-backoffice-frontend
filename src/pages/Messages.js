@@ -31,15 +31,53 @@ import EmojiPicker from 'emoji-picker-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
+// When a status was set and by whom, for the badge tooltip. Completion is the later
+// event, so it wins when both are present.
+function txBadgeWho(msg) {
+  const who = msg.tx_completed_by_name || msg.tx_processed_by_name;
+  const when = msg.tx_completed_at || msg.tx_processed_at;
+  if (!who && !when) return null;
+  let stamp = '';
+  if (when) {
+    const d = new Date(when);
+    if (!isNaN(d)) {
+      stamp = d.toLocaleString(undefined, {
+        day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+      });
+    }
+  }
+  return { who, stamp };
+}
+
+function txBadgeTip(msg) {
+  const i = txBadgeWho(msg);
+  if (!i) return undefined;
+  const verb = msg.tx_completed_by ? 'Completed' : 'Processed';
+  return `${verb}${i.who ? ` by ${i.who}` : ''}${i.stamp ? ` · ${i.stamp}` : ''}`;
+}
+
 // Status badge for auto-posted transaction cards — reflects the furthest state reached.
+// Hovering shows who moved it there and when; the older cards that predate the
+// attribution fields simply have no tooltip.
 function TxBadge({ msg }) {
   const st = msg.tx_status;
-  let label = '⏳ Pending', cls = 'bg-amber-100 text-amber-700';
-  if (st === 'rejected') { label = '❌ Rejected'; cls = 'bg-red-100 text-red-700'; }
-  else if (st === 'completed' || msg.tx_completed_by) { label = '✅ Completed'; cls = 'bg-emerald-100 text-emerald-700'; }
-  else if (st === 'approved') { label = '✅ Approved'; cls = 'bg-green-100 text-green-700'; }
-  else if (msg.tx_processed_by) { label = '⚙️ Processing'; cls = 'bg-blue-100 text-blue-700'; }
-  return <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-full ${cls}`}>{label}</span>;
+  let label = '⏳ Pending', cls = 'bg-amber-100 text-amber-700', verb = 'Set';
+  if (st === 'rejected') { label = '❌ Rejected'; cls = 'bg-red-100 text-red-700'; verb = 'Rejected'; }
+  else if (st === 'completed' || msg.tx_completed_by) { label = '✅ Completed'; cls = 'bg-emerald-100 text-emerald-700'; verb = 'Completed'; }
+  else if (st === 'approved') { label = '✅ Approved'; cls = 'bg-green-100 text-green-700'; verb = 'Approved'; }
+  else if (msg.tx_processed_by) { label = '⚙️ Processing'; cls = 'bg-blue-100 text-blue-700'; verb = 'Processed'; }
+
+  const info = txBadgeWho(msg);
+  const tip = info
+    ? `${verb}${info.who ? ` by ${info.who}` : ''}${info.stamp ? ` · ${info.stamp}` : ''}`
+    : undefined;
+
+  return (
+    <span title={tip}
+      className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-full ${cls} ${tip ? 'cursor-help' : ''}`}>
+      {label}
+    </span>
+  );
 }
 
 // Reaction chips — shown ABOVE the message; click a chip to toggle your reaction.
@@ -369,14 +407,14 @@ const ChannelMessageRow = memo(function ChannelMessageRow({
                       className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-600 text-white hover:bg-amber-700">Process</button>
                   )}
                   {msg.tx_processed_by && (
-                    <span className="text-[11px] text-emerald-600 font-medium">🟢 Processed{msg.tx_processed_by_name ? ` by ${msg.tx_processed_by_name}` : ''}</span>
+                    <span title={txBadgeTip(msg)} className="text-[11px] text-emerald-600 font-medium cursor-help">🟢 Processed{msg.tx_processed_by_name ? ` by ${msg.tx_processed_by_name}` : ''}</span>
                   )}
                   {msg.tx_owner_id === currentUserId && !msg.tx_completed_by && (
                     <button type="button" onClick={() => onTxComplete(msg)}
                       className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-primary text-white hover:bg-primary/90">Complete</button>
                   )}
                   {msg.tx_completed_by && (
-                    <span className="text-[11px] text-green-600 font-medium">✅ Completed{msg.tx_completed_by_name ? ` by ${msg.tx_completed_by_name}` : ''}</span>
+                    <span title={txBadgeTip(msg)} className="text-[11px] text-green-600 font-medium cursor-help">✅ Completed{msg.tx_completed_by_name ? ` by ${msg.tx_completed_by_name}` : ''}</span>
                   )}
                 </div>
               )}
@@ -831,6 +869,10 @@ export default function Messages({ fullscreen = false }) {
   const [channelPage, setChannelPage] = useState(1);
   const [channelHasMore, setChannelHasMore] = useState(false);
   const [channelLoadingMore, setChannelLoadingMore] = useState(false);
+  // Switching channels refetches a full page; without this the previous channel's
+  // messages stay on screen for the whole round trip and it reads as a freeze.
+  const [channelLoading, setChannelLoading] = useState(false);
+  const [threadLoading, setThreadLoading] = useState(false);
   const channelLoadingMoreRef = useRef(false);  // synchronous re-entrancy guard for rapid scroll events
   // Message edit / in-chat search + filter
   const [editingId, setEditingId] = useState(null);   // message_id (DM) or msg_id (channel)
@@ -1482,6 +1524,7 @@ export default function Messages({ fullscreen = false }) {
   const fetchChannelMessages = useCallback(async (channelId, opts = {}) => {
     if (!channelId) return;
     const { page = 1, dateFrom = '', dateTo = '', search = '', append = false } = opts;
+    if (!append) setChannelLoading(true);
     try {
       const qs = new URLSearchParams({ page: String(page), page_size: '200' });
       if (dateFrom) qs.set('date_from', dateFrom);
@@ -1511,15 +1554,17 @@ export default function Messages({ fullscreen = false }) {
       }
     } catch { /* */ } finally {
       if (append) { channelLoadingMoreRef.current = false; setChannelLoadingMore(false); }
+      else setChannelLoading(false);
     }
   }, [getAuthHeaders]);
 
   const fetchThreadReplies = useCallback(async (channelId, msgId) => {
     if (!channelId || !msgId) return;
+    setThreadLoading(true);
     try {
       const r = await fetch(`${API_URL}/api/channels/${channelId}/messages/${msgId}/replies`, { headers: getAuthHeaders() });
       if (r.ok) { setThreadReplies(await r.json()); setTimeout(() => scrollToBottom(threadScrollRef), 60); }
-    } catch { /* */ }
+    } catch { /* */ } finally { setThreadLoading(false); }
   }, [getAuthHeaders]);
 
   // Stable per-message "open thread" handler for the memoized channel row list — takes
@@ -2253,7 +2298,14 @@ export default function Messages({ fullscreen = false }) {
                   </div>
 
                   {/* Channel messages */}
-                  <div ref={channelScrollRef} onScroll={handleChannelScroll} className="flex-1 overflow-y-auto py-2">
+                  <div ref={channelScrollRef} onScroll={handleChannelScroll} className="relative flex-1 overflow-y-auto py-2">
+                    {channelLoading && (
+                      <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70 backdrop-blur-[1px]">
+                        <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                          <Loader2 className="w-4 h-4 animate-spin" /> Loading messages...
+                        </div>
+                      </div>
+                    )}
                     {channelLoadingMore && (
                       <div className="flex items-center justify-center py-2 text-muted-foreground/60">
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -2454,14 +2506,14 @@ export default function Messages({ fullscreen = false }) {
                                     </button>
                                   )}
                                   {msg.tx_processed_by && (
-                                    <span className="text-[11px] text-emerald-600 font-medium">🟢 Processed{msg.tx_processed_by_name ? ` by ${msg.tx_processed_by_name}` : ''}</span>
+                                    <span title={txBadgeTip(msg)} className="text-[11px] text-emerald-600 font-medium cursor-help">🟢 Processed{msg.tx_processed_by_name ? ` by ${msg.tx_processed_by_name}` : ''}</span>
                                   )}
                                   {msg.tx_owner_id === user?.user_id && !msg.tx_completed_by && (
                                     <button type="button" onClick={() => handleTxComplete(msg)}
                                       className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-600 text-white hover:bg-blue-700">Complete</button>
                                   )}
                                   {msg.tx_completed_by && (
-                                    <span className="text-[11px] text-green-600 font-medium">✅ Completed{msg.tx_completed_by_name ? ` by ${msg.tx_completed_by_name}` : ''}</span>
+                                    <span title={txBadgeTip(msg)} className="text-[11px] text-green-600 font-medium cursor-help">✅ Completed{msg.tx_completed_by_name ? ` by ${msg.tx_completed_by_name}` : ''}</span>
                                   )}
                                 </div>
                               )}
@@ -2603,6 +2655,11 @@ export default function Messages({ fullscreen = false }) {
                   <p className="text-xs text-muted-foreground/60 font-semibold mb-3">
                     {threadReplies.length} {threadReplies.length === 1 ? 'reply' : 'replies'}
                   </p>
+                  {threadLoading && (
+                    <div className="flex items-center gap-2 justify-center py-3 text-muted-foreground/60 text-sm">
+                      <Loader2 className="w-4 h-4 animate-spin" /> Loading replies...
+                    </div>
+                  )}
                   {threadReplies.map(r => (
                     <div key={r.msg_id} className="group flex gap-2.5 mb-3">
                       <Avatar className="w-7 h-7 shrink-0">
