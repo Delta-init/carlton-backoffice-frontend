@@ -1526,7 +1526,7 @@ export default function Messages({ fullscreen = false }) {
     const { page = 1, dateFrom = '', dateTo = '', search = '', append = false } = opts;
     if (!append) setChannelLoading(true);
     try {
-      const qs = new URLSearchParams({ page: String(page), page_size: '200' });
+      const qs = new URLSearchParams({ page: String(page), page_size: '50' });
       if (dateFrom) qs.set('date_from', dateFrom);
       if (dateTo) qs.set('date_to', dateTo);
       if (search) qs.set('search', search);
