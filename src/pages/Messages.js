@@ -133,6 +133,7 @@ const TAG_META = [
   { key: 'Processed', icon: '⚙️', cls: 'bg-blue-100 text-blue-700' },
   { key: 'Hold',      icon: '✋', cls: 'bg-amber-100 text-amber-700' },
   { key: 'Rejected',  icon: '❌', cls: 'bg-red-100 text-red-700' },
+  { key: 'Cancelled', icon: '🚫', cls: 'bg-rose-100 text-rose-700' },
   { key: 'Pending',   icon: '⏳', cls: 'bg-slate-100 text-slate-600' },
   { key: 'Query',     icon: '❓', cls: 'bg-purple-100 text-purple-700' },
 ];
