@@ -693,6 +693,16 @@ export default function Transactions() {
             ) : (
               "-"
             )}
+            {/* The account the money came OUT of. For a withdrawal that is the
+                treasury account, while the destination above is the client's bank
+                or an exchanger - without this the row never names the account it
+                was actually paid from. */}
+            {tx.source_account_name && (
+              <span className="block text-xs text-muted-foreground/60 mt-0.5"
+                title={`Paid from ${tx.source_account_name}${tx.source_currency ? ` (${tx.source_currency})` : ''}`}>
+                from {tx.source_account_name}
+              </span>
+            )}
           </TableCell>
         );
       case "client_tags":
