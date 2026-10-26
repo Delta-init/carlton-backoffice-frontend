@@ -695,7 +695,7 @@ export default function PSPs() {
     const gross = selected.reduce((s, tx) => s + (tx.amount || 0), 0);
     const commission = selected.reduce((s, tx) => s + (tx.psp_commission_amount || 0), 0);
     const reserve = selected.reduce((s, tx) => s + (tx.psp_reserve_fund_amount || tx.psp_chargeback_amount || 0), 0);
-    const extra = selected.reduce((s, tx) => s + (tx.psp_extra_charges || 0), 0);
+    const extra = selected.reduce((s, tx) => s + (tx.psp_extra_charges || 0) + (tx.psp_gateway_fee || 0), 0);
     const deductions = commission + reserve + extra;
     const net = gross - deductions;
     // Payment currency info
@@ -703,9 +703,21 @@ export default function PSPs() {
     const payCurrency = currencies.length === 1 ? currencies[0] : null;
     const baseGross = payCurrency ? selected.reduce((s, tx) => s + (tx.base_amount || 0), 0) : null;
     const avgRate = payCurrency && baseGross ? gross / baseGross : null;
-    const baseDeductions = payCurrency && avgRate ? deductions / avgRate : null;
+    // Convert each transaction's charges at its own rate, exactly as the backend
+    // does. An averaged rate weights a small transaction the same as a large one
+    // and the net drifts a fils or two from what is credited to treasury.
+    const convAtOwnRate = (pick) => (payCurrency && baseGross ? selected.reduce((s, tx) => {
+      const v = pick(tx);
+      if (!v) return s;
+      const txRate = tx.exchange_rate || avgRate;
+      return txRate ? s + v / txRate : s;
+    }, 0) : null);
+    const baseCommission = convAtOwnRate(tx => tx.psp_commission_amount || 0);
+    const baseReserve = convAtOwnRate(tx => tx.psp_reserve_fund_amount || tx.psp_chargeback_amount || 0);
+    const baseExtra = convAtOwnRate(tx => (tx.psp_extra_charges || 0) + (tx.psp_gateway_fee || 0));
+    const baseDeductions = payCurrency && baseGross ? baseCommission + baseReserve + baseExtra : null;
     const baseNet = payCurrency && baseGross && baseDeductions != null ? baseGross - baseDeductions : null;
-    return { count: selected.length, gross, commission, reserve, extra, deductions, net, payCurrency, baseGross, baseDeductions, baseNet, avgRate };
+    return { count: selected.length, gross, commission, reserve, extra, deductions, net, payCurrency, baseGross, baseCommission, baseReserve, baseExtra, baseDeductions, baseNet, avgRate };
   })();
 
   // Handle compound batch settlement
@@ -2482,14 +2494,14 @@ export default function PSPs() {
                 <span className="text-muted-foreground">Commission</span>
                 <div className="text-right">
                   <span className="font-mono text-yellow-600">-${batchSummary.commission.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                  {batchSummary.payCurrency && batchSummary.avgRate && <p className="text-[10px] text-yellow-500 font-mono">-{(batchSummary.commission / batchSummary.avgRate).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} {batchSummary.payCurrency}</p>}
+                  {batchSummary.payCurrency && batchSummary.avgRate && <p className="text-[10px] text-yellow-500 font-mono">-{(batchSummary.baseCommission || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} {batchSummary.payCurrency}</p>}
                 </div>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Reserve Fund</span>
                 <div className="text-right">
                   <span className="font-mono text-red-500">-${batchSummary.reserve.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                  {batchSummary.payCurrency && batchSummary.avgRate && batchSummary.reserve > 0 && <p className="text-[10px] text-red-400 font-mono">-{(batchSummary.reserve / batchSummary.avgRate).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} {batchSummary.payCurrency}</p>}
+                  {batchSummary.payCurrency && batchSummary.avgRate && batchSummary.reserve > 0 && <p className="text-[10px] text-red-400 font-mono">-{(batchSummary.baseReserve || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} {batchSummary.payCurrency}</p>}
                 </div>
               </div>
               {batchSummary.extra > 0 && (
@@ -2497,7 +2509,7 @@ export default function PSPs() {
                   <span className="text-muted-foreground">Extra Charges</span>
                   <div className="text-right">
                     <span className="font-mono text-red-500">-${batchSummary.extra.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                    {batchSummary.payCurrency && batchSummary.avgRate && <p className="text-[10px] text-red-400 font-mono">-{(batchSummary.extra / batchSummary.avgRate).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} {batchSummary.payCurrency}</p>}
+                    {batchSummary.payCurrency && batchSummary.avgRate && <p className="text-[10px] text-red-400 font-mono">-{(batchSummary.baseExtra || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} {batchSummary.payCurrency}</p>}
                   </div>
                 </div>
               )}
